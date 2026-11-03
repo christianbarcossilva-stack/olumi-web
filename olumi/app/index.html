@@ -1396,7 +1396,7 @@ function sheetPres(id,p){
   <p class="err" id="shErr" hidden></p>
   ${id&&q.estado!=='aceptado'?`<div><button class="btn" data-act="qaccept">Cliente aceptó: crear la obra${q.oportunidadId?' y ganar la oportunidad':''}</button></div>`:''}
   ${id&&q.estado==='aceptado'&&!(q.obraId&&D.proyectos[q.obraId])?`<div><button class="btn" data-act="q2obra:${id}">Crear la obra con etapas y tareas</button></div>`:''}${id&&q.obraId&&D.proyectos[q.obraId]?`<div><button class="btn ghost" data-open="pry:${q.obraId}">Ver la obra</button></div>`:''}
-  ${id&&q.estado==='aceptado'?`<div><button class="btn pri" data-act="pres2fact">Crear factura con este presupuesto</button></div>`:''}`;
+  ${id&&q.estado==='aceptado'&&has('facturas')?qFactHtml(id,q):''}`;
   return sheetFrame('Presupuesto '+(q.numero||'nuevo'),cliName(q.clienteId)||'Sin cliente',body,{del:!!id,extra:`${id?'<button class="btn" data-act="qdup">Duplicar</button>':''}<button class="btn" data-act="qcopy">Copiar texto</button><button class="btn" data-act="qdl">Descargar</button>`});
 }
 function qLinesHtml(){return QE.lineas.map((l,i)=>`<div class="ql">
@@ -1467,6 +1467,7 @@ async function act(a,el){
   if(await invAct(k,el,arg))return;
   if(await obraAct(k,el,arg))return;
   if(await rubAct(k,el,arg))return;
+  if(await cuotaAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -1638,7 +1639,7 @@ function sheetPry(id,p){
   let body=`<div class="grid">${PRYF().map(f=>fld(f,r[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
   if(id){const it=pryItems(id);
     body=`<div class="actions"><button class="btn pri" data-new="tk" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Ticket</button><button class="btn" data-new="trab" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Visita</button>${has('presupuestos')?`<button class="btn" data-new="pres" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Presupuesto</button>`:''}</div>`+body
-    +`${pryTasksHtml(id)}<section class="rel"><h3>Tickets</h3>${it.tks.map(t=>`<div class="item link" role="button" tabindex="0" data-open="tk:${t.id}">${prChip(tkPrio(t))}<span class="code">${esc(t.numero)}</span><span class="grow">${esc(t.titulo||'')}</span><span class="tk-est">${TKEK[t.estado||'nuevo']}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin tickets.</p>'}</section>
+    +`${pryTasksHtml(id)}${has('facturas')?pryFactLine(id):''}<section class="rel"><h3>Tickets</h3>${it.tks.map(t=>`<div class="item link" role="button" tabindex="0" data-open="tk:${t.id}">${prChip(tkPrio(t))}<span class="code">${esc(t.numero)}</span><span class="grow">${esc(t.titulo||'')}</span><span class="tk-est">${TKEK[t.estado||'nuevo']}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin tickets.</p>'}</section>
     ${pryPlanosHtml(id)}
     ${pryRentHtml(id)}
     <section class="rel"><h3>Visitas e informes</h3>${it.jobs.map(jobItem).join('')||'<p class="muted" style="margin:0">Sin visitas.</p>'}</section>
@@ -3082,6 +3083,43 @@ document.addEventListener('change',async e=>{const t=e.target;if(!t||!t.dataset)
     catch(err){IMP=null;toast(/\.xls$/i.test(f.name)?'Ese es un Excel viejo (.xls): guardalo como .xlsx o CSV y probá de nuevo.':'No pude leer el archivo. Probá guardarlo como .xlsx o CSV.')}
     const box=$('#impBox');if(box)box.innerHTML=impBoxHtml();return}});
 document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.kt){const [i,f]=t.dataset.kt.split(':');if(KE&&KE.items[i]){KE.items[i][f]=t.value;SH&&(SH.dirty=true)}}});
+
+/* ---------- 1.7: anticipo y facturas por avance de obra ---------- */
+const CUOTA={anticipo:'Anticipo',avance:'Avance de obra',final:'Saldo final',total:'Total'};
+function qFacturado(qid,mon){return sum(arr('facturas').filter(f=>f.presupuestoId===qid&&!f.anulada),f=>conv(calcQ(f).base,f.moneda,mon))}
+function qFactInfo(qid,q){
+  const base=calcQ(q).base,fact=qFacturado(qid,q.moneda),pid=q.obraId&&D.proyectos[q.obraId]?q.obraId:(q.proyectoId&&D.proyectos[q.proyectoId]?q.proyectoId:'');
+  const av=pid?pryTaskAv(pid):{t:0,pct:0},pctF=base?Math.round(fact/base*100):0;
+  return{base,fact,saldo:Math.max(0,base-fact),pctF,pid,av,sugAvance:Math.max(0,(av.t?av.pct:0)-pctF)};
+}
+function qFactHtml(id,q){
+  const x=qFactInfo(id,q),m=q.moneda,fs=arr('facturas').filter(f=>f.presupuestoId===id).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  return`<section class="rel"><h3>Facturación del presupuesto</h3>
+    <div class="kpis" style="margin-bottom:8px"><div class="kpi"><span class="k">Presupuesto sin IVA</span><b class="num">${money(x.base,m)}</b></div><div class="kpi"><span class="k">Facturado</span><b class="num">${money(x.fact,m)} · ${x.pctF}%</b></div><div class="kpi"><span class="k">Falta facturar</span><b class="num">${money(x.saldo,m)}</b></div>${x.av.t?`<div class="kpi"><span class="k">Avance de la obra</span><b class="num">${x.av.pct}%</b></div>`:''}</div>
+    ${fs.length?fs.map(f=>{const s=factState(f);return`<div class="item link" role="button" tabindex="0" data-open="fact:${f.id}"><span class="code">${esc(f.numero||'')}</span><span class="grow">${esc(CUOTA[f.cuota?.tipo]||'Factura')}${f.cuota?.pct?` ${f.cuota.pct}%`:''} · ${fdate(f.fecha)}</span><span class="num">${money(calcQ(f).base,f.moneda)}</span><span class="tag ${FST[s][1]}">${FST[s][0]}</span></div>`}).join(''):''}
+    ${readonly||x.saldo<=0.5?(x.saldo<=0.5&&x.base?'<p class="hint" style="margin:6px 0 0">Ya está facturado completo.</p>':''):`<div class="mini" style="margin-top:10px"><div class="row2"><input type="number" id="qc_pct" min="1" max="100" step="1" inputmode="numeric" value="${x.fact?(x.sugAvance||Math.min(100,100-x.pctF)):30}" aria-label="Porcentaje a facturar" style="max-width:90px"><span class="muted" style="align-self:center">%</span>
+      ${x.fact?'':'<button class="btn" data-act="qcuota:anticipo">Facturar anticipo</button>'}<button class="btn" data-act="qcuota:avance">Facturar avance</button><button class="btn pri" data-act="qcuota:final">${x.fact?'Facturar el saldo':'Facturar todo'}</button></div></div>
+      <p class="hint" style="margin:6px 0 0">${x.av.t?`La obra va ${x.av.pct}% por tareas hechas${x.sugAvance?`: te sugiero facturar ${x.sugAvance}% de avance`:''}. `:''}El anticipo y el avance salen como una línea con el porcentaje; ${x.fact?'el saldo':'“Facturar todo”'} ${x.fact?'cierra lo que falta':'copia todas las líneas del presupuesto'}.</p>`}
+  </section>`;
+}
+async function cuotaAct(k,el,arg){
+  if(k!=='qcuota'||!SH||SH.type!=='pres'||!QE)return false;
+  if(SH.dirty){const ok=await saveQ(false);if(!ok)return true}
+  const qid=SH.id,q=clean(QE),x=qFactInfo(qid,q),cli=q.clienteId||opp(q.oportunidadId)?.clienteId||'',ref=`Presupuesto ${q.numero||''}${x.pid?' · '+pryName(x.pid):''}`.trim();
+  const extra={moneda:q.moneda,iva:q.iva,presupuestoId:qid,proyectoId:x.pid||q.proyectoId||''};
+  if(arg==='final'&&!x.fact){openSheet('fact',null,{draft:factDraft(cli,q.lineas,{...extra,descuento:n0(q.descuento),cuota:{tipo:'total',pct:100}})});SH.dirty=true;return true}
+  let pct=arg==='final'?Math.round((x.saldo/x.base)*1000)/10:Math.max(1,Math.min(100,n0($('#qc_pct')?.value)));
+  let monto=arg==='final'?x.saldo:r2(x.base*pct/100);
+  if(monto>x.saldo+0.5){monto=r2(x.saldo);pct=Math.round(monto/x.base*1000)/10;toast(`Solo falta facturar ${money(x.saldo,q.moneda)}: ajusté el porcentaje`)}
+  if(monto<=0){toast('No queda nada por facturar en este presupuesto.');return true}
+  const desc=`${CUOTA[arg]} ${pct}% · ${ref}`;
+  openSheet('fact',null,{draft:factDraft(cli,[{desc,cant:1,unidad:'global',precio:monto}],{...extra,descuento:0,cuota:{tipo:arg,pct}})});SH.dirty=true;return true;
+}
+function pryFactLine(pid){
+  const q=arr('presupuestos').find(x=>x.estado==='aceptado'&&(x.obraId===pid||x.proyectoId===pid));if(!q)return'';
+  const x=qFactInfo(q.id,q);if(!x.base)return'';
+  return`<p class="hint" style="margin:8px 0 0">Facturado ${money(x.fact,q.moneda)} de ${money(x.base,q.moneda)} (${x.pctF}%) del presupuesto ${esc(q.numero||'')}${x.sugAvance?` · la obra va ${x.av.pct}%`:''}. ${readonly?'':`<button class="btn ghost sm" data-open="pres:${q.id}">${x.sugAvance?'Facturar avance':'Ver facturación'}</button>`}</p>`;
+}
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
