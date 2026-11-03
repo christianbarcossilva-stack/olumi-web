@@ -418,6 +418,8 @@ body.portal .main{max-width:900px;margin-inline:auto;width:100%}
 .tarrow{align-items:flex-start}.tarrow .tarck{margin-top:3px;width:18px;height:18px;flex:none}.tarrow.done b{text-decoration:line-through;color:var(--muted)}
 .kan{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}.kcol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}.kcol h2{font-size:14px;margin:2px 0 6px}
 @media (max-width:899px){.kan{grid-template-columns:minmax(0,1fr)}}
+.setup{margin-bottom:12px}.setup.ok{opacity:.75}.st-h{display:flex;gap:12px;align-items:center}.st-h .grow{flex:1;min-width:0}.st-n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:1.5px solid var(--line);flex:none}.setup.ok .st-n{background:var(--ok);border-color:var(--ok);color:#fff}
+body.sub nav .navsec,body.sub nav [data-view]:not([data-view=campo]):not([data-view=proyectos]):not([data-view=trabajos]):not([data-view=menu]),body.sub .menu [data-view]:not([data-view=proyectos]):not([data-view=trabajos]),body.sub #topNew{display:none!important}
 .planthumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
 .planthumb{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;font:inherit;color:inherit}
 .planthumb img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#fff}
@@ -508,7 +510,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas'];
+const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -548,7 +550,7 @@ function applyBrand(){
   if(id&&!logoData)loadLogoData();
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -635,6 +637,7 @@ function overdueCount(){const t=today();return arr('actividades').filter(a=>!a.h
 /* ---------- render ---------- */
 let rq=0;function sr(){if(!rq)rq=requestAnimationFrame(()=>{rq=0;render()})}
 function render(){
+  applyRubros();subGuard();
   if(ROLE==='pendiente'){document.body.classList.add('portal');$('#banner').innerHTML='';$('#main').innerHTML=pendingHtml();return}
   if(CFEI===undefined&&mode==='live'&&ORG&&PLAN&&has('cfe')&&!PORTAL())loadCfe();
   if(PORTAL()){document.body.classList.add('portal');applyBrand();$('#banner').innerHTML='';$('#main').innerHTML=(loaded.size>=NEED||slow)?vPortal():loadingHtml();return}
@@ -648,7 +651,7 @@ function render(){
   const em=arr('tickets').filter(t=>tkOpen(t)&&t.tipo==='emergencia').length,p2=$('#navTk');p2.hidden=!em;p2.textContent=em;
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=bannerHtml()+pendBanner();
+  $('#banner').innerHTML=bannerHtml()+pendBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
@@ -821,6 +824,7 @@ function vMas(){
   :`<div class="empty">${fiberArt}<h2>Catálogo vacío</h2><p>Cargá lo que más cotizás: metro de fibra, cámaras, jornal de técnico, puntos de red. Al escribir una línea de presupuesto se completan unidad y precio.</p><button class="btn pri" data-new="prod">+ Primer producto</button></div>`}
   <div class="vhead" style="margin-top:34px"><div><h1>Ajustes de la empresa</h1><p class="sub">Nombre, logo y color con los que esta empresa usa Olumi. Salen en el menú, los presupuestos y las facturas.</p></div></div>
   <div class="panel">${has('marca')?'':'<p class="hint" style="margin:0 0 12px">Logo y color propios: incluidos en el plan Empresa. Mientras tanto se usa la marca Olumi.</p>'}<div class="logoprev" style="margin-bottom:14px${has('marca')?'':';display:none'}">${CFG.logo?.id?`<img src="${esc(blobUrl(CFG.logo.id))}" alt="Logo actual">`:'<span class="hint">Sin logo cargado.</span>'}${AS?`<label class="btn upl">${CFG.logo?.id?'Cambiar logo':'Subir logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-up="logo"></label>${CFG.logo?.id?'<button class="btn ghost" data-act="rmlogo">Quitar logo</button>':''}`:''}</div><div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
+  ${ajustes16Html()}
   ${cfeAjustesHtml()}
   ${equipoHtml()}
   <div class="vhead" style="margin-top:34px"><div><h1>Apariencia</h1><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día. Se guarda en cada dispositivo.</p></div></div>${themeSeg()}
@@ -1014,7 +1018,7 @@ async function saveTrab(close=true,estado){
   if(!v.titulo&&!v.clienteId){err.textContent='Poné qué trabajo es o elegí el cliente.';err.hidden=false;return}
   v.duracion=n0(v.duracion)||1;
   v.tecnicos=[...document.querySelectorAll('#techs input[name=tec]:checked')].map(i=>i.value);
-  const inf=$('#f_informe'),mat=$('#f_materiales');if(inf)v.informe=inf.value;if(mat)v.materiales=mat.value;if(TJ&&TJ._ms)v.matStock=msClean(TJ._ms);
+  const inf=$('#f_informe'),mat=$('#f_materiales');if(inf)v.informe=inf.value;if(mat)v.materiales=mat.value;if(TJ&&TJ._ms)v.matStock=msClean(TJ._ms);if(TJ&&TJ._ck)v.checklist=TJ._ck.map(x=>({t:x.t,ok:!!x.ok}));
   ['tipoTrabajo','llegada','salida','pendientes'].forEach(k=>{const e=$('#f_'+k);if(e)v[k]=e.value});
   if(estado)v.estado=estado;
   if(estado==='en_curso'&&!v.llegada)v.llegada=hhmm();
@@ -1157,7 +1161,7 @@ function sheetFact(id,p){
     ${cfeOn()||(q.cfeData&&q.cfeData.idCFE)?'':`<label class="fld" for="q_cfe"><span>Nº de CFE (de tu proveedor)</span><input type="text" id="q_cfe" data-q="cfe" value="${esc(q.cfe)}" placeholder="Ej.: A 1234"></label>`}
   </div>
   <section class="rel"><h3>Líneas</h3><div class="qlh" aria-hidden="true"><span>Descripción</span><span>Cant.</span><span>Unidad</span><span>Precio u.</span><span>Importe</span><span></span></div>
-    <div class="qlines" id="qlines">${qLinesHtml()}</div><div><button class="btn" data-act="addline">+ Línea</button></div>
+    <div class="qlines" id="qlines">${qLinesHtml()}</div><div class="actions"><button class="btn" data-act="addline">+ Línea</button>${kitPickHtml()}</div>
     <div class="grid" style="margin-top:4px"><label class="fld" for="q_descuento"><span>Descuento (%)</span><input type="number" id="q_descuento" data-q="descuento" min="0" max="100" step="any" value="${esc(q.descuento)}"></label>
     <label class="fld chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="q_iva" data-q="iva"${q.iva?' checked':''}><span>Sumar IVA 22 %</span></label></div>
     <div class="totals" id="qtot">${qTotHtml()}</div></section>
@@ -1200,13 +1204,13 @@ async function genAbonos(){
 
 /* ---------- menú (celular) ---------- */
 function vMenu(){
-  const it=[['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${mantPend().length?' · '+mantPend().length+' mantenimiento'+(mantPend().length===1?'':'s')+' a vencer':''}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
+  const it=[...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${mantPend().length?' · '+mantPend().length+' mantenimiento'+(mantPend().length===1?'':'s')+' a vencer':''}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ['facturacion','Facturación',`${arr('facturas').filter(f=>factState(f)==='vencida').length} vencidas`],['agenda','Seguimientos',`${overdueCount()} vencidos`],
     ['reportes','Reportes','Pipeline, tickets y cobros'],['mas','Catálogo y ajustes','Productos, datos de la empresa, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${it.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
 }
 
-const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario};
+const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1262,7 +1266,7 @@ const PRODF=[{k:'nombre',l:'Nombre',w:'full',ph:'Ej.: Cable fibra óptica 12 hil
   {k:'serie',l:'Lleva número de serie (equipos)',t:'checkbox',inv:1},{k:'garantiaMeses',l:'Garantía (meses)',t:'number',step:'1',inv:1},
   {k:'mantCada',l:'Mantenimiento preventivo',t:'select',o:[['0','Sin mantenimiento'],['1','Cada mes'],['3','Cada 3 meses'],['6','Cada 6 meses'],['12','Cada año']],inv:1},
   {k:'notas',l:'Notas',t:'textarea',w:'full'}];
-const prodF=()=>PRODF.filter(f=>(!f.boss||isBoss())&&(!f.inv||invOn()));
+const prodF=()=>PRODF.filter(f=>(!f.boss||isBoss())&&(!f.inv||invOn())).map(f=>f.k==='servicio'?{...f,o:[['','—'],...SERV]}:f);
 
 function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={}){
   return`<header class="sh-h"><h2 id="shTitle"><span class="kind">${kind}</span>${esc(title)}</h2><button class="x" data-act="close" aria-label="Cerrar">✕</button></header>
@@ -1271,7 +1275,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1383,7 +1387,7 @@ function sheetPres(id,p){
     <label class="fld" for="q_estado"><span>Estado</span><select id="q_estado" data-q="estado">${opts(EST,q.estado)}</select></label>
   </div>
   <section class="rel"><h3>Líneas</h3><div class="qlh" aria-hidden="true"><span>Descripción</span><span>Cant.</span><span>Unidad</span><span>Precio u.</span><span>Importe</span><span></span></div>
-    <div class="qlines" id="qlines">${qLinesHtml()}</div><div><button class="btn" data-act="addline">+ Línea</button></div>
+    <div class="qlines" id="qlines">${qLinesHtml()}</div><div class="actions"><button class="btn" data-act="addline">+ Línea</button>${kitPickHtml()}</div>
     <div class="grid" style="margin-top:4px"><label class="fld" for="q_descuento"><span>Descuento (%)</span><input type="number" id="q_descuento" data-q="descuento" min="0" max="100" step="any" value="${esc(q.descuento)}"></label>
     <label class="fld chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="q_iva" data-q="iva"${q.iva?' checked':''}><span>Sumar IVA 22 %</span></label></div>
     <div class="totals" id="qtot">${qTotHtml()}</div></section>
@@ -1462,6 +1466,7 @@ async function act(a,el){
   if(await modulosAct(k,el,arg))return;
   if(await invAct(k,el,arg))return;
   if(await obraAct(k,el,arg))return;
+  if(await rubAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -1504,12 +1509,12 @@ async function act(a,el){
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
         el.textContent=nOps?`Tiene ${nOps} oportunidad${nOps>1?'es':''}. ¿Eliminar igual?`:'¿Eliminar? Tocá de nuevo';return}
-      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas'}[SH.type];if(!col){closeSheet();break}
+      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists'}[SH.type];if(!col){closeSheet();break}
       const tarPry=SH.type==='tar'&&D.tareas[SH.id]?.proyectoId;
       if(SH.type==='trab')await msDropJob(SH.id);
       await remove(col,SH.id);if(tarPry){delete D.tareas[SH.id];await pryAvSync(tarPry)}toast('Eliminado');closeSheet();break}
@@ -1672,7 +1677,7 @@ function informeHtml(j){
     ${fld({k:'tipoTrabajo',l:'Tipo de trabajo',t:'select',o:[['','—'],...TTIPO]},j.tipoTrabajo||(D.tickets[j.ticketId]?.tipo==='instalacion'?'instalacion':D.tickets[j.ticketId]?.tipo==='reclamo'?'reclamo':''))}
     ${fld({k:'llegada',l:'Llegada',t:'time'},j.llegada)}${fld({k:'salida',l:'Salida',t:'time'},j.salida)}
     ${fld({k:'informe',l:'Qué se hizo',t:'textarea',w:'full',ph:'Trabajo realizado, pruebas hechas, cómo quedó'},j.informe)}
-    ${fld({k:'materiales',l:'Materiales usados',t:'textarea',w:'full',ph:'Ej.: 40 m UTP cat6, 2 cámaras domo 4 MP, 1 fuente 12 V'},j.materiales)}</div>${msHtml(j)}<div class="grid">
+    ${fld({k:'materiales',l:'Materiales usados',t:'textarea',w:'full',ph:'Ej.: 40 m UTP cat6, 2 cámaras domo 4 MP, 1 fuente 12 V'},j.materiales)}</div>${msHtml(j)}${ckHtml(j)}<div class="grid">
     ${fld({k:'pendientes',l:'Pendientes y recomendaciones',t:'textarea',w:'full',ph:'Lo que queda por hacer o lo que conviene revisar'},j.pendientes)}</div>
     <div class="sigview">${f&&f.id?`<img src="${esc(blobUrl(f.id))}" alt="Firma del cliente"><p style="margin:6px 0 0"><b>${esc(f.nombre||'')}</b>${f.ci?' · CI '+esc(f.ci):''} · ${new Date(f.en).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'<p class="muted" style="margin:0">Todavía sin firma del cliente.</p>'}</div>
     <div class="actions">${AS&&!PORTAL()?`<button class="btn ${f&&f.id?'':'pri'}" data-act="firmar">${f&&f.id?'Volver a firmar':'Firma del cliente'}</button>`:''}<button class="btn" data-act="informe">Descargar informe</button></div></section>`;
@@ -1742,7 +1747,7 @@ ${docHead('Informe de servicio',j.numero||'',fdateL(j.fecha))}
 <div class="box"><span class="k">Cliente</span><div><strong>${esc(c.nombre||'')}</strong>${c.rut?' · RUT/CI '+esc(c.rut):''}</div><div>${[esc(c.contacto||''),esc(c.telefono||''),esc(j.obra||c.direccion||'')].filter(Boolean).join(' · ')}</div>${pr?`<div>Proyecto: <b>${esc(pr)}</b></div>`:''}${t?`<div>Pedido ${esc(t.numero)}: ${esc(t.titulo||'')}</div>`:''}</div>
 <div class="cols"><div><span class="k">Tipo</span><div>${esc(TTIPOK[j.tipoTrabajo]||'—')}</div></div><div><span class="k">Llegada</span><div>${esc(j.llegada||'—')}</div></div><div><span class="k">Salida</span><div>${esc(j.salida||'—')}</div></div><div><span class="k">Técnicos</span><div>${esc(tecs||'—')}</div></div></div>
 <h2>Trabajo realizado</h2><div class="txt">${esc(j.informe||j.titulo||'—')}</div>
-${msInforme(j)}${j.materiales?`<h2>${(j.matStock||[]).length?'Otros materiales':'Materiales'}</h2><div class="txt">${esc(j.materiales)}</div>`:''}
+${msInforme(j)}${ckInforme(j)}${j.materiales?`<h2>${(j.matStock||[]).length?'Otros materiales':'Materiales'}</h2><div class="txt">${esc(j.materiales)}</div>`:''}
 ${j.pendientes?`<h2>Pendientes y recomendaciones</h2><div class="txt">${esc(j.pendientes)}</div>`:''}
 ${fotos.length?`<h2>Fotos</h2><div class="ph">${fotos.map(u=>`<img src="${u}" alt="">`).join('')}</div>`:''}
 <div class="sig"><span class="k">Conformidad del cliente</span>${firma?`<img src="${firma}" alt="Firma"><div><b>${esc(j.firma.nombre||'')}</b>${j.firma.ci?' · CI '+esc(j.firma.ci):''}</div><div>${new Date(j.firma.en).toLocaleString('es-UY')}</div>`:'<p>Sin firmar.</p>'}</div>
@@ -2276,7 +2281,7 @@ function sheetTec(id){
   let body=`<div class="contact"><strong>${esc(personName(id))}</strong><span class="muted">${esc(MEMBERS[id]?.email||'')}</span>${vencTags(f)}</div>
     <div class="kpis" style="margin-bottom:6px"><div class="kpi"><span class="k">${esc(tpRange()[2])}</span><b class="num">${fmtH(s.horas)}</b></div><div class="kpi"><span class="k">Extra</span><b class="num">${fmtH(s.extra)}</b></div><div class="kpi"><span class="k">Visitas cerradas</span><b class="num">${s.term}</b></div>${boss&&s.vh?`<div class="kpi"><span class="k">A liquidar</span><b class="num">${money(s.total,s.moneda)}</b></div>`:''}</div>`;
   if(boss){
-    body+=`<section class="rel"><h3>Especialidades</h3><div class="techs">${SERV.filter(x=>x!=='Otro').concat(['Alarmas','Altura','Electricidad']).map(x=>`<label><input type="checkbox" name="tesp" value="${esc(x)}"${esp.has(x)?' checked':''}>${esc(x)}</label>`).join('')}</div></section>
+    body+=`<section class="rel"><h3>Especialidades</h3><div class="techs">${[...new Set(SERV.filter(x=>x!=='Otro').concat(['Alarmas','Altura','Electricidad']))].map(x=>`<label><input type="checkbox" name="tesp" value="${esc(x)}"${esp.has(x)?' checked':''}>${esc(x)}</label>`).join('')}</div></section>
       <div class="grid">${TECF().map(x=>fld(x,f[x.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
   }else body+=`<p class="muted">Los datos de tu ficha los carga el administrador.</p>`;
   body+=`<section class="rel"><h3>Visitas del período</h3>${s.jobs.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(j=>{const h=jobHours(j);return`<div class="item link" role="button" tabindex="0" data-open="trab:${j.id}"><span>${fdate(j.fecha)}</span><span class="grow">${esc(j.titulo||'Visita')} · <span class="muted">${esc(cliName(j.clienteId)||'')}</span></span><span class="num">${h!=null?fmtH(h):'—'}</span>${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':''}</div>`}).join('')||'<p class="muted" style="margin:0">Sin visitas en el período.</p>'}</section>`;
@@ -2311,8 +2316,8 @@ function cfeBox(f){
     return`<section class="rel"><h3>Factura electrónica</h3><div class="contact"><span class="code">${esc(c.comprobante||'CFE')}</span><span class="tag ${st[1]}">${st[0]}</span>${c.ambiente==='testing'?'<span class="tag t-warn">Prueba (no va a DGI)</span>':''}</div>
       ${c.motivoRechazoDGI?`<p class="err">${esc(c.motivoRechazoDGI)}</p>`:''}
       <div class="actions">${c.urlA4?`<a class="btn" href="${esc(c.urlA4)}" target="_blank" rel="noopener">PDF A4</a>`:''}${c.urlTicket?`<a class="btn" href="${esc(c.urlTicket)}" target="_blank" rel="noopener">Ticket</a>`:''}<button class="btn ghost" data-act="cfe:consultar">Actualizar estado</button>${!c.urlA4?'<button class="btn ghost" data-act="cfe:imprimir">Pedir PDF</button>':''}
-      ${f.cfeNC&&f.cfeNC.idCFE?`<span class="tag t-none">Nota de crédito ${esc(f.cfeNC.comprobante||'')}</span>${f.cfeNC.urlA4?`<a class="btn" href="${esc(f.cfeNC.urlA4)}" target="_blank" rel="noopener">PDF nota</a>`:''}`:(isBoss()?'<button class="btn ghost danger" data-act="cfe:devolver">Nota de crédito</button>':'')}</div></section>`}
-  if(cfeOn())return`<section class="rel"><h3>Factura electrónica</h3><p class="muted" style="margin:0">Se emite por Fixed${CFEI.ambiente==='testing'?' en modo prueba (no va a DGI)':''}. Con RUT sale e-Factura; sin RUT, e-Ticket.</p>${SH&&SH.id&&isBoss()?'<div class="actions"><button class="btn pri" data-act="cfe:emitir">Emitir CFE</button></div>':'<p class="hint">Guardá la factura para poder emitirla.</p>'}</section>`;
+      ${f.cfeNC&&f.cfeNC.idCFE?`<span class="tag t-none">Nota de crédito ${esc(f.cfeNC.comprobante||'')}</span>${f.cfeNC.urlA4?`<a class="btn" href="${esc(f.cfeNC.urlA4)}" target="_blank" rel="noopener">PDF nota</a>`:''}`:(canCfe()?'<button class="btn ghost danger" data-act="cfe:devolver">Nota de crédito</button>':'')}</div></section>`}
+  if(cfeOn())return`<section class="rel"><h3>Factura electrónica</h3><p class="muted" style="margin:0">Se emite por Fixed${CFEI.ambiente==='testing'?' en modo prueba (no va a DGI)':''}. Con RUT sale e-Factura; sin RUT, e-Ticket.</p>${SH&&SH.id&&canCfe()?'<div class="actions"><button class="btn pri" data-act="cfe:emitir">Emitir CFE</button></div>':'<p class="hint">Guardá la factura para poder emitirla.</p>'}</section>`;
   return'';
 }
 async function cfeCall(accion,extra={}){const d=await fnData(await SB.functions.invoke('cfe',{body:{org:ORG,accion,...extra}}));return d}
@@ -2902,6 +2907,182 @@ document.addEventListener('change',async e=>{const t=e.target;if(!t)return;
     const {error}=await SB.from('members').update({role:r}).match({org_id:ORG,user_id:u});
     if(error){toast('No se pudo aprobar.');return}MEMBERS[u].role=r;toast('Aprobado como '+(ROLEN[r]||r));sr()}});
 
+/* ---------- 1.6: rubros, asistente de inicio, kits de presupuesto, listas de control, importar desde Excel y subcontratistas ---------- */
+const RUBROS=[
+  {k:'cctv',n:'CCTV',l:'Cámaras (CCTV)',kits:[['Cámara IP instalada',[['Cámara IP domo 4 MP',1,'unidad'],['Cable UTP cat6',20,'metro'],['Conector RJ45',2,'unidad'],['Caja de paso estanca',1,'unidad'],['Mano de obra',2,'hora']]]],
+    chk:[['Instalación de CCTV','instalacion',['Cámaras enfocadas, con imagen de día y de noche','Grabador grabando con fecha y hora correctas','Días de grabación según lo acordado','Acceso desde el celular del cliente probado','Usuario y contraseña entregados al cliente','Cables y rack etiquetados']],['Mantenimiento de CCTV','mantenimiento',['Limpieza de lentes y domos','Grabación de los últimos días revisada','Estado del disco revisado','Firmware actualizado si corresponde','Fuentes y UPS revisadas']]]},
+  {k:'accesos',n:'Control de acceso',l:'Control de acceso',kits:[['Puerta con control de acceso',[['Lectora de proximidad',1,'unidad'],['Cerradura electromagnética 600 lb',1,'unidad'],['Fuente 12 V con batería',1,'unidad'],['Botón de salida',1,'unidad'],['Cable 6 hilos',15,'metro'],['Mano de obra',3,'hora']]]],
+    chk:[['Instalación de control de acceso','instalacion',['Apertura con tarjeta, huella o código probada','Botón de salida y apertura de emergencia funcionando','Batería de respaldo probada cortando la luz','Usuarios cargados y listado entregado','Horarios configurados']]]},
+  {k:'alarmas',n:'Alarmas',l:'Alarmas',kits:[['Alarma básica',[['Panel de alarma',1,'unidad'],['Teclado',1,'unidad'],['Sensor de movimiento',4,'unidad'],['Sensor magnético',2,'unidad'],['Sirena exterior',1,'unidad'],['Batería 12 V 7 Ah',1,'unidad'],['Mano de obra',4,'hora']]]],
+    chk:[['Instalación de alarma','instalacion',['Todas las zonas probadas una por una','Sirena y aviso al celular probados','Batería de respaldo cargada','Códigos de usuario entregados','Conexión con el monitoreo probada si corresponde']]]},
+  {k:'fibra',n:'Fibra óptica',l:'Fibra óptica',kits:[['Empalme de fibra (12 hilos)',[['Fusión',12,'unidad'],['Bandeja de empalme',1,'unidad'],['Protector de fusión',12,'unidad']]]],
+    chk:[['Tendido y fusión de fibra','instalacion',['Medición con OTDR guardada','Pérdida por empalme dentro de lo permitido','Hilos identificados en las dos puntas','Cajas cerradas y selladas']]]},
+  {k:'cableado',n:'Cableado estructurado',l:'Cableado estructurado',kits:[['Punto de red',[['Cable UTP cat6',25,'metro'],['Jack cat6',1,'unidad'],['Patch cord',2,'unidad'],['Faceplate',1,'unidad'],['Canaleta',3,'metro'],['Mano de obra',1,'hora']]]],
+    chk:[['Cableado de red','instalacion',['Todos los puntos certificados o probados','Puntos y patch panel etiquetados','Rack ordenado y cerrado','Planilla de puntos entregada']]]},
+  {k:'redes',n:'Redes y WiFi',l:'Redes y WiFi',kits:[['Punto de acceso WiFi',[['Access point',1,'unidad'],['Cable UTP cat6',20,'metro'],['Conector RJ45',2,'unidad'],['Mano de obra',1,'hora']]]],
+    chk:[['Red y WiFi','instalacion',['Señal medida en todos los ambientes','Red de invitados separada','Contraseñas cambiadas y entregadas','Equipos actualizados']]]},
+  {k:'electricidad',n:'Electricidad',l:'Electricidad',kits:[['Toma corriente nuevo',[['Cable 2,5 mm²',15,'metro'],['Caño corrugado',10,'metro'],['Caja de embutir',1,'unidad'],['Toma doble',1,'unidad'],['Mano de obra',1.5,'hora']]]],
+    chk:[['Instalación eléctrica','instalacion',['Diferencial probado con el botón de prueba','Puesta a tierra medida','Circuitos identificados en el tablero','Tablero cerrado, sin partes con tensión expuestas','Ajuste de bornes revisado']]]},
+  {k:'sanitaria',n:'Sanitaria',l:'Sanitaria',kits:[['Conexión de calefón',[['Caño termofusión 20 mm',6,'metro'],['Llave de paso',2,'unidad'],['Flexible',2,'unidad'],['Válvula de seguridad',1,'unidad'],['Mano de obra',3,'hora']]]],
+    chk:[['Instalación sanitaria','instalacion',['Prueba de presión sin pérdidas','Desagües con pendiente y sin pérdidas','Llaves de paso funcionando','Lugar limpio y sin escombros']]]},
+  {k:'clima',n:'Climatización',l:'Climatización',kits:[['Instalación de split',[['Kit de cañería 3 m',1,'unidad'],['Soporte de unidad exterior',1,'unidad'],['Cable 4 × 1,5 mm²',5,'metro'],['Manguera de drenaje',3,'metro'],['Mano de obra',4,'hora']]]],
+    chk:[['Instalación de aire acondicionado','instalacion',['Vacío hecho antes de abrir el gas','Sin pérdidas en las conexiones','Drenaje probado','Temperatura de salida medida','Control remoto explicado al cliente']]]},
+  {k:'incendio',n:'Incendio',l:'Incendio',kits:[['Detector de humo',[['Detector de humo',1,'unidad'],['Base de detector',1,'unidad'],['Cable de incendio',15,'metro'],['Mano de obra',1,'hora']]]],
+    chk:[['Sistema de incendio','instalacion',['Cada detector probado con aerosol de prueba','Panel sin fallas','Sirenas y luces probadas','Planilla de dispositivos entregada']]]},
+  {k:'portones',n:'Portones automáticos',l:'Portones automáticos',kits:[['Motor de portón corredizo',[['Motor corredizo',1,'unidad'],['Cremallera',4,'metro'],['Control remoto',2,'unidad'],['Fotocélula',1,'unidad'],['Mano de obra',4,'hora']]]],
+    chk:[['Instalación de portón','instalacion',['Finales de carrera ajustados','La fotocélula detiene el cierre','Controles programados','Desbloqueo manual explicado al cliente']]]},
+  {k:'solar',n:'Energía solar',l:'Energía solar',kits:[['Panel solar instalado',[['Panel solar',1,'unidad'],['Estructura de montaje',1,'unidad'],['Cable solar 6 mm²',10,'metro'],['Conector MC4',2,'unidad'],['Mano de obra',2,'hora']]]],
+    chk:[['Instalación solar','instalacion',['Polaridad y tensión de cada string medidas','Inversor configurado y conectado','Puesta a tierra de las estructuras','Monitoreo configurado en el celular del cliente']]]}];
+const SERV_BASE=[...SERV];
+function applyRubros(){const r=(CFG&&CFG.rubros)||[];const want=r.length?[...RUBROS.filter(x=>r.includes(x.k)).map(x=>x.n),'Mantenimiento','Otro']:SERV_BASE;
+  if(want.join('|')!==SERV.join('|'))SERV.splice(0,SERV.length,...want)}
+const canCfe=()=>isBoss()||ROLE==='administracion';
+
+/* --- asistente de inicio --- */
+function setupSteps(){
+  const staff=Object.values(MEMBERS).filter(m=>!['cliente','pendiente'].includes(m.role)).length;
+  return[
+    {k:'datos',n:'Datos de la empresa',d:'RUT, teléfono y logo para presupuestos y facturas',ok:!!(CFG.rut||CFG.telefono),go:'mas'},
+    {k:'rubros',n:'Tus rubros',d:'Qué instalan: arma los servicios, kits de presupuesto y listas de control',ok:((CFG.rubros||[]).length>0)},
+    {k:'equipo',n:'Tu equipo',d:'Invitá a técnicos, encargados y administración con su rol',ok:staff>1,go:'mas'},
+    {k:'datos2',n:'Clientes y catálogo',d:'Importá tus planillas de Excel o cargalos de a uno',ok:arr('clientes').length>0&&arr('productos').length>0},
+    ...(invOn()?[{k:'stock',n:'Depósitos y camionetas',d:'Para descontar materiales desde cada trabajo',ok:arr('depositos').length>0,go:'inventario'}]:[])];
+}
+const setupPending=()=>isBoss()&&!CFG.setupDone&&setupSteps().some(s=>!s.ok);
+function setupBanner(){if(!setupPending()||VIEW==='inicio')return'';const s=setupSteps();return`<p class="note">Configurá Olumi: ${s.filter(x=>x.ok).length} de ${s.length} pasos listos. <button class="btn ghost" data-view="inicio">Seguir</button></p>`}
+function vInicio(){
+  const s=setupSteps(),r=new Set(CFG.rubros||[]);
+  const step=(x,i,body='')=>`<div class="panel setup${x.ok?' ok':''}"><div class="st-h"><span class="st-n">${x.ok?'✓':i+1}</span><div class="grow"><b>${esc(x.n)}</b><p class="muted" style="margin:2px 0 0">${esc(x.d)}</p></div>${x.go?`<button class="btn${x.ok?' ghost':''}" data-view="${x.go}">${x.ok?'Revisar':'Ir'}</button>`:''}</div>${body}</div>`;
+  const rub=`<div class="techs" style="margin-top:12px">${RUBROS.map(x=>`<label><input type="checkbox" name="rub" value="${x.k}"${r.has(x.k)?' checked':''}${isBoss()?'':' disabled'}>${esc(x.l)}</label>`).join('')}</div>
+    ${isBoss()?`<div class="actions" style="margin-top:10px"><button class="btn pri" data-act="rubsave">Guardar rubros</button><button class="btn" data-act="rubseed">Cargar kits y listas de control de ejemplo</button></div><p class="hint" style="margin:6px 0 0">Los ejemplos se pueden editar o borrar en Catálogo y ajustes.</p>`:''}`;
+  const imp=`<div class="actions" style="margin-top:12px"><button class="btn" data-view="mas">Importar desde Excel</button><button class="btn ghost" data-new="cli">+ Cliente</button><button class="btn ghost" data-new="prod">+ Producto</button></div>`;
+  return`<div class="vhead"><div><h1>Primeros pasos</h1><p class="sub">${s.filter(x=>x.ok).length} de ${s.length} listos · en 10 minutos queda pronta para trabajar</p></div>${isBoss()?'<div class="tools"><button class="btn ghost" data-act="setupdone">Ya está, no mostrar más</button></div>':''}</div>
+  ${s.map((x,i)=>step(x,i,x.k==='rubros'?rub:x.k==='datos2'?imp:'')).join('')}`;
+}
+
+/* --- kits de presupuesto --- */
+const kits=()=>arr('kits').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+function kitPickHtml(){const l=kits();return l.length?`<select data-kitpick aria-label="Agregar un kit"><option value="">+ Kit…</option>${l.map(k=>`<option value="${esc(k.id)}">${esc(k.nombre)}</option>`).join('')}</select><input type="number" id="kit_n" min="1" step="1" value="1" inputmode="numeric" aria-label="Cantidad de kits" style="width:72px">`:''}
+function kitLines(k,n){return(k.items||[]).filter(x=>x.desc).map(x=>{const p=arr('productos').find(p=>qn(p.nombre)===qn(x.desc));const ok=p&&(!x.unidad||x.unidad===p.unidad);return{desc:x.desc,cant:r2(n0(x.cant)*n),unidad:x.unidad||p?.unidad||'unidad',precio:ok?r2(conv(p.precio,p.moneda,QE.moneda)):n0(x.precio)}})}
+let KE=null;
+function sheetKit(id){
+  const k=id?D.kits[id]:{nombre:'',items:[{desc:'',cant:1,unidad:'unidad'}]};KE={...k,items:(k.items||[]).map(x=>({...x}))};
+  return sheetFrame('Kit de presupuesto',id?k.nombre:'Nuevo kit',`<div class="grid"><label class="fld full" for="kt_n"><span>Nombre del kit</span><input id="kt_n" type="text" value="${esc(k.nombre||'')}" placeholder="Ej.: Cámara IP instalada"></label></div>
+    <section class="rel"><h3>Qué lleva cada kit</h3><p class="hint">Al agregarlo a un presupuesto, cada línea toma el precio del catálogo si el nombre coincide.</p><div id="ktLines">${ktLinesHtml()}</div><div><button class="btn" data-act="ktadd">+ Línea</button></div></section><p class="err" id="shErr" hidden></p>`,{del:!!id});
+}
+function ktLinesHtml(){return KE.items.map((x,i)=>`<div class="msrow"><input type="text" list="prodlist" data-kt="${i}:desc" value="${esc(x.desc||'')}" placeholder="Material o mano de obra" aria-label="Descripción"><input type="number" data-kt="${i}:cant" value="${esc(String(x.cant??1))}" step="any" min="0" inputmode="decimal" aria-label="Cantidad"><select data-kt="${i}:unidad" aria-label="Unidad">${opts(UNID,x.unidad||'unidad')}</select><button class="btn ghost" data-act="ktdel:${i}" aria-label="Quitar">✕</button></div>`).join('')}
+async function saveKit(){const n=$('#kt_n').value.trim(),e=$('#shErr');if(!n){e.textContent='Poné un nombre.';e.hidden=false;return}
+  const items=KE.items.filter(x=>(x.desc||'').trim()).map(x=>({desc:x.desc.trim(),cant:n0(x.cant)||1,unidad:x.unidad||'unidad'}));if(!items.length){e.textContent='Agregá al menos una línea.';e.hidden=false;return}
+  const id=SH.id||uid();await put('kits',id,{...(SH.id?D.kits[SH.id]:{creado:Date.now()}),nombre:n,items});toast('Kit guardado');closeSheet()}
+
+/* --- listas de control por tipo de trabajo --- */
+const chks=()=>arr('checklists').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+function sheetChk(id){const c=id?D.checklists[id]:{tipo:'instalacion',items:[]};
+  return sheetFrame('Lista de control',id?c.nombre:'Nueva lista',`<div class="grid"><label class="fld full" for="ck_n"><span>Nombre</span><input id="ck_n" type="text" value="${esc(c.nombre||'')}" placeholder="Ej.: Instalación de CCTV"></label>
+    <label class="fld" for="ck_t"><span>Tipo de trabajo</span><select id="ck_t">${opts([['','Cualquiera'],...TTIPO],c.tipo||'')}</select></label>
+    <label class="fld full" for="ck_i"><span>Controles (uno por renglón)</span><textarea id="ck_i" rows="8" placeholder="Cámaras enfocadas&#10;Grabador grabando">${esc((c.items||[]).join('\n'))}</textarea></label></div><p class="err" id="shErr" hidden></p>`,{del:!!id})}
+async function saveChk(){const n=$('#ck_n').value.trim(),items=$('#ck_i').value.split('\n').map(x=>x.trim()).filter(Boolean),e=$('#shErr');
+  if(!n||!items.length){e.textContent='Poné un nombre y al menos un control.';e.hidden=false;return}
+  const id=SH.id||uid();await put('checklists',id,{...(SH.id?D.checklists[SH.id]:{creado:Date.now()}),nombre:n,tipo:$('#ck_t').value,items});toast('Lista guardada');closeSheet()}
+function ckHtml(j){
+  if(!j._ck)j._ck=(j.checklist||[]).map(x=>({...x}));const l=chks(),can=AS&&!PORTAL();
+  if(!j._ck.length&&!l.length)return'';
+  const sug=l.find(c=>c.tipo&&c.tipo===j.tipoTrabajo)||null;
+  return`<section class="rel" id="ckBox"><h3>Lista de control${j._ck.length?` <span class="num">${j._ck.filter(x=>x.ok).length}/${j._ck.length}</span>`:''}</h3>
+    <div id="ckList">${j._ck.map((x,i)=>`<label class="item" style="cursor:pointer"><input type="checkbox" data-jck="${i}"${x.ok?' checked':''}${can?'':' disabled'}><span class="grow">${esc(x.t)}</span></label>`).join('')}</div>
+    ${can&&l.length?`<div class="mini"><div class="row2"><select id="ck_pick" aria-label="Lista de control">${opts([['',j._ck.length?'Cambiar por otra lista…':'Elegí una lista…'],...l.map(c=>[c.id,c.nombre])],sug&&!j._ck.length?sug.id:'')}</select><button class="btn" data-act="ckload">Usar</button></div></div>`:''}</section>`;
+}
+function ckInforme(j){const l=j.checklist||[];return l.length?`<h2>Lista de control</h2><table><tbody>${l.map(x=>`<tr><td style="width:28px">${x.ok?'✓':'—'}</td><td>${esc(x.t)}</td></tr>`).join('')}</tbody></table>`:''}
+
+/* --- importar clientes y productos desde Excel (.xlsx) o CSV --- */
+const colIdx=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n-1};
+async function readXlsx(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf),td=new TextDecoder();
+  let e=u8.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('zip');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const files={};
+  for(let i=0;i<n;i++){const nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true);files[td.decode(u8.subarray(p+46,p+46+nl))]={m:dv.getUint16(p+10,true),cs:dv.getUint32(p+20,true),off:dv.getUint32(p+42,true)};p+=46+nl+el+cl}
+  const get=async name=>{const f=files[name];if(!f)return null;const s0=f.off+30+dv.getUint16(f.off+26,true)+dv.getUint16(f.off+28,true),data=u8.slice(s0,s0+f.cs);
+    if(f.m===0)return td.decode(data);return td.decode(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer())};
+  const xml=t=>new DOMParser().parseFromString(t,'application/xml'),ss=[],sx=await get('xl/sharedStrings.xml');
+  if(sx)xml(sx).querySelectorAll('si').forEach(si=>ss.push([...si.querySelectorAll('t')].map(t=>t.textContent).join('')));
+  const sn=Object.keys(files).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/))).at(0);if(!sn)throw new Error('sheet');
+  const rows=[];xml(await get(sn)).querySelectorAll('sheetData row').forEach(r=>{const row=[];r.querySelectorAll('c').forEach(c=>{const ci=colIdx((c.getAttribute('r')||'A').replace(/\d+/g,'')),t=c.getAttribute('t');
+    row[ci]=t==='s'?(ss[+(c.querySelector('v')?.textContent||0)]||''):t==='inlineStr'?[...c.querySelectorAll('is t')].map(x=>x.textContent).join(''):(c.querySelector('v')?.textContent||'')});rows.push(Array.from(row,x=>x??''))});
+  return rows.filter(r=>r.some(x=>String(x).trim()));
+}
+function parseCsv(t){t=t.replace(/^﻿/,'');const f0=(t.split(/\r?\n/)[0]||'');const sep=[';',',','\t'].map(s=>[s,f0.split(s).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}else if(ch==='"')q=true;else if(ch===sep){row.push(f);f=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>String(x).trim()))}
+const IMPMAP={clientes:{nombre:['nombre','razon social','cliente','empresa','nombre o razon social'],rut:['rut','ci','documento','cedula','rut o ci'],contacto:['contacto','persona de contacto'],telefono:['telefono','celular','tel','movil','whatsapp'],email:['email','correo','mail','e-mail','correo electronico'],direccion:['direccion','domicilio'],departamento:['departamento','depto'],notas:['notas','observaciones','comentarios']},
+  productos:{codigo:['codigo','sku','cod','codigo interno'],nombre:['nombre','descripcion','producto','articulo'],unidad:['unidad','um','unidad de medida'],precio:['precio','precio sin iva','precio de venta','pvp','precio unitario'],moneda:['moneda'],costo:['costo','precio de costo','costo unitario'],servicio:['servicio','rubro','categoria']}};
+const numUY=v=>{let s=String(v??'').replace(/[^\d,.\-]/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else if(s.includes(','))s=s.replace(',','.');return Number(s)||0};
+function impMap(kind,rows){
+  const hdr=(rows[0]||[]).map(h=>qn(h).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()),M=IMPMAP[kind],idx={};
+  Object.entries(M).forEach(([k,al])=>{let i=hdr.findIndex(h=>al.includes(h));if(i<0)i=hdr.findIndex(h=>al.some(a=>h.startsWith(a)));if(i>=0)idx[k]=i});
+  const out=rows.slice(1).map(r=>{const o={};Object.entries(idx).forEach(([k,i])=>o[k]=String(r[i]??'').trim());return o}).filter(o=>o.nombre);
+  if(kind==='clientes')out.forEach(o=>{if(o.departamento){const d=DEPTOS.find(x=>qn(x)===qn(o.departamento));o.departamento=d||o.departamento}});
+  if(kind==='productos')out.forEach(o=>{const u=UNID.find(x=>qn(x)===qn(o.unidad)||qn(x).startsWith(qn(o.unidad||'-'))&&qn(o.unidad).length>=2);o.unidad=u||(/^m(t|ts|etros?)?$/.test(qn(o.unidad))?'metro':'unidad');o.precio=numUY(o.precio);if('costo' in o)o.costo=numUY(o.costo);o.moneda=/us|u\$|dol/i.test(o.moneda||'')?'USD':'UYU'});
+  return{idx,out,cols:Object.keys(idx)};
+}
+let IMP=null;
+function impBoxHtml(){if(!IMP)return'';const {kind,map,dup}=IMP,nuevos=map.out.length-dup;
+  return`<div class="panel" style="margin-top:10px"><b>${map.out.length} ${kind} en el archivo</b>${dup?` · ${dup} ya estaban y se saltean`:''}<p class="hint" style="margin:4px 0 8px">Columnas reconocidas: ${esc(map.cols.join(', ')||'ninguna')}</p>
+    ${map.out.length?`<div class="tablewrap"><table><thead><tr>${map.cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${map.out.slice(0,4).map(o=>`<tr>${map.cols.map(c=>`<td>${esc(String(o[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="err">No encontré una columna de nombre. La primera fila tiene que tener los títulos (Nombre, RUT, Teléfono…).</p>'}
+    ${nuevos>0?`<div class="actions" style="margin-top:10px"><button class="btn pri" data-act="impgo">Importar ${nuevos} ${kind}</button><button class="btn ghost" data-act="impcancel">Cancelar</button></div>`:''}<p class="busy" id="impBusy" hidden></p></div>`}
+function impDup(kind,o){if(kind==='clientes'){const r=String(o.rut||'').replace(/\D/g,'');return arr('clientes').some(c=>qn(c.nombre)===qn(o.nombre)||(r&&String(c.rut||'').replace(/\D/g,'')===r))}
+  return arr('productos').some(p=>(o.codigo&&p.codigo&&qn(p.codigo)===qn(o.codigo))||qn(p.nombre)===qn(o.nombre))}
+
+/* --- Catálogo y ajustes: rubros, kits, listas e importación --- */
+function ajustes16Html(){
+  const ks=kits(),cs=chks(),boss=isBoss()&&!readonly;
+  return`<div class="vhead" style="margin-top:34px"><div><h1>Kits de presupuesto</h1><p class="sub">Combinaciones que se repiten: se agregan a un presupuesto de una vez, con los precios del catálogo.</p></div>${readonly?'':'<div class="tools"><button class="btn pri" data-act="kitnew">+ Kit</button></div>'}</div>
+  ${ks.length?`<div class="list">${ks.map(k=>`<div class="row" role="button" tabindex="0" data-open="kit:${k.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(k.nombre)}</strong><span class="muted">${esc((k.items||[]).map(x=>x.desc).join(', ').slice(0,120))}</span></div><span class="muted">${(k.items||[]).length} líneas</span></div>`).join('')}</div>`:`<p class="muted">Todavía no hay kits. ${boss?'Elegí tus rubros en <button class="btn ghost" data-view="inicio">Primeros pasos</button> para cargar ejemplos.':''}</p>`}
+  <div class="vhead" style="margin-top:34px"><div><h1>Listas de control</h1><p class="sub">Lo que el técnico tiene que revisar antes de irse, según el tipo de trabajo. Quedan en el informe que firma el cliente.</p></div>${readonly?'':'<div class="tools"><button class="btn pri" data-act="chknew">+ Lista</button></div>'}</div>
+  ${cs.length?`<div class="list">${cs.map(c=>`<div class="row" role="button" tabindex="0" data-open="chk:${c.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(c.nombre)}</strong><span class="muted">${esc(TTIPOK[c.tipo]||'Cualquier trabajo')} · ${(c.items||[]).length} controles</span></div></div>`).join('')}</div>`:'<p class="muted">Todavía no hay listas de control.</p>'}
+  <div class="vhead" style="margin-top:34px"><div><h1>Importar desde Excel</h1><p class="sub">Planillas de Excel (.xlsx) o CSV. La primera fila con los títulos: Nombre, RUT, Teléfono, Email, Dirección… o Código, Nombre, Unidad, Precio, Moneda, Costo.</p></div></div>
+  ${readonly?'<p class="muted">Necesitás permiso de edición para importar.</p>':`<div class="tools"><label class="btn upl">Importar clientes<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="clientes" hidden></label><label class="btn upl">Importar productos<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="productos" hidden></label><button class="btn ghost" data-act="impmodelo:clientes">Planilla modelo de clientes</button><button class="btn ghost" data-act="impmodelo:productos">Planilla modelo de productos</button></div><div id="impBox">${impBoxHtml()}</div>`}`;
+}
+
+/* --- subcontratistas: solo su día, sus tareas y su historial --- */
+const SUBV=['campo','proyectos','trabajos','menu'];
+function subGuard(){if(ROLE!=='subcontratista')return;document.body.classList.add('sub');if(!SUBV.includes(VIEW))VIEW='campo';PRYTAB='tareas'}
+
+/* --- acciones --- */
+async function rubAct(k,el,arg){
+  switch(k){
+    case'setupdone':await saveCfg({...CFG,setupDone:true});toast('Listo. Primeros pasos queda en el menú si lo necesitás.');VIEW='tickets';sr();return true;
+    case'rubsave':{const r=[...document.querySelectorAll('input[name=rub]:checked')].map(i=>i.value);await saveCfg({...CFG,rubros:r});applyRubros();toast(r.length?'Rubros guardados':'Sin rubros: quedan los servicios de siempre');sr();return true}
+    case'rubseed':{const r=[...document.querySelectorAll('input[name=rub]:checked')].map(i=>i.value);if(!r.length){toast('Marcá al menos un rubro.');return true}
+      await saveCfg({...CFG,rubros:r});applyRubros();el.disabled=true;let n=0;
+      for(const x of RUBROS.filter(x=>r.includes(x.k))){for(const [nom,its] of x.kits){if(kits().some(k=>qn(k.nombre)===qn(nom)))continue;await put('kits',uid(),{nombre:nom,rubro:x.k,items:its.map(([desc,cant,unidad])=>({desc,cant,unidad})),creado:Date.now()});n++}
+        for(const [nom,tipo,items] of x.chk){if(chks().some(c=>qn(c.nombre)===qn(nom)))continue;await put('checklists',uid(),{nombre:nom,tipo,rubro:x.k,items,creado:Date.now()});n++}}
+      el.disabled=false;toast(n?`Cargados ${n} kits y listas de control`:'Ya estaban cargados');sr();return true}
+    case'kitnew':openSheet('kit',null);return true;
+    case'ktadd':KE.items.push({desc:'',cant:1,unidad:'unidad'});$('#ktLines').innerHTML=ktLinesHtml();SH.dirty=true;return true;
+    case'ktdel':KE.items.splice(+arg,1);$('#ktLines').innerHTML=ktLinesHtml();SH.dirty=true;return true;
+    case'chknew':openSheet('chk',null);return true;
+    case'ckload':{const c=D.checklists[$('#ck_pick')?.value];if(!c||!TJ)return true;TJ._ck=(c.items||[]).map(t=>({t,ok:false}));$('#ckBox').outerHTML=ckHtml(TJ);SH.dirty=true;return true}
+    case'impcancel':IMP=null;$('#impBox').innerHTML='';return true;
+    case'impmodelo':{const h=arg==='clientes'?[['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],['Depósito Sur SA','219999990011','Ana Pérez','099 123 456','compras@deposur.uy','Ruta 1 km 20','Canelones','Cliente con abono']]:[['Código','Nombre','Unidad','Precio','Moneda','Costo','Servicio'],['DOMO4','Cámara IP domo 4 MP','unidad','95','USD','52','CCTV']];
+      saveFile(`Planilla modelo de ${arg}.csv`,csv(h));return true}
+    case'impgo':{if(!IMP)return true;const {kind,map}=IMP,b=$('#impBusy');el.disabled=true;let n=0,i=0;
+      for(const o of map.out){i++;if(impDup(kind,o))continue;const id=uid();
+        const data=kind==='clientes'?{...o,creado:Date.now()}:{...o,moneda:o.moneda||defMon(),...(o.servicio&&!SERV.includes(o.servicio)?{servicio:''}:{}),creado:Date.now()};
+        await put(kind,id,data);D[kind][id]=data;n++;if(b&&n%10===0){b.hidden=false;b.textContent=`Importando ${i} de ${map.out.length}…`}}
+      IMP=null;toast(`Importados ${n} ${kind}`);sr();return true}
+  }
+  return false;
+}
+document.addEventListener('change',async e=>{const t=e.target;if(!t||!t.dataset)return;
+  if(t.dataset.kitpick!=null){const k=D.kits[t.value];t.value='';if(!k||!QE)return;const n=Math.max(1,n0($('#kit_n')?.value)||1);QE.lineas=QE.lineas.filter(l=>l.desc||n0(l.precio));QE.lineas.push(...kitLines(k,n));$('#qlines').innerHTML=qLinesHtml();qRefresh();SH.dirty=true;toast(`Kit ${k.nombre} agregado`);return}
+  if(t.dataset.kt){const [i,f]=t.dataset.kt.split(':');if(KE&&KE.items[i]){KE.items[i][f]=t.value;SH.dirty=true}return}
+  if(t.dataset.jck!=null&&TJ&&TJ._ck){TJ._ck[+t.dataset.jck].ok=t.checked;SH&&(SH.dirty=true);return}
+  if(t.dataset.imp&&t.files&&t.files[0]){const f=t.files[0],kind=t.dataset.imp;t.value='';
+    try{const rows=/\.xlsx$/i.test(f.name)||f.type.includes('spreadsheetml')?await readXlsx(await f.arrayBuffer()):parseCsv(await f.text());const map=impMap(kind,rows);IMP={kind,map,dup:map.out.filter(o=>impDup(kind,o)).length}}
+    catch(err){IMP=null;toast(/\.xls$/i.test(f.name)?'Ese es un Excel viejo (.xls): guardalo como .xlsx o CSV y probá de nuevo.':'No pude leer el archivo. Probá guardarlo como .xlsx o CSV.')}
+    const box=$('#impBox');if(box)box.innerHTML=impBoxHtml();return}});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.kt){const [i,f]=t.dataset.kt.split(':');if(KE&&KE.items[i]){KE.items[i][f]=t.value;SH&&(SH.dirty=true)}}});
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -3251,8 +3432,8 @@ document.addEventListener('submit',async e=>{
 });
 
 /* ---------- equipo (en Ajustes) ---------- */
-const ROLES=[['admin','Administrador'],['encargado','Encargado'],['ventas','Ventas'],['administracion','Administración'],['tecnico','Técnico'],['viewer','Solo lectura']];
-const ROLEN={owner:'Dueño',admin:'Administrador',encargado:'Encargado',ventas:'Ventas',administracion:'Administración',tecnico:'Técnico',viewer:'Solo lectura',pendiente:'Pide entrar'};
+const ROLES=[['admin','Administrador'],['encargado','Encargado'],['ventas','Ventas'],['administracion','Administración'],['tecnico','Técnico'],['subcontratista','Subcontratista'],['viewer','Solo lectura']];
+const ROLEN={owner:'Dueño',admin:'Administrador',encargado:'Encargado',ventas:'Ventas',administracion:'Administración',tecnico:'Técnico',viewer:'Solo lectura',pendiente:'Pide entrar',subcontratista:'Subcontratista'};
 function equipoHtml(){
   if(!ORG)return'';const admin=['owner','admin'].includes(ROLE);
   const ms=Object.values(MEMBERS).filter(m=>m.role!=='cliente').sort((a,b)=>(a.display_name||a.email||'').localeCompare(b.display_name||b.email||'','es'));
