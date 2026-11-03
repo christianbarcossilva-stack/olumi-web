@@ -408,6 +408,11 @@ body.portal a.btn{text-decoration:none;color:inherit}
 body.portal .app{grid-template-columns:minmax(0,1fr)}
 body.portal .nav,body.portal #topNew,body.portal .top .search{display:none!important}
 body.portal .main{max-width:900px;margin-inline:auto;width:100%}
+.invtabs{display:flex;max-width:100%;overflow-x:auto}.invtabs button{white-space:nowrap}
+.invfil{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.invfil select{min-width:200px}
+.msrow{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,.8fr) auto;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.msrow .full{grid-column:1/-1}.msrow:last-child{border-bottom:0}
+@media (max-width:899px){.msrow{grid-template-columns:minmax(0,1fr) 84px auto}.msrow select[data-ms$=":d"]{grid-column:1/-1;grid-row:2}}
+.eqtags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
 .planthumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
 .planthumb{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;font:inherit;color:inherit}
 .planthumb img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#fff}
@@ -452,6 +457,7 @@ body.portal .main{max-width:900px;margin-inline:auto;width:100%}
     <button data-view="trabajos" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="M20 19l2 2"/></svg>Historial</button>
     <button data-view="proyectos" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6M9 11h1M14 11h1"/></svg>Proyectos</button>
     <button data-view="tecnicos" class="dsk"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 11.5l1.6 1.6 3.4-3.4"/></svg>Técnicos</button>
+    <button data-view="inventario" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Inventario</button>
     <span class="navsec dsk">Comercial</span>
     <button data-view="pipeline"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>Pipeline</button>
     <button data-view="clientes" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Clientes</button>
@@ -497,7 +503,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos'];
+const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -537,7 +543,7 @@ function applyBrand(){
   if(id&&!logoData)loadLogoData();
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -641,7 +647,7 @@ function render(){
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
-  const view=Q&&['reportes','mas','menu','calendario','campo','plan','admin','trabajos'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
+  const view=Q&&['reportes','mas','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   $('#main').innerHTML=ready?view():loadingHtml();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
@@ -714,7 +720,7 @@ function vSearch(){
   const rls=arr('relevamientos').filter(x=>hit([x.titulo,x.servicio,cliName(x.clienteId),x.notas].join(' '))).slice(0,8);
   const prs=arr('proyectos').filter(p=>hit([p.nombre,cliName(p.clienteId),p.direccion].join(' '))).slice(0,8),js=arr('trabajos').filter(j=>hit([j.numero,j.titulo,cliName(j.clienteId),j.obra,j.informe,j.materiales].join(' '))).slice(0,8);
   const r2=sec('Proyectos',prs,p=>`<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="a-main" role="button" tabindex="0" data-open="pry:${p.id}"><strong>${esc(p.nombre)}</strong><span class="muted">${esc(cliName(p.clienteId))}</span></div><span class="muted">${esc((PRYE.find(e=>e[0]===p.estado)||PRYE[0])[1])}</span></div>`)+sec('Relevamientos',rls,x=>`<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="a-main" role="button" tabindex="0" data-open="rel:${x.id}"><strong>${esc(x.titulo||x.servicio||'Relevamiento')}</strong><span class="muted">${esc(cliName(x.clienteId))}</span></div><span class="muted">${fdate(x.fecha)}</span></div>`)+sec('Trabajos',js,j=>`<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="a-main" role="button" tabindex="0" data-open="trab:${j.id}"><strong>${esc(j.titulo||'Trabajo')}</strong><span class="muted">${esc(cliName(j.clienteId))}</span></div><span class="muted">${fdate(j.fecha)}</span></div>`);
-  return`<div class="vhead"><div><h1>Resultados para “${esc(Q)}”</h1><p class="sub">En tickets, clientes, proyectos, trabajos, oportunidades y presupuestos</p></div></div>`+((r+r2)||'<p class="muted">No se encontró nada.</p>');
+  return`<div class="vhead"><div><h1>Resultados para “${esc(Q)}”</h1><p class="sub">En tickets, clientes, proyectos, trabajos, equipos, stock, oportunidades y presupuestos</p></div></div>`+((r+r2+invSearch(hit,sec))||'<p class="muted">No se encontró nada.</p>');
 }
 
 /* --- Clientes --- */
@@ -883,7 +889,7 @@ async function saveTk(){
   if(!v.titulo){err.textContent='Escribí qué pasa o qué pide el cliente.';err.hidden=false;$('#f_titulo').focus();return}
   const nc=($('#f_nuevoCli')?.value||'').trim();
   if(nc){const cid=uid();await put('clientes',cid,{nombre:nc,telefono:($('#f_nuevoTel')?.value||'').trim(),creado:Date.now()});v.clienteId=cid}
-  const base=SH.id?{...D.tickets[SH.id]}:{creado:Date.now(),numero:nextCode('tickets','T')};
+  const base=SH.id?{...D.tickets[SH.id]}:{creado:Date.now(),numero:nextCode('tickets','T'),...(SH.preset?.draft?.equipoId?{equipoId:SH.preset.draft.equipoId}:{})};
   const t={...base,...v,actualizado:Date.now()};
   if(!tkOpen(t)&&!t.resueltoEn)t.resueltoEn=Date.now();
   if(tkOpen(t))t.resueltoEn=0;
@@ -1002,7 +1008,7 @@ async function saveTrab(close=true,estado){
   if(!v.titulo&&!v.clienteId){err.textContent='Poné qué trabajo es o elegí el cliente.';err.hidden=false;return}
   v.duracion=n0(v.duracion)||1;
   v.tecnicos=[...document.querySelectorAll('#techs input[name=tec]:checked')].map(i=>i.value);
-  const inf=$('#f_informe'),mat=$('#f_materiales');if(inf)v.informe=inf.value;if(mat)v.materiales=mat.value;
+  const inf=$('#f_informe'),mat=$('#f_materiales');if(inf)v.informe=inf.value;if(mat)v.materiales=mat.value;if(TJ&&TJ._ms)v.matStock=msClean(TJ._ms);
   ['tipoTrabajo','llegada','salida','pendientes'].forEach(k=>{const e=$('#f_'+k);if(e)v[k]=e.value});
   if(estado)v.estado=estado;
   if(estado==='en_curso'&&!v.llegada)v.llegada=hhmm();
@@ -1011,6 +1017,7 @@ async function saveTrab(close=true,estado){
   const j={...base,...v,actualizado:Date.now()};
   if(j.estado==='terminado'&&!j.terminadoEn)j.terminadoEn=Date.now();
   const id=SH.id||uid();await put('trabajos',id,j);D.trabajos[id]=j;
+  if(invOn()&&((j.matStock||[]).length||arr('movimientos').some(x=>x.trabajoId===id)))await msSync(id,j);
   const t=j.ticketId&&D.tickets[j.ticketId];
   if(t){let ne=null;const te=t.estado||'nuevo';
     if(j.estado==='terminado'&&tkOpen(t))ne='resuelto';
@@ -1172,7 +1179,7 @@ async function saveFact(close=true){
   return id;
 }
 function factDraft(clienteId,lineas,extra={}){return{numero:'',tipo:'venta',clienteId,fecha:today(),vence:addDays(today(),15),moneda:defMon(),iva:true,descuento:0,lineas:lineas.length?lineas:[{desc:'',cant:1,unidad:'unidad',precio:0}],cobros:[],cfe:'',notas:'',...extra}}
-function jobLines(jobs){const l=[];jobs.forEach(j=>{l.push({desc:`Visita técnica ${fdate(j.fecha)}: ${j.titulo||''}`.trim(),cant:n0(j.duracion)||1,unidad:'hora',precio:0});if(j.materiales)l.push({desc:'Materiales: '+j.materiales.replace(/\s+/g,' ').slice(0,300),cant:1,unidad:'global',precio:0})});return l}
+function jobLines(jobs){const l=[];jobs.forEach(j=>{l.push({desc:`Visita técnica ${fdate(j.fecha)}: ${j.titulo||''}`.trim(),cant:n0(j.duracion)||1,unidad:'hora',precio:0});(j.matStock||[]).forEach(m=>{const p=D.productos[m.p];if(p&&n0(m.c))l.push({desc:p.nombre+(m.s?' (serie '+m.s+')':''),cant:n0(m.c),unidad:p.unidad||'unidad',precio:r2(conv(p.precio,p.moneda,defMon()))})});if(j.materiales)l.push({desc:'Materiales: '+j.materiales.replace(/\s+/g,' ').slice(0,300),cant:1,unidad:'global',precio:0})});return l}
 async function genAbonos(){
   const ym=today().slice(0,7);const fs=arr('facturas').filter(f=>f.tipo==='abono'&&f.periodo===ym&&!f.anulada);
   const falta=arr('clientes').filter(c=>c.abonado&&n0(c.abonoMonto)>0&&!fs.some(f=>f.clienteId===c.id));
@@ -1186,13 +1193,13 @@ async function genAbonos(){
 
 /* ---------- menú (celular) ---------- */
 function vMenu(){
-  const it=[['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isBoss()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
+  const it=[['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isBoss()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${mantPend().length?' · '+mantPend().length+' mantenimiento'+(mantPend().length===1?'':'s')+' a vencer':''}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ['facturacion','Facturación',`${arr('facturas').filter(f=>factState(f)==='vencida').length} vencidas`],['agenda','Seguimientos',`${overdueCount()} vencidos`],
     ['reportes','Reportes','Pipeline, tickets y cobros'],['mas','Catálogo y ajustes','Productos, datos de la empresa, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${it.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
 }
 
-const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos};
+const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1243,7 +1250,12 @@ const ACTF=()=>[{k:'tipo',l:'Tipo',t:'select',o:TIPOS},{k:'fecha',l:'Fecha y hor
   {k:'responsable',l:'Responsable',t:'person'},{k:'hecha',l:'Hecha',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
 const PRODF=[{k:'nombre',l:'Nombre',w:'full',ph:'Ej.: Cable fibra óptica 12 hilos (metro)'},{k:'servicio',l:'Servicio',t:'select',o:[['','—'],...SERV]},
   {k:'unidad',l:'Unidad',t:'select',o:UNID},{k:'precio',l:'Precio unitario sin IVA',t:'number',step:'any'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','$ Pesos'],['USD','US$ Dólares']]},
+  {k:'codigo',l:'Código o SKU',ph:'Opcional'},{k:'costo',l:'Costo unitario sin IVA (misma moneda)',t:'number',step:'any',boss:1},
+  {k:'stock',l:'Llevar stock de este producto',t:'checkbox',inv:1},{k:'stockMin',l:'Stock mínimo (avisa cuando baja)',t:'number',step:'any',inv:1},
+  {k:'serie',l:'Lleva número de serie (equipos)',t:'checkbox',inv:1},{k:'garantiaMeses',l:'Garantía (meses)',t:'number',step:'1',inv:1},
+  {k:'mantCada',l:'Mantenimiento preventivo',t:'select',o:[['0','Sin mantenimiento'],['1','Cada mes'],['3','Cada 3 meses'],['6','Cada 6 meses'],['12','Cada año']],inv:1},
   {k:'notas',l:'Notas',t:'textarea',w:'full'}];
+const prodF=()=>PRODF.filter(f=>(!f.boss||isBoss())&&(!f.inv||invOn()));
 
 function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={}){
   return`<header class="sh-h"><h2 id="shTitle"><span class="kind">${kind}</span>${esc(title)}</h2><button class="x" data-act="close" aria-label="Cerrar">✕</button></header>
@@ -1252,7 +1264,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1313,6 +1325,7 @@ function sheetCli(id){
       <section class="rel"><h3>Planos y documentos del cliente</h3><p class="hint">Los técnicos los ven en cada trabajo de este cliente.</p><div id="cliFiles">${cliFilesHtml(id)}</div>${AS?`<div class="actions"><label class="btn upl">Subir plano o documento<input type="file" accept="image/*,application/pdf" multiple data-up="cliplano"></label></div><p class="busy" id="cliBusy" hidden></p>`:''}</section>`;
     if(qs.length)body+=`<section class="rel"><h3>Presupuestos</h3>${qs.map(q=>`<div class="item link" role="button" tabindex="0" data-open="pres:${q.id}"><span class="code">${esc(q.numero)}</span><span class="grow">${fdate(q.fecha)}</span><span class="num">${money(calcQ(q).total,q.moneda)}</span><span class="tag ${ESTC[q.estado]||'t-none'}">${esc((EST.find(e=>e[0]===q.estado)||EST[0])[1])}</span></div>`).join('')}</section>`;
     body+=cliRelHtml(id);
+    body+=cliEqHtml(id);
     body+=cliPortalHtml(id);
   }
   return sheetFrame('Cliente',id?c.nombre:'Nuevo cliente',body,{del:!!id});
@@ -1343,8 +1356,8 @@ async function addActFromOp(){
 }
 
 /* producto */
-function sheetProd(id){const p=id?D.productos[id]:{unidad:'unidad',moneda:defMon()};return sheetFrame('Catálogo',id?p.nombre:'Nuevo producto o servicio',`<div class="grid">${PRODF.map(f=>fld(f,p[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`,{del:!!id})}
-async function saveProd(){const v=readForm(PRODF);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}await put('productos',SH.id||uid(),{...(SH.id?D.productos[SH.id]:{}),...v});toast('Guardado en el catálogo');closeSheet()}
+function sheetProd(id){const p=id?D.productos[id]:{unidad:'unidad',moneda:defMon()};return sheetFrame('Catálogo',id?p.nombre:'Nuevo producto o servicio',`<div class="grid">${prodF().map(f=>fld(f,f.k==='mantCada'?String(n0(p.mantCada)):p[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`,{del:!!id})}
+async function saveProd(){const v=readForm(prodF());if('mantCada' in v)v.mantCada=n0(v.mantCada);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}await put('productos',SH.id||uid(),{...(SH.id?D.productos[SH.id]:{}),...v});toast('Guardado en el catálogo');closeSheet()}
 
 /* presupuesto */
 function nextNum(){const m=Math.max(0,...arr('presupuestos').map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
@@ -1439,6 +1452,7 @@ async function act(a,el){
   if(await obrasAct(k,el,arg))return;
   if(await planosAct(k,el,arg))return;
   if(await modulosAct(k,el,arg))return;
+  if(await invAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -1481,12 +1495,13 @@ async function act(a,el){
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet()}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
         el.textContent=nOps?`Tiene ${nOps} oportunidad${nOps>1?'es':''}. ¿Eliminar igual?`:'¿Eliminar? Tocá de nuevo';return}
-      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas'}[SH.type];
+      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos'}[SH.type];if(!col){closeSheet();break}
+      if(SH.type==='trab')await msDropJob(SH.id);
       await remove(col,SH.id);toast('Eliminado');closeSheet();break}
     case'step':{$('#f_etapa').value=arg;$('#f_prob').value=EK[arg].p;document.querySelectorAll('#sheet .step').forEach(b=>{const on=b.dataset.act==='step:'+arg;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});SH.dirty=true;
       if(arg==='per'){const m=$('#f_motivoPerdida');m.scrollIntoView({block:'center'});m.focus()}break}
@@ -1610,6 +1625,7 @@ function sheetPry(id,p){
     body=`<div class="actions"><button class="btn pri" data-new="tk" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Ticket</button><button class="btn" data-new="trab" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Visita</button>${has('presupuestos')?`<button class="btn" data-new="pres" data-cli="${esc(r.clienteId)}" data-pry="${id}">+ Presupuesto</button>`:''}</div>`+body
     +`<section class="rel"><h3>Tickets</h3>${it.tks.map(t=>`<div class="item link" role="button" tabindex="0" data-open="tk:${t.id}">${prChip(tkPrio(t))}<span class="code">${esc(t.numero)}</span><span class="grow">${esc(t.titulo||'')}</span><span class="tk-est">${TKEK[t.estado||'nuevo']}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin tickets.</p>'}</section>
     ${pryPlanosHtml(id)}
+    ${pryRentHtml(id)}
     <section class="rel"><h3>Visitas e informes</h3>${it.jobs.map(jobItem).join('')||'<p class="muted" style="margin:0">Sin visitas.</p>'}</section>
     ${cliRelHtml(r.clienteId,id)}
     ${it.fotos.length?`<section class="rel"><h3>Fotos del proyecto <span class="num">${it.fotos.length}</span></h3><div class="photos">${it.fotos.slice(-24).map(f=>`<div class="ph"><img src="${esc(blobUrl(f.id))}" alt="" loading="lazy" data-act="lb:${esc(f.id)}"></div>`).join('')}</div></section>`:''}
@@ -1646,7 +1662,7 @@ function informeHtml(j){
     ${fld({k:'tipoTrabajo',l:'Tipo de trabajo',t:'select',o:[['','—'],...TTIPO]},j.tipoTrabajo||(D.tickets[j.ticketId]?.tipo==='instalacion'?'instalacion':D.tickets[j.ticketId]?.tipo==='reclamo'?'reclamo':''))}
     ${fld({k:'llegada',l:'Llegada',t:'time'},j.llegada)}${fld({k:'salida',l:'Salida',t:'time'},j.salida)}
     ${fld({k:'informe',l:'Qué se hizo',t:'textarea',w:'full',ph:'Trabajo realizado, pruebas hechas, cómo quedó'},j.informe)}
-    ${fld({k:'materiales',l:'Materiales usados',t:'textarea',w:'full',ph:'Ej.: 40 m UTP cat6, 2 cámaras domo 4 MP, 1 fuente 12 V'},j.materiales)}
+    ${fld({k:'materiales',l:'Materiales usados',t:'textarea',w:'full',ph:'Ej.: 40 m UTP cat6, 2 cámaras domo 4 MP, 1 fuente 12 V'},j.materiales)}</div>${msHtml(j)}<div class="grid">
     ${fld({k:'pendientes',l:'Pendientes y recomendaciones',t:'textarea',w:'full',ph:'Lo que queda por hacer o lo que conviene revisar'},j.pendientes)}</div>
     <div class="sigview">${f&&f.id?`<img src="${esc(blobUrl(f.id))}" alt="Firma del cliente"><p style="margin:6px 0 0"><b>${esc(f.nombre||'')}</b>${f.ci?' · CI '+esc(f.ci):''} · ${new Date(f.en).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'<p class="muted" style="margin:0">Todavía sin firma del cliente.</p>'}</div>
     <div class="actions">${AS&&!PORTAL()?`<button class="btn ${f&&f.id?'':'pri'}" data-act="firmar">${f&&f.id?'Volver a firmar':'Firma del cliente'}</button>`:''}<button class="btn" data-act="informe">Descargar informe</button></div></section>`;
@@ -1716,7 +1732,7 @@ ${docHead('Informe de servicio',j.numero||'',fdateL(j.fecha))}
 <div class="box"><span class="k">Cliente</span><div><strong>${esc(c.nombre||'')}</strong>${c.rut?' · RUT/CI '+esc(c.rut):''}</div><div>${[esc(c.contacto||''),esc(c.telefono||''),esc(j.obra||c.direccion||'')].filter(Boolean).join(' · ')}</div>${pr?`<div>Proyecto: <b>${esc(pr)}</b></div>`:''}${t?`<div>Pedido ${esc(t.numero)}: ${esc(t.titulo||'')}</div>`:''}</div>
 <div class="cols"><div><span class="k">Tipo</span><div>${esc(TTIPOK[j.tipoTrabajo]||'—')}</div></div><div><span class="k">Llegada</span><div>${esc(j.llegada||'—')}</div></div><div><span class="k">Salida</span><div>${esc(j.salida||'—')}</div></div><div><span class="k">Técnicos</span><div>${esc(tecs||'—')}</div></div></div>
 <h2>Trabajo realizado</h2><div class="txt">${esc(j.informe||j.titulo||'—')}</div>
-${j.materiales?`<h2>Materiales</h2><div class="txt">${esc(j.materiales)}</div>`:''}
+${msInforme(j)}${j.materiales?`<h2>${(j.matStock||[]).length?'Otros materiales':'Materiales'}</h2><div class="txt">${esc(j.materiales)}</div>`:''}
 ${j.pendientes?`<h2>Pendientes y recomendaciones</h2><div class="txt">${esc(j.pendientes)}</div>`:''}
 ${fotos.length?`<h2>Fotos</h2><div class="ph">${fotos.map(u=>`<img src="${u}" alt="">`).join('')}</div>`:''}
 <div class="sig"><span class="k">Conformidad del cliente</span>${firma?`<img src="${firma}" alt="Firma"><div><b>${esc(j.firma.nombre||'')}</b>${j.firma.ci?' · CI '+esc(j.firma.ci):''}</div><div>${new Date(j.firma.en).toLocaleString('es-UY')}</div>`:'<p>Sin firmar.</p>'}</div>
@@ -1783,7 +1799,7 @@ async function loadStaff(){if(!SB||!ORG)return;const {data}=await SB.rpc('portal
 function vPortal(){
   const cid=MYCLI(),c=(cid&&D.clientes[cid])||{},co=CFG.nombre||(PLAN&&PLAN.org_name)||'la empresa';
   if(PLAN&&!has('portal'))return`<div class="empty">${fiberArt}<h2>El portal no está activo</h2><p>${esc(co)} todavía no tiene activado el portal de clientes. Comunicate con ellos para seguir tus pedidos.</p><button class="btn" data-act="logout">Cerrar sesión</button></div>`;
-  const tabs=[['pedidos','Pedidos'],['visitas','Visitas'],['informes','Informes'],['presupuestos','Presupuestos'],['facturas','Facturas']];
+  const tabs=[['pedidos','Pedidos'],['visitas','Visitas'],['informes','Informes'],['presupuestos','Presupuestos'],['facturas','Facturas'],...(has('inventario')&&arr('equipos').length?[['equipos','Equipos']]:[])];
   let body='';
   if(PTAB==='pedidos'){const l=arr('tickets').sort((a,b)=>n0(b.creado)-n0(a.creado));
     body=`<div class="tools" style="margin-bottom:14px"><button class="btn pri" data-act="pnew">+ Nuevo pedido</button></div>`+(l.length?`<div class="list">${l.map(t=>{const j=tkNextJob(t.id);return`<div class="row" style="grid-template-columns:minmax(0,1fr) auto;cursor:default"><div><strong>${esc(t.titulo||'Pedido')}</strong><span class="muted"><span class="code">${esc(t.numero)}</span> · ${esc(TKTK[t.tipo]||'')} · ${fdate(new Date(n0(t.creado)).toISOString())}${j?` · visita ${fdate(j.fecha)} ${esc(j.hora||'')}`:''}</span></div><span class="tk-est">${TKEK[t.estado||'nuevo']}</span></div>`}).join('')}</div>`:empty('Sin pedidos','Cuando necesites un servicio, una instalación o tengas una falla, cargalo acá con fotos y te avisamos cuándo vamos.','',''));}
@@ -1795,6 +1811,7 @@ function vPortal(){
     body=l.length?`<div class="list">${l.map(j=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto;cursor:default"><div><strong>${esc(j.titulo||'Trabajo')}</strong><span class="muted">${fdateL(j.fecha)}${j.firma&&j.firma.id?' · firmado por '+esc(j.firma.nombre||''):''}${(j.fotos||[]).length?` · ${j.fotos.length} foto${j.fotos.length>1?'s':''}`:''}</span></div><button class="btn" data-act="pinf:${j.id}">Ver informe</button></div>`).join('')}</div>`:empty('Sin informes','Cuando terminemos un trabajo, acá vas a tener el informe con fotos y tu firma.','','');}
   else if(PTAB==='presupuestos'){const l=arr('presupuestos').sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
     body=l.length?`<div class="list">${l.map(q=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto;cursor:default"><div><strong><span class="code">${esc(q.numero)}</span> · ${money(calcQ(q).total,q.moneda)}</strong><span class="muted">${fdateL(q.fecha)} · <span class="tag ${ESTC[q.estado]||'t-none'}">${esc((EST.find(e=>e[0]===q.estado)||EST[0])[1])}</span></span></div><div class="actions"><button class="btn" data-act="pq:${q.id}">Ver</button>${q.estado==='enviado'?`<button class="btn pri" data-act="pqok:${q.id}">Aceptar</button><button class="btn ghost" data-act="pqno:${q.id}">Rechazar</button>`:''}</div></div>`).join('')}</div>`:empty('Sin presupuestos','Los presupuestos que te mandemos aparecen acá y los podés aceptar con un toque.','','');}
+  else if(PTAB==='equipos'){body=portalEqHtml()}
   else if(PTAB==='facturas'){const l=arr('facturas').filter(f=>!f.anulada).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));const saldo=sum(l,f=>conv(factCalc(f).saldo,f.moneda,'UYU'));
     body=l.length?`<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="kpi"><span>Saldo pendiente</span><b>${money(saldo,'UYU')}</b></div><div class="kpi"><span>Facturas</span><b>${l.length}</b></div></div><div class="list">${l.map(f=>{const s=factState(f),k=factCalc(f);return`<div class="row" style="grid-template-columns:minmax(0,1fr) auto;cursor:default"><div><strong><span class="code">${esc(f.numero)}</span> · ${money(k.total,f.moneda)}</strong><span class="muted">${fdateL(f.fecha)}${f.cfe?' · CFE '+esc(f.cfe):''}${k.saldo>0.5?' · saldo '+money(k.saldo,f.moneda):''} · <span class="tag ${FST[s][1]}">${FST[s][0]}</span></span></div><button class="btn" data-act="pf:${f.id}">Ver</button></div>`}).join('')}</div>`:empty('Sin facturas','Acá vas a ver tus facturas, lo pagado y el saldo.','','');}
   const wa=waLink(CFG.telefono);
@@ -2170,8 +2187,9 @@ const r2=x=>Math.round((Number(x)||0)*100)/100;
 let PRYTAB='proyectos', PRYQ='';
 function vProyectos(){
   const q=qn(PRYQ);
-  const tabs=`<div class="seg" role="tablist" style="margin-bottom:14px">${[['proyectos','Proyectos'],['relevamientos','Relevamientos']].map(([k,n])=>`<button role="tab" class="${PRYTAB===k?'on':''}" aria-selected="${PRYTAB===k}" data-act="prytab:${k}">${n}</button>`).join('')}</div>`;
+  const tabs=`<div class="seg" role="tablist" style="margin-bottom:14px">${[['proyectos','Proyectos'],['relevamientos','Relevamientos'],...(rentOn()?[['rentabilidad','Rentabilidad']]:[])].map(([k,n])=>`<button role="tab" class="${PRYTAB===k?'on':''}" aria-selected="${PRYTAB===k}" data-act="prytab:${k}">${n}</button>`).join('')}</div>`;
   const search=`<input type="search" class="tfq" id="pry_q" data-pryq value="${esc(PRYQ)}" placeholder="Buscar por proyecto, cliente o dirección" aria-label="Buscar">`;
+  if(PRYTAB==='rentabilidad'&&rentOn())return pryRentView(tabs);
   if(PRYTAB==='relevamientos'){
     const l=arr('relevamientos').filter(r=>!q||qn([r.titulo,r.servicio,cliName(r.clienteId),pryName(r.proyectoId),r.direccion].join(' ')).includes(q)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
     return`<div class="vhead"><div><h1>Relevamientos</h1><p class="sub">${l.length} relevamiento${l.length===1?'':'s'} · lo que se midió en la obra antes de cotizar</p></div></div>${tabs}${search}
@@ -2349,6 +2367,322 @@ async function modulosAct(k,el,arg){
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='pry_q'){PRYQ=e.target.value;const pos=e.target.selectionStart;sr();const n=$('#pry_q');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}}});
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='cf_prov'){CFEI={...(CFEI||{}),proveedor:e.target.value};sr()}});
 
+/* ---------- 1.4: Inventario por depósito y camioneta, equipos instalados (garantía y mantenimiento) y rentabilidad por proyecto ---------- */
+const invOn=()=>has('inventario');
+const rentOn=()=>isBoss()&&has('reportes');
+const MOVT=[['entrada','Entrada (compra)'],['salida','Salida a obra'],['transf','Transferencia'],['ajuste','Ajuste por conteo'],['devol','Devolución de obra']];
+const MOVK=Object.fromEntries(MOVT);
+const MOVC={entrada:'t-ok',salida:'t-acc',transf:'t-none',ajuste:'t-warn',devol:'t-ok'};
+const uq=p=>({metro:'m',unidad:'u'}[p&&p.unidad]||(p&&p.unidad)||'');
+const fq=(x,p)=>`${r2(x).toLocaleString('es-UY',{maximumFractionDigits:2})}${uq(p)?' '+uq(p):''}`;
+const deps=()=>arr('depositos').filter(d=>!d.inactivo).sort((a,b)=>(a.tipo==='vehiculo')-(b.tipo==='vehiculo')||(a.nombre||'').localeCompare(b.nombre||'','es'));
+const depName=id=>(D.depositos&&D.depositos[id]?.nombre)||(id?'Depósito borrado':'—');
+const depOpts=(v,blank)=>opts([...(blank?[['',blank]]:[]),...deps().map(d=>[d.id,(d.tipo==='vehiculo'?'🚐 ':'')+d.nombre])],v);
+function myDep(){const v=deps().find(d=>d.tecnicoId===ME);return v?v.id:((deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'')}
+const invProds=()=>arr('productos').filter(p=>p.unidad!=='jornal'&&p.unidad!=='hora').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+const prodLabel=p=>(p.nombre||'Producto')+(p.codigo?' · '+p.codigo:'');
+const costoUYU=(p,c)=>conv(c??n0(p&&p.costo),p&&p.moneda,'UYU');
+
+/* stock: suma de lo que entra a cada depósito menos lo que sale */
+function stockMap(){const m={};for(const x of arr('movimientos')){const c=n0(x.cant);if(!c||!x.prodId)continue;const r=m[x.prodId]||(m[x.prodId]={});if(x.hacia)r[x.hacia]=(r[x.hacia]||0)+c;if(x.desde)r[x.desde]=(r[x.desde]||0)-c}return m}
+const stockOf=(m,pid,dep)=>{const r=m[pid]||{};return dep?(r[dep]||0):Object.values(r).reduce((a,b)=>a+b,0)};
+const bajoMin=(m,p)=>n0(p.stockMin)>0&&stockOf(m,p.id)<n0(p.stockMin);
+
+/* equipos instalados */
+const fdY=d=>d?new Date(d.slice(0,10)+'T12:00').toLocaleDateString('es-UY',{day:'numeric',month:'short',year:'numeric'}):'';
+function eqState(e){const t=today(),lim=addDays(t,30);
+  const gar=e.garantiaHasta?(e.garantiaHasta>=t?['En garantía hasta '+fdY(e.garantiaHasta),'t-ok']:['Garantía vencida','t-none']):null;
+  const man=e.estado==='retirado'||!e.proxMant?null:e.proxMant<t?['Mantenimiento vencido '+fdate(e.proxMant),'t-bad']:e.proxMant<=lim?['Mantenimiento '+fdate(e.proxMant),'t-warn']:['Próx. mantenimiento '+fdY(e.proxMant),'t-none'];
+  return{gar,man,vence:!!(man&&e.proxMant<=lim)}}
+const eqTags=e=>{const s=eqState(e);return(e.estado==='retirado'?'<span class="tag t-none">Retirado</span>':'')+(s.gar?`<span class="tag ${s.gar[1]}">${s.gar[0]}</span>`:'')+(s.man?`<span class="tag ${s.man[1]}">${s.man[0]}</span>`:'')};
+const eqName=e=>e.descripcion||D.productos[e.prodId]?.nombre||'Equipo';
+const mantPend=()=>arr('equipos').filter(e=>e.estado!=='retirado'&&eqState(e).vence);
+
+/* --- vista Inventario --- */
+let INVT='stock',INVD='',INVQ='',INVMIN=false,EQF='todos';
+function vInventario(){
+  if(!invOn())return`<div class="vhead"><div><h1>Inventario</h1></div></div><div class="empty">${fiberArt}<h2>Inventario incluido en Pro y Empresa</h2><p>Stock por depósito y por camioneta, materiales descontados desde cada trabajo, equipos instalados con número de serie, garantía y mantenimiento preventivo.</p><button class="btn pri" data-view="plan">Ver planes</button></div>`;
+  const boss=isBoss(),m=stockMap(),ds=deps(),q=qn(INVQ),mp=mantPend().length;
+  const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${[['stock','Stock'],['movimientos','Movimientos'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']].map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
+  const search=ph=>`<input type="search" class="tfq" id="inv_q" value="${esc(INVQ)}" placeholder="${ph}" aria-label="Buscar">`;
+  const kpi=(n,v)=>`<div class="kpi"><span class="k">${n}</span><b class="num">${v}</b></div>`;
+  const head=(sub,tools='')=>`<div class="vhead"><div><h1>Inventario</h1><p class="sub">${sub}</p></div>${tools?`<div class="tools">${tools}</div>`:''}</div>`;
+  if(INVT==='depositos'){
+    return head(`${ds.length} depósito${ds.length===1?'':'s'} y camioneta${ds.length===1?'':'s'}`,readonly?'':'<button class="btn" data-act="invdep:vehiculo">+ Camioneta</button><button class="btn pri" data-act="invdep:deposito">+ Depósito</button>')+tabs
+      +(ds.length?`<div class="list">${ds.map(d=>{const its=Object.keys(m).filter(pid=>stockOf(m,pid,d.id)>0),val=sum(its,pid=>stockOf(m,pid,d.id)*costoUYU(D.productos[pid]));
+        return`<div class="row" role="button" tabindex="0" data-open="dep:${d.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${d.tipo==='vehiculo'?'🚐 ':''}${esc(d.nombre)}</strong><span class="muted">${d.tipo==='vehiculo'?'Camioneta':'Depósito'}${d.tecnicoId?' · '+esc(personName(d.tecnicoId)):''} · ${its.length} artículo${its.length===1?'':'s'} con stock</span></div>${boss?`<span class="num">${money(val,'UYU')}</span>`:''}</div>`}).join('')}</div>`
+      :`<div class="empty"><h2>Sin depósitos</h2><p>Creá el depósito de la empresa y una camioneta por técnico: cada uno ve lo que lleva y lo que usa en cada obra se descuenta solo.</p></div>`);
+  }
+  if(INVT==='movimientos'){
+    const l=arr('movimientos').filter(x=>!q||qn([MOVK[x.tipo],D.productos[x.prodId]?.nombre,D.productos[x.prodId]?.codigo,depName(x.desde),depName(x.hacia),cliName(x.clienteId),x.proveedor,x.doc,x.nota].join(' ')).includes(q))
+      .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado)).slice(0,300);
+    return head('Entradas, salidas a obra, transferencias y ajustes',readonly?'':'<button class="btn" data-act="invnew:transf">Transferir</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>')+tabs+search('Buscar por producto, depósito, cliente o proveedor')
+      +(l.length?`<div class="list">${l.map(x=>{const p=D.productos[x.prodId];
+        return`<div class="row" role="button" tabindex="0" data-open="${x.trabajoId&&D.trabajos[x.trabajoId]?'trab:'+x.trabajoId:'mov:'+x.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p?.nombre||'Producto borrado')} · ${fq(x.cant,p)}</strong><span class="muted">${fdate(x.fecha)} · ${esc([x.desde?depName(x.desde):'',x.hacia?depName(x.hacia):''].filter(Boolean).join(' → '))}${x.clienteId?' · '+esc(cliName(x.clienteId)):''}${x.proveedor?' · '+esc(x.proveedor):''}${x.trabajoId?' · desde un trabajo':''}</span></div><span class="tag ${MOVC[x.tipo]||'t-none'}">${esc(MOVK[x.tipo]||x.tipo)}</span></div>`}).join('')}</div>`
+      :`<div class="empty"><h2>Sin movimientos</h2><p>Cargá una entrada con lo que tenés en el depósito, o hacé un ajuste por conteo para arrancar con el stock real.</p></div>`);
+  }
+  if(INVT==='equipos'){
+    const all=arr('equipos'),t=today();
+    const l=all.filter(e=>(EQF==='todos'||(EQF==='mant'&&e.estado!=='retirado'&&eqState(e).vence)||(EQF==='gar'&&e.garantiaHasta&&e.garantiaHasta>=t))&&(!q||qn([eqName(e),e.serie,e.ubicacion,cliName(e.clienteId),pryName(e.proyectoId)].join(' ')).includes(q)))
+      .sort((a,b)=>(eqState(b).vence-eqState(a).vence)||(a.proxMant||'9').localeCompare(b.proxMant||'9')||cliName(a.clienteId).localeCompare(cliName(b.clienteId),'es'));
+    const fl=`<div class="seg" role="group" aria-label="Filtro" style="margin-bottom:10px">${[['todos','Todos'],['mant',`Mantenimiento a vencer${mp?' ('+mp+')':''}`],['gar','En garantía']].map(([k,n])=>`<button class="${EQF===k?'on':''}" aria-pressed="${EQF===k}" data-act="eqf:${k}">${n}</button>`).join('')}</div>`;
+    return head(`${all.length} equipo${all.length===1?'':'s'} instalado${all.length===1?'':'s'} · número de serie, garantía y mantenimiento preventivo`,(all.length?'<button class="btn" data-act="eqcsv">Exportar CSV</button>':'')+(readonly?'':'<button class="btn pri" data-act="eqnew">+ Equipo</button>'))+tabs+fl+search('Buscar por número de serie, modelo, cliente o ubicación')
+      +(l.length?`<div class="list">${l.map(e=>`<div class="row" role="button" tabindex="0" data-open="eq:${e.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(eqName(e))}${e.serie?` <span class="code">${esc(e.serie)}</span>`:''}</strong><span class="muted">${esc([cliName(e.clienteId)||'Sin cliente',pryName(e.proyectoId),e.ubicacion].filter(Boolean).join(' · '))}${e.instalado?' · instalado '+fdate(e.instalado):''}</span></div><span class="eqtags">${eqTags(e)}</span></div>`).join('')}</div>`
+      :`<div class="empty"><h2>${all.length?'Ningún equipo coincide':'Sin equipos instalados'}</h2><p>Los equipos con número de serie se cargan solos cuando el técnico los saca del stock en un trabajo. También podés cargarlos a mano.</p></div>`);
+  }
+  // stock
+  if(!ds.length)return head('Stock por depósito y camioneta')+tabs+`<div class="empty">${fiberArt}<h2>Empezá por los depósitos</h2><p>Creá el depósito de la empresa y una camioneta por técnico. Después cargá una entrada o un ajuste por conteo con lo que tenés hoy.</p>${readonly?'':'<div class="actions" style="justify-content:center"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button><button class="btn" data-act="invdep:vehiculo">+ Camioneta</button></div>'}</div>`;
+  const prods=arr('productos').filter(p=>p.stock||m[p.id]).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+  const l=prods.filter(p=>(!INVD||stockOf(m,p.id,INVD)!==0)&&(!INVMIN||bajoMin(m,p))&&(!q||qn([p.nombre,p.codigo,p.servicio].join(' ')).includes(q)));
+  const val=sum(prods,p=>Math.max(0,INVD?stockOf(m,p.id,INVD):stockOf(m,p.id))*costoUYU(p)),nb=prods.filter(p=>bajoMin(m,p)).length;
+  const cols=INVD?[D.depositos[INVD]].filter(Boolean):ds.slice(0,6);
+  const st=p=>{const s=stockOf(m,p.id);return s<0?'<span class="tag t-bad">Negativo</span>':bajoMin(m,p)?'<span class="tag t-warn">Bajo mínimo</span>':s===0?'<span class="tag t-none">Sin stock</span>':''};
+  const tools=readonly?'':`<button class="btn" data-act="invnew:ajuste">Ajuste</button><button class="btn" data-act="invnew:transf">Transferir</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>`;
+  const filt=`<div class="mini invfil"><select id="inv_dep" aria-label="Depósito">${depOpts(INVD,'Todos los depósitos')}</select><button class="tgl${INVMIN?' on':''}" data-act="invmin" aria-pressed="${INVMIN}">Bajo mínimo (${nb})</button><button class="btn ghost" data-act="invcsv:stock">Exportar stock</button>${nb?'<button class="btn ghost" data-act="invcsv:compra">Lista de compra</button>':''}</div>`;
+  const tot=p=>INVD?stockOf(m,p.id,INVD):stockOf(m,p.id);
+  const mob=`<div class="list only-mob">${l.map(p=>`<div class="row" role="button" tabindex="0" data-open="stk:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p.nombre)}</strong><span class="muted">${esc(ds.filter(d=>stockOf(m,p.id,d.id)).map(d=>d.nombre+': '+fq(stockOf(m,p.id,d.id),p)).join(' · ')||'Sin stock')}</span></div><span style="text-align:right"><b class="num">${fq(tot(p),p)}</b><br>${st(p)}</span></div>`).join('')}</div>`;
+  const dsk=`<div class="tablewrap only-dsk"><table><thead><tr><th>Producto</th>${cols.map(d=>`<th class="n">${esc(d.nombre)}</th>`).join('')}${INVD?'':'<th class="n">Total</th>'}<th class="n">Mínimo</th>${boss?'<th class="n">Valor (costo)</th>':''}<th></th></tr></thead>
+    <tbody>${l.map(p=>`<tr data-open="stk:${p.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(p.nombre)}</b>${p.codigo?`<br><span class="muted code">${esc(p.codigo)}</span>`:''}</td>${cols.map(d=>{const v=stockOf(m,p.id,d.id);return`<td class="n"${v<0?' style="color:var(--bad)"':''}>${v?fq(v,p):'—'}</td>`}).join('')}${INVD?'':`<td class="n"><b>${fq(stockOf(m,p.id),p)}</b></td>`}<td class="n">${n0(p.stockMin)?fq(p.stockMin,p):'—'}</td>${boss?`<td class="n">${n0(p.costo)?money(Math.max(0,tot(p))*costoUYU(p),'UYU'):'<span class="muted">sin costo</span>'}</td>`:''}<td>${st(p)}</td></tr>`).join('')}</tbody></table></div>`;
+  return head(`Stock por depósito y camioneta${ds.length>6&&!INVD?' · se muestran los primeros 6 depósitos, filtrá para ver otro':''}`,tools)+tabs
+    +`<div class="kpis only-dsk" style="margin:0 0 14px">${kpi('Artículos con stock',prods.filter(p=>stockOf(m,p.id)>0).length)}${boss?kpi('Valor del stock',money(val,'UYU')):kpi('Depósitos',ds.length)}${kpi('Bajo mínimo',nb)}${kpi('Mantenimientos a vencer',mp)}</div>`
+    +filt+search('Buscar producto o código')
+    +(l.length?mob+dsk:prods.length?'<p class="muted">Ningún producto coincide.</p>':`<div class="empty"><h2>Todavía no hay stock</h2><p>Cargá una <b>entrada</b> con lo que compraste o un <b>ajuste por conteo</b> con lo que hay hoy en cada depósito. Los productos se toman del catálogo.</p></div>`)
+    +`<p class="hint" style="margin-top:12px">El stock baja solo cuando un técnico carga “Materiales del stock” en un trabajo. Los productos con número de serie quedan además como equipos instalados del cliente.</p>`;
+}
+
+/* --- hoja: depósito o camioneta --- */
+const DEPF=()=>[{k:'nombre',l:'Nombre',w:'full',ph:'Ej.: Depósito central · Camioneta Juan'},{k:'tipo',l:'Tipo',t:'select',o:[['deposito','Depósito'],['vehiculo','Camioneta o vehículo']]},{k:'tecnicoId',l:'Responsable',t:'person'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
+function sheetDep(id,p){
+  const d=id?D.depositos[id]:{tipo:p.tipo||'deposito',tecnicoId:''};
+  let body=`<div class="grid">${DEPF().map(f=>fld(f,d[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
+  if(id){const m=stockMap(),its=Object.keys(m).filter(pid=>stockOf(m,pid,id)!==0&&D.productos[pid]).map(pid=>D.productos[pid]&&{...D.productos[pid],id:pid}).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+    body+=`<section class="rel"><h3>Lo que hay ${d.tipo==='vehiculo'?'en la camioneta':'en el depósito'} <span class="num">${its.length}</span></h3>${its.map(x=>`<div class="item link" role="button" tabindex="0" data-open="stk:${x.id}"><span class="grow">${esc(x.nombre)}</span><b class="num">${fq(stockOf(m,x.id,id),x)}</b></div>`).join('')||'<p class="muted" style="margin:0">Vacío.</p>'}
+      ${readonly?'':`<div class="actions"><button class="btn" data-act="invnew:transf::${id}">Transferir desde acá</button><button class="btn" data-act="invnew:ajuste::${id}">Ajuste por conteo</button></div>`}</section>`}
+  return sheetFrame(d.tipo==='vehiculo'?'Camioneta':'Depósito',id?d.nombre:(d.tipo==='vehiculo'?'Nueva camioneta':'Nuevo depósito'),body,{del:!!id});
+}
+async function saveDep(){const v=readForm(DEPF());if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}
+  const id=SH.id||uid();await put('depositos',id,{...(SH.id?D.depositos[SH.id]:{creado:Date.now()}),...v});toast(v.tipo==='vehiculo'?'Camioneta guardada':'Depósito guardado');closeSheet()}
+
+/* --- hoja: stock de un producto --- */
+function sheetStk(pid){
+  const p=D.productos[pid]||{},m=stockMap(),boss=isBoss();
+  const movs=arr('movimientos').filter(x=>x.prodId===pid).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado)).slice(0,40);
+  const body=`<div class="contact">${p.codigo?`<span class="code">${esc(p.codigo)}</span>`:''}<strong>${fq(stockOf(m,pid),p)} en total</strong>${n0(p.stockMin)?`<span class="muted">mínimo ${fq(p.stockMin,p)}</span>`:''}${bajoMin(m,{...p,id:pid})?'<span class="tag t-warn">Bajo mínimo</span>':''}${boss&&n0(p.costo)?`<span class="muted">costo ${money(p.costo,p.moneda,2)}</span>`:''}</div>
+    ${readonly?'':`<div class="actions"><button class="btn pri" data-act="invnew:entrada:${pid}">+ Entrada</button><button class="btn" data-act="invnew:transf:${pid}">Transferir</button><button class="btn" data-act="invnew:ajuste:${pid}">Ajuste por conteo</button>${boss?`<button class="btn ghost" data-open="prod:${pid}">Editar producto</button>`:''}</div>`}
+    <section class="rel"><h3>Por depósito</h3>${deps().map(d=>`<div class="item"><span class="grow">${d.tipo==='vehiculo'?'🚐 ':''}${esc(d.nombre)}</span><b class="num">${fq(stockOf(m,pid,d.id),p)}</b></div>`).join('')}</section>
+    <section class="rel"><h3>Últimos movimientos</h3>${movs.map(x=>`<div class="item link" role="button" tabindex="0" data-open="${x.trabajoId&&D.trabajos[x.trabajoId]?'trab:'+x.trabajoId:'mov:'+x.id}"><span>${fdate(x.fecha)}</span><span class="grow">${esc(MOVK[x.tipo]||'')}${x.clienteId?' · '+esc(cliName(x.clienteId)):''}<br><span class="muted">${esc([x.desde?depName(x.desde):'',x.hacia?depName(x.hacia):''].filter(Boolean).join(' → '))}</span></span><b class="num">${x.hacia&&!x.desde?'+':x.desde&&!x.hacia?'−':''}${fq(x.cant,p)}</b></div>`).join('')||'<p class="muted" style="margin:0">Sin movimientos.</p>'}</section>`;
+  return sheetFrame('Stock',p.nombre||'Producto',body,{saveLabel:'Cerrar'});
+}
+
+/* --- hoja: movimiento --- */
+function sheetMov(id,pr){
+  const x=id?{...D.movimientos[id]}:{tipo:pr.tipo||'entrada',fecha:today(),prodId:pr.prod||'',cant:'',desde:'',hacia:'',...(pr.mv||{})};
+  if(!id&&!pr.mv){const dd=pr.dep||(x.tipo==='entrada'||x.tipo==='devol'?(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id:myDep())||'';
+    if(x.tipo==='entrada'||x.tipo==='devol')x.hacia=dd;else x.desde=dd;
+    if(x.tipo==='transf'){x.desde=pr.dep||(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'';x.hacia=(deps().find(d=>d.id!==x.desde&&d.tecnicoId===ME)||deps().find(d=>d.id!==x.desde))?.id||''}}
+  if(x.trabajoId&&D.trabajos[x.trabajoId])return sheetFrame('Movimiento',MOVK[x.tipo]||'Movimiento',`<p>Este movimiento sale del trabajo <b>${esc(D.trabajos[x.trabajoId].titulo||'')}</b> del ${fdate(D.trabajos[x.trabajoId].fecha)}. Para cambiarlo, editá los materiales en el trabajo.</p><div class="actions"><button class="btn pri" data-open="trab:${x.trabajoId}">Abrir el trabajo</button></div>`,{saveLabel:'Cerrar'});
+  if(!deps().length)return sheetFrame('Movimiento','Primero creá un depósito','<p>Para mover stock hace falta al menos un depósito o una camioneta.</p><div class="actions"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button></div>',{saveLabel:'Cerrar'});
+  const t=x.tipo,ps=invProds(),m=stockMap(),p=D.productos[x.prodId];
+  const sel=(k,l,v,o)=>`<label class="fld" for="mv_${k}"><span>${l}</span><select id="mv_${k}">${o}</select></label>`;
+  const inp=(k,l,v,a='')=>`<label class="fld" for="mv_${k}"><span>${l}</span><input id="mv_${k}" value="${esc(v??'')}" ${a}></label>`;
+  const where=t==='ajuste'?x.desde||x.hacia:t==='entrada'||t==='devol'?x.hacia:x.desde;
+  let g=(id?`<label class="fld" for="mv_tipo"><span>Tipo de movimiento</span><select id="mv_tipo" disabled>${opts(MOVT,t)}</select></label>`:sel('tipo','Tipo de movimiento',t,opts(MOVT,t)))+inp('fecha','Fecha',x.fecha,'type="date"')
+    +`<label class="fld full" for="mv_prod"><span>Producto</span><select id="mv_prod">${opts([['','Elegí el producto'],...ps.map(q=>[q.id,prodLabel(q)])],x.prodId)}</select></label>`;
+  if(t==='entrada')g+=sel('hacia','Entra a',x.hacia,depOpts(x.hacia));
+  if(t==='salida')g+=sel('desde','Sale de',x.desde,depOpts(x.desde));
+  if(t==='transf')g+=sel('desde','Desde',x.desde,depOpts(x.desde))+sel('hacia','Hacia',x.hacia,depOpts(x.hacia));
+  if(t==='devol')g+=sel('hacia','Vuelve a',x.hacia,depOpts(x.hacia));
+  if(t==='ajuste')g+=sel('dep','Depósito contado',where,depOpts(where));
+  g+=t==='ajuste'?inp('contado','Cantidad contada (lo que hay de verdad)',id?x.contado:'','type="number" step="any" min="0" inputmode="decimal"')
+    :inp('cant',`Cantidad${p?' ('+esc(p.unidad||'unidad')+')':''}`,x.cant,'type="number" step="any" min="0" inputmode="decimal"');
+  if(t==='entrada'){g+=(isBoss()?inp('costo',`Costo unitario sin IVA${p?' ('+(p.moneda==='USD'?'US$':'$')+')':''}`,x.costo||'', 'type="number" step="any" min="0" inputmode="decimal"'):'')+inp('proveedor','Proveedor',x.proveedor)+inp('doc','Nº de factura o remito',x.doc)}
+  if(t==='salida'||t==='devol')g+=`<label class="fld" for="mv_cli"><span>Cliente</span><select id="mv_cli">${opts([['','—'],...arr('clientes').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es')).map(c=>[c.id,c.nombre])],x.clienteId)}</select></label>`
+    +`<label class="fld" for="mv_pry"><span>Proyecto</span><select id="mv_pry">${opts([['','—'],...arr('proyectos').filter(q=>q.estado!=='terminado'||q.id===x.proyectoId).map(q=>[q.id,q.nombre])],x.proyectoId)}</select></label>`;
+  g+=`<label class="fld full" for="mv_nota"><span>Nota</span><textarea id="mv_nota" placeholder="Opcional">${esc(x.nota||'')}</textarea></label>`;
+  const hint=p&&where?`<p class="hint" id="mvHint">Hay ${fq(stockOf(m,x.prodId,where),p)} en ${esc(depName(where))}${t==='transf'&&x.hacia?` y ${fq(stockOf(m,x.prodId,x.hacia),p)} en ${esc(depName(x.hacia))}`:''}.</p>`:'';
+  return sheetFrame('Inventario',id?MOVK[t]||'Movimiento':'Nuevo movimiento',`<div class="grid">${g}</div>${hint}<p class="err" id="shErr" hidden></p>`,{del:!!id&&isBoss()});
+}
+function movRead(){const g=k=>{const e=$('#mv_'+k);return e?e.value.trim():''};return{tipo:g('tipo'),fecha:g('fecha'),prodId:g('prod'),cant:g('cant'),desde:g('desde'),hacia:g('hacia'),dep:g('dep'),contado:g('contado'),costo:g('costo'),proveedor:g('proveedor'),doc:g('doc'),clienteId:g('cli'),proyectoId:g('pry'),nota:g('nota')}}
+async function saveMov(){
+  const r=movRead(),e=$('#shErr'),bad=t=>{e.textContent=t;e.hidden=false};
+  if(!r.prodId)return bad('Elegí el producto.');
+  const p=D.productos[r.prodId],base=SH.id?{...D.movimientos[SH.id]}:{creado:Date.now(),by:ME||''};
+  const x={...base,tipo:r.tipo,fecha:r.fecha||today(),prodId:r.prodId,desde:'',hacia:'',nota:r.nota,clienteId:r.clienteId||'',proyectoId:r.proyectoId||''};
+  if(r.tipo==='ajuste'){if(r.contado==='')return bad('Escribí cuánto contaste.');if(!r.dep)return bad('Elegí el depósito.');
+    const m=stockMap();if(SH.id){const o=D.movimientos[SH.id];if(o.hacia)m[o.prodId][o.hacia]-=n0(o.cant);if(o.desde)m[o.prodId][o.desde]+=n0(o.cant)}
+    const delta=r2(n0(r.contado)-stockOf(m,r.prodId,r.dep));if(!delta&&!SH.id){toast('El stock ya coincide con lo contado');closeSheet();return}
+    Object.assign(x,{contado:n0(r.contado),cant:Math.abs(delta),[delta>=0?'hacia':'desde']:r.dep});}
+  else{const c=n0(r.cant);if(!(c>0))return bad('Poné una cantidad mayor que cero.');x.cant=c;
+    if(r.tipo==='entrada'){if(!r.hacia)return bad('Elegí a qué depósito entra.');x.hacia=r.hacia;x.proveedor=r.proveedor;x.doc=r.doc;if(r.costo!=='')x.costo=n0(r.costo)}
+    if(r.tipo==='devol'){if(!r.hacia)return bad('Elegí a qué depósito vuelve.');x.hacia=r.hacia}
+    if(r.tipo==='salida'){if(!r.desde)return bad('Elegí de dónde sale.');x.desde=r.desde;x.costo=n0(p?.costo)}
+    if(r.tipo==='transf'){if(!r.desde||!r.hacia)return bad('Elegí origen y destino.');if(r.desde===r.hacia)return bad('El origen y el destino son el mismo.');x.desde=r.desde;x.hacia=r.hacia}}
+  const id=SH.id||uid();
+  // costo promedio ponderado del producto con cada compra
+  if(p&&!SH.id&&r.tipo==='entrada'&&r.costo!==''&&isBoss()){const st=Math.max(0,stockOf(stockMap(),r.prodId)),oc=n0(p.costo);
+    const nc=st>0&&oc?r2((st*oc+x.cant*n0(r.costo))/(st+x.cant)):n0(r.costo);await put('productos',r.prodId,{...p,costo:nc,stock:true})}
+  else if(p&&!p.stock)await put('productos',r.prodId,{...p,stock:true});
+  await put('movimientos',id,x);toast('Movimiento guardado');closeSheet();
+}
+
+/* --- hoja: equipo instalado --- */
+const EQF_=()=>[{k:'descripcion',l:'Equipo (marca y modelo)',w:'full',ph:'Ej.: Cámara domo Hikvision 4 MP DS-2CD1143'},{k:'serie',l:'Nº de serie'},{k:'ubicacion',l:'Ubicación',ph:'Ej.: Portón 3, lado norte'},
+  {k:'instalado',l:'Instalado el',t:'date'},{k:'garantiaHasta',l:'Garantía hasta',t:'date'},
+  {k:'mantCada',l:'Mantenimiento preventivo',t:'select',o:[['0','Sin mantenimiento'],['1','Cada mes'],['3','Cada 3 meses'],['6','Cada 6 meses'],['12','Cada año']]},{k:'proxMant',l:'Próximo mantenimiento',t:'date'},
+  {k:'estado',l:'Estado',t:'select',o:[['activo','Instalado'],['retirado','Retirado o reemplazado']]},{k:'notas',l:'Notas',t:'textarea',w:'full',ph:'Configuración, IP, canal del grabador… (no guardes contraseñas acá)'}];
+function sheetEq(id,p){
+  const e=id?{...D.equipos[id]}:{clienteId:p.cli||'',proyectoId:p.pry||'',instalado:today(),estado:'activo',mantCada:'0'};
+  const cl=`<label class="fld" for="eq_cli"><span>Cliente</span><select id="eq_cli">${opts([['','Elegí el cliente'],...arr('clientes').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es')).map(c=>[c.id,c.nombre])],e.clienteId)}</select></label>
+    <label class="fld" for="eq_pry"><span>Proyecto</span><select id="eq_pry">${opts([['','—'],...arr('proyectos').map(q=>[q.id,q.nombre])],e.proyectoId)}</select></label>
+    <label class="fld full" for="eq_prod"><span>Producto del catálogo</span><select id="eq_prod">${opts([['','—'],...invProds().map(q=>[q.id,prodLabel(q)])],e.prodId)}</select></label>`;
+  let body=(id?`<div class="contact">${eqTags(e)}${e.trabajoId&&D.trabajos[e.trabajoId]?`<button class="btn ghost" data-open="trab:${e.trabajoId}">Trabajo de instalación ${fdate(D.trabajos[e.trabajoId].fecha)}</button>`:''}</div>`:'')
+    +`<div class="grid">${cl}${EQF_().map(f=>fld(f,f.k==='mantCada'?String(n0(e.mantCada)):e[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
+  if(id&&!readonly){
+    const tks=arr('tickets').filter(t=>t.equipoId===id).sort((a,b)=>n0(b.creado)-n0(a.creado));
+    body+=`<div class="actions">${n0(e.mantCada)?'<button class="btn pri" data-act="eqmant">Mantenimiento hecho</button>':''}<button class="btn" data-act="eqtk:mantenimiento">Ticket de mantenimiento</button><button class="btn" data-act="eqtk:reclamo">Ticket por falla${e.garantiaHasta&&e.garantiaHasta>=today()?' (en garantía)':''}</button></div>
+      ${tks.length?`<section class="rel"><h3>Tickets de este equipo</h3>${tks.map(t=>`<div class="item link" role="button" tabindex="0" data-open="tk:${t.id}"><span class="code">${esc(t.numero||'')}</span><span class="grow">${esc(t.titulo||'')}</span><span class="tk-est">${TKEK[t.estado||'nuevo']}</span></div>`).join('')}</section>`:''}
+      ${e.ultMant?`<p class="hint">Último mantenimiento: ${fdateL(e.ultMant)}.</p>`:''}`}
+  return sheetFrame('Equipo instalado',id?eqName(e):'Nuevo equipo',body,{del:!!id});
+}
+async function saveEq(){
+  const v=readForm(EQF_());v.mantCada=n0(v.mantCada);v.clienteId=$('#eq_cli').value;v.proyectoId=$('#eq_pry').value;v.prodId=$('#eq_prod').value;
+  const e=$('#shErr');if(!v.clienteId){e.textContent='Elegí el cliente.';e.hidden=false;return}
+  const p=D.productos[v.prodId];if(!v.descripcion&&p)v.descripcion=p.nombre;if(!v.descripcion){e.textContent='Escribí qué equipo es.';e.hidden=false;return}
+  if(!v.garantiaHasta&&p&&n0(p.garantiaMeses)&&v.instalado)v.garantiaHasta=addMonths(v.instalado,n0(p.garantiaMeses));
+  if(!v.proxMant&&v.mantCada)v.proxMant=addMonths(v.instalado||today(),v.mantCada);
+  const id=SH.id||uid();await put('equipos',id,{...(SH.id?D.equipos[SH.id]:{creado:Date.now()}),...v});toast('Equipo guardado');closeSheet();
+}
+function cliEqHtml(cid,ro){
+  if(!invOn())return'';const l=arr('equipos').filter(e=>e.clienteId===cid).sort((a,b)=>(a.estado==='retirado')-(b.estado==='retirado')||(a.instalado||'').localeCompare(b.instalado||''));
+  if(!l.length&&ro)return'';
+  return`<section class="rel"><h3>Equipos instalados <span class="num">${l.length}</span></h3>${l.map(e=>`<div class="item link" role="button" tabindex="0" data-open="eq:${e.id}"><span class="grow"><b>${esc(eqName(e))}</b>${e.serie?` <span class="code">${esc(e.serie)}</span>`:''}${e.ubicacion?`<br><span class="muted">${esc(e.ubicacion)}</span>`:''}</span><span class="eqtags">${eqTags(e)}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin equipos cargados.</p>'}
+    ${readonly?'':`<div><button class="btn" data-act="eqnew:${cid}">+ Equipo</button></div>`}</section>`;
+}
+function portalEqHtml(){
+  const l=arr('equipos').filter(e=>e.estado!=='retirado').sort((a,b)=>(a.ubicacion||'').localeCompare(b.ubicacion||''));
+  return l.length?`<div class="list">${l.map(e=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto;cursor:default"><div><strong>${esc(eqName(e))}</strong><span class="muted">${esc([e.serie?'Serie '+e.serie:'',e.ubicacion,e.instalado?'instalado el '+fdateL(e.instalado):''].filter(Boolean).join(' · '))}</span></div><span class="eqtags">${eqTags(e)}</span></div>`).join('')}</div>`:'<p class="muted">No hay equipos registrados.</p>';
+}
+
+/* --- materiales del stock en el trabajo --- */
+function msHtml(j){
+  if(!invOn()||!deps().length)return'';
+  if(!j._ms)j._ms=(j.matStock||[]).map(x=>({...x}));
+  return`<section class="rel" id="msBox"><h3>Materiales del stock</h3><p class="hint">Se descuentan de la camioneta o del depósito que elijas${isBoss()?' y suman al costo del proyecto':''}.</p><div id="msList">${msRows(j)}</div>${AS&&!PORTAL()?'<div class="actions"><button class="btn" data-act="msadd">+ Material del stock</button></div>':''}</section>`;
+}
+function msAvail(j){const m=stockMap();
+  // lo que este trabajo ya descontó vuelve a contar como disponible
+  arr('movimientos').filter(x=>x.trabajoId&&x.trabajoId===SH?.id).forEach(x=>{if(x.desde&&m[x.prodId])m[x.prodId][x.desde]=(m[x.prodId][x.desde]||0)+n0(x.cant)});return m}
+function msWarn(l,m,i){const p=D.productos[l.p],disp=p&&l.d?stockOf(m,l.p,l.d):null;return disp==null?'':`<span class="full ${disp<n0(l.c)?'err':'hint'}" id="msw${i}" style="margin:0">${disp<n0(l.c)?'Ojo: ':''}hay ${fq(disp,p)} en ${esc(depName(l.d))}</span>`}
+function msRows(j){
+  const ps=invProds(),m=msAvail(j);
+  return(j._ms||[]).map((l,i)=>{const p=D.productos[l.p];
+    return`<div class="msrow"><select data-ms="${i}:p" aria-label="Producto">${opts([['','Elegí el producto'],...ps.map(q=>[q.id,prodLabel(q)])],l.p)}</select>
+      <input type="number" data-ms="${i}:c" value="${esc(l.c??'')}" step="any" min="0" inputmode="decimal" placeholder="Cant." aria-label="Cantidad">
+      <select data-ms="${i}:d" aria-label="Sale de">${depOpts(l.d)}</select>
+      <button class="btn ghost" data-act="msdel:${i}" aria-label="Quitar">✕</button>
+      ${p&&p.serie?`<input type="text" class="full" data-ms="${i}:s" value="${esc(l.s||'')}" placeholder="Nº de serie (si son varios, separalos con coma)" aria-label="Números de serie">`:''}
+      ${msWarn(l,m,i)}</div>`}).join('')||'<p class="muted" style="margin:0">Sin materiales del stock.</p>';
+}
+const msClean=a=>(a||[]).filter(l=>l.p&&n0(l.c)>0&&l.d).map(l=>({p:l.p,c:n0(l.c),d:l.d,...(l.s?{s:String(l.s).trim()}:{})}));
+async function msSync(jid,j){
+  const want={};(j.matStock||[]).forEach((l,i)=>{want[`${jid}-m${i}`]={fecha:j.fecha||today(),tipo:'salida',prodId:l.p,cant:n0(l.c),desde:l.d,hacia:'',trabajoId:jid,proyectoId:j.proyectoId||'',clienteId:j.clienteId||''}});
+  for(const x of arr('movimientos').filter(x=>x.trabajoId===jid))if(!want[x.id])await remove('movimientos',x.id);
+  for(const [id,w] of Object.entries(want)){const o=D.movimientos[id];
+    if(o&&['fecha','prodId','cant','desde','proyectoId','clienteId'].every(k=>String(o[k]??'')===String(w[k]??'')))continue;
+    await put('movimientos',id,{...w,costo:o&&o.prodId===w.prodId&&n0(o.costo)?n0(o.costo):n0(D.productos[w.prodId]?.costo),by:o?.by||ME||'',creado:o?.creado||Date.now()})}
+  // productos con número de serie: quedan como equipos instalados del cliente
+  const weq={};(j.matStock||[]).forEach((l,i)=>{const p=D.productos[l.p];if(!p||!p.serie)return;String(l.s||'').split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean).forEach((s,k)=>{weq[`${jid}-e${i}-${k}`]={s,p:{...p,id:l.p}}})});
+  for(const e of arr('equipos').filter(e=>e.trabajoId===jid&&e.auto))if(!weq[e.id])await remove('equipos',e.id);
+  for(const [id,{s,p}] of Object.entries(weq)){const o=D.equipos[id],inst=o?.instalado||j.fecha||today();
+    if(o&&o.serie===s&&o.prodId===p.id&&o.clienteId===(j.clienteId||''))continue;
+    await put('equipos',id,{...(o||{}),auto:true,trabajoId:jid,clienteId:j.clienteId||'',proyectoId:j.proyectoId||'',prodId:p.id,descripcion:(o&&o.prodId===p.id&&o.descripcion)||p.nombre,serie:s,instalado:inst,
+      garantiaHasta:o?.garantiaHasta||(n0(p.garantiaMeses)?addMonths(inst,n0(p.garantiaMeses)):''),mantCada:o?n0(o.mantCada):n0(p.mantCada),proxMant:o?.proxMant||(n0(p.mantCada)?addMonths(inst,n0(p.mantCada)):''),estado:o?.estado||'activo',creado:o?.creado||Date.now()})}
+}
+async function msDropJob(jid){for(const x of arr('movimientos').filter(x=>x.trabajoId===jid))await remove('movimientos',x.id);for(const e of arr('equipos').filter(e=>e.trabajoId===jid&&e.auto))await remove('equipos',e.id)}
+function msInforme(j){const l=(j.matStock||[]).map(x=>{const p=D.productos[x.p];return p?`<tr><td>${esc(p.nombre)}</td><td>${fq(x.c,p)}</td><td>${esc(x.s||'')}</td></tr>`:''}).join('');
+  return l?`<h2>Materiales instalados</h2><table><thead><tr><th>Material</th><th>Cantidad</th><th>Nº de serie</th></tr></thead><tbody>${l}</tbody></table>`:''}
+
+/* --- rentabilidad por proyecto (solo dueño y administradores) --- */
+function pryRent(pid){
+  const it=pryItems(pid),jids=new Set(it.jobs.map(j=>j.id));
+  const ing=sum(it.fs.filter(f=>!f.anulada),f=>conv(calcQ(f).base,f.moneda,'UYU'));
+  const pres=sum(it.qs.filter(q=>q.estado==='aceptado'),q=>conv(calcQ(q).base,q.moneda,'UYU'));
+  const mv=arr('movimientos').filter(x=>x.proyectoId===pid||(x.trabajoId&&jids.has(x.trabajoId)));
+  const mat=sum(mv,x=>{const p=D.productos[x.prodId],c=n0(x.cant)*costoUYU(p,n0(x.costo)||n0(p&&p.costo));return x.tipo==='salida'?c:x.tipo==='devol'?-c:0});
+  let horas=0,sinHora=0;const mo=sum(it.jobs,j=>{const h=jobHours(j);if(h==null){if(j.estado==='terminado')sinHora++;return 0}
+    return sum(j.tecnicos||[],t=>{const f=tecFicha(t);horas+=h;return h*conv(n0(f.valorHora),f.moneda,'UYU')})});
+  const sinCosto=new Set(mv.filter(x=>!n0(x.costo)&&!n0(D.productos[x.prodId]?.costo)).map(x=>x.prodId)).size;
+  const costo=mat+mo,marg=ing-costo;
+  return{ing,pres,mat,mo,horas,costo,marg,pct:ing?Math.round(marg/ing*100):null,sinHora,sinCosto};
+}
+function pryRentHtml(pid){
+  if(!rentOn())return'';const r=pryRent(pid);if(!r.ing&&!r.costo&&!r.pres)return'';
+  const k=(n,v,c='')=>`<div class="kpi"><span class="k">${n}</span><b class="num"${c?` style="color:var(--${c})"`:''}>${v}</b></div>`;
+  return`<section class="rel"><h3>Rentabilidad <span class="muted" style="font-weight:400">· solo la ven los administradores</span></h3>
+    <div class="kpis">${k('Facturado sin IVA',money(r.ing,'UYU'))}${k('Materiales (costo)',money(r.mat,'UYU'))}${k('Mano de obra',money(r.mo,'UYU'))}${k('Margen',money(r.marg,'UYU')+(r.pct!=null?` · ${r.pct} %`:''),r.marg<0?'bad':r.pct!=null&&r.pct>=25?'ok':'')}</div>
+    <p class="hint" style="margin:0">${r.pres?`Presupuestos aceptados: ${money(r.pres,'UYU')}${r.pres>r.ing?` · falta facturar ${money(r.pres-r.ing,'UYU')}`:''}. `:''}Mano de obra: ${fmtH(r.horas)} a valor hora de cada técnico.${r.sinHora?` ${r.sinHora} visita${r.sinHora===1?'':'s'} sin hora de salida.`:''}${r.sinCosto?` ${r.sinCosto} material${r.sinCosto===1?'':'es'} sin costo cargado.`:''} Montos en pesos.</p></section>`;
+}
+function pryRentView(tabs){
+  const l=arr('proyectos').map(p=>({p,r:pryRent(p.id)})).filter(x=>x.r.ing||x.r.costo||x.r.pres).sort((a,b)=>b.r.ing-a.r.ing);
+  const t=l.reduce((a,{r})=>({ing:a.ing+r.ing,c:a.c+r.costo}),{ing:0,c:0});
+  return`<div class="vhead"><div><h1>Rentabilidad por proyecto</h1><p class="sub">Facturado sin IVA contra materiales al costo y horas de los técnicos · en pesos</p></div></div>${tabs}
+  <div class="kpis" style="margin:0 0 14px"><div class="kpi"><span class="k">Facturado</span><b class="num">${money(t.ing,'UYU')}</b></div><div class="kpi"><span class="k">Costos</span><b class="num">${money(t.c,'UYU')}</b></div><div class="kpi"><span class="k">Margen</span><b class="num">${money(t.ing-t.c,'UYU')}</b></div><div class="kpi"><span class="k">Margen %</span><b class="num">${t.ing?Math.round((t.ing-t.c)/t.ing*100)+' %':'—'}</b></div></div>
+  ${l.length?`<div class="tablewrap"><table><thead><tr><th>Proyecto</th><th class="n">Presupuestado</th><th class="n">Facturado</th><th class="n">Materiales</th><th class="n">Mano de obra</th><th class="n">Margen</th></tr></thead><tbody>${l.map(({p,r})=>`<tr data-open="pry:${p.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(p.nombre)}</b><br><span class="muted">${esc(cliName(p.clienteId))}</span></td><td class="n">${r.pres?money(r.pres,'UYU'):'—'}</td><td class="n">${money(r.ing,'UYU')}</td><td class="n">${money(r.mat,'UYU')}</td><td class="n">${money(r.mo,'UYU')}</td><td class="n"><b style="color:var(--${r.marg<0?'bad':'ink'})">${money(r.marg,'UYU')}</b>${r.pct!=null?`<br><span class="muted">${r.pct} %</span>`:''}</td></tr>`).join('')}</tbody></table></div>`
+  :'<div class="empty"><h2>Todavía no hay datos</h2><p>La rentabilidad aparece cuando un proyecto tiene facturas, materiales del stock o visitas con hora de llegada y salida.</p></div>'}`;
+}
+
+/* --- búsqueda global: equipos por número de serie y productos por código --- */
+function invSearch(hit,sec){
+  if(!invOn())return'';const m=stockMap();
+  const es=arr('equipos').filter(e=>hit([eqName(e),e.serie,e.ubicacion,cliName(e.clienteId)].join(' '))).slice(0,8);
+  const ps=arr('productos').filter(p=>(p.stock||m[p.id])&&hit([p.nombre,p.codigo].join(' '))).slice(0,6);
+  return sec('Equipos instalados',es,e=>`<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="a-main" role="button" tabindex="0" data-open="eq:${e.id}"><strong>${esc(eqName(e))}${e.serie?` <span class="code">${esc(e.serie)}</span>`:''}</strong><span class="muted">${esc([cliName(e.clienteId),e.ubicacion].filter(Boolean).join(' · '))}</span></div><span class="eqtags">${eqTags(e)}</span></div>`)
+    +sec('Stock',ps,p=>`<div class="arow" style="grid-template-columns:minmax(0,1fr) auto"><div class="a-main" role="button" tabindex="0" data-open="stk:${p.id}"><strong>${esc(p.nombre)}</strong><span class="muted">${esc(p.codigo||'')}</span></div><b class="num">${fq(stockOf(m,p.id),p)}</b></div>`);
+}
+
+/* --- exportar --- */
+function invCsv(k){
+  const m=stockMap(),ds=deps(),ps=arr('productos').filter(p=>p.stock||m[p.id]).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es')),boss=isBoss();
+  if(k==='compra'){const last={};arr('movimientos').filter(x=>x.tipo==='entrada').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).forEach(x=>last[x.prodId]=x);
+    return csv([['Código','Producto','Unidad','Stock','Mínimo','Sugerido para pedir','Último proveedor',...(boss?['Último costo','Moneda']:[])],...ps.filter(p=>bajoMin(m,p)).map(p=>{const s=stockOf(m,p.id),l=last[p.id];return[p.codigo||'',p.nombre,p.unidad,r2(s),n0(p.stockMin),r2(Math.max(0,2*n0(p.stockMin)-s)),l?.proveedor||'',...(boss?[n0(l?.costo)||n0(p.costo),p.moneda||'UYU']:[])]})]);}
+  return csv([['Código','Producto','Unidad',...ds.map(d=>d.nombre),'Total','Mínimo',...(boss?['Costo unitario','Moneda','Valor en pesos']:[])],...ps.map(p=>{const s=stockOf(m,p.id);return[p.codigo||'',p.nombre,p.unidad,...ds.map(d=>r2(stockOf(m,p.id,d.id))),r2(s),n0(p.stockMin),...(boss?[n0(p.costo),p.moneda||'UYU',r2(Math.max(0,s)*costoUYU(p))]:[])]})]);
+}
+const eqCsv=()=>csv([['Cliente','Proyecto','Equipo','Nº de serie','Ubicación','Instalado','Garantía hasta','Mantenimiento cada (meses)','Próximo mantenimiento','Último mantenimiento','Estado'],
+  ...arr('equipos').sort((a,b)=>cliName(a.clienteId).localeCompare(cliName(b.clienteId),'es')).map(e=>[cliName(e.clienteId),pryName(e.proyectoId),eqName(e),e.serie,e.ubicacion,e.instalado,e.garantiaHasta,n0(e.mantCada)||'',e.proxMant,e.ultMant,e.estado==='retirado'?'Retirado':'Instalado'])]);
+
+/* --- acciones --- */
+async function invAct(k,el,arg){
+  switch(k){
+    case'del':{if(!SH||SH.type!=='dep')return false;const m=stockMap(),n=Object.keys(m).filter(pid=>stockOf(m,pid,SH.id)!==0).length;
+      if(n){toast(`Tiene ${n} artículo${n===1?'':'s'} con stock: transferilos o hacé un ajuste a cero antes de borrarlo.`);return true}return false}
+    case'invtab':INVT=arg;INVQ='';sr();return true;
+    case'invmin':INVMIN=!INVMIN;sr();return true;
+    case'eqf':EQF=arg;sr();return true;
+    case'invdep':openSheet('dep',null,{tipo:arg});return true;
+    case'invnew':{const [tipo,prod,dep]=String(arg||'').split(':');openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
+    case'invcsv':saveFile(`${arg==='compra'?'Lista de compra':'Stock'} ${today()}.csv`,invCsv(arg));return true;
+    case'eqcsv':saveFile(`Equipos instalados ${today()}.csv`,eqCsv());return true;
+    case'eqnew':openSheet('eq',null,{cli:arg||''});return true;
+    case'eqmant':{const e=D.equipos[SH.id];if(!e)return true;const t=today();await put('equipos',SH.id,{...e,ultMant:t,proxMant:addMonths(t,n0(e.mantCada)||12)});D.equipos[SH.id]={...e,ultMant:t,proxMant:addMonths(t,n0(e.mantCada)||12)};toast('Próximo mantenimiento: '+fdate(addMonths(t,n0(e.mantCada)||12)));openSheet('eq',SH.id);return true}
+    case'eqtk':{const e=D.equipos[SH.id];if(!e)return true;const gar=e.garantiaHasta&&e.garantiaHasta>=today();
+      openSheet('tk',null,{cli:e.clienteId,pry:e.proyectoId,draft:{tipo:arg==='reclamo'?'reclamo':'mantenimiento',equipoId:SH.id,titulo:`${arg==='reclamo'?'Falla':'Mantenimiento preventivo'}: ${eqName(e)}${e.ubicacion?' · '+e.ubicacion:''}`,descripcion:[`Equipo: ${eqName(e)}`,e.serie?`Nº de serie: ${e.serie}`:'',e.ubicacion?`Ubicación: ${e.ubicacion}`:'',arg==='reclamo'?(gar?`En garantía hasta ${fdateL(e.garantiaHasta)}`:'Fuera de garantía'):''].filter(Boolean).join('\n')}});return true}
+    case'msadd':{if(!TJ)return true;TJ._ms=TJ._ms||[];const last=TJ._ms[TJ._ms.length-1];TJ._ms.push({p:'',c:'',d:last?.d||myDep()});$('#msList').innerHTML=msRows(TJ);SH.dirty=true;const s=$$('#msList select[data-ms$=":p"]');s.length&&s[s.length-1].focus();return true}
+    case'msdel':{if(!TJ||!TJ._ms)return true;TJ._ms.splice(+arg,1);$('#msList').innerHTML=msRows(TJ);SH.dirty=true;return true}
+  }
+  return false;
+}
+const $$=s=>[...document.querySelectorAll(s)];
+document.addEventListener('input',e=>{const t=e.target;if(!t)return;
+  if(t.id==='inv_q'){INVQ=t.value;const pos=t.selectionStart;sr();const n=$('#inv_q');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}return}
+  if(t.dataset&&t.dataset.ms&&TJ&&TJ._ms){const [i,f]=t.dataset.ms.split(':');if(TJ._ms[i]){TJ._ms[i][f]=t.value;SH&&(SH.dirty=true)}}});
+document.addEventListener('change',e=>{const t=e.target;if(!t)return;
+  if(t.id==='inv_dep'){INVD=t.value;sr();return}
+  if(t.dataset&&t.dataset.ms&&TJ&&TJ._ms){const [i,f]=t.dataset.ms.split(':');if(TJ._ms[i]){TJ._ms[i][f]=t.value;if(f==='c'){const w=$('#msw'+i);if(w)w.outerHTML=msWarn(TJ._ms[i],msAvail(TJ),i)}else if(f!=='s'){const a=document.activeElement&&document.activeElement.dataset?.ms;$('#msList').innerHTML=msRows(TJ);if(a){const n=document.querySelector(`[data-ms="${a}"]`);n&&n.focus()}}}return}
+  if(SH&&SH.type==='mov'&&['mv_tipo','mv_prod','mv_desde','mv_hacia','mv_dep'].includes(t.id)){const r=movRead(),mv={tipo:r.tipo,fecha:r.fecha,prodId:r.prodId,cant:r.cant,desde:r.desde||(r.tipo==='ajuste'?r.dep:''),hacia:r.hacia,costo:r.costo,proveedor:r.proveedor,doc:r.doc,clienteId:r.clienteId,proyectoId:r.proyectoId,nota:r.nota,contado:r.contado};
+    if(t.id==='mv_tipo'){const d0=r.desde||r.hacia||r.dep;mv.desde=r.tipo==='entrada'||r.tipo==='devol'?'':d0;mv.hacia=r.tipo==='entrada'||r.tipo==='devol'?d0:r.tipo==='transf'?r.hacia:'';}
+    if(mv.tipo==='transf'&&(!mv.hacia||mv.hacia===mv.desde))mv.hacia=(deps().find(d=>d.id!==mv.desde&&d.tecnicoId===ME)||deps().find(d=>d.id!==mv.desde))?.id||'';
+    if(SH.id)return;$('#sheet').innerHTML=sheetMov(null,{mv});SH.dirty=true;const n=$('#'+t.id);n&&n.focus()}});
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -2360,7 +2694,7 @@ const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capa
 let PLAN=null, PLANS=null, ISADMIN=false, ADM=null, ADM_LOADING=false, WAMSG=[];
 const EXTRA_USD=6;
 const has=f=>!PLAN||(PLAN.features||[]).includes(f);
-const FEAT=[['presupuestos','Presupuestos y facturas en PDF'],['abonos','Abonos mensuales con prioridad en tickets'],['gcal','Botón de Google Calendar'],['reportes','Reportes'],['whatsapp','WhatsApp automático'],['cfe','Factura electrónica (CFE) con Fixed y exportación para Zureo'],['marca','Logo y colores propios'],['portal','Portal de clientes: piden, siguen sus visitas y aceptan presupuestos']];
+const FEAT=[['presupuestos','Presupuestos y facturas en PDF'],['abonos','Abonos mensuales con prioridad en tickets'],['gcal','Botón de Google Calendar'],['reportes','Reportes y rentabilidad por proyecto'],['inventario','Inventario por depósito y camioneta, equipos con garantía y mantenimiento'],['whatsapp','WhatsApp automático'],['cfe','Factura electrónica (CFE) con Fixed y exportación para Zureo'],['marca','Logo y colores propios'],['portal','Portal de clientes: piden, siguen sus visitas y aceptan presupuestos']];
 const GATE={presupuestos:'presupuestos',facturacion:'facturas',reportes:'reportes'};
 function gated(v){const f=GATE[v];if(!f||has(f))return false;if(v==='reportes')return true;return !arr(v==='facturacion'?'facturas':'presupuestos').length}
 function lockedHtml(v){const n={presupuestos:'Presupuestos',facturacion:'Facturación',reportes:'Reportes'}[v];
