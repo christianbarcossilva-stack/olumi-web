@@ -824,6 +824,7 @@ function vMas(){
   :`<div class="empty">${fiberArt}<h2>Catálogo vacío</h2><p>Cargá lo que más cotizás: metro de fibra, cámaras, jornal de técnico, puntos de red. Al escribir una línea de presupuesto se completan unidad y precio.</p><button class="btn pri" data-new="prod">+ Primer producto</button></div>`}
   <div class="vhead" style="margin-top:34px"><div><h1>Ajustes de la empresa</h1><p class="sub">Nombre, logo y color con los que esta empresa usa Olumi. Salen en el menú, los presupuestos y las facturas.</p></div></div>
   <div class="panel">${has('marca')?'':'<p class="hint" style="margin:0 0 12px">Logo y color propios: incluidos en el plan Empresa. Mientras tanto se usa la marca Olumi.</p>'}<div class="logoprev" style="margin-bottom:14px${has('marca')?'':';display:none'}">${CFG.logo?.id?`<img src="${esc(blobUrl(CFG.logo.id))}" alt="Logo actual">`:'<span class="hint">Sin logo cargado.</span>'}${AS?`<label class="btn upl">${CFG.logo?.id?'Cambiar logo':'Subir logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-up="logo"></label>${CFG.logo?.id?'<button class="btn ghost" data-act="rmlogo">Quitar logo</button>':''}`:''}</div><div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
+  ${pedidoAjustesHtml()}
   ${ajustes16Html()}
   ${cfeAjustesHtml()}
   ${equipoHtml()}
@@ -871,7 +872,7 @@ const TKF=()=>[{k:'titulo',l:'Qué pasa o qué pide',w:'full',ph:'Ej.: Cámara d
 function sheetTk(id,p){
   const t=id?{...D.tickets[id]}:{tipo:'consulta',estado:'nuevo',origen:'WhatsApp',responsable:ME||'',clienteId:p.cli||'',proyectoId:p.pry||'',...(p.draft||{})};
   const pr=tkPrio(t);
-  let body=`<div class="contact">${prChip(pr)}<span>${PRN[pr]}</span>${aboTag(t.clienteId)}${id?`<span class="muted">· abierto ${ago(t.creado)}</span>`:''}</div>
+  let body=webContactHtml(t,id)+`<div class="contact">${prChip(pr)}<span>${PRN[pr]}</span>${aboTag(t.clienteId)}${id?`<span class="muted">· abierto ${ago(t.creado)}</span>`:''}</div>
     <div class="grid">${TKF().map(f=>fld(f,t[f.k])).join('')}${!id?fld({k:'nuevoCli',l:'…o cliente nuevo',ph:'Nombre'},p.newCli?.nombre||'')+fld({k:'nuevoTel',l:'Teléfono del cliente nuevo',t:'tel'},p.newCli?.telefono||''):''}</div><p class="err" id="shErr" hidden></p>`;
   if(id){
     const jobs=arr('trabajos').filter(j=>j.ticketId===id).sort((a,b)=>((a.fecha||'')+(a.hora||'')).localeCompare((b.fecha||'')+(b.hora||'')));
@@ -1468,6 +1469,7 @@ async function act(a,el){
   if(await obraAct(k,el,arg))return;
   if(await rubAct(k,el,arg))return;
   if(await cuotaAct(k,el,arg))return;
+  if(await pedidoAct(k,el))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -3121,6 +3123,57 @@ function pryFactLine(pid){
   return`<p class="hint" style="margin:8px 0 0">Facturado ${money(x.fact,q.moneda)} de ${money(x.base,q.moneda)} (${x.pctF}%) del presupuesto ${esc(q.numero||'')}${x.sugAvance?` · la obra va ${x.av.pct}%`:''}. ${readonly?'':`<button class="btn ghost sm" data-open="pres:${q.id}">${x.sugAvance?'Facturar avance':'Ver facturación'}</button>`}</p>`;
 }
 
+/* ---------- 1.7: pedido de servicio sin cuenta (link público) ---------- */
+const PEDIR=(()=>{try{return new URLSearchParams(location.search).get('pedir')||''}catch(e){return''}})();
+let PEDINFO=undefined,PEDT0=0,PEDNUM='';
+async function pedidoLoad(){try{const {data}=await SB.rpc('public_request_info',{code:PEDIR});PEDINFO=data||null}catch(e){PEDINFO=null}renderAuth()}
+function pedidoHtml(){
+  if(PEDINFO===undefined){pedidoLoad();return'<p class="muted">Cargando…</p>'}
+  if(!PEDINFO)return'<h2>Este link ya no funciona</h2><p class="muted">Pedile a la empresa el link nuevo para cargar tu pedido.</p>';
+  const co=esc(PEDINFO.nombre||'la empresa');
+  if(authMode==='pedidook')return`<h2>¡Listo! Recibimos tu pedido</h2><p class="muted">${co} ya lo tiene${PEDNUM?` con el número <b>${esc(PEDNUM)}</b>`:''} y te va a contactar al teléfono que dejaste.</p>${PEDINFO.telefono?`<p class="muted">Si es urgente, llamá al <b>${esc(PEDINFO.telefono)}</b>.</p>`:''}<button class="btn" data-act="pednew">Cargar otro pedido</button>`;
+  PEDT0=Date.now();
+  return`<h2>Pedí un servicio a ${co}</h2><p class="muted">Contanos qué necesitás y te contactamos. No hace falta crear una cuenta.</p>
+  <form data-form="pedido" class="authform">
+    <label class="fld" for="pd_tipo"><span>Qué necesitás</span><select id="pd_tipo">${opts([['reclamo','Algo dejó de funcionar'],['instalacion','Una instalación nueva'],['mantenimiento','Un mantenimiento'],['emergencia','Es una emergencia'],['consulta','Una consulta o presupuesto']],'reclamo')}</select></label>
+    <label class="fld" for="pd_desc"><span>Contanos qué pasa</span><textarea id="pd_desc" required maxlength="3000" placeholder="Ej.: la cámara del portón no se ve desde ayer"></textarea></label>
+    <label class="fld" for="pd_nom"><span>Tu nombre o el de la empresa</span><input id="pd_nom" type="text" autocomplete="name" required maxlength="120"></label>
+    <label class="fld" for="pd_tel"><span>Teléfono o celular</span><input id="pd_tel" type="tel" autocomplete="tel" inputmode="tel" required maxlength="40"></label>
+    <label class="fld" for="pd_mail"><span>Email (opcional)</span><input id="pd_mail" type="email" autocomplete="email" inputmode="email" maxlength="150"></label>
+    <label class="fld" for="pd_dir"><span>Dirección del lugar</span><input id="pd_dir" type="text" autocomplete="street-address" maxlength="300"></label>
+    <label class="fld" for="pd_dep"><span>Departamento</span><select id="pd_dep">${opts([['','—'],...DEPTOS],'')}</select></label>
+    <div style="position:absolute;left:-5000px" aria-hidden="true"><label for="pd_web">Web</label><input id="pd_web" type="text" tabindex="-1" autocomplete="off"></div>
+    ${authMsg?`<p class="err" role="alert">${esc(authMsg)}</p>`:''}<button class="btn pri" type="submit">Mandar pedido</button>
+    <p class="hint">Tus datos solo los ve ${co} para atender tu pedido.</p></form>`;
+}
+async function pedidoSend(){
+  if(Date.now()-PEDT0<2500){authMsg='Revisá los datos y tocá Mandar pedido de nuevo.';renderAuth();return}
+  const v=k=>($('#pd_'+k)?.value||'').trim();
+  const {data,error}=await SB.rpc('public_request',{code:PEDIR,d:{tipo:v('tipo'),descripcion:v('desc'),nombre:v('nom'),telefono:v('tel'),email:v('mail'),direccion:v('dir'),departamento:v('dep'),web:v('web')}});
+  if(error){authMsg=/faltan_datos/.test(error.message)?'Completá qué pasa, tu nombre y un teléfono válido.':/demasiados/.test(error.message)?'Ya recibimos varios pedidos tuyos. Te vamos a contactar.':/link_invalido/.test(error.message)?'Este link ya no funciona.':'No se pudo mandar. Probá de nuevo en un momento.';renderAuth();return}
+  PEDNUM=data||'';authMode='pedidook';authMsg='';renderAuth();
+}
+let REQC=undefined;
+async function reqLoad(renew){if(!SB||!ORG)return;try{const {data,error}=await SB.rpc('request_code',{o:ORG,renew:!!renew});REQC=error?null:data}catch(e){REQC=null}sr()}
+const reqLink=()=>REQC?PORTAL_URL+'?pedir='+REQC:'';
+function pedidoAjustesHtml(){
+  if(!isBoss()||mode!=='live')return'';if(REQC===undefined){REQC=null;reqLoad(false)}
+  return`<div class="vhead" style="margin-top:34px"><div><h1>Pedidos desde tu web o WhatsApp</h1><p class="sub">Un link para que cualquiera te pida un servicio sin crear cuenta. Cada pedido entra como ticket nuevo, con sus datos de contacto.</p></div></div>
+  <div class="panel">${REQC?`<p class="num" style="word-break:break-all;margin:0 0 10px">${esc(reqLink())}</p><div class="actions"><button class="btn pri" data-act="reqcopy">Copiar link</button><a class="btn" href="${esc(reqLink())}" target="_blank" rel="noopener">Probarlo</a><button class="btn ghost" data-act="reqnew">Cambiar el link</button></div><p class="hint" style="margin:8px 0 0">Ponelo en tu web, en la bio de Instagram o como respuesta automática de WhatsApp. Si cambiás el link, el anterior deja de funcionar.</p>`:'<p class="muted" style="margin:0">Preparando el link…</p>'}</div>`;
+}
+function webContactHtml(t,id){const w=t&&t.contactoWeb;if(!w)return'';
+  return`<div class="panel" style="margin-bottom:12px"><b>Pedido desde el link público</b><p style="margin:4px 0 0">${esc(w.nombre||'')} · <span class="num">${esc(w.telefono||'')}</span>${w.email?' · '+esc(w.email):''}${w.direccion?'<br>'+esc(w.direccion):''}${w.departamento?', '+esc(w.departamento):''}</p>
+    <div class="actions" style="margin-top:8px">${waLink(w.telefono)?`<a class="btn" href="${esc(waLink(w.telefono))}" target="_blank" rel="noopener">WhatsApp</a>`:''}${id&&!t.clienteId&&!readonly?'<button class="btn pri" data-act="webcli">Crear el cliente con estos datos</button>':''}</div></div>`}
+async function pedidoAct(k,el){
+  if(k==='pednew'){authMode='pedido';authMsg='';renderAuth();return true}
+  if(k==='reqcopy'){try{await navigator.clipboard.writeText(reqLink());toast('Link copiado')}catch(e){toast(reqLink())}return true}
+  if(k==='reqnew'){if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='El link de ahora deja de andar. Tocá de nuevo';return true}armed=null;await reqLoad(true);toast('Link nuevo listo');return true}
+  if(k==='webcli'){const t=D.tickets[SH?.id];const w=t&&t.contactoWeb;if(!w)return true;const cid=uid();
+    await put('clientes',cid,{nombre:w.nombre,telefono:w.telefono,email:w.email||'',direccion:w.direccion||'',departamento:w.departamento||'',creado:Date.now()});
+    await put('tickets',SH.id,{...t,clienteId:cid,actualizado:Date.now()});D.tickets[SH.id]={...t,clienteId:cid};toast('Cliente creado');openSheet('tk',SH.id);return true}
+  return false;
+}
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -3434,6 +3487,8 @@ function renderAuth(){
     body=`<h2>Revisá tu email</h2><p class="muted">Si ese email tiene cuenta en Olumi, te llegó un enlace para elegir una contraseña nueva.</p><button class="btn pri" data-auth="login">Volver a entrar</button>`;
   }else if(authMode==='setpass'){
     body=`<h2>Elegí tu contraseña</h2><p class="muted">Con esta contraseña vas a entrar a Olumi desde la app o la web.</p><form data-form="setpass" class="authform"><label class="fld" for="a_pass"><span>Contraseña nueva</span><input id="a_pass" type="password" autocomplete="new-password" minlength="6" required></label>${err}<button class="btn pri" type="submit">Guardar y entrar</button></form>`;
+  }else if(authMode==='pedido'||authMode==='pedidook'){
+    body=pedidoHtml();
   }else if(authMode==='config'){
     body=`<h2>Falta conectar el servidor</h2><p class="muted">Completá el archivo <b>www/config.js</b> con la URL y la clave pública de tu proyecto de Supabase.</p>`;
   }
@@ -3457,6 +3512,7 @@ document.addEventListener('submit',async e=>{
   const btn=f.querySelector('button[type=submit]');btn.disabled=true;authMsg='';
   try{
     const k=f.dataset.form;
+    if(k==='pedido'){await pedidoSend();return}
     if(k==='forgot'){const {error}=await SB.auth.resetPasswordForEmail($('#a_email').value.trim(),{redirectTo:PORTAL_URL});if(error)throw error;authMode='sent';renderAuth();return}
     if(k==='setpass'){const {error}=await SB.auth.updateUser({password:$('#a_pass').value});if(error)throw error;PASSDONE=true;history.replaceState(null,'',location.pathname);await boot();return}
     if(k==='login'){const {error}=await SB.auth.signInWithPassword({email:$('#a_email').value.trim(),password:$('#a_pass').value});if(error)throw error;await boot()}
@@ -3503,6 +3559,7 @@ const slowT=setTimeout(()=>{slow=true;sr()},10000);
 let booted=false;
 async function boot(){
   if(!SB){clearTimeout(slowT);showAuth('config');return}
+  if(PEDIR){clearTimeout(slowT);showAuth('pedido');return}
   const {data:{session}}=await SB.auth.getSession();
   if(!session){clearTimeout(slowT);showAuth('login');return}
   ME=session.user.id;
