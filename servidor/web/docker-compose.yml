@@ -1,0 +1,35 @@
+# Web pública de unitytech.uy, detrás del Traefik que ya usa n8n.
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: unitytech-web
+    restart: unless-stopped
+    volumes:
+      - /var/www:/srv:ro,z
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro,z
+    networks: [app]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=n8n-traefik_app_network
+      - traefik.http.services.unitytech.loadbalancer.server.port=80
+      # https://unitytech.uy y https://www.unitytech.uy (certificado gratis de Let's Encrypt)
+      - traefik.http.routers.unitytech.rule=Host(`unitytech.uy`) || Host(`www.unitytech.uy`)
+      - traefik.http.routers.unitytech.entrypoints=websecure
+      - traefik.http.routers.unitytech.tls.certresolver=le
+      - traefik.http.routers.unitytech.service=unitytech
+      # http -> https
+      - traefik.http.middlewares.unitytech-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.unitytech-https.redirectscheme.permanent=true
+      - traefik.http.routers.unitytech-http.rule=Host(`unitytech.uy`) || Host(`www.unitytech.uy`)
+      - traefik.http.routers.unitytech-http.entrypoints=web
+      - traefik.http.routers.unitytech-http.middlewares=unitytech-https
+      - traefik.http.routers.unitytech-http.service=unitytech
+      # prueba por IP mientras el dominio no apunta: http://129.121.60.208/olumi/
+      - traefik.http.routers.unitytech-ip.rule=Host(`129.121.60.208`) && PathPrefix(`/olumi`)
+      - traefik.http.routers.unitytech-ip.entrypoints=web
+      - traefik.http.routers.unitytech-ip.priority=100
+      - traefik.http.routers.unitytech-ip.service=unitytech
+networks:
+  app:
+    external: true
+    name: n8n-traefik_app_network
