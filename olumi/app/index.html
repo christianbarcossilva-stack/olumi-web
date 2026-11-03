@@ -450,6 +450,8 @@ body.portal .main{max-width:900px;margin-inline:auto;width:100%}
     <button data-view="calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3v3H8z"/></svg>Calendario</button>
     <button data-view="campo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>Mi día</button>
     <button data-view="trabajos" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="M20 19l2 2"/></svg>Historial</button>
+    <button data-view="proyectos" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6M9 11h1M14 11h1"/></svg>Proyectos</button>
+    <button data-view="tecnicos" class="dsk"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 11.5l1.6 1.6 3.4-3.4"/></svg>Técnicos</button>
     <span class="navsec dsk">Comercial</span>
     <button data-view="pipeline"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>Pipeline</button>
     <button data-view="clientes" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Clientes</button>
@@ -495,7 +497,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos'];
+const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -535,7 +537,7 @@ function applyBrand(){
   if(id&&!logoData)loadLogoData();
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -622,6 +624,7 @@ function overdueCount(){const t=today();return arr('actividades').filter(a=>!a.h
 /* ---------- render ---------- */
 let rq=0;function sr(){if(!rq)rq=requestAnimationFrame(()=>{rq=0;render()})}
 function render(){
+  if(CFEI===undefined&&mode==='live'&&ORG&&PLAN&&has('cfe')&&!PORTAL())loadCfe();
   if(PORTAL()){document.body.classList.add('portal');applyBrand();$('#banner').innerHTML='';$('#main').innerHTML=(loaded.size>=NEED||slow)?vPortal():loadingHtml();return}
   document.body.classList.remove('portal');
   if(!VIEWS[VIEW])VIEW='pipeline';
@@ -806,6 +809,7 @@ function vMas(){
   :`<div class="empty">${fiberArt}<h2>Catálogo vacío</h2><p>Cargá lo que más cotizás: metro de fibra, cámaras, jornal de técnico, puntos de red. Al escribir una línea de presupuesto se completan unidad y precio.</p><button class="btn pri" data-new="prod">+ Primer producto</button></div>`}
   <div class="vhead" style="margin-top:34px"><div><h1>Ajustes de la empresa</h1><p class="sub">Nombre, logo y color con los que esta empresa usa Olumi. Salen en el menú, los presupuestos y las facturas.</p></div></div>
   <div class="panel">${has('marca')?'':'<p class="hint" style="margin:0 0 12px">Logo y color propios: incluidos en el plan Empresa. Mientras tanto se usa la marca Olumi.</p>'}<div class="logoprev" style="margin-bottom:14px${has('marca')?'':';display:none'}">${CFG.logo?.id?`<img src="${esc(blobUrl(CFG.logo.id))}" alt="Logo actual">`:'<span class="hint">Sin logo cargado.</span>'}${AS?`<label class="btn upl">${CFG.logo?.id?'Cambiar logo':'Subir logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-up="logo"></label>${CFG.logo?.id?'<button class="btn ghost" data-act="rmlogo">Quitar logo</button>':''}`:''}</div><div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
+  ${cfeAjustesHtml()}
   ${equipoHtml()}
   <div class="vhead" style="margin-top:34px"><div><h1>Apariencia</h1><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día. Se guarda en cada dispositivo.</p></div></div>${themeSeg()}
   <div class="vhead" style="margin-top:34px"><div><h1>Exportar</h1><p class="sub">Archivos CSV que abren en Excel</p></div></div>
@@ -1128,7 +1132,7 @@ function sheetFact(id,p){
   else QE={numero:'',tipo:'venta',clienteId:p.cli||'',fecha:today(),vence:addDays(today(),15),moneda:defMon(),iva:true,descuento:0,lineas:[{desc:'',cant:1,unidad:'unidad',precio:0}],cobros:[],cfe:'',notas:''};
   if(!QE.cobros)QE.cobros=[];
   const q=QE,c=factCalc(q),st=factState(q);
-  const body=`${id?`<div class="contact"><span class="tag ${FST[st][1]}">${FST[st][0]}</span>${q.cfe?`<span class="code">CFE ${esc(q.cfe)}</span>`:'<span class="tag t-warn">Falta el número de CFE</span>'}</div>`:''}
+  const body=`${id?`<div class="contact"><span class="tag ${FST[st][1]}">${FST[st][0]}</span>${q.cfe?`<span class="code">CFE ${esc(q.cfe)}</span>`:cfeOn()?'<span class="tag t-warn">Sin CFE emitido</span>':'<span class="tag t-warn">Falta el número de CFE</span>'}</div>`:''}
   <div class="grid">
     <label class="fld" for="q_clienteId"><span>Cliente</span><select id="q_clienteId" data-q="clienteId">${opts(cliOpts(),q.clienteId)}</select></label>
     <label class="fld" for="q_tipo"><span>Tipo</span><select id="q_tipo" data-q="tipo">${opts([['venta','Venta / trabajo'],['abono','Abono mensual']],q.tipo)}</select></label>
@@ -1136,13 +1140,14 @@ function sheetFact(id,p){
     <label class="fld" for="q_fecha"><span>Fecha</span><input type="date" id="q_fecha" data-q="fecha" value="${esc(q.fecha)}"></label>
     <label class="fld" for="q_vence"><span>Vence</span><input type="date" id="q_vence" data-q="vence" value="${esc(q.vence)}"></label>
     <label class="fld" for="q_moneda"><span>Moneda</span><select id="q_moneda" data-q="moneda">${opts([['UYU','$ Pesos'],['USD','US$ Dólares']],q.moneda)}</select></label>
-    <label class="fld" for="q_cfe"><span>Nº de CFE (de tu proveedor)</span><input type="text" id="q_cfe" data-q="cfe" value="${esc(q.cfe)}" placeholder="Ej.: A 1234"></label>
+    ${cfeOn()||(q.cfeData&&q.cfeData.idCFE)?'':`<label class="fld" for="q_cfe"><span>Nº de CFE (de tu proveedor)</span><input type="text" id="q_cfe" data-q="cfe" value="${esc(q.cfe)}" placeholder="Ej.: A 1234"></label>`}
   </div>
   <section class="rel"><h3>Líneas</h3><div class="qlh" aria-hidden="true"><span>Descripción</span><span>Cant.</span><span>Unidad</span><span>Precio u.</span><span>Importe</span><span></span></div>
     <div class="qlines" id="qlines">${qLinesHtml()}</div><div><button class="btn" data-act="addline">+ Línea</button></div>
     <div class="grid" style="margin-top:4px"><label class="fld" for="q_descuento"><span>Descuento (%)</span><input type="number" id="q_descuento" data-q="descuento" min="0" max="100" step="any" value="${esc(q.descuento)}"></label>
     <label class="fld chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="q_iva" data-q="iva"${q.iva?' checked':''}><span>Sumar IVA 22 %</span></label></div>
     <div class="totals" id="qtot">${qTotHtml()}</div></section>
+  ${cfeBox(q)}
   <section class="rel cobros"><h3>Cobros</h3><div id="cobros">${cobrosHtml()}</div>
     <div class="mini"><input type="date" id="co_fecha" value="${today()}" aria-label="Fecha del cobro"><input type="number" id="co_monto" step="any" min="0" inputmode="decimal" placeholder="Monto" value="${c.saldo?+c.saldo.toFixed(2):''}" aria-label="Monto cobrado">
     <div class="row2"><select id="co_medio" aria-label="Medio de pago">${opts(MEDIOS,'Transferencia')}</select><button class="btn" data-act="addcobro">Registrar cobro</button></div></div></section>
@@ -1156,6 +1161,7 @@ async function saveFact(close=true){
   const e=$('#shErr');
   if(!QE.clienteId){e.textContent='Elegí el cliente.';e.hidden=false;return null}
   if(!QE.lineas.some(l=>l.desc)){e.textContent='Agregá al menos una línea con descripción.';e.hidden=false;return null}
+  {const prev=SH.id&&D.facturas[SH.id];if(prev&&prev.cfeData&&prev.cfeData.idCFE&&(Math.abs(calcQ(prev).total-calcQ(QE).total)>0.004||prev.clienteId!==QE.clienteId||prev.moneda!==QE.moneda)){e.textContent='Esta factura ya tiene CFE emitido: no se pueden cambiar cliente, moneda ni importes. Si hay un error, hacé una nota de crédito y una factura nueva.';e.hidden=false;return null}}
   e.hidden=true;
   if(!QE.numero)QE.numero=nextCode('facturas','F');
   QE.lineas=QE.lineas.filter(l=>l.desc||n0(l.precio));
@@ -1180,13 +1186,13 @@ async function genAbonos(){
 
 /* ---------- menú (celular) ---------- */
 function vMenu(){
-  const it=[['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
+  const it=[['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isBoss()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ['facturacion','Facturación',`${arr('facturas').filter(f=>factState(f)==='vencida').length} vencidas`],['agenda','Seguimientos',`${overdueCount()} vencidos`],
     ['reportes','Reportes','Pipeline, tickets y cobros'],['mas','Catálogo y ajustes','Productos, datos de la empresa, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${it.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
 }
 
-const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos};
+const VIEWS={tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1246,7 +1252,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1432,6 +1438,7 @@ async function act(a,el){
   if(await planAct(k,el,arg))return;
   if(await obrasAct(k,el,arg))return;
   if(await planosAct(k,el,arg))return;
+  if(await modulosAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -1474,7 +1481,7 @@ async function act(a,el){
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -2155,6 +2162,193 @@ async function planosUpload(inp){
   return false;
 }
 
+/* ---------- 1.3: Proyectos, Técnicos (ficha, horas, liquidación), CFE con Fixed y exportación para Zureo ---------- */
+const isBoss=()=>['owner','admin'].includes(ROLE);
+const r2=x=>Math.round((Number(x)||0)*100)/100;
+
+/* --- Proyectos (con planos, avance y relevamientos) --- */
+let PRYTAB='proyectos', PRYQ='';
+function vProyectos(){
+  const q=qn(PRYQ);
+  const tabs=`<div class="seg" role="tablist" style="margin-bottom:14px">${[['proyectos','Proyectos'],['relevamientos','Relevamientos']].map(([k,n])=>`<button role="tab" class="${PRYTAB===k?'on':''}" aria-selected="${PRYTAB===k}" data-act="prytab:${k}">${n}</button>`).join('')}</div>`;
+  const search=`<input type="search" class="tfq" id="pry_q" data-pryq value="${esc(PRYQ)}" placeholder="Buscar por proyecto, cliente o dirección" aria-label="Buscar">`;
+  if(PRYTAB==='relevamientos'){
+    const l=arr('relevamientos').filter(r=>!q||qn([r.titulo,r.servicio,cliName(r.clienteId),pryName(r.proyectoId),r.direccion].join(' ')).includes(q)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    return`<div class="vhead"><div><h1>Relevamientos</h1><p class="sub">${l.length} relevamiento${l.length===1?'':'s'} · lo que se midió en la obra antes de cotizar</p></div></div>${tabs}${search}
+    ${l.length?`<div class="list">${l.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),r.servicio].filter(Boolean).join(' · '))}</span></div><span class="muted">${fdate(r.fecha)}</span></div>`).join('')}</div>`
+      :`<div class="empty"><h2>Sin relevamientos</h2><p>Cargá lo que medís en la obra (cámaras, metros, puntos, jornales) y Olumi arma el presupuesto solo.</p>${readonly?'':'<button class="btn pri" data-new="rel">+ Relevamiento</button>'}</div>`}`;
+  }
+  const l=arr('proyectos').filter(p=>!q||qn([p.nombre,cliName(p.clienteId),p.direccion,p.estado].join(' ')).includes(q)).sort((a,b)=>n0(b.creado||0)-n0(a.creado||0));
+  const card=p=>{const pls=pryPlanos(p.id),av=pryAvance(p.id),jobs=arr('trabajos').filter(j=>j.proyectoId===p.id),rels=arr('relevamientos').filter(r=>r.proyectoId===p.id).length;
+    const pend=jobs.filter(j=>j.estado!=='terminado').length;
+    return`<div class="row" role="button" tabindex="0" data-open="pry:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p.nombre||'Proyecto')}</strong><span class="muted">${esc(cliName(p.clienteId)||'Sin cliente')} · ${pls.length} plano${pls.length===1?'':'s'} · ${jobs.length} visita${jobs.length===1?'':'s'}${pend?` (${pend} pendiente${pend===1?'':'s'})`:''}${rels?` · ${rels} relevamiento${rels===1?'':'s'}`:''}</span>
+      ${av.t?`<div class="bar" style="--bc:var(--ok);margin-top:6px"><span class="lbl">Instalado</span><span class="val">${av.d} de ${av.t} · ${av.pct}%</span><div class="trk"><div class="fil" style="width:${Math.max(2,av.pct)}%"></div></div></div>`:''}</div>
+      <span class="tag ${p.estado==='terminado'?'t-ok':p.estado==='pausado'?'t-warn':'t-none'}">${esc({activo:'Activo',pausado:'Pausado',terminado:'Terminado'}[p.estado]||'Activo')}</span></div>`};
+  return`<div class="vhead"><div><h1>Proyectos y obras</h1><p class="sub">${l.length} proyecto${l.length===1?'':'s'} · planos, avance de la instalación, visitas y relevamientos</p></div></div>${tabs}${search}
+  ${l.length?`<div class="list">${l.map(card).join('')}</div>`:`<div class="empty"><h2>Sin proyectos</h2><p>Un proyecto agrupa la obra de un cliente: planos, puntos marcados, visitas, informes y presupuestos.</p>${readonly?'':'<button class="btn pri" data-new="pry">+ Proyecto</button>'}</div>`}`;
+}
+
+/* --- Técnicos --- */
+let TP={per:'mes'};
+function tpRange(){
+  const d=new Date(),iso=x=>localISO(x).slice(0,10);
+  if(TP.per==='semana'){const s=new Date(d);s.setDate(d.getDate()-((d.getDay()+6)%7));const e=new Date(s);e.setDate(s.getDate()+6);return[iso(s),iso(e),'Esta semana']}
+  if(TP.per==='mesant'){const s=new Date(d.getFullYear(),d.getMonth()-1,1),e=new Date(d.getFullYear(),d.getMonth(),0);return[iso(s),iso(e),s.toLocaleDateString('es-UY',{month:'long',year:'numeric'})]}
+  if(TP.per==='rango'&&TP.desde&&TP.hasta)return[TP.desde,TP.hasta,`${fdate(TP.desde)} al ${fdate(TP.hasta)}`];
+  const s=new Date(d.getFullYear(),d.getMonth(),1),e=new Date(d.getFullYear(),d.getMonth()+1,0);return[iso(s),iso(e),s.toLocaleDateString('es-UY',{month:'long',year:'numeric'})];
+}
+const hm=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1])+(+m[2])/60:null};
+function jobHours(j){const a=hm(j.llegada),b=hm(j.salida);if(a==null||b==null)return null;let h=b-a;if(h<0)h+=24;return h>16?null:h}
+const fmtH=h=>{const t=Math.round((h||0)*60);return`${Math.floor(t/60)} h${t%60?' '+String(t%60).padStart(2,'0'):''}`};
+function tecList(){return Object.keys(MEMBERS).filter(id=>MEMBERS[id].role!=='cliente').sort((a,b)=>personName(a).localeCompare(personName(b),'es'))}
+function tecFicha(id){return D.tecnicos&&D.tecnicos[id]||{}}
+function tecStats(id,[desde,hasta]){
+  const f=tecFicha(id),jornada=n0(f.jornada)||8;
+  const jobs=arr('trabajos').filter(j=>(j.tecnicos||[]).includes(id)&&j.fecha&&j.fecha>=desde&&j.fecha<=hasta);
+  const porDia={};let sinHora=0;
+  jobs.forEach(j=>{const h=jobHours(j);if(h==null){if(j.estado==='terminado')sinHora++;return}porDia[j.fecha]=(porDia[j.fecha]||0)+h});
+  let normales=0,extra=0;
+  Object.entries(porDia).forEach(([dia,h])=>{const dom=new Date(dia+'T12:00').getDay()===0;if(dom){extra+=h;return}normales+=Math.min(h,jornada);extra+=Math.max(0,h-jornada)});
+  const term=jobs.filter(j=>j.estado==='terminado'),sinFirma=term.filter(j=>!(j.firma&&j.firma.id)).length;
+  const vh=n0(f.valorHora),ve=n0(f.valorExtra)||r2(vh*1.5);
+  return{jobs,dias:Object.keys(porDia).length,normales,extra,horas:normales+extra,term:term.length,sinFirma,sinHora,prom:term.length?(normales+extra)/term.length:0,vh,ve,total:r2(normales*vh+extra*ve),moneda:f.moneda||'UYU',jornada};
+}
+function vencTags(f){const out=[],hoy=today(),lim=addDays(hoy,30);[['carneAltura','Carné de altura'],['libreta','Libreta de conducir'],['carneSalud','Carné de salud']].forEach(([k,n])=>{const v=f[k];if(!v)return;if(v<hoy)out.push(`<span class="tag t-bad">${n} vencido</span>`);else if(v<=lim)out.push(`<span class="tag t-warn">${n} vence ${fdate(v)}</span>`)});return out.join('')}
+function vTecnicos(){
+  const rg=tpRange(),ids=isBoss()?tecList():[ME];
+  const rows=ids.map(id=>({id,s:tecStats(id,rg),f:tecFicha(id)}));
+  const tot=rows.reduce((a,r)=>({h:a.h+r.s.horas,e:a.e+r.s.extra,t:a.t+r.s.term,$:a.$+(r.s.moneda==='UYU'?r.s.total:0)}),{h:0,e:0,t:0,$:0});
+  const per=`<div class="seg" role="group" aria-label="Período">${[['semana','Semana'],['mes','Este mes'],['mesant','Mes anterior'],['rango','Rango']].map(([k,n])=>`<button class="${TP.per===k?'on':''}" data-act="tpper:${k}" aria-pressed="${TP.per===k}">${n}</button>`).join('')}</div>
+    ${TP.per==='rango'?`<div class="mini" style="margin-top:8px"><input type="date" id="tp_desde" value="${esc(TP.desde||'')}" aria-label="Desde"><input type="date" id="tp_hasta" value="${esc(TP.hasta||'')}" aria-label="Hasta"><button class="btn" data-act="tprango">Ver</button></div>`:''}`;
+  const kpi=(n,v)=>`<div class="kpi"><span class="k">${n}</span><b class="num">${v}</b></div>`;
+  const mob=`<div class="list only-mob">${rows.map(({id,s,f})=>`<div class="row" role="button" tabindex="0" data-act="tec:${id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(personName(id))}</strong><span class="muted">${s.term} visitas cerradas · ${fmtH(s.horas)}${s.extra?` (${fmtH(s.extra)} extra)`:''}${s.sinFirma?` · ${s.sinFirma} sin firma`:''}</span>${vencTags(f)?`<div style="margin-top:4px">${vencTags(f)}</div>`:''}</div>${isBoss()&&s.vh?`<span class="num">${money(s.total,s.moneda)}</span>`:''}</div>`).join('')}</div>`;
+  const dsk=`<div class="tablewrap only-dsk"><table><thead><tr><th>Técnico</th><th class="n">Visitas</th><th class="n">Cerradas</th><th class="n">Días</th><th class="n">Horas</th><th class="n">Extra</th><th class="n">Prom. por visita</th><th class="n">Sin firma</th>${isBoss()?'<th class="n">A liquidar</th>':''}<th>Avisos</th></tr></thead>
+    <tbody>${rows.map(({id,s,f})=>`<tr data-act="tec:${id}" tabindex="0" style="cursor:pointer"><td><b>${esc(personName(id))}</b><br><span class="muted">${esc((f.especialidades||[]).join(', ')||({owner:'Dueño',admin:'Administrador',tecnico:'Técnico',viewer:'Solo lectura'}[MEMBERS[id]?.role]||''))}</span></td>
+      <td class="n">${s.jobs.length}</td><td class="n">${s.term}</td><td class="n">${s.dias}</td><td class="n">${fmtH(s.horas)}</td><td class="n">${s.extra?fmtH(s.extra):'—'}</td><td class="n">${s.term?fmtH(s.prom):'—'}</td><td class="n">${s.sinFirma||'—'}</td>
+      ${isBoss()?`<td class="n">${s.vh?money(s.total,s.moneda):'<span class="muted">cargá el valor hora</span>'}</td>`:''}<td>${vencTags(f)}${s.sinHora?`<span class="tag t-warn">${s.sinHora} sin hora de salida</span>`:''}</td></tr>`).join('')}</tbody></table></div>`;
+  return`<div class="vhead"><div><h1>${isBoss()?'Técnicos':'Mis horas'}</h1><p class="sub">${esc(rg[2])} · horas tomadas de la llegada y salida de cada visita${isBoss()?'':''}</p></div>
+    ${isBoss()?`<div class="tools"><button class="btn" data-act="liqcsv">Exportar liquidación</button><button class="btn pri" data-act="liqdoc">Descargar liquidación</button></div>`:''}</div>
+    ${per}
+    <div class="kpis" style="margin:14px 0">${kpi('Horas trabajadas',fmtH(tot.h))}${kpi('Horas extra',fmtH(tot.e))}${kpi('Visitas cerradas',tot.t)}${isBoss()?kpi('A liquidar ($)',money(tot.$,'UYU')):''}</div>
+    ${rows.length?mob+dsk:'<div class="empty"><h2>Todavía no hay técnicos</h2><p>Invitalos desde Catálogo y ajustes → Equipo.</p></div>'}
+    <p class="hint" style="margin-top:12px">Horas normales hasta la jornada de cada técnico (8 h si no se cargó); lo que pasa de la jornada y los domingos cuenta como extra. La hora extra vale 1,5 veces la hora normal salvo que cargues otro valor en la ficha.</p>`;
+}
+const TECF=()=>[{k:'telefono',l:'Teléfono',t:'tel'},{k:'documento',l:'Cédula'},{k:'vehiculo',l:'Vehículo'},{k:'matricula',l:'Matrícula'},
+  {k:'carneAltura',l:'Carné de altura vence',t:'date'},{k:'libreta',l:'Libreta de conducir vence',t:'date'},{k:'carneSalud',l:'Carné de salud vence',t:'date'},
+  {k:'jornada',l:'Jornada (horas por día)',t:'number',step:'0.5'},{k:'valorHora',l:'Valor hora',t:'number',step:'any'},{k:'valorExtra',l:'Valor hora extra (vacío = 1,5×)',t:'number',step:'any'},
+  {k:'moneda',l:'Moneda',t:'select',o:[['UYU','$ Pesos'],['USD','US$ Dólares']]},
+  {k:'herramientas',l:'Herramientas y equipos asignados',t:'textarea',w:'full',ph:'Ej.: fusionadora Fujikura 41S, OTDR, escalera 6 m, taladro'},
+  {k:'notas',l:'Notas',t:'textarea',w:'full'}];
+function sheetTec(id){
+  const f=tecFicha(id),s=tecStats(id,tpRange()),boss=isBoss();
+  const esp=new Set(f.especialidades||[]);
+  let body=`<div class="contact"><strong>${esc(personName(id))}</strong><span class="muted">${esc(MEMBERS[id]?.email||'')}</span>${vencTags(f)}</div>
+    <div class="kpis" style="margin-bottom:6px"><div class="kpi"><span class="k">${esc(tpRange()[2])}</span><b class="num">${fmtH(s.horas)}</b></div><div class="kpi"><span class="k">Extra</span><b class="num">${fmtH(s.extra)}</b></div><div class="kpi"><span class="k">Visitas cerradas</span><b class="num">${s.term}</b></div>${boss&&s.vh?`<div class="kpi"><span class="k">A liquidar</span><b class="num">${money(s.total,s.moneda)}</b></div>`:''}</div>`;
+  if(boss){
+    body+=`<section class="rel"><h3>Especialidades</h3><div class="techs">${SERV.filter(x=>x!=='Otro').concat(['Alarmas','Altura','Electricidad']).map(x=>`<label><input type="checkbox" name="tesp" value="${esc(x)}"${esp.has(x)?' checked':''}>${esc(x)}</label>`).join('')}</div></section>
+      <div class="grid">${TECF().map(x=>fld(x,f[x.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
+  }else body+=`<p class="muted">Los datos de tu ficha los carga el administrador.</p>`;
+  body+=`<section class="rel"><h3>Visitas del período</h3>${s.jobs.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(j=>{const h=jobHours(j);return`<div class="item link" role="button" tabindex="0" data-open="trab:${j.id}"><span>${fdate(j.fecha)}</span><span class="grow">${esc(j.titulo||'Visita')} · <span class="muted">${esc(cliName(j.clienteId)||'')}</span></span><span class="num">${h!=null?fmtH(h):'—'}</span>${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':''}</div>`}).join('')||'<p class="muted" style="margin:0">Sin visitas en el período.</p>'}</section>`;
+  return sheetFrame('Técnico',personName(id),body,boss?{}:{saveLabel:'Cerrar'});
+}
+async function saveTec(){
+  if(!isBoss()){closeSheet();return}
+  const v=readForm(TECF());v.especialidades=[...document.querySelectorAll('input[name=tesp]:checked')].map(i=>i.value);
+  const id=SH.id;await put('tecnicos',id,{...tecFicha(id),...v,actualizado:Date.now()});toast('Ficha guardada');closeSheet();
+}
+function liqRows(){const rg=tpRange();return tecList().map(id=>({id,s:tecStats(id,rg)}))}
+function liqDoc(){
+  const rg=tpRange(),rows=liqRows();
+  return`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Liquidación de horas ${esc(rg[2])}</title><style>${DOCCSS}</style></head><body>
+${docHead('Liquidación de horas','',`${fdateL(rg[0])} al ${fdateL(rg[1])}`)}
+<table><thead><tr><th>Técnico</th><th>Días</th><th>Horas normales</th><th>Horas extra</th><th>Valor hora</th><th>Valor extra</th><th>Total</th></tr></thead><tbody>
+${rows.map(({id,s})=>`<tr><td><b>${esc(personName(id).replace(' (vos)',''))}</b></td><td>${s.dias}</td><td>${fmtH(s.normales)}</td><td>${fmtH(s.extra)}</td><td>${s.vh?money(s.vh,s.moneda,2):'—'}</td><td>${s.vh?money(s.ve,s.moneda,2):'—'}</td><td><b>${s.vh?money(s.total,s.moneda,2):'—'}</b></td></tr>`).join('')}
+</tbody></table>
+${rows.map(({id,s})=>s.jobs.length?`<h2>${esc(personName(id).replace(' (vos)',''))}</h2><table><thead><tr><th>Fecha</th><th>Cliente y trabajo</th><th>Llegada</th><th>Salida</th><th>Horas</th></tr></thead><tbody>${s.jobs.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(j=>{const h=jobHours(j);return`<tr><td>${fdate(j.fecha)}</td><td>${esc(cliName(j.clienteId)||'')} · ${esc(j.titulo||'')}</td><td>${esc(j.llegada||'—')}</td><td>${esc(j.salida||'—')}</td><td>${h!=null?fmtH(h):'—'}</td></tr>`}).join('')}</tbody></table>`:'').join('')}
+<footer>Liquidación generada con Olumi el ${new Date().toLocaleString('es-UY')}. Horas tomadas de la llegada y salida de cada visita. Revisala antes de pagar.</footer></body></html>`;
+}
+
+/* --- Facturación electrónica --- */
+let CFEI=undefined, CFELOADING=false;
+async function loadCfe(){if(CFELOADING||!SB||!ORG||!has('cfe'))return;CFELOADING=true;try{const {data,error}=await SB.rpc('cfe_info',{o:ORG});CFEI=error?null:(data||null)}catch(e){CFEI=null}CFELOADING=false;sr()}
+const cfeOn=()=>has('cfe')&&CFEI&&CFEI.proveedor==='fixed'&&CFEI.configurado;
+const DGIT={aceptado:['Aceptado por DGI','t-ok'],rechazado:['Rechazado por DGI','t-bad'],sinrespuesta:['Esperando a DGI','t-warn']};
+function cfeBox(f){
+  if(!has('cfe'))return'';
+  const c=f.cfeData;
+  if(c&&c.idCFE){const st=DGIT[c.estadoDGI]||DGIT.sinrespuesta;
+    return`<section class="rel"><h3>Factura electrónica</h3><div class="contact"><span class="code">${esc(c.comprobante||'CFE')}</span><span class="tag ${st[1]}">${st[0]}</span>${c.ambiente==='testing'?'<span class="tag t-warn">Prueba (no va a DGI)</span>':''}</div>
+      ${c.motivoRechazoDGI?`<p class="err">${esc(c.motivoRechazoDGI)}</p>`:''}
+      <div class="actions">${c.urlA4?`<a class="btn" href="${esc(c.urlA4)}" target="_blank" rel="noopener">PDF A4</a>`:''}${c.urlTicket?`<a class="btn" href="${esc(c.urlTicket)}" target="_blank" rel="noopener">Ticket</a>`:''}<button class="btn ghost" data-act="cfe:consultar">Actualizar estado</button>${!c.urlA4?'<button class="btn ghost" data-act="cfe:imprimir">Pedir PDF</button>':''}
+      ${f.cfeNC&&f.cfeNC.idCFE?`<span class="tag t-none">Nota de crédito ${esc(f.cfeNC.comprobante||'')}</span>${f.cfeNC.urlA4?`<a class="btn" href="${esc(f.cfeNC.urlA4)}" target="_blank" rel="noopener">PDF nota</a>`:''}`:(isBoss()?'<button class="btn ghost danger" data-act="cfe:devolver">Nota de crédito</button>':'')}</div></section>`}
+  if(cfeOn())return`<section class="rel"><h3>Factura electrónica</h3><p class="muted" style="margin:0">Se emite por Fixed${CFEI.ambiente==='testing'?' en modo prueba (no va a DGI)':''}. Con RUT sale e-Factura; sin RUT, e-Ticket.</p>${SH&&SH.id&&isBoss()?'<div class="actions"><button class="btn pri" data-act="cfe:emitir">Emitir CFE</button></div>':'<p class="hint">Guardá la factura para poder emitirla.</p>'}</section>`;
+  return'';
+}
+async function cfeCall(accion,extra={}){const d=await fnData(await SB.functions.invoke('cfe',{body:{org:ORG,accion,...extra}}));return d}
+function cfeAjustesHtml(){
+  if(!has('cfe'))return`<div class="vhead" style="margin-top:34px"><div><h1>Facturación electrónica</h1><p class="sub">Emitir CFE desde Olumi con Fixed, o exportar para Zureo: incluido en el plan Empresa.</p></div></div>`;
+  if(CFEI===undefined)loadCfe();
+  const c=CFEI||{},p=c.proveedor||'';
+  return`<div class="vhead" style="margin-top:34px"><div><h1>Facturación electrónica</h1><p class="sub">Con <b>Fixed</b> las facturas de Olumi salen como CFE real (e-Factura o e-Ticket). Con <b>Zureo</b> exportás clientes, artículos y ventas para cargarlos allá.</p></div></div>
+  <div class="panel"><div class="grid">
+    <label class="fld" for="cf_prov"><span>Proveedor</span><select id="cf_prov">${opts([['','Ninguno (cargo el número a mano)'],['fixed','Fixed (emitir desde Olumi)'],['zureo','Zureo (exportar datos)']],p)}</select></label>
+    ${p==='fixed'||!p?`<label class="fld" for="cf_amb"><span>Ambiente de Fixed</span><select id="cf_amb">${opts([['testing','Prueba (no va a DGI)'],['produccion','Producción (CFE reales)']],c.ambiente||'testing')}</select></label>
+    <label class="fld" for="cf_key"><span>x-api-key de Fixed</span><input id="cf_key" type="password" autocomplete="off" placeholder="${c.configurado?'Guardada · escribí solo para cambiarla':'Pegala acá'}"></label>
+    <label class="fld" for="cf_sec"><span>x-api-secret de Fixed</span><input id="cf_sec" type="password" autocomplete="off" placeholder="${c.configurado?'Guardada · escribí solo para cambiarla':'Pegala acá'}"></label>
+    <label class="fld" for="cf_rubro"><span>Rubro en Fixed</span><input id="cf_rubro" value="${esc(c.rubro||'Servicios técnicos')}"></label>
+    <label class="fld" for="cf_local"><span>Local (si tenés más de uno)</span><input id="cf_local" value="${esc(c.local||'')}" placeholder="Opcional"></label>`:''}
+  </div>
+  ${isBoss()?`<div class="actions" style="margin-top:12px"><button class="btn pri" data-act="cfesave">Guardar</button>${c.configurado&&c.proveedor==='fixed'?'<button class="btn" data-act="cfetest">Probar conexión</button>':''}</div>`:'<p class="hint">Solo el dueño o un administrador puede cambiar esto.</p>'}
+  <p class="hint" style="margin-top:10px">Las claves de Fixed se guardan en el servidor y no se vuelven a mostrar. Se piden en <a href="https://acceso.fixed.uy/accesoAPI" target="_blank" rel="noopener">acceso.fixed.uy</a> (plan API de Fixed). Empezá en Prueba y pasá a Producción cuando la primera factura salga bien.</p>
+  <h3 style="margin-top:18px;font-size:15px">Exportar para Zureo (u otro sistema)</h3>
+  <div class="tools"><button class="btn" data-act="zx:clientes">Clientes</button><button class="btn" data-act="zx:articulos">Artículos</button><button class="btn" data-act="zx:ventas">Ventas</button><button class="btn" data-act="zx:lineas">Ventas con detalle</button></div>
+  <p class="hint">Archivos CSV (Excel). En Zureo usá la importación de clientes y artículos; si te pide otro orden de columnas, avisanos y lo ajustamos a su plantilla.</p></div>`;
+}
+const docNum=c=>String(c.rut||'').replace(/\D/g,'');
+function zureoCsv(k){
+  const iva=f=>calcQ(f);
+  if(k==='clientes')return csv([['Código','Razón social','Nombre comercial','Tipo de documento','Documento','Dirección','Localidad','Departamento','Teléfono','Email','Contacto'],
+    ...arr('clientes').map(c=>{const d=docNum(c);return[c.id,c.nombre,c.nombre,d.length===12?'RUT':d?'CI':'',d,c.direccion,c.localidad||c.departamento||'',c.departamento,c.telefono,c.email,c.contacto]})]);
+  if(k==='articulos')return csv([['Código','Descripción','Unidad','Precio sin IVA','Moneda','IVA','Rubro'],...arr('productos').map(p=>[p.codigo||p.id,p.nombre,p.unidad,n0(p.precio),p.moneda||'UYU','Básico 22%',p.servicio||''])]);
+  const fs=arr('facturas').filter(f=>!f.anulada).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  if(k==='ventas')return csv([['Fecha','Número','CFE','Cliente','Documento','Moneda','Subtotal','Descuento','IVA','Total','Cobrado','Saldo','Vence'],
+    ...fs.map(f=>{const c=D.clientes[f.clienteId]||{},t=factCalc(f);return[f.fecha,f.numero,(f.cfeData&&f.cfeData.comprobante)||f.cfe||'',c.nombre||'',docNum(c),f.moneda,r2(t.sub),r2(t.desc),r2(t.iva),r2(t.total),r2(t.pagado),r2(t.saldo),f.vence]})]);
+  return csv([['Fecha','Número','Cliente','Documento','Moneda','Descripción','Cantidad','Unidad','Precio unitario','Descuento %','IVA','Importe'],
+    ...fs.flatMap(f=>{const c=D.clientes[f.clienteId]||{};return(f.lineas||[]).map(l=>[f.fecha,f.numero,c.nombre||'',docNum(c),f.moneda,l.desc,n0(l.cant),l.unidad,n0(l.precio),n0(f.descuento),f.iva?'22%':'Exento',r2(n0(l.cant)*n0(l.precio))])})]);
+}
+
+/* --- acciones --- */
+async function modulosAct(k,el,arg){
+  switch(k){
+    case'prytab':PRYTAB=arg;sr();return true;
+    case'tpper':TP.per=arg;sr();return true;
+    case'tprango':TP.desde=$('#tp_desde').value;TP.hasta=$('#tp_hasta').value;if(TP.desde&&TP.hasta&&TP.desde>TP.hasta){const x=TP.desde;TP.desde=TP.hasta;TP.hasta=x}sr();return true;
+    case'tec':openSheet('tec',arg);return true;
+    case'liqcsv':{const rg=tpRange();saveFile(`Liquidación ${rg[0]} a ${rg[1]}.csv`,csv([['Técnico','Email','Días','Horas normales','Horas extra','Valor hora','Valor extra','Moneda','Total','Visitas cerradas','Sin firma'],
+      ...liqRows().map(({id,s})=>[personName(id).replace(' (vos)',''),MEMBERS[id]?.email||'',s.dias,r2(s.normales),r2(s.extra),s.vh,s.ve,s.moneda,s.total,s.term,s.sinFirma])]));return true}
+    case'liqdoc':{const rg=tpRange();await saveFile(`Liquidación ${rg[0]} a ${rg[1]}.html`,liqDoc());return true}
+    case'cfesave':{const prov=$('#cf_prov').value,b={o:ORG,prov,amb:$('#cf_amb')?.value||'testing',k:($('#cf_key')?.value||'').trim(),s:($('#cf_sec')?.value||'').trim(),loc:($('#cf_local')?.value||'').trim(),rub:($('#cf_rubro')?.value||'').trim()};
+      el.disabled=true;const {error}=await SB.rpc('cfe_set',b);el.disabled=false;if(error){toast(/sin_permiso/.test(error.message)?'Solo el dueño o un administrador puede cambiar esto.':'No se pudo guardar.');return true}
+      toast('Facturación electrónica guardada');CFEI=undefined;await loadCfe();return true}
+    case'cfetest':{el.disabled=true;const d=await cfeCall('probar');el.disabled=false;toast(d.ok?'Conexión con Fixed correcta ✓':(d.error||'Fixed no aceptó las claves.'));return true}
+    case'cfe':{
+      if(!SH||SH.type!=='fact')return true;
+      if(arg==='emitir'){if(SH.dirty){const id=await saveFact(false);if(!id)return true}
+        if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=CFEI.ambiente==='produccion'?'Se emite un CFE real ante DGI. Tocá de nuevo':'Emitir CFE de prueba. Tocá de nuevo';return true}armed=null}
+      if(arg==='devolver'){if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='Anula la factura con una nota de crédito por el total. Tocá de nuevo';return true}armed=null}
+      el.disabled=true;el.textContent='Conectando con Fixed…';
+      const d=await cfeCall(arg,{factura:SH.id});
+      if(d.error){el.disabled=false;el.textContent=el.dataset.orig||'Reintentar';toast(d.error);return true}
+      if(d.factura){D.facturas[SH.id]=d.factura}
+      toast({emitir:'CFE emitido: '+(d.factura?.cfeData?.comprobante||''),consultar:'Estado actualizado',imprimir:'PDF listo',devolver:'Nota de crédito emitida'}[arg]||'Listo');
+      openSheet('fact',SH.id);return true}
+    case'zx':{const n={clientes:'Clientes',articulos:'Artículos',ventas:'Ventas',lineas:'Ventas con detalle'}[arg];saveFile(`${n} para Zureo ${today()}.csv`,zureoCsv(arg));return true}
+  }
+  return false;
+}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='pry_q'){PRYQ=e.target.value;const pos=e.target.selectionStart;sr();const n=$('#pry_q');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}}});
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='cf_prov'){CFEI={...(CFEI||{}),proveedor:e.target.value};sr()}});
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -2166,7 +2360,7 @@ const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capa
 let PLAN=null, PLANS=null, ISADMIN=false, ADM=null, ADM_LOADING=false, WAMSG=[];
 const EXTRA_USD=6;
 const has=f=>!PLAN||(PLAN.features||[]).includes(f);
-const FEAT=[['presupuestos','Presupuestos y facturas en PDF'],['abonos','Abonos mensuales con prioridad en tickets'],['gcal','Botón de Google Calendar'],['reportes','Reportes'],['whatsapp','WhatsApp automático'],['cfe','Factura electrónica (CFE) con tu proveedor · próximamente'],['marca','Logo y colores propios'],['portal','Portal de clientes: piden, siguen sus visitas y aceptan presupuestos']];
+const FEAT=[['presupuestos','Presupuestos y facturas en PDF'],['abonos','Abonos mensuales con prioridad en tickets'],['gcal','Botón de Google Calendar'],['reportes','Reportes'],['whatsapp','WhatsApp automático'],['cfe','Factura electrónica (CFE) con Fixed y exportación para Zureo'],['marca','Logo y colores propios'],['portal','Portal de clientes: piden, siguen sus visitas y aceptan presupuestos']];
 const GATE={presupuestos:'presupuestos',facturacion:'facturas',reportes:'reportes'};
 function gated(v){const f=GATE[v];if(!f||has(f))return false;if(v==='reportes')return true;return !arr(v==='facturacion'?'facturas':'presupuestos').length}
 function lockedHtml(v){const n={presupuestos:'Presupuestos',facturacion:'Facturación',reportes:'Reportes'}[v];
