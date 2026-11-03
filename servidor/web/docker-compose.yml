@@ -24,10 +24,14 @@ services:
       - traefik.http.routers.unitytech-http.entrypoints=web
       - traefik.http.routers.unitytech-http.middlewares=unitytech-https
       - traefik.http.routers.unitytech-http.service=unitytech
-      # prueba por IP mientras el dominio no apunta: http://129.121.60.208/olumi/
+      # por IP ya no se sirve la web: redirige a https://unitytech.uy
+      - traefik.http.middlewares.unitytech-dominio.redirectregex.regex=^http://[^/]+/(.*)
+      - traefik.http.middlewares.unitytech-dominio.redirectregex.replacement=https://unitytech.uy/$${1}
+      - traefik.http.middlewares.unitytech-dominio.redirectregex.permanent=true
       - traefik.http.routers.unitytech-ip.rule=Host(`129.121.60.208`) && PathPrefix(`/olumi`)
       - traefik.http.routers.unitytech-ip.entrypoints=web
       - traefik.http.routers.unitytech-ip.priority=100
+      - traefik.http.routers.unitytech-ip.middlewares=unitytech-dominio
       - traefik.http.routers.unitytech-ip.service=unitytech
 networks:
   app:
