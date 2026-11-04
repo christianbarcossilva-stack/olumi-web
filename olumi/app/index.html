@@ -510,7 +510,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists'];
+const COLS=['clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -651,7 +651,7 @@ function render(){
   const em=arr('tickets').filter(t=>tkOpen(t)&&t.tipo==='emergencia').length,p2=$('#navTk');p2.hidden=!em;p2.textContent=em;
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=bannerHtml()+pendBanner()+setupBanner();
+  $('#banner').innerHTML=offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
@@ -1276,7 +1276,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1470,6 +1470,8 @@ async function act(a,el){
   if(await rubAct(k,el,arg))return;
   if(await cuotaAct(k,el,arg))return;
   if(await pedidoAct(k,el))return;
+  if(await ocAct(k,el,arg))return;
+  if(await offAct(k))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -1512,12 +1514,12 @@ async function act(a,el){
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
         el.textContent=nOps?`Tiene ${nOps} oportunidad${nOps>1?'es':''}. ¿Eliminar igual?`:'¿Eliminar? Tocá de nuevo';return}
-      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists'}[SH.type];if(!col){closeSheet();break}
+      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists',oc:'compras'}[SH.type];if(!col){closeSheet();break}
       const tarPry=SH.type==='tar'&&D.tareas[SH.id]?.proyectoId;
       if(SH.type==='trab')await msDropJob(SH.id);
       await remove(col,SH.id);if(tarPry){delete D.tareas[SH.id];await pryAvSync(tarPry)}toast('Eliminado');closeSheet();break}
@@ -2424,10 +2426,11 @@ let INVT='stock',INVD='',INVQ='',INVMIN=false,EQF='todos';
 function vInventario(){
   if(!invOn())return`<div class="vhead"><div><h1>Inventario</h1></div></div><div class="empty">${fiberArt}<h2>Inventario incluido en Pro y Empresa</h2><p>Stock por depósito y por camioneta, materiales descontados desde cada trabajo, equipos instalados con número de serie, garantía y mantenimiento preventivo.</p><button class="btn pri" data-view="plan">Ver planes</button></div>`;
   const boss=isBoss(),m=stockMap(),ds=deps(),q=qn(INVQ),mp=mantPend().length;
-  const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${[['stock','Stock'],['movimientos','Movimientos'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']].map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
+  const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${[['stock','Stock'],['movimientos','Movimientos'],['compras','Compras'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']].map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
   const search=ph=>`<input type="search" class="tfq" id="inv_q" value="${esc(INVQ)}" placeholder="${ph}" aria-label="Buscar">`;
   const kpi=(n,v)=>`<div class="kpi"><span class="k">${n}</span><b class="num">${v}</b></div>`;
   const head=(sub,tools='')=>`<div class="vhead"><div><h1>Inventario</h1><p class="sub">${sub}</p></div>${tools?`<div class="tools">${tools}</div>`:''}</div>`;
+  if(INVT==='compras')return vCompras(head,tabs);
   if(INVT==='depositos'){
     return head(`${ds.length} depósito${ds.length===1?'':'s'} y camioneta${ds.length===1?'':'s'}`,readonly?'':'<button class="btn" data-act="invdep:vehiculo">+ Camioneta</button><button class="btn pri" data-act="invdep:deposito">+ Depósito</button>')+tabs
       +(ds.length?`<div class="list">${ds.map(d=>{const its=Object.keys(m).filter(pid=>stockOf(m,pid,d.id)>0),val=sum(its,pid=>stockOf(m,pid,d.id)*costoUYU(D.productos[pid]));
@@ -3174,6 +3177,146 @@ async function pedidoAct(k,el){
   return false;
 }
 
+/* ---------- 1.8: órdenes de compra a proveedores ---------- */
+const OCE=[['borrador','Borrador'],['enviada','Enviada'],['parcial','Recibida en parte'],['recibida','Recibida'],['cancelada','Cancelada']];
+const OCEK=Object.fromEntries(OCE),OCEC={borrador:'t-none',enviada:'t-acc',parcial:'t-warn',recibida:'t-ok',cancelada:'t-none'};
+const provList=()=>[...new Set([...arr('movimientos').map(x=>x.proveedor),...arr('compras').map(c=>c.proveedor)].filter(Boolean).map(s=>s.trim()))].sort((a,b)=>a.localeCompare(b,'es'));
+const ocTotal=c=>sum(c.lineas||[],l=>n0(l.cant)*n0(l.costo));
+const ocPend=l=>Math.max(0,n0(l.cant)-n0(l.recibido));
+function vCompras(head,tabs){
+  const l=arr('compras').sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||(b.numero||'').localeCompare(a.numero||'')),m=stockMap();
+  const nb=arr('productos').filter(p=>bajoMin(m,p)).length,abiertas=l.filter(c=>['enviada','parcial'].includes(c.estado));
+  return head(`${abiertas.length} ${abiertas.length===1?'orden':'órdenes'} esperando mercadería`,readonly?'':`${nb?`<button class="btn" data-act="ocmin">Pedir lo que está bajo mínimo (${nb})</button>`:''}<button class="btn pri" data-act="ocnew">+ Orden de compra</button>`)+tabs
+    +(l.length?`<div class="list">${l.map(c=>`<div class="row" role="button" tabindex="0" data-open="oc:${c.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong><span class="code">${esc(c.numero||'')}</span> · ${esc(c.proveedor||'Sin proveedor')}</strong><span class="muted">${fdate(c.fecha)} · ${(c.lineas||[]).length} artículo${(c.lineas||[]).length===1?'':'s'}${c.entrega?' · llega '+fdate(c.entrega):''}${isBoss()?' · '+money(ocTotal(c),c.moneda||'UYU'):''}</span></div><span class="tag ${OCEC[c.estado]||'t-none'}">${esc(OCEK[c.estado]||'Borrador')}</span></div>`).join('')}</div>`
+    :`<div class="empty"><h2>Sin órdenes de compra</h2><p>Armá el pedido al proveedor con lo que falta, mandáselo por WhatsApp o email, y cuando llega la mercadería la recibís acá: entra sola al stock con su costo.</p></div>`);
+}
+let OCX=null;
+function sheetOc(id,p){
+  const c=id?clean(D.compras[id]):{numero:'',proveedor:p.prov||'',fecha:today(),entrega:'',depositoId:(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'',moneda:defMon(),estado:'borrador',lineas:p.lineas||[{prodId:'',cant:1,costo:0,recibido:0}],notas:''};
+  OCX=c;const rec=id&&['enviada','parcial'].includes(c.estado),ro=readonly||c.estado==='recibida'||c.estado==='cancelada';
+  const body=`<datalist id="provlist">${provList().map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>
+  <div class="grid"><label class="fld" for="oc_prov"><span>Proveedor</span><input id="oc_prov" list="provlist" value="${esc(c.proveedor||'')}" placeholder="Ej.: Anixter, Hikvision UY"${ro?' readonly':''}></label>
+    <label class="fld" for="oc_est"><span>Estado</span><select id="oc_est"${ro?' disabled':''}>${opts(OCE,c.estado)}</select></label>
+    <label class="fld" for="oc_fec"><span>Fecha</span><input id="oc_fec" type="date" value="${esc(c.fecha||'')}"${ro?' readonly':''}></label>
+    <label class="fld" for="oc_ent"><span>Llega el</span><input id="oc_ent" type="date" value="${esc(c.entrega||'')}"${ro?' readonly':''}></label>
+    <label class="fld" for="oc_dep"><span>Entra a</span><select id="oc_dep"${ro?' disabled':''}>${depOpts(c.depositoId)}</select></label>
+    <label class="fld" for="oc_mon"><span>Moneda</span><select id="oc_mon"${ro?' disabled':''}>${opts([['UYU','$ Pesos'],['USD','US$ Dólares']],c.moneda)}</select></label></div>
+  <section class="rel"><h3>Artículos</h3><div id="ocLines">${ocLinesHtml(ro,rec)}</div>${ro?'':'<div><button class="btn" data-act="ocadd">+ Artículo</button></div>'}<div class="totals" id="ocTot">${ocTotHtml()}</div></section>
+  <label class="fld" for="oc_not"><span>Notas para el proveedor</span><textarea id="oc_not"${ro?' readonly':''} placeholder="Forma de pago, lugar de entrega, horario">${esc(c.notas||'')}</textarea></label><p class="err" id="shErr" hidden></p>
+  ${id?`<div class="actions">${rec&&!readonly?'<button class="btn pri" data-act="ocrecibir">Recibir lo que llegó</button>':''}<button class="btn" data-act="ocdoc">Descargar la orden</button><button class="btn" data-act="occopy">Copiar para WhatsApp</button></div>${rec?'<p class="hint">Al recibir, lo que llegó entra al stock del depósito elegido con su costo, y el costo promedio del producto se actualiza.</p>':''}`:''}`;
+  return sheetFrame('Orden de compra '+(c.numero||'nueva'),c.proveedor||'Nueva orden',body,{del:!!id&&!['recibida','parcial'].includes(c.estado)});
+}
+function ocLinesHtml(ro,rec){const ps=invProds(),boss=isBoss();
+  return OCX.lineas.map((l,i)=>{const p=D.productos[l.prodId];return`<div class="msrow"><select data-oc="${i}:prodId" aria-label="Producto"${ro?' disabled':''}>${opts([['','Elegí el producto'],...ps.map(q=>[q.id,prodLabel(q)])],l.prodId)}</select>
+    <input type="number" data-oc="${i}:cant" value="${esc(String(l.cant??''))}" step="any" min="0" inputmode="decimal" aria-label="Cantidad"${ro?' readonly':''}>
+    ${boss?`<input type="number" data-oc="${i}:costo" value="${esc(String(l.costo??''))}" step="any" min="0" inputmode="decimal" aria-label="Costo unitario" placeholder="Costo"${ro?' readonly':''}>`:'<span></span>'}
+    ${ro?'<span></span>':`<button class="btn ghost" data-act="ocdel:${i}" aria-label="Quitar">✕</button>`}
+    ${rec&&ocPend(l)>0?`<label class="full hint" style="margin:0;display:flex;gap:8px;align-items:center">Llegó ahora <input type="number" data-ocr="${i}" value="${ocPend(l)}" step="any" min="0" inputmode="decimal" style="width:110px" aria-label="Cantidad que llegó"> de ${fq(ocPend(l),p)} pendientes</label>`:n0(l.recibido)?`<span class="full hint" style="margin:0">Recibido ${fq(l.recibido,p)} de ${fq(l.cant,p)}</span>`:''}</div>`}).join('')}
+function ocTotHtml(){return isBoss()?`<span>Total sin IVA</span><b class="num">${money(ocTotal(OCX),OCX.moneda||'UYU',2)}</b>`:''}
+function ocRead(){const g=k=>$('#oc_'+k);const c=OCX;if(g('prov'))c.proveedor=g('prov').value.trim();if(g('est')&&!g('est').disabled)c.estado=g('est').value;if(g('fec'))c.fecha=g('fec').value;if(g('ent'))c.entrega=g('ent').value;if(g('dep')&&!g('dep').disabled)c.depositoId=g('dep').value;if(g('mon')&&!g('mon').disabled)c.moneda=g('mon').value;if(g('not'))c.notas=g('not').value;return c}
+async function saveOc(close=true){
+  const c=ocRead(),e=$('#shErr');c.lineas=c.lineas.filter(l=>l.prodId&&n0(l.cant)>0);
+  if(!c.proveedor){e.textContent='Poné el proveedor.';e.hidden=false;return null}if(!c.lineas.length){e.textContent='Agregá al menos un artículo con cantidad.';e.hidden=false;return null}
+  if(!c.numero)c.numero=nextCode('compras','OC');const id=SH.id||uid();SH.id=id;
+  await put('compras',id,{...c,actualizado:Date.now(),creado:c.creado||Date.now()});D.compras[id]={...c};if(close){toast('Orden '+c.numero+' guardada');closeSheet()}return id;
+}
+function ocText(c){const ls=(c.lineas||[]).map(l=>{const p=D.productos[l.prodId]||{};return`• ${fq(l.cant,p)} ${p.nombre||''}${p.codigo?' ('+p.codigo+')':''}`}).join('\n');
+  return`Hola, te paso la orden de compra ${c.numero} de ${CFG.nombre||''}:\n\n${ls}\n${c.entrega?`\nLa necesitamos para el ${fdateL(c.entrega)}.`:''}${c.notas?'\n'+c.notas:''}\n\nGracias.`}
+function ocDoc(c){
+  return`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orden de compra ${esc(c.numero)}</title><style>${DOCCSS}</style></head><body>
+${docHead('Orden de compra',c.numero,fdateL(c.fecha))}
+<div class="box"><span class="k">Proveedor</span><div><strong>${esc(c.proveedor||'')}</strong></div>${c.entrega?`<div>Entrega: ${esc(fdateL(c.entrega))}</div>`:''}</div>
+<table><thead><tr><th>Código</th><th>Artículo</th><th>Cantidad</th>${isBoss()?'<th>Costo unitario</th><th>Importe</th>':''}</tr></thead><tbody>${(c.lineas||[]).map(l=>{const p=D.productos[l.prodId]||{};return`<tr><td>${esc(p.codigo||'')}</td><td>${esc(p.nombre||'')}</td><td>${fq(l.cant,p)}</td>${isBoss()?`<td>${money(l.costo,c.moneda,2)}</td><td>${money(n0(l.cant)*n0(l.costo),c.moneda,2)}</td>`:''}</tr>`}).join('')}</tbody></table>
+${isBoss()?`<p style="text-align:right"><b>Total sin IVA: ${money(ocTotal(c),c.moneda,2)}</b></p>`:''}${c.notas?`<h2>Notas</h2><div class="txt">${esc(c.notas)}</div>`:''}
+<footer>Orden generada con Olumi el ${new Date().toLocaleString('es-UY')}.</footer></body></html>`;
+}
+async function ocRecibir(){
+  const c=clean(D.compras[SH.id]||ocRead());if(!c.depositoId){toast('Elegí a qué depósito entra.');return}
+  const m=stockMap();let n=0;
+  for(const [i,l] of (c.lineas||[]).entries()){const inp=document.querySelector(`[data-ocr="${i}"]`);const q=inp?Math.min(ocPend(l),Math.max(0,n0(inp.value))):0;if(!q)continue;
+    const p=D.productos[l.prodId];const mid=`${SH.id}-r${i}-${Date.now()}`;
+    await put('movimientos',mid,{tipo:'entrada',fecha:today(),prodId:l.prodId,cant:q,hacia:c.depositoId,desde:'',costo:n0(l.costo),proveedor:c.proveedor,doc:c.numero,compraId:SH.id,by:ME||'',creado:Date.now()});
+    if(p){const st=Math.max(0,stockOf(m,l.prodId)),oc=n0(p.costo),nc=n0(l.costo)?(st>0&&oc?r2((st*oc+q*n0(l.costo))/(st+q)):n0(l.costo)):oc;await put('productos',l.prodId,{...p,stock:true,...(isBoss()&&n0(l.costo)?{costo:nc}:{})})}
+    l.recibido=r2(n0(l.recibido)+q);n++}
+  if(!n){toast('Poné cuánto llegó de cada artículo.');return}
+  c.estado=(c.lineas||[]).every(l=>ocPend(l)<=0)?'recibida':'parcial';c.recibidaEn=Date.now();
+  await put('compras',SH.id,{...c,actualizado:Date.now()});D.compras[SH.id]=c;toast(c.estado==='recibida'?'Orden recibida: la mercadería entró al stock':'Recepción parcial guardada');openSheet('oc',SH.id);
+}
+async function ocAct(k,el,arg){
+  switch(k){
+    case'ocnew':openSheet('oc',null);return true;
+    case'ocmin':{const m=stockMap(),last={};arr('movimientos').filter(x=>x.tipo==='entrada').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).forEach(x=>last[x.prodId]=x);
+      const ps=arr('productos').filter(p=>bajoMin(m,p));const prov=ps.map(p=>last[p.id]?.proveedor).find(Boolean)||'';
+      openSheet('oc',null,{prov,lineas:ps.map(p=>({prodId:p.id,cant:r2(Math.max(1,2*n0(p.stockMin)-stockOf(m,p.id))),costo:n0(last[p.id]?.costo)||n0(p.costo),recibido:0}))});SH.dirty=true;return true}
+    case'ocadd':ocRead();OCX.lineas.push({prodId:'',cant:1,costo:0,recibido:0});$('#ocLines').innerHTML=ocLinesHtml(false,false);SH.dirty=true;return true;
+    case'ocdel':ocRead();OCX.lineas.splice(+arg,1);$('#ocLines').innerHTML=ocLinesHtml(false,false);$('#ocTot').innerHTML=ocTotHtml();SH.dirty=true;return true;
+    case'ocrecibir':{if(SH.dirty){const id=await saveOc(false);if(!id)return true}await ocRecibir();return true}
+    case'ocdoc':{const c=D.compras[SH.id];if(c)await saveFile(`Orden de compra ${c.numero} - ${c.proveedor}.html`.replace(/[\\/:*?"<>|]/g,''),ocDoc(c));return true}
+    case'occopy':{const c=D.compras[SH.id];if(!c)return true;try{await navigator.clipboard.writeText(ocText(c));toast('Texto copiado: pegalo en WhatsApp o en un email')}catch(e){toast('No se pudo copiar')}
+      if(c.estado==='borrador'){await put('compras',SH.id,{...c,estado:'enviada',actualizado:Date.now()});D.compras[SH.id]={...c,estado:'enviada'};openSheet('oc',SH.id)}return true}
+  }
+  return false;
+}
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.oc&&OCX){const [i,f]=t.dataset.oc.split(':');if(OCX.lineas[i]){OCX.lineas[i][f]=f==='prodId'?t.value:t.value;SH&&(SH.dirty=true);if(f!=='prodId'){const tt=$('#ocTot');if(tt)tt.innerHTML=ocTotHtml()}}}});
+document.addEventListener('change',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.oc&&OCX){const [i,f]=t.dataset.oc.split(':');if(OCX.lineas[i]){OCX.lineas[i][f]=t.value;if(f==='prodId'&&!n0(OCX.lineas[i].costo)){const p=D.productos[t.value];if(p&&n0(p.costo)){OCX.lineas[i].costo=n0(p.costo);const c=document.querySelector(`[data-oc="${i}:costo"]`);if(c)c.value=p.costo}}const tt=$('#ocTot');if(tt)tt.innerHTML=ocTotHtml();SH&&(SH.dirty=true)}}});
+
+/* ---------- 1.8: seguir trabajando sin señal ---------- */
+const OFF={q:[],busy:false,stale:false,subidos:0};
+const netErr=e=>!navigator.onLine||/fetch|network|load failed|NetworkError|offline|timed? ?out|ERR_INTERNET/i.test(String((e&&(e.message||e.error_description||e))||''));
+let IDBP=null;
+const idb=()=>IDBP||(IDBP=new Promise((res,rej)=>{try{const r=indexedDB.open('olumi',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+async function kvGet(k){try{const d=await idb();return await new Promise(res=>{const t=d.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>res(undefined)})}catch(e){return undefined}}
+async function kvSet(k,v){try{const d=await idb();await new Promise(res=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=res})}catch(e){}}
+async function kvDel(k){try{const d=await idb();await new Promise(res=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=res;t.onerror=res})}catch(e){}}
+
+/* lo último que se bajó queda guardado en el teléfono para abrir sin señal */
+let snapT=null;
+function offSnap(by){if(!ORG)return;clearTimeout(snapT);snapT=setTimeout(()=>kvSet('snap-'+ORG,{at:Date.now(),by}),1500)}
+async function offRestore(){
+  if(!ORG)return false;const s=await kvGet('snap-'+ORG);if(!s||!s.by)return false;
+  const by=s.by;for(const it of OFF.q){if(it.op==='set')(by[it.col]=by[it.col]||{})[it.id]=it.data;if(it.op==='del'&&by[it.col])delete by[it.col][it.id]}
+  [...COLS,'config'].forEach(c=>{const L=liveCol(c);L.map=by[c]||{};L.loaded=true;emit(c)});
+  OFF.stale=s.at||true;sr();return true;
+}
+async function loadAll(){
+  try{await loadAllNet();OFF.stale=false;if(OFF.q.length)offFlush()}
+  catch(e){if(netErr(e)&&await offRestore())return;throw e}
+}
+
+/* cambios hechos sin señal: se guardan en orden y se suben solos cuando vuelve */
+async function offLoadQ(){OFF.q=(ORG&&await kvGet('cola-'+ORG))||[];if(OFF.q.length)setTimeout(offFlush,1500)}
+async function offSaveQ(){if(ORG)await kvSet('cola-'+ORG,OFF.q)}
+async function offQueue(it){if(it.op!=='up')OFF.q=OFF.q.filter(x=>!(x.op!=='up'&&x.col===it.col&&x.id===it.id));OFF.q.push(it);await offSaveQ();sr()}
+async function offPhoto(path,blob,type){await kvSet('foto-'+path,blob);await offQueue({op:'up',path,type});const url=URL.createObjectURL(blob);URLS[path]={url,exp:Date.now()+864e5};return{id:path,url,contentType:type,sizeBytes:blob.size,pendiente:true}}
+async function offFlush(){
+  if(OFF.busy||!OFF.q.length||!navigator.onLine||!SB||!ORG)return;OFF.busy=true;let fail=0,ok=0;
+  try{while(OFF.q.length){const it=OFF.q[0];let error=null;
+      if(it.op==='set')({error}=await SB.from('docs').upsert({org_id:ORG,col:it.col,id:it.id,data:it.data,updated_at:new Date().toISOString()}));
+      else if(it.op==='del')({error}=await SB.from('docs').delete().match({org_id:ORG,col:it.col,id:it.id}));
+      else if(it.op==='up'){const b=await kvGet('foto-'+it.path);if(b){({error}=await SB.storage.from(BUCKET).upload(it.path,b,{contentType:it.type,upsert:true}));if(!error)await kvDel('foto-'+it.path)}}
+      if(error&&netErr(error))break;
+      if(error){fail++;console.error('cola',error)}else ok++;
+      OFF.q.shift();await offSaveQ()}}
+  finally{OFF.busy=false}
+  if(fail)toast(`${fail} cambio${fail>1?'s':''} hecho${fail>1?'s':''} sin señal no se pudo subir.`);
+  else if(ok&&!OFF.q.length)toast('Volvió la señal: se subió todo lo que hiciste sin conexión ✓');
+  if(!OFF.q.length)loadAllNet().then(()=>{OFF.stale=false;sr()}).catch(()=>{});
+  sr();
+}
+function offBanner(){
+  if(OFF.q.length)return`<p class="note">📶 Sin señal: ${OFF.q.length} cambio${OFF.q.length===1?'':'s'} guardado${OFF.q.length===1?'':'s'} en este equipo. Se suben solos cuando vuelva la conexión.${navigator.onLine?' <button class="btn ghost" data-act="offsync">Subir ahora</button>':''}</p>`;
+  if(OFF.stale||!navigator.onLine)return`<p class="note">📶 Sin señal: estás viendo lo último guardado en este equipo${typeof OFF.stale==='number'?` (${new Date(OFF.stale).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})})`:''}. Podés seguir trabajando: lo que cargues se sube después.</p>`;
+  return'';
+}
+async function offAct(k){if(k==='offsync'){await offFlush();return true}return false}
+window.addEventListener('online',()=>{offFlush();if(ORG&&SB)loadAll().catch(()=>{})});
+window.addEventListener('offline',()=>sr());
+setInterval(()=>{if(OFF.q.length&&navigator.onLine)offFlush()},30000);
+const lsJ=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSetJ=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+/* en la web, la app abre aunque no haya señal */
+try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.Capacitor)navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -3378,22 +3521,27 @@ const SBDB={
   }},
   doc(path){const [col,id]=path.split('/');const L=liveCol(col);return{
     async set(data){L.map[id]=data;emit(col);
+      if(OFF.q.length||!navigator.onLine){await offQueue({op:'set',col,id,data});return}
       const {error}=await SB.from('docs').upsert({org_id:ORG,col,id,data,updated_at:new Date().toISOString()});
+      if(error&&netErr(error)){await offQueue({op:'set',col,id,data});return}
       if(error){loadAll().catch(()=>{});throw sbErr(error)}},
     async update(f){const cur=L.map[id];if(!cur)throw{code:'invalid_argument',message:'No existe'};return this.set({...cur,...f})},
     async delete(){delete L.map[id];emit(col);
+      if(OFF.q.length||!navigator.onLine){await offQueue({op:'del',col,id});return}
       const {error}=await SB.from('docs').delete().match({org_id:ORG,col,id});
+      if(error&&netErr(error)){await offQueue({op:'del',col,id});return}
       if(error){loadAll().catch(()=>{});throw sbErr(error)}},
     onSnapshot(next){const w=()=>{const d=L.map[id];next({id,exists:!!d,data:()=>d,metadata:{fromCache:false,hasPendingWrites:false}})};
       L.cbs.push(w);if(L.loaded)setTimeout(w);return()=>{L.cbs=L.cbs.filter(x=>x!==w)}}
   }}
 };
-async function loadAll(){
+async function loadAllNet(){
   const all=[];for(let from=0;;from+=1000){
     const {data,error}=await SB.from('docs').select('col,id,data').eq('org_id',ORG).range(from,from+999);
     if(error)throw error;all.push(...data);if(data.length<1000)break}
   const by={};all.forEach(r=>{(by[r.col]=by[r.col]||{})[r.id]=r.data});
   [...COLS,'config'].forEach(c=>{const L=liveCol(c);L.map=by[c]||{};L.loaded=true;emit(c)});
+  offSnap(by);
 }
 let chan=null;
 function subscribeLive(){
@@ -3430,7 +3578,8 @@ const SBAS={
     const type=(opts&&opts.type)||blob.type||'application/octet-stream';
     const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg','application/pdf':'pdf'})[type]||'bin';
     const path=`${ORG}/${uid()}.${ext}`;
-    const {error}=await SB.storage.from(BUCKET).upload(path,blob,{contentType:type,upsert:false});
+    const {error}=OFF.q.length||!navigator.onLine?{error:{message:'offline'}}:await SB.storage.from(BUCKET).upload(path,blob,{contentType:type,upsert:false});
+    if(error&&netErr(error))return offPhoto(path,blob,type);
     if(error)throw{code:/size|large|exceed/i.test(error.message||'')?'too_large':(/mime|type/i.test(error.message||'')?'unsupported_type':'upstream_error'),message:error.message};
     const {data}=await SB.storage.from(BUCKET).createSignedUrl(path,URL_TTL);
     if(data&&data.signedUrl)URLS[path]={url:data.signedUrl,exp:Date.now()+(URL_TTL-3600)*1000};
@@ -3565,15 +3714,18 @@ async function boot(){
   ME=session.user.id;
   if(/type=(invite|recovery)/.test(AUTHHASH)&&!PASSDONE){clearTimeout(slowT);showAuth('setpass');return}
   try{await SB.rpc('claim_invites')}catch(e){}
-  const {data:mems,error}=await SB.from('members').select('org_id,role,orgs(name,join_code)').eq('user_id',ME);
+  let {data:mems,error}=await SB.from('members').select('org_id,role,orgs(name,join_code)').eq('user_id',ME);
+  if(error&&netErr(error)){const c=lsJ('olumi.mems.'+ME);if(c&&c.length){mems=c;error=null;OFF.stale=true}}
   if(error){showAuth('login',authErrText(error));return}
+  if(!OFF.stale)lsSetJ('olumi.mems.'+ME,mems);
   if(!mems.length){clearTimeout(slowT);showAuth('org');return}
   const pick=mems.find(m=>m.org_id===lsGet('olumi.org'))||mems[0];
   ORG=pick.org_id;ROLE=pick.role;ORGINFO={id:ORG,...(pick.orgs||{})};lsSet('olumi.org',ORG);
   readonly=ROLE==='viewer'||ROLE==='cliente'||ROLE==='pendiente';
   DB=SBDB;USER=SBUSER;AS=(readonly&&ROLE!=='cliente')?null:SBAS;DL=SBDL;SAMPLE=null;
-  hideAuth();mode='live';
-  await Promise.all([loadMembers(),loadPlan(),loadInvites()]);
+  hideAuth();mode='live';await offLoadQ();
+  await Promise.allSettled([loadMembers(),loadPlan(),loadInvites()]);
+  if(Object.keys(MEMBERS).length)lsSetJ('olumi.members.'+ORG,MEMBERS);else{const c=lsJ('olumi.members.'+ORG);if(c)MEMBERS=c}
   if(PORTAL())await loadStaff();
   if(!booted){booted=true;
     const done=k=>{loaded.add(k);if(loaded.size>=NEED)clearTimeout(slowT)};
