@@ -38,8 +38,9 @@ print(json.dumps(c))
 PY
 chmod 600 $DIR/creds.json
 docker cp $DIR/creds.json n8n-main:/tmp/creds.json
+docker exec -u root n8n-main chmod 644 /tmp/creds.json
 docker exec n8n-main n8n import:credentials --input=/tmp/creds.json 2>&1 | grep -v "Error tracking\|Postgres 1" | tail -2
-docker exec n8n-main rm -f /tmp/creds.json; rm -f $DIR/creds.json
+docker exec -u root n8n-main rm -f /tmp/creds.json || true; rm -f $DIR/creds.json
 echo "== credenciales en n8n: evo, olumi$( [ -n "$MAILPASS" ] && echo ', imap, smtp' )"
 
 # 2) Base de datos propia en el Postgres de n8n (usuario y contraseña se leen del compose de n8n, no se muestran)
