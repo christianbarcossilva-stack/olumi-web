@@ -1746,7 +1746,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.20',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.21',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -4553,9 +4553,11 @@ function sheetOrg(id){
       <div class="grid"><label class="fld" for="w_pnid"><span>Identificador del número</span><input id="w_pnid" type="text" inputmode="numeric" placeholder="Ej.: 123456789012345"></label><label class="fld" for="w_phone"><span>Número</span><input id="w_phone" type="tel" placeholder="+598 99 123 456"></label>
       <label class="fld full" for="w_tok"><span>Token de acceso permanente</span><input id="w_tok" type="password" autocomplete="off"></label></div>
       <div class="actions" style="margin-top:10px"><button class="btn" data-act="orgwa">Conectar WhatsApp</button></div>`}</section>
+    <div id="orgExtrasBox"></div>
     <section class="rel"><h3>Soporte</h3><div id="orgSop"><p class="muted" style="margin:0">Cargando…</p></div></section>
     <section class="rel"><h3>Cobros</h3><div id="orgBill"><p class="muted" style="margin:0">Cargando…</p></div></section>
     <p class="err" id="shErr" hidden></p>`;
+  setTimeout(async()=>{const bx=$('#orgExtrasBox');if(bx){try{const {data:x,error}=await SB.rpc('admin_get_extras',{o:id});if(error)throw error;bx.innerHTML=extrasHtml(x?.extras||[],x?.nota||'')}catch(e){bx.innerHTML='<section class="rel"><h3>Extras de esta empresa</h3><p class="muted" style="margin:0">Falta correr <span class="code">supabase/extras-1.21.sql</span>.</p></section>'}}},0);
   setTimeout(async()=>{const box=$('#orgSop');if(!box)return;try{const {data:e,error}=await SB.rpc('soporte_estado',{o:id});if(error)throw error;
       box.innerHTML=e.activo?`<p style="margin:0 0 10px"><span class="tag t-ok">Habilitado hasta ${sopHasta(e.hasta)}</span></p><div class="actions"><button class="btn pri" data-act="sopentrar:${esc(id)}">Entrar como soporte</button></div><p class="hint">Entrás como administrador de esta empresa, con una marca visible. Todo lo que toques queda registrado y el cliente lo ve.</p>${(e.log||[]).length?`<div class="list" style="margin-top:8px">${soporteLogHtml(e.log,8)}</div>`:''}`
         :`<p class="muted" style="margin:0">Sin acceso. El dueño o un administrador tiene que habilitarlo en <b>Catálogo y ajustes → Equipo → Soporte de Unity Tech</b>.</p>${(e.log||[]).length?`<div class="list" style="margin-top:8px">${soporteLogHtml(e.log,5)}</div>`:''}`}
@@ -4567,10 +4569,16 @@ async function loadBill(id){
   e.innerHTML=(data&&data.length)?data.map(b=>`<div class="item"><span class="grow">${esc(BILLK[b.kind]||b.kind)}${b.status?' · '+esc(b.status):''}</span><span>${fdate(b.created_at)}</span><span class="num">${b.amount!=null?money(b.amount,b.currency):''}</span></div>`).join(''):'<p class="muted" style="margin:0">Sin cobros registrados todavía.</p>';
 }
 const isoEnd=d=>d?new Date(d+'T23:59:59').toISOString():null;
+/* 1.21: extras por empresa */
+const EXTRAS=[...FEAT,['relojes','Relojes de control de personal / marcas de entrada y salida'],['odoo','Sincronización con Odoo'],['medida','Desarrollo a medida (ver nota)']];
+function extrasHtml(ex,nota){const set=new Set(ex||[]);return`<section class="rel" id="orgExtras"><h3>Extras de esta empresa</h3><p class="hint">Módulos sueltos y desarrollos a medida que se cotizan y cobran aparte del plan. Se prenden solo para esta empresa; la app los ve como parte de su plan.</p>
+  <div class="chips">${EXTRAS.map(([k,n])=>`<label class="chip"><input type="checkbox" data-extra="${k}"${set.has(k)?' checked':''}> ${esc(n)}</label>`).join('')}</div>
+  <label class="fld full" for="g_extras_nota" style="margin-top:8px"><span>Nota de lo cotizado (solo Unity Tech)</span><textarea id="g_extras_nota" rows="2" placeholder="Ej.: reloj biométrico en 2 sedes, US$ 60/mes desde dic 2026">${esc(nota||'')}</textarea></label></section>`}
 async function saveOrg(){
   const id=SH.id,v=readForm(ORGF,'g_');
   const {error}=await SB.rpc('admin_set_plan',{o:id,p:v.plan,until:isoEnd(v.paid_until),trial:isoEnd(v.trial_ends),extra:Math.max(0,Math.round(n0(v.extra_users))),is_founder:!!v.founder,note:v.notes||null});
   if(error){const e=$('#shErr');e.textContent='No se pudo guardar: '+(error.message||'probá de nuevo');e.hidden=false;return}
+  if($('#orgExtras')){const ex=[...document.querySelectorAll('[data-extra]:checked')].map(i=>i.dataset.extra);const {error:e2}=await SB.rpc('admin_set_extras',{o:id,ex,nota:($('#g_extras_nota')?.value||'').trim()||null});if(e2)toast('Plan guardado, pero los extras no: falta correr extras-1.21.sql.')}
   toast('Plan guardado');closeSheet();ADM=null;loadAdmin();if(id===ORG)loadPlan();
 }
 function addMonths(d,n){const x=new Date((d||today())+'T12:00');x.setMonth(x.getMonth()+n);return localISO(x).slice(0,10)}
