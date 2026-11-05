@@ -1,0 +1,27 @@
+# Arma los instaladores de Ondi (Windows, Mac y el proyecto de iPhone/Android) y los publica en la release "ondi-escritorio".
+name: Ondi · instaladores
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['servidor/escritorio-ondi/**', 'servidor/ondi-app/**', 'ondi/app/**', '.github/workflows/ondi-escritorio.yml']
+permissions:
+  contents: write
+jobs:
+  armar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows y Mac
+        run: bash servidor/escritorio-ondi/empaquetar.sh
+      - name: Proyecto de iPhone y Android
+        run: |
+          rm -rf /tmp/ondi-app && cp -r servidor/ondi-app /tmp/ondi-app && mkdir -p /tmp/ondi-app/www && cp -r ondi/app/* /tmp/ondi-app/www/
+          (cd /tmp && zip -qr9 ondi-app.zip ondi-app) && mv /tmp/ondi-app.zip servidor/escritorio-ondi/build/
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          B=servidor/escritorio-ondi/build
+          gh release view ondi-escritorio >/dev/null 2>&1 || gh release create ondi-escritorio --title "Ondi para Windows y Mac" --notes "Versión de escritorio de Ondi: abre siempre la última versión de unitytech.uy/ondi/app. Windows 10/11 64 bits · Mac con chip Apple · Mac Intel. ondi-app.zip es el proyecto para compilar la app de iPhone y Android."
+          gh release upload ondi-escritorio $B/Ondi-Windows.zip $B/Ondi-Mac.zip $B/Ondi-Mac-Intel.zip $B/ondi-app.zip --clobber
