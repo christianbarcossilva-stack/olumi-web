@@ -10,3 +10,9 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 - `servidor/actualizar.sh`: queda en el VPS como `olumi-actualizar`; baja la última versión de este repositorio y la publica.
 
 
+
+## Ondi
+- `ondi/`: página de Ondi (monitoreo de redes UniFi y multimarca) y su app web instalable en `ondi/app/`. `monitor/` redirige a `ondi/` (era el nombre anterior).
+- Los instaladores de Windows y Mac están en la release `ondi-escritorio`, armados por GitHub Actions (`.github/workflows/ondi-escritorio.yml`) desde `servidor/escritorio-ondi/` cada vez que cambia la app. Ahí también queda `ondi-app.zip`, el proyecto de iPhone/Android (`servidor/ondi-app/`).
+- La app tiene enlaces directos: `#panel`, `#clientes`, `#cliente-c1`, `#pantallas`, `#pantalla-p1` (abre el modo pantalla, para televisores), `#alertas`, `#ajustes`.
+- La versión pública (`ondi/app/`) se genera desde la demo privada sin nombres reales de clientes; no editarla a mano.

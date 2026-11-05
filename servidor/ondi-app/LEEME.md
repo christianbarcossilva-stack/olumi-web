@@ -65,6 +65,10 @@ Es una ficha nueva, separada de la de Olumi.
 
 ---
 
+## Enlaces directos
+
+La app responde a estos enlaces, útiles para accesos directos y para el televisor: `#panel`, `#clientes`, `#pantallas`, `#pantalla-p1` (abre directo el modo pantalla), `#alertas` y `#ajustes`. En iPhone y Android, al mantener apretado el ícono aparecen accesos directos a Alertas y a Pantalla 1.
+
 ## Cuando cambie algo en la app
 
 1. Reemplazá la carpeta `www` por la nueva que te pase.
