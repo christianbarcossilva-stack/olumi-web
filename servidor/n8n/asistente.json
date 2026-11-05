@@ -1,0 +1,2095 @@
+{
+ "name": "Asistente de Christian (WhatsApp + mail)",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "wa",
+    "responseMode": "onReceived",
+    "options": {}
+   },
+   "name": "WhatsApp entrante",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    300
+   ],
+   "webhookId": "olumi-wa"
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Convierte el aviso de Evolution API en algo simple. Devuelve vacío si no hay que hacer nada.\nconst b = $json.body || $json;\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}; const key = d.key || {}; const jid = String(key.remoteJid || '');\nif (!/@s\\.whatsapp\\.net$/.test(jid)) return [];                      // grupos, estados y newsletters: no\nconst m = d.message || {};\nconst owner = String(b.sender || '').replace(/:\\d+@/, '@');\nconst text = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst ctx = m.extendedTextMessage?.contextInfo || m.audioMessage?.contextInfo || m.imageMessage?.contextInfo || {};\nconst fromMe = !!key.fromMe;\nconst self = fromMe && jid === owner;\nconst mine = fromMe && !self;                                         // lo que le escribo a un cliente (a mano o desde mi chat)\nif (self && /^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return [];        // mensajes del propio asistente\nif (!text && !audioB64) return [];\nif (mine) { const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};  // respuestas automáticas: no son mías\n  if (sd.auto[key.id] || (text && sd.auto['t:' + jid] === text)) return [];\n  for (const k of Object.keys(sd.auto)) if (Date.now() - (sd.auto[k].ts || sd.auto[k] || 0) > 3 * 864e5 && typeof sd.auto[k] !== 'string') delete sd.auto[k]; }\nreturn [{ json: { from: jid.replace(/@.*/, ''), jid, fromMe, self, mine, text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg',\n  msgId: key.id || '', quotedId: ctx.stanzaId || '', nombre: d.pushName || '', owner, ownerNum: owner.replace(/@.*/, '') } }];\n"
+   },
+   "name": "Leer mensaje",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.audioB64 ? true : false }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es audio?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    480,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "operation": "toBinary",
+    "sourceProperty": "audioB64",
+    "options": {
+     "fileName": "audio.ogg",
+     "mimeType": "audio/ogg"
+    }
+   },
+   "name": "Audio a archivo",
+   "type": "n8n-nodes-base.convertToFile",
+   "typeVersion": 1.1,
+   "position": [
+    720,
+    200
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "contentType": "multipart-form-data",
+    "bodyParameters": {
+     "parameters": [
+      {
+       "parameterType": "formBinaryData",
+       "name": "file",
+       "inputDataFieldName": "data"
+      },
+      {
+       "name": "model",
+       "value": "whisper-large-v3-turbo"
+      },
+      {
+       "name": "language",
+       "value": "es"
+      },
+      {
+       "name": "response_format",
+       "value": "json"
+      }
+     ]
+    }
+   },
+   "name": "Transcribir (Groq Whisper)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    960,
+    200
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "const m = $('Leer mensaje').item.json; return [{ json: { ...m, audioB64: m.self ? m.audioB64 : undefined, texto: ($json.text || '').trim(), esAudio: true } }];"
+   },
+   "name": "Texto del audio",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1200,
+    200
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "return [{ json: { ...$json, texto: ($json.text || '').trim(), esAudio: false } }];"
+   },
+   "name": "Texto escrito",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    720,
+    420
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.mine }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es una respuesta mía a un cliente?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1440,
+    560
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'registrar', soloGuardar: true, autor: 'christian', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + $json.from, texto: ($json.esAudio ? '🎤 ' : '') + $json.texto, msgId: $json.msgId, esAudio: $json.esAudio }) }}"
+   },
+   "name": "Guardar mi respuesta en Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1700,
+    700
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.mio = sd.mio || {}; sd.mio[$json.jid] = Date.now();\nfor (const k of Object.keys(sd.mio)) if (Date.now() - sd.mio[k] > 2 * 864e5) delete sd.mio[k];\nreturn [{ json: $json }];\n"
+   },
+   "name": "Anotar que respondí yo",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1580,
+    700
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.self }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es mi propio chat?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1700,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + $json.from, nombre: $json.nombre }) }}"
+   },
+   "name": "Contexto en Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1700,
+    460
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); const m = $('¿Es mi propio chat?').item.json; const ctx = { ...$json };\nconst mio = (sd.mio || {})[m.jid]; if (mio) { const min = Math.round((Date.now() - mio) / 60000); ctx.minutosDesdeMiUltimaRespuesta = ctx.minutosDesdeMiUltimaRespuesta == null ? min : Math.min(ctx.minutosDesdeMiUltimaRespuesta, min); }\nconst modo = sd.modo && sd.modo.hasta > Date.now() ? sd.modo : null;\nctx.christianOcupado = modo ? { tipo: modo.tipo, hasta: modo.hastaTxt, desdeHace: Math.round((Date.now() - modo.desde) / 60000) } : null;\nreturn [{ json: ctx }];\n"
+   },
+   "name": "Agregar modo y memoria",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1820,
+    460
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: esPedido (true si es un cliente o posible cliente que pide algo relacionado con nuestro trabajo; false si es charla personal, un proveedor, publicidad, spam o un mensaje que no pide nada), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) otro / esPedido=false: responder=false, avisarme=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 4 horas (minutosDesdeMiUltimaRespuesta < 240), él está atendiendo la conversación: responder=false SIEMPRE. Solo avisarme=true si el cliente pide algo nuevo que Christian todavía no respondió o si es urgente; si no, avisarme=false. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$json, historial: undefined }) } ] }) }}"
+   },
+   "name": "Decidir y responder",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1940,
+    460
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $('¿Es mi propio chat?').item.json; const ctx = $('Agregar modo y memoria').item.json || {};\nlet j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nif (j.esPedido === false && !j.responder) return [];   // charla, proveedores, spam: no se hace nada\nconst dest = j.intencion === 'falla' || j.tipo === 'emergencia' ? 'ticket' : 'bandeja';\nconst pedido = j.esPedido !== false && !['agradecimiento', 'otro'].includes(j.intencion || '');\nconst ocupado = !!ctx.christianOcupado;                 // en relevamiento / reunión: el asistente atiende aunque yo haya escrito hace poco\nconst mioReciente = !ocupado && ctx.minutosDesdeMiUltimaRespuesta != null && ctx.minutosDesdeMiUltimaRespuesta < 240;   // Christian está atendiendo este chat\nconst registrar = j.esPedido !== false;                 // siempre queda en la conversación; solo va a la bandeja si es un pedido\nconst urgente = j.tipo === 'emergencia' || /urgen|hoy mismo|cuanto antes|no funciona|se rompi|se cort/i.test(m.texto);\nif (ocupado && pedido) { const sd = $getWorkflowStaticData('global'); sd.modo.pend = [...(sd.modo.pend || []), { hora: new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' }), quien: (j.nombre || m.nombre || '') + (j.empresa ? ' (' + j.empresa + ')' : ''), num: m.from, titulo: j.titulo || j.resumen || m.texto.slice(0, 80), respondi: (j.respuesta || '').trim(), urgente }].slice(-40); }\nreturn [{ json: { registrar, soloGuardar: !pedido, autor: 'cliente', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '', texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '',\n  intencion: j.intencion || 'consulta', tipoEntrada: j.tipoEntrada || 'consulta', tipo: j.tipo || 'consulta', destino: dest, titulo: j.titulo || '', canal: 'whatsapp', origen: 'WhatsApp', msgId: m.msgId, esAudio: m.esAudio,\n  urgente,\n  responder: !!j.responder && !!(j.respuesta || '').trim() && !mioReciente, respuestaAuto: (j.respuesta || '').trim(), enviarPlanos: !!j.enviarPlanos && (ctx.planos || []).length > 0 && !mioReciente, planos: (ctx.planos || []).slice(0, 4),\n  avisarme: ocupado ? urgente : (pedido && !mioReciente ? j.avisarme !== false : j.avisarme === true), ownerNum: m.ownerNum, from: m.from } }];\n"
+   },
+   "name": "Armar registro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2180,
+    460
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.responder }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Responder?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2420,
+    360
+   ]
+  },
+  {
+   "parameters": {
+    "amount": "={{ 8 + Math.floor(Math.random() * 12) }}",
+    "unit": "seconds"
+   },
+   "name": "Pausa breve",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    2660,
+    300
+   ],
+   "webhookId": "olumi-pausa"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $('Armar registro').item.json.from, text: $('Armar registro').item.json.respuestaAuto }) }}"
+   },
+   "name": "Responder al cliente",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2900,
+    300
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const a = $('Armar registro').item.json;\nconst id = $json.key?.id; if (id) sd.auto[id] = { ts: Date.now() }; sd.auto['t:' + a.from + '@s.whatsapp.net'] = a.respuestaAuto;\nreturn [{ json: $json }];\n"
+   },
+   "name": "Anotar respuesta automática",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3020,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $('Armar registro').item.json.enviarPlanos }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Mandar planos?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3140,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "const a = $('Armar registro').item.json; return (a.planos || []).map(p => ({ json: { number: a.from, url: p.url, caption: (p.proyecto ? p.proyecto + ' · ' : '') + p.nombre } }));"
+   },
+   "name": "Un plano por vez",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3380,
+    240
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendMedia/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.number, mediatype: 'image', mimetype: 'image/jpeg', media: $json.url, fileName: 'plano.jpg', caption: $json.caption }) }}"
+   },
+   "name": "Mandar plano",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3620,
+    240
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.registrar }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Registrar?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2420,
+    560
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($('Armar registro').item.json) }}"
+   },
+   "name": "Crear ticket en Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    560
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ ($('Armar registro').item.json.avisarme || !!$json.ticket) && !$json.repetido }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Avisarme?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2900,
+    560
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ (() => { const r = $('Crear ticket en Olumi').item.json; const a = $('Armar registro').item.json; const quien = (r.cliente || a.nombre || a.empresa || a.from) + (r.posible ? ' (no registrado)' : ''); const d = (a.urgente ? '🚨 URGENTE · ' : '') + (r.guardado ? '💬 Mensaje en un chat que estás atendiendo' : r.ticket ? ('🤖 Ticket ' + r.ticket + (r.nuevo ? '' : ' (se sumó)')) : ('📥 Pedido en la bandeja' + (r.nuevo ? '' : ' (se sumó)'))); return JSON.stringify({ number: a.ownerNum, text: d + ' · ' + quien + '\\n' + (a.titulo || '') + (a.resumen ? '\\n' + a.resumen : '') + (a.responder ? '\\n\\nLe respondí: “' + a.respuestaAuto + '”' : '\\n\\n(No le respondí nada.)') + '\\n\\n↩️ Respondé a este mensaje con un audio o texto y se lo mando como vos.' }); })() }}"
+   },
+   "name": "Avisarme por WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3140,
+    560
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.clientes = sd.clientes || {};\nconst id = $json.key?.id || ''; const a = $('Armar registro').item.json; const r = $('Crear ticket en Olumi').item.json;\nif (id) sd.clientes[id] = { jid: a.from + '@s.whatsapp.net', num: a.from, nombre: a.nombre || r.cliente || '', ticket: r.ticket || '', ts: Date.now() };\nfor (const k of Object.keys(sd.clientes)) if (Date.now() - (sd.clientes[k].ts || 0) > 30 * 864e5) delete sd.clientes[k];\nreturn [{ json: { guardado: !!id } }];\n"
+   },
+   "name": "Guardar referencia (cliente)",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3380,
+    560
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Mensajes a mí mismo que cambian el modo del asistente. Devuelve cmd:'' si no es un comando.\nconst sd = $getWorkflowStaticData('global'); const t = ($json.texto || '').trim(); const low = t.toLowerCase();\nconst fmt = d => d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' });\nconst resumen = (clear) => { const mo = sd.modo; const pend = (mo && mo.pend) || [];\n  let out = pend.length ? `📋 Mientras estabas ${mo.tipo} (desde ${fmt(new Date(mo.desde))}):\\n` + pend.map((p, i) => `${i + 1}) ${p.urgente ? '🚨 ' : ''}${p.quien || p.num} · ${p.titulo}${p.respondi ? `\\n   Le dije: “${p.respondi}”` : '\\n   (no le respondí)'}\\n   📱 +${p.num}`).join('\\n') + '\\n\\nTodo está en la bandeja de Olumi. Tocá el número para abrir el chat.' : '📋 No entró nada nuevo mientras estabas ' + (mo ? mo.tipo : 'ocupado') + '.';\n  if (clear) sd.modo = null; return out; };\nlet m;\nif ((m = low.match(/^(?:estoy |ando |me voy |voy )?(?:en |a |de )?(relevamiento|relevando|obra|reuni[oó]n|manejando|viaje|ocupado|almorzando|visita)\\b(.*)$/))) {\n  const tipo = { relevando: 'en relevamiento', relevamiento: 'en relevamiento', obra: 'en obra', reunión: 'en reunión', reunion: 'en reunión', manejando: 'manejando', viaje: 'de viaje', ocupado: 'ocupado', almorzando: 'almorzando', visita: 'en una visita' }[m[1]] || 'ocupado';\n  const resto = m[2] || ''; let hasta = Date.now() + 2 * 3600e3; let h;\n  if ((h = resto.match(/hasta (?:las? )?(\\d{1,2})(?:[:.h](\\d{2}))?/))) { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })); d.setHours(+h[1], +(h[2] || 0), 0, 0); hasta = Date.now() + (d.getTime() - new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })).getTime()); if (hasta < Date.now()) hasta += 864e5; }\n  else if ((h = resto.match(/(\\d+(?:[.,]\\d+)?) ?(h|hora|horas)\\b/))) hasta = Date.now() + parseFloat(h[1].replace(',', '.')) * 3600e3;\n  else if ((h = resto.match(/(\\d+) ?min/))) hasta = Date.now() + (+h[1]) * 60000;\n  sd.modo = { tipo, desde: Date.now(), hasta, hastaTxt: fmt(new Date(hasta)), pend: (sd.modo && sd.modo.hasta > Date.now() ? sd.modo.pend : []) || [] };\n  return [{ json: { ...$json, cmd: 'modo', respuesta: `🤖 Dale. Quedo atendiendo yo: estás ${tipo} hasta las ${sd.modo.hastaTxt}. A los clientes les digo eso y que los llamás después. Cuando termines escribí “volví” y te paso los pendientes.` } }];\n}\nif (/^(volv[ií]|ya volv[ií]|termin[ée]|libre|ya estoy|listo)\\b/.test(low)) return [{ json: { ...$json, cmd: 'volvi', respuesta: '✅ Listo, vuelvo al modo normal.\\n\\n' + resumen(true) } }];\nif (/^(pendientes|resumen|qu[eé] hay)\\b/.test(low)) return [{ json: { ...$json, cmd: 'pend', respuesta: resumen(false) } }];\nif (/^(ayuda|comandos)$/.test(low)) return [{ json: { ...$json, cmd: 'ayuda', respuesta: '🤖 Comandos (escribilos acá, en tu chat):\\n• “relevamiento hasta las 14” / “reunión 1h” / “manejando 30 min” → atiendo yo y te guardo los pendientes.\\n• “volví” → vuelvo al modo normal y te paso el resumen.\\n• “pendientes” → resumen sin salir del modo.\\n• Respondé a un aviso con audio o texto → se lo mando al cliente como vos.\\n• Un audio o nota suelta → ticket en Olumi.' } }];\nreturn [{ json: { ...$json, cmd: '' } }];\n"
+   },
+   "name": "¿Es un comando mío?",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1580,
+    60
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!$json.cmd }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Comando?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1700,
+    60
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.ownerNum, text: $json.respuesta }) }}"
+   },
+   "name": "Responder comando",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1940,
+    -40
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.mails = sd.mails || {}; sd.clientes = sd.clientes || {};\nconst q = $json.quotedId; const mail = q && sd.mails[q]; const cli = q && sd.clientes[q];\nreturn [{ json: { ...$json, mail: mail || null, esRespuestaMail: !!mail, cliente: cli || null, esRespuestaCliente: !mail && !!cli } }];\n"
+   },
+   "name": "¿Responde a un mail?",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1700,
+    140
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.esRespuestaMail }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Mail o nota?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1940,
+    140
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.esRespuestaCliente }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Responde a un cliente?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2180,
+    340
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.audioB64 ? true : false }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Audio o texto?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2420,
+    340
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendWhatsAppAudio/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.cliente.num, audio: $json.audioB64, encoding: true }) }}"
+   },
+   "name": "Mandar mi audio al cliente",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    300
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.cliente.num, text: $json.texto }) }}"
+   },
+   "name": "Mandar mi texto al cliente",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ (() => { const m = $('¿Responde a un cliente?').item.json; const sd = $getWorkflowStaticData('global'); sd.clientes = sd.clientes || {}; const id = $json.key?.id; if (id) sd.clientes[id] = { ...m.cliente, ts: Date.now() }; return JSON.stringify({ number: m.ownerNum, text: '✅ Enviado a ' + (m.cliente.nombre || m.cliente.num) + (m.audioB64 ? ' (audio)' : '') + (m.cliente.ticket ? ' · ' + m.cliente.ticket : '') + '\\n↩️ Si te vuelve a escribir te aviso; podés seguir respondiendo a este mensaje.' }); })() }}"
+   },
+   "name": "Confirmar respuesta",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2900,
+    340
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian Barcos, de Phitel (instalaciones y soporte técnico en Uruguay). Christian dictó por audio la respuesta a un mail. Convertí su dictado en un mail prolijo en español rioplatense, con trato de 'usted' si el original lo usa, sin muletillas ni repeticiones, breve y claro, manteniendo todo lo que dijo (precios, fechas, condiciones). No inventes datos. Devolvé SOLO un JSON con: asunto (empieza con 'Re: ' seguido del asunto original) y cuerpo (texto plano con saludos, sin firma: la firma se agrega aparte).\" }, { role: 'user', content: 'Mail original de ' + $json.mail.from + '\\nAsunto: ' + $json.mail.subject + '\\n---\\n' + ($json.mail.texto || '').slice(0, 3000) + '\\n---\\nDictado de Christian: ' + $json.texto } ] }) }}"
+   },
+   "name": "Redactar mail",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2180,
+    40
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $('¿Mail o nota?').item.json;\nlet j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nreturn [{ json: { to: m.mail.replyTo || m.mail.from, subject: j.asunto || ('Re: ' + m.mail.subject), text: (j.cuerpo || m.texto) + '\\n\\n' + \"Christian Barcos\\nPhitel · Instalaciones y soporte\\ncbarcos@phi.com.uy\", ownerNum: m.ownerNum, quien: m.mail.from } }];\n"
+   },
+   "name": "Preparar envío",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2420,
+    40
+   ]
+  },
+  {
+   "parameters": {
+    "fromEmail": "cbarcos@phi.com.uy",
+    "toEmail": "={{ $json.to }}",
+    "subject": "={{ $json.subject }}",
+    "emailFormat": "text",
+    "text": "={{ $json.text }}",
+    "options": {
+     "appendAttribution": false
+    }
+   },
+   "name": "Enviar mail",
+   "type": "n8n-nodes-base.emailSend",
+   "typeVersion": 2.1,
+   "position": [
+    2660,
+    40
+   ],
+   "credentials": {
+    "smtp": {
+     "id": "smtp",
+     "name": "smtp"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $('Preparar envío').item.json.ownerNum, text: '✅ Mail enviado a ' + $('Preparar envío').item.json.quien + '\\n' + $('Preparar envío').item.json.subject + '\\n\\n' + $('Preparar envío').item.json.text.slice(0, 600) }) }}"
+   },
+   "name": "Confirmar por WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2900,
+    40
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian, de Phitel (instalaciones en Uruguay). Christian se manda a sí mismo un audio o texto con un pedido, una consulta o una tarea. Devolvé SOLO un JSON con: cliente (nombre de la empresa o persona que menciona, o cadena vacía), tipo (uno de: emergencia, reclamo, instalacion, relevamiento, mantenimiento, consulta), titulo (máximo 60 letras, sin emojis), resumen (lo importante en 1 o 2 frases).\" }, { role: 'user', content: $json.texto } ] }) }}"
+   },
+   "name": "Entender mi nota",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2180,
+    240
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $('¿Responde a un cliente?').item.json;\nlet j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nreturn [{ json: { org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '', nombre: '', empresa: j.cliente || '', texto: '🎤 Nota de Christian: ' + m.texto, resumen: j.resumen || '',\n  tipo: j.tipo || 'consulta', tipoEntrada: j.tipo === 'emergencia' || j.tipo === 'reclamo' ? 'falla' : j.tipo === 'instalacion' ? 'trabajo' : j.tipo === 'relevamiento' ? 'presupuesto' : 'consulta', destino: 'ticket', titulo: j.titulo || '', canal: 'whatsapp', origen: 'Nota de voz', msgId: m.msgId, esAudio: m.esAudio, ownerNum: m.ownerNum } }];\n"
+   },
+   "name": "Armar ticket (nota)",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2420,
+    240
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}"
+   },
+   "name": "Crear ticket (nota)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    240
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $('Armar ticket (nota)').item.json.ownerNum, text: '🤖 Ticket ' + $json.ticket + ' en Olumi' + ($json.cliente ? ' · ' + $json.cliente : '') + '\\n' + $('Armar ticket (nota)').item.json.titulo + ($json.posible ? '\\n(no está registrado como cliente: queda como posible cliente)' : '') }) }}"
+   },
+   "name": "Confirmar nota",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2900,
+    240
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "mailbox": "INBOX",
+    "postProcessAction": "read",
+    "options": {
+     "forceReconnect": 60
+    }
+   },
+   "name": "Mail nuevo",
+   "type": "n8n-nodes-base.emailReadImap",
+   "typeVersion": 2,
+   "position": [
+    0,
+    800
+   ],
+   "credentials": {
+    "imap": {
+     "id": "imap",
+     "name": "imap"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Deja pasar solo mails de personas (no avisos automáticos ni publicidad)\nconst j = $json; const from = String(j.from || '').toLowerCase(); const subj = String(j.subject || '');\nconst h = j.headers || {};\nif (/no-?reply|noreply|notificacion|notification|newsletter|mailer|daemon|bounce|facebook|instagram|mercadolibre|mercadopago/.test(from)) return [];\nif (h['list-unsubscribe'] || h['precedence'] === 'bulk' || /^(auto|out of office|fuera de la oficina)/i.test(subj)) return [];\nconst crudo = (j.textPlain || j.text || String(j.textHtml || j.html || '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' '));\n// separa lo nuevo (arriba) del historial citado (abajo): \"El ... escribió:\", \"De:\", \"From:\", \"-------- Mensaje Original\", líneas con \">\"\nconst corte = crudo.search(/(^|\\n)\\s*(El .{3,80} escribi[oó]:|On .{3,80} wrote:|-{3,} ?(Mensaje original|Original Message|Forwarded message|Mensaje reenviado).*|De: .+\\n|From: .+\\n|>\\s)/i);\nconst ultimo = (corte > 40 ? crudo.slice(0, corte) : crudo).replace(/\\s+/g, ' ').trim();\nconst historial = (corte > 40 ? crudo.slice(corte) : '').replace(/^>+\\s?/gm, '').replace(/\\s+/g, ' ').trim();\nconst texto = (ultimo + (historial ? '\\n\\n[Historial del hilo] ' + historial : '')).trim();\nconst fromMail = (String(j.from || '').match(/<([^>]+)>/) || [])[1] || String(j.from || '');\nconst interno = /@phi\\.com\\.uy$/i.test(fromMail) || /@unitytech\\.uy$/i.test(fromMail);   // mails propios o de compañeros: se registran, nunca se contestan solos\nconst reenvio = /^(fwd?|rv|tr):/i.test(subj);\nreturn [{ json: { from: fromMail, fromName: String(j.from || '').replace(/<.*/, '').replace(/\"/g, '').trim(), replyTo: (String(j.replyTo || '').match(/<([^>]+)>/) || [])[1] || '', subject: subj, texto: texto.slice(0, 6000), ultimo: ultimo.slice(0, 3000), historial: historial.slice(0, 5000), messageId: h['message-id'] || j.messageId || '', interno, reenvio } }];\n"
+   },
+   "name": "Filtrar mails",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    800
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000,
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', email: $json.from, nombre: $json.fromName }) }}"
+   },
+   "name": "Contexto en Olumi (mail)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    800
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende la casilla cbarcos@phi.com.uy de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Respondés como una persona del equipo: cordial pero no muy formal, en español rioplatense; seguís el registro del que escribe (si trata de usted, usted; si tutea, vos). 2 a 5 frases, sin emojis, sin decir que sos un asistente ni una IA. Sin firma (se agrega aparte). NUNCA inventes precios, fechas, horarios ni disponibilidad: solo lo que está en CONTEXTO. Te paso el MAIL (remitente, asunto, cuerpo) y el CONTEXTO que tiene Olumi del remitente (si es cliente, quién escribe y de qué área, dirección, tickets abiertos y visitas, presupuestos, proyectos, planos). Devolvé SOLO un JSON con: esPedido (true si un cliente o posible cliente pide un trabajo, un presupuesto, avisa una falla o consulta algo del rubro; false si es administrativo, publicidad, proveedor, factura de un proveedor, o no pide nada), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta), nombre (quien firma o está en el contexto, o ''), empresa (empresa o lugar, o ''), titulo (máximo 60 letras), resumen (máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen), responder (true si corresponde contestar ahora), respuesta (cuerpo exacto del mail de respuesta; '' si responder es false), avisarme (true si Christian tiene que intervenir). REGLAS: 1) Lo básico, siempre que sea un pedido real: 'Recibí tu mensaje, me quedo con el tema y apenas pueda te respondo con detalle' (dicho con tus palabras y según el registro). 2) Si piden pasar a relevar o hacer un trabajo: pedí dirección, contacto en el lugar y días u horarios posibles, SALVO que la dirección ya esté en el contexto (cliente registrado con dirección o proyecto conocido): en ese caso no la pidas, confirmá que coordinamos la visita y pedí solo lo que falte. 3) Si piden presupuesto: si hay uno en el contexto nombralo (número y fecha) y decí que lo revisamos; si no, decí que lo preparamos y pedí los datos que falten. Nunca des montos. 4) Si preguntan por el estado de algo: respondé con lo del contexto (pedido, visita agendada, presupuesto); si no hay nada, 'lo reviso y te confirmo'. 5) Si piden un documento (plano, presupuesto, factura, informe): decí que se lo mandamos a la brevedad (avisarme=true). 6) Si es una falla o urgencia: confirmá recepción, decí que lo tomamos como pedido y que lo contactamos; pedí teléfono de contacto si no está. 7) Agradecimiento o cierre de hilo: responder=false. 8) esPedido=false: responder=false, avisarme=false. 9) Si es la continuación de un hilo (asunto con Re:) y ya hay un pedido pendiente en el contexto, no repitas el acuse: respondé solo lo nuevo o responder=false. 0) En un hilo largo respondé solo al ÚLTIMO MENSAJE; el historial sirve para entender de qué se trata y qué ya se acordó (dirección, fechas, personas), no para volver a responderlo. 10) Si el mail lo manda alguien de Phitel (casilla @phi.com.uy) o es un reenvío (Fwd), NO respondas (responder=false): solo clasificalo y resumí qué pide el cliente del hilo, con empresa y nombre del cliente (no del compañero que reenvía). Usá el nombre de la persona si lo sabés. No prometas fechas.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE (esto es lo que hay que responder): ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL DEL HILO (solo contexto, ya fue respondido antes): ' + $('Filtrar mails').item.json.historial.slice(0, 3500) : '') + '\\n\\nCONTEXTO EN OLUMI: ' + JSON.stringify($json) } ] }) }}"
+   },
+   "name": "Decidir respuesta (mail)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    720,
+    800
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst f = $('Filtrar mails').item.json; let j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nif (j.esPedido === false && !j.responder) return [];\nconst registrar = j.esPedido !== false && !['agradecimiento', 'otro'].includes(j.intencion || '');\nconst dest = j.intencion === 'falla' || j.tipo === 'emergencia' ? 'ticket' : 'bandeja';\nreturn [{ json: { registrar, org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '', email: f.from, nombre: j.nombre || f.fromName, empresa: j.empresa || '', texto: 'Asunto: ' + f.subject + '\\n\\n' + f.texto.slice(0, 3500), resumen: j.resumen || '',\n  intencion: j.intencion || 'consulta', tipoEntrada: j.tipoEntrada || 'consulta', tipo: j.tipo || 'consulta', destino: dest, titulo: j.titulo || f.subject, canal: 'mail', origen: 'Email', msgId: f.messageId,\n  responder: !!j.responder && !!(j.respuesta || '').trim() && !f.interno && !f.reenvio, respuestaAuto: (j.respuesta || '').trim(), avisarme: j.avisarme !== false || f.interno,\n  to: f.replyTo || f.from, subject: /^re:/i.test(f.subject) ? f.subject : 'Re: ' + f.subject, fromName: f.fromName } }];\n"
+   },
+   "name": "Armar pedido (mail)",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    960,
+    800
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.responder }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Responder el mail?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1200,
+    700
+   ]
+  },
+  {
+   "parameters": {
+    "amount": "={{ 50 + Math.floor(Math.random() * 40) }}",
+    "unit": "seconds"
+   },
+   "name": "Pausa (mail)",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    1320,
+    700
+   ],
+   "webhookId": "olumi-pausa-mail"
+  },
+  {
+   "parameters": {
+    "fromEmail": "cbarcos@phi.com.uy",
+    "toEmail": "={{ $json.to }}",
+    "subject": "={{ $json.subject }}",
+    "emailFormat": "text",
+    "text": "={{ $json.respuestaAuto + '\\n\\n' + \"Christian Barcos\\nPhitel · Instalaciones y soporte\\ncbarcos@phi.com.uy\" }}",
+    "options": {
+     "appendAttribution": false
+    }
+   },
+   "name": "Responder el mail",
+   "type": "n8n-nodes-base.emailSend",
+   "typeVersion": 2.1,
+   "position": [
+    1440,
+    700
+   ],
+   "credentials": {
+    "smtp": {
+     "id": "smtp",
+     "name": "smtp"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.registrar }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Registrar el mail?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1200,
+    900
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($('Armar pedido (mail)').item.json) }}"
+   },
+   "name": "Pedido a la bandeja (mail)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1440,
+    900
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "http://evolution:8080/instance/fetchInstances?instanceName=christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth"
+   },
+   "name": "Mi número",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1680,
+    900
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ (() => { const inst = Array.isArray($json) ? $json[0] : ($json.instance || $json); const num = String(inst.ownerJid || inst.owner || '').replace(/@.*/, ''); const a = $('Armar pedido (mail)').item.json; const r = $('Pedido a la bandeja (mail)').item.json; const quien = (r.cliente || a.empresa || a.fromName || a.email) + (r.posible ? ' (no registrado)' : ''); return JSON.stringify({ number: num, text: '📧 ' + quien + ' · ' + (a.titulo || '') + '\\n' + (a.resumen || '') + (r.ticket ? '\\n🤖 Ticket ' + r.ticket : '\\n📥 Quedó en la bandeja de Olumi.') + (a.responder ? '\\n\\nLe contesté: “' + a.respuestaAuto.slice(0, 400) + '”' : '\\n\\n(No le contesté nada.)') + '\\n\\n↩️ Respondé a este mensaje con un audio o texto y lo mando por mail como vos.' }); })() }}"
+   },
+   "name": "Avisar mail por WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1920,
+    900
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.mails = sd.mails || {};\nconst id = $json.key?.id || ''; const f = $('Filtrar mails').item.json;\nif (id) sd.mails[id] = { from: f.from, replyTo: f.replyTo, subject: f.subject, texto: f.texto.slice(0, 3000), messageId: f.messageId, ts: Date.now() };\nfor (const k of Object.keys(sd.mails)) if (Date.now() - (sd.mails[k].ts || 0) > 30 * 864e5) delete sd.mails[k];\nreturn [{ json: { guardado: !!id, id } }];\n"
+   },
+   "name": "Guardar referencia",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2160,
+    900
+   ]
+  },
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "minutes",
+       "minutesInterval": 10
+      }
+     ]
+    }
+   },
+   "name": "Cada 10 minutos",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    1100
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); const mo = sd.modo; if (!mo || mo.hasta > Date.now() || mo.avisado) return [];\nmo.avisado = true; const pend = mo.pend || []; const fmt = d => new Date(d).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' });\nconst out = `⏰ Pasaron las ${mo.hastaTxt}: ¿ya terminaste? Escribí “volví” (o “relevamiento hasta las 16” para seguir).\\n\\n` + (pend.length ? `Mientras tanto entró:\\n` + pend.map((p, i) => `${i + 1}) ${p.urgente ? '🚨 ' : ''}${p.quien || p.num} · ${p.titulo}${p.respondi ? `\\n   Le dije: “${p.respondi}”` : ''}\\n   📱 +${p.num}`).join('\\n') : 'No entró nada nuevo.');\nreturn [{ json: { text: out } }];\n"
+   },
+   "name": "¿Venció el modo?",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    1100
+   ]
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "http://evolution:8080/instance/fetchInstances?instanceName=christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth"
+   },
+   "name": "Mi número (reloj)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    1100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ (() => { const inst = Array.isArray($json) ? $json[0] : ($json.instance || $json); const num = String(inst.ownerJid || inst.owner || '').replace(/@.*/, ''); return JSON.stringify({ number: num, text: $('¿Venció el modo?').item.json.text }); })() }}"
+   },
+   "name": "Avisar que venció",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    720,
+    1100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  }
+ ],
+ "connections": {
+  "WhatsApp entrante": {
+   "main": [
+    [
+     {
+      "node": "Leer mensaje",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer mensaje": {
+   "main": [
+    [
+     {
+      "node": "¿Es audio?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es audio?": {
+   "main": [
+    [
+     {
+      "node": "Audio a archivo",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Texto escrito",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Audio a archivo": {
+   "main": [
+    [
+     {
+      "node": "Transcribir (Groq Whisper)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Transcribir (Groq Whisper)": {
+   "main": [
+    [
+     {
+      "node": "Texto del audio",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Texto del audio": {
+   "main": [
+    [
+     {
+      "node": "¿Es una respuesta mía a un cliente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Texto escrito": {
+   "main": [
+    [
+     {
+      "node": "¿Es una respuesta mía a un cliente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es una respuesta mía a un cliente?": {
+   "main": [
+    [
+     {
+      "node": "Anotar que respondí yo",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Es mi propio chat?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anotar que respondí yo": {
+   "main": [
+    [
+     {
+      "node": "Guardar mi respuesta en Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es mi propio chat?": {
+   "main": [
+    [
+     {
+      "node": "¿Es un comando mío?",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Contexto en Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contexto en Olumi": {
+   "main": [
+    [
+     {
+      "node": "Agregar modo y memoria",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agregar modo y memoria": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir y responder": {
+   "main": [
+    [
+     {
+      "node": "Armar registro",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar registro": {
+   "main": [
+    [
+     {
+      "node": "¿Responder?",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "¿Registrar?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Responder?": {
+   "main": [
+    [
+     {
+      "node": "Pausa breve",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pausa breve": {
+   "main": [
+    [
+     {
+      "node": "Responder al cliente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Responder al cliente": {
+   "main": [
+    [
+     {
+      "node": "Anotar respuesta automática",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anotar respuesta automática": {
+   "main": [
+    [
+     {
+      "node": "¿Mandar planos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Mandar planos?": {
+   "main": [
+    [
+     {
+      "node": "Un plano por vez",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Un plano por vez": {
+   "main": [
+    [
+     {
+      "node": "Mandar plano",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Registrar?": {
+   "main": [
+    [
+     {
+      "node": "Crear ticket en Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crear ticket en Olumi": {
+   "main": [
+    [
+     {
+      "node": "¿Avisarme?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Avisarme?": {
+   "main": [
+    [
+     {
+      "node": "Avisarme por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Avisarme por WhatsApp": {
+   "main": [
+    [
+     {
+      "node": "Guardar referencia (cliente)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es un comando mío?": {
+   "main": [
+    [
+     {
+      "node": "¿Comando?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Comando?": {
+   "main": [
+    [
+     {
+      "node": "Responder comando",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Responde a un mail?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Responde a un mail?": {
+   "main": [
+    [
+     {
+      "node": "¿Mail o nota?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Mail o nota?": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Responde a un cliente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Responde a un cliente?": {
+   "main": [
+    [
+     {
+      "node": "¿Audio o texto?",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Entender mi nota",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Audio o texto?": {
+   "main": [
+    [
+     {
+      "node": "Mandar mi audio al cliente",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Mandar mi texto al cliente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mandar mi audio al cliente": {
+   "main": [
+    [
+     {
+      "node": "Confirmar respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mandar mi texto al cliente": {
+   "main": [
+    [
+     {
+      "node": "Confirmar respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Redactar mail": {
+   "main": [
+    [
+     {
+      "node": "Preparar envío",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Preparar envío": {
+   "main": [
+    [
+     {
+      "node": "Enviar mail",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Enviar mail": {
+   "main": [
+    [
+     {
+      "node": "Confirmar por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota": {
+   "main": [
+    [
+     {
+      "node": "Armar ticket (nota)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar ticket (nota)": {
+   "main": [
+    [
+     {
+      "node": "Crear ticket (nota)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crear ticket (nota)": {
+   "main": [
+    [
+     {
+      "node": "Confirmar nota",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mail nuevo": {
+   "main": [
+    [
+     {
+      "node": "Filtrar mails",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Filtrar mails": {
+   "main": [
+    [
+     {
+      "node": "Contexto en Olumi (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contexto en Olumi (mail)": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir respuesta (mail)": {
+   "main": [
+    [
+     {
+      "node": "Armar pedido (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar pedido (mail)": {
+   "main": [
+    [
+     {
+      "node": "¿Responder el mail?",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "¿Registrar el mail?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Responder el mail?": {
+   "main": [
+    [
+     {
+      "node": "Pausa (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pausa (mail)": {
+   "main": [
+    [
+     {
+      "node": "Responder el mail",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Registrar el mail?": {
+   "main": [
+    [
+     {
+      "node": "Pedido a la bandeja (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pedido a la bandeja (mail)": {
+   "main": [
+    [
+     {
+      "node": "Mi número",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mi número": {
+   "main": [
+    [
+     {
+      "node": "Avisar mail por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Avisar mail por WhatsApp": {
+   "main": [
+    [
+     {
+      "node": "Guardar referencia",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Cada 10 minutos": {
+   "main": [
+    [
+     {
+      "node": "¿Venció el modo?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Venció el modo?": {
+   "main": [
+    [
+     {
+      "node": "Mi número (reloj)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mi número (reloj)": {
+   "main": [
+    [
+     {
+      "node": "Avisar que venció",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "America/Montevideo",
+  "saveManualExecutions": true
+ }
+}
