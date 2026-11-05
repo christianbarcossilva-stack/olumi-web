@@ -1740,7 +1740,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.16',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.17',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -4126,28 +4126,33 @@ function wedgeApply(code){
 }
 
 /* ---------- 1.13: Bandeja de entrada (pedidos que llegan por WhatsApp y mail) · posibles clientes dentro del ticket ---------- */
-const ENT_TIPO={trabajo:['Trabajo nuevo','t-acc'],falla:['Falla o reclamo','t-bad'],presupuesto:['Pide presupuesto','t-warn'],consulta:['Consulta','t-none'],otro:['Otro','t-none']};
+const ENT_TIPO={trabajo:['Trabajo nuevo','t-acc'],falla:['Falla o reclamo','t-bad'],presupuesto:['Pide presupuesto','t-warn'],consulta:['Consulta','t-none'],otro:['Otro','t-none'],charla:['Charla','t-none'],proveedor:['Proveedor','t-none'],spam:['Publicidad','t-none']};
+/* 1.17: charla en la bandeja */
+const ENT_CHARLA=['charla','proveedor','spam'];const entCharla=e=>ENT_CHARLA.includes(e.tipo);
+const ENT_TEMA={trabajo:'Instalación o trabajo',obra:'Obra en curso',soporte:'Soporte técnico',comercial:'Comercial',coordinar:'Coordinación',charla:'Charla',proveedor:'Proveedor',spam:'Publicidad'};
 const ENT_EST={nuevo:'Nuevo',seguimiento:'En seguimiento',ticket:'Pasó a ticket',descartado:'Descartado'};
 const ENT_CANAL={whatsapp:'💬',mail:'📧',web:'🌐',llamada:'📞',otro:'✉️'};
 const entOpen=e=>['nuevo','seguimiento'].includes(e.estado||'nuevo');
 const tkContacto=t=>t.contacto||t.contactoWeb||null;
 const contactoLabel=c=>c?[c.empresa,c.nombre].filter(Boolean).join(' · ')||c.telefono||c.email||'Sin nombre':'';
 const entNombre=e=>e.clienteId?cliName(e.clienteId):(contactoLabel(e.contacto)||e.nombre||e.de||'Sin nombre');
-const entNuevas=()=>arr('entradas').filter(e=>(e.estado||'nuevo')==='nuevo');
+const entNuevas=()=>arr('entradas').filter(e=>(e.estado||'nuevo')==='nuevo'&&!entCharla(e));
 let ENTF='abiertas';
 function entRow(e){
   const tp=ENT_TIPO[e.tipo]||ENT_TIPO.otro,c=e.contacto;
   return`<div class="tkrow" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ENT_CANAL[e.canal]||ENT_CANAL.otro}</span><div class="tk-main"><strong>${esc(e.titulo||e.resumen||(e.texto||'').slice(0,80)||'Mensaje')}</strong><div class="tk-meta"><span>${esc(entNombre(e))}</span>${!e.clienteId&&c?'<span class="tag t-warn">Sin registrar</span>':''}${isAbo(e.clienteId)?aboTag(e.clienteId):''}<span>·</span><span>${ago(e.creado)}</span></div></div>
-    <div class="tk-side"><span class="tag ${tp[1]}">${tp[0]}</span><span class="tk-est">${ENT_EST[e.estado||'nuevo']}${e.ticketId&&D.tickets[e.ticketId]?' '+esc(D.tickets[e.ticketId].numero||''):''}</span></div></div>`;
+    <div class="tk-side"><span class="tag ${tp[1]}">${e.tema&&ENT_TEMA[e.tema]&&!entCharla(e)?esc(ENT_TEMA[e.tema]):tp[0]}</span>${entCharla(e)&&!readonly?`<button class="btn ico ghost" data-act="entborrar:${e.id}" aria-label="Borrar mensaje" title="Borrar">✕</button>`:`<span class="tk-est">${ENT_EST[e.estado||'nuevo']}${e.ticketId&&D.tickets[e.ticketId]?' '+esc(D.tickets[e.ticketId].numero||''):''}</span>`}</div></div>`;
 }
 function vBandeja(){
   const all=arr('entradas');
-  let l=all.filter(e=>ENTF==='abiertas'?entOpen(e):ENTF==='nuevas'?(e.estado||'nuevo')==='nuevo':true);
+  let l=all.filter(e=>ENTF==='charla'?entCharla(e):ENTF==='abiertas'?entOpen(e)&&!entCharla(e):ENTF==='nuevas'?(e.estado||'nuevo')==='nuevo'&&!entCharla(e):true);
+  const nCharla=all.filter(entCharla).length;
   if(Q)l=l.filter(e=>qn([e.titulo,e.resumen,e.texto,entNombre(e),e.contacto?.telefono,e.de].join(' ')).includes(qn(Q)));
   l.sort((a,b)=>n0(b.creado)-n0(a.creado));
   const nuevas=entNuevas().length;
   const head=`<div class="vhead"><div><h1>Bandeja de entrada</h1><p class="sub">${pl(nuevas,'pedido nuevo','pedidos nuevos')} · lo que llega por WhatsApp y mail, antes de convertirlo en ticket, visita o presupuesto</p></div>
-    <div class="tools"><div class="seg" role="group" aria-label="Filtro">${[['abiertas','Pendientes'],['nuevas','Nuevas'],['todas','Todas']].map(([k,n])=>`<button class="${ENTF===k?'on':''}" data-act="entf:${k}">${n}</button>`).join('')}</div><button class="btn pri" data-new="ent">+ Anotar pedido</button></div></div>`;
+    <div class="tools"><div class="seg" role="group" aria-label="Filtro">${[['abiertas','Pendientes'],['nuevas','Nuevas'],['charla','Charla y otros'+(nCharla?' · '+nCharla:'')],['todas','Todas']].map(([k,n])=>`<button class="${ENTF===k?'on':''}" data-act="entf:${k}">${n}</button>`).join('')}</div>${ENTF==='charla'&&nCharla&&!readonly?'<button class="btn ghost danger" data-act="entvaciar">Vaciar charla</button>':''}<button class="btn pri" data-new="ent">+ Anotar pedido</button></div></div>
+    ${ENTF==='charla'?'<p class="hint" style="margin:-6px 0 12px">Mensajes que el asistente tomó como charla, saludo, proveedor o publicidad. No generan avisos. Si alguno es un pedido, abrilo y cambiale el tipo; si no, borralo.</p>':''}`;
   if(!all.length)return head+empty('Todavía no llegó nada','Cuando un cliente escriba al WhatsApp de la empresa o al correo, el asistente lo deja acá con quién es, qué pide y de qué tipo es. Las fallas urgentes pasan a ticket solas; el resto lo decidís vos con un toque.','ent','+ Anotar un pedido a mano');
   if(!l.length)return head+'<p class="muted">No hay pedidos con este filtro.</p>';
   return head+`<div class="list">${l.map(entRow).join('')}</div>`;
@@ -4165,7 +4170,7 @@ function sheetEnt(id,p){
     if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Qué hacer con este pedido</h3><p class="hint">${e.clienteId?'Es de un cliente registrado.':c.telefono||c.nombre?'No está registrado como cliente: queda como <b>posible cliente</b> y se registra solo cuando le hagas un presupuesto o una factura.':''}</p>
       <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Crear ticket</button>`}<button class="btn" data-act="ent2trab">Agendar visita</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
-      <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por mail</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}</div></section>`;
+      <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por mail</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
   }
   return sheetFrame('Bandeja',id?(e.titulo||'Pedido'):'Anotar pedido',body,{del:!!id});
 }
@@ -4188,6 +4193,8 @@ async function entAct(k,el,arg){
   const e=SH&&SH.type==='ent'&&SH.id?D.entradas[SH.id]:null;
   switch(k){
     case'entf':ENTF=arg;sr();return true;
+    case'entborrar':{const id=arg||(SH&&SH.id);if(!id)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Borrar?';return true}armed=null;await remove('entradas',id);if(SH&&SH.type==='ent'&&SH.id===id)closeSheet();toast('Mensaje borrado');sr();return true}
+    case'entvaciar':{const l=arr('entradas').filter(entCharla);if(!l.length)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=`¿Borrar ${l.length}? Tocá de nuevo`;return true}armed=null;for(const e of l)await remove('entradas',e.id);toast('Charla borrada');sr();return true}
     case'entest':{if(!e)return true;await patch('entradas',SH.id,{estado:arg,actualizado:Date.now()});openSheet('ent',SH.id);return true}
     case'entreg':{if(!e)return true;const cid=await registrarContacto(e.contacto||{});await patch('entradas',SH.id,{clienteId:cid});if(e.ticketId&&D.tickets[e.ticketId]&&!D.tickets[e.ticketId].clienteId)await patch('tickets',e.ticketId,{clienteId:cid});openSheet('ent',SH.id);return true}
     case'ent2tk':{if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
