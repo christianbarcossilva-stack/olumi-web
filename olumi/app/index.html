@@ -533,6 +533,24 @@ th{font-size:11px;letter-spacing:.07em}
 }
 @media (prefers-reduced-motion: reduce){.btn,.card,.menu button,.nav button,.seg button{transition:none}}
 
+/* 1.12: relevamiento de campo e ingreso con lector */
+.reltools{position:sticky;top:-1px;z-index:3;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0 10px;margin:-6px 0 10px;background:var(--surface);border-bottom:1px solid var(--line-2)}
+.reltools .btn{white-space:nowrap}
+.ritem{padding:8px 0;border-bottom:1px solid var(--line-2)}
+.ritem:last-child{border-bottom:0}
+.ri-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ri-row input{min-width:0;margin:0}
+.ri-ubic{flex:1 1 34%}.ri-desc{flex:2 1 46%}.ri-cant{flex:0 0 84px}
+.ritem .photos{margin-top:6px}
+.btn.ico{padding:7px 10px;line-height:1}
+#ingLines .ingh,#ingLines .ingl{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line-2)}
+#ingLines .ingh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+#ingLines .ingl:last-child{border-bottom:0}
+#ingLines .ing-c{flex:0 0 96px;text-align:right;margin:0;min-width:0}
+#ingLines .ing-x{flex:0 0 36px;padding:6px 0;text-align:center}
+#ingLines .grow{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:600px){#ingLines .ing-c{flex-basis:72px}}
+@media (max-width:600px){.ri-ubic{flex:1 1 100%}.ri-desc{flex:1 1 calc(100% - 180px)}.ri-cant{flex:0 0 76px}}
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -1180,6 +1198,7 @@ async function patch(col,id,fields){
 async function onUpload(inp){
   if(ADJCOL[inp.dataset.up]){await adjUpload(inp);return}
   if(inp.dataset.up==='pfoto'){await portalUpload(inp);return}
+  if(await campoUpload(inp))return;
   if(await planosUpload(inp))return;
   if(!AS){toast('Necesitás permiso de edición para subir archivos.');return}
   const files=[...inp.files];const kind=inp.dataset.up;if(!files.length||(kind!=='logo'&&!SH?.id))return;
@@ -1406,7 +1425,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1500,7 +1519,7 @@ async function addActFromOp(){
 
 /* producto */
 function sheetProd(id){const p=id?D.productos[id]:{unidad:'unidad',moneda:defMon(),barras:PENDING_BARRAS||''};PENDING_BARRAS='';return sheetFrame('Catálogo',id?p.nombre:'Nuevo producto o servicio',`<div class="grid">${prodF().map(f=>fld(f,f.k==='mantCada'?String(n0(p.mantCada)):p[f.k])).join('')}</div><div class="actions">${scanBtn('prod','Escanear código de barras')}</div><p class="err" id="shErr" hidden></p>`,{del:!!id})}
-async function saveProd(){const v=readForm(prodF());if('mantCada' in v)v.mantCada=n0(v.mantCada);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}await put('productos',SH.id||uid(),{...(SH.id?D.productos[SH.id]:{}),...v});toast('Guardado en el catálogo');closeSheet()}
+async function saveProd(){const v=readForm(prodF());if('mantCada' in v)v.mantCada=n0(v.mantCada);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}const pid=SH.id||uid();await put('productos',pid,{...(SH.id?D.productos[SH.id]:{}),...v});toast('Guardado en el catálogo');if(ING_BACK&&ING){ING_BACK=null;closeSheet();openSheet('ing',null,{resume:true});ingAdd({...(D.productos[pid]||v),id:pid});return}closeSheet()}
 
 /* presupuesto */
 function nextNum(){const m=Math.max(0,...arr('presupuestos').map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
@@ -1596,6 +1615,7 @@ async function act(a,el){
   if(await planAct(k,el,arg))return;
   if(await obrasAct(k,el,arg))return;
   if(await planosAct(k,el,arg))return;
+  if(await campoAct(k,el,arg))return;
   if(await modulosAct(k,el,arg))return;
   if(await invAct(k,el,arg))return;
   if(await obraAct(k,el,arg))return;
@@ -1647,7 +1667,7 @@ async function act(a,el){
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -1689,7 +1709,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.11',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.12',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -1721,7 +1741,7 @@ document.addEventListener('input',e=>{
   if(t.dataset.psearch){personSearch(t);return}
   if(t.dataset.tsearch){clearTimeout(qT);qT=setTimeout(()=>techSearch(t),250);return}
   if(t.dataset.up)return;
-  if(SH&&t.closest('#sheet')&&t.id!=='copyFallback'&&!/^(na_|op_nota|mv_code|oc_code|scan_manual)/.test(t.id))SH.dirty=true;
+  if(SH&&t.closest('#sheet')&&t.id!=='copyFallback'&&!/^(na_|op_nota|mv_code|oc_code|ing_code|ing_pick|scan_manual)/.test(t.id))SH.dirty=true;
   if(t.id&&t.id.startsWith('s_')){CFGDRAFT=CFGDRAFT||{};CFGDRAFT[t.id.slice(2)]=t.type==='checkbox'?t.checked:t.value;return}
   if(!QE)return;
   if(t.dataset.li!=null&&t.dataset.lf){const l=QE.lineas[+t.dataset.li];if(!l)return;const f=t.dataset.lf;l[f]=['cant','precio'].includes(f)?n0(t.value):t.value;
@@ -2278,26 +2298,17 @@ const RELF=()=>[{k:'titulo',l:'Qué se releva',w:'full',ph:'Ej.: CCTV perímetro
   {k:'jornales',l:'Jornales de mano de obra estimados',t:'number',step:'0.5'},{k:'dificultad',l:'Dificultad',t:'select',o:['Normal','Media','Alta (altura, accesos, horarios)']},
   {k:'notas',l:'Observaciones',t:'rich',w:'full',ph:'Accesos, horarios, energía, permisos, lo que pidió el cliente. Usá listas y casillas ☐.'}];
 let RELJ=null;
-function sheetRel(id,p){
-  const r=id?{...D.relevamientos[id]}:{fecha:today(),responsable:ME||'',clienteId:p.cli||(D.proyectos[p.pry]||{}).clienteId||'',proyectoId:p.pry||'',servicio:p.serv||'CCTV',q:{},fotos:[],jornales:1};RELJ=r;
-  let body=`<div class="grid">${RELF().map(f=>fldv(f,r)).join('')}</div>
-    <section class="rel" id="relQ">${relQHtml(r.servicio,r.q)}</section>`;
-  if(id){const pls=r.proyectoId?pryPlanos(r.proyectoId):[];
-    body+=`<section class="rel"><h3>Fotos del relevamiento</h3><div id="relFotos">${photosHtmlRO(r.fotos||[])}</div>${AS?`<div class="actions"><label class="btn pri upl">Sacar foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*" multiple data-up="relfoto"></label></div><p class="busy" id="upBusy" hidden></p>`:''}</section>
-      <section class="rel"><h3>Planos</h3>${r.proyectoId?(pls.length?pls.map(pl=>{const s=planStats(pl);return`<div class="item link" role="button" tabindex="0" data-act="plan:${pl.id}"><span class="grow">${esc(pl.nombre)}</span><span class="muted">${s.total} puntos${Object.keys(s.metros).length?' · '+fmtM(Object.values(s.metros).reduce((a,b)=>a+b,0)):''}</span></div>`}).join(''):'<p class="muted" style="margin:0">El proyecto todavía no tiene planos.</p>')+(AS?`<div class="actions"><label class="btn upl">Subir plano<input type="file" accept="image/*,application/pdf" data-up="planoint" data-pry="${esc(r.proyectoId)}"></label></div><p class="busy" id="plBusy" hidden></p>`:''):'<p class="muted" style="margin:0">Asigná un proyecto para subir y marcar el plano.</p>'}</section>`;
-  }
-  return sheetFrame('Relevamiento',id?(r.titulo||'Relevamiento'):'Nuevo relevamiento',body,{del:!!id,extra:id&&has('presupuestos')?'<button class="btn" data-act="rel2pres">Armar presupuesto</button>':''});
-}
 async function saveRel(close=true){
   const v=readForm(RELF()),e=$('#shErr');if(!v.clienteId&&!v.titulo){if(e){e.textContent='Poné qué se releva o elegí el cliente.';e.hidden=false}else toast('Poné qué se releva o elegí el cliente.');return false}
   const base=SH.id?{...D.relevamientos[SH.id]}:{creado:Date.now(),fotos:[]};const q={...(base.q||{})};
   (RSERV[v.servicio]||[]).forEach(f=>{const el=document.getElementById('rq_'+f.k);if(el)q[f.k]=el.type==='checkbox'?el.checked:(f.t==='number'?n0(el.value):el.value)});
-  const id=SH.id||uid();const r={...base,...v,q,actualizado:Date.now()};await put('relevamientos',id,r);D.relevamientos[id]=r;
+  const id=SH.id||uid();const r={...base,...v,q,items:relItemsClean(relReadItems()),actualizado:Date.now()};if(RELJ&&RELJ.geo)r.geo=RELJ.geo;await put('relevamientos',id,r);D.relevamientos[id]=r;if(RELJ)RELJ.items=r.items.map(x=>({...x}));
   if(close){toast('Relevamiento guardado');if(!SH.id)openSheet('rel',id);else closeSheet()}return id;
 }
 function relToLines(r){
   const mon=defMon(),out=[];
   (RSERV[r.servicio]||[]).forEach(f=>{const v=(r.q||{})[f.k];if(!f.kw||!n0(v))return;const cant=f.qty||n0(v);out.push(lineFor(f.kw,f.l.replace(/ estimad[oa]s? \(m\)/,'').replace(/ \(m\)/,''),cant,f.u||'unidad',mon))});
+  relItemsToLines(r,mon,out);
   if(n0(r.jornales))out.push(lineFor(['jornal','mano de obra'],'Mano de obra (jornal)',n0(r.jornales),'jornal',mon));
   if(r.proyectoId){pryPlanos(r.proyectoId).forEach(p=>planToLines(p,10).forEach(l=>{const ex=out.find(o=>o.desc===l.desc);if(ex)ex.cant=Math.max(ex.cant,l.cant);else out.push(l)}))}
   return out;
@@ -2339,9 +2350,6 @@ async function planosUpload(inp){
   if(k==='planoint'){await uploadPlano(inp);return true}
   if(k==='planover'){await uploadPlano(inp,PV&&PV.id);return true}
   if(k==='ptfoto'){const f=inp.files&&inp.files[0];if(!f||!PV||!PV.sel)return true;try{const b=await shrink(f);const up=await AS.upload(b,{type:b.type||f.type});const sel=PV.sel;mutPlan(p=>{const q=(p.puntos||[]).find(x=>x.id===sel.id);if(q)q.fotos=[...(q.fotos||[]),{id:up.id,name:f.name||'foto',type:up.contentType,at:Date.now(),by:ME||''}]});await flushPlan();toast('Foto agregada al punto')}catch(e){toast(upErr(e))}inp.value='';return true}
-  if(k==='relfoto'){const files=[...(inp.files||[])];if(!files.length||!SH||!SH.id)return true;const busy=$('#upBusy');if(busy){busy.hidden=false;busy.textContent='Subiendo fotos…'}const out=[];
-    for(const f of files){try{const b=await shrink(f);const up=await AS.upload(b,{type:b.type||f.type});out.push({id:up.id,name:f.name||'foto',type:up.contentType,at:Date.now(),by:ME||''})}catch(e){toast(upErr(e))}}
-    if(busy)busy.hidden=true;inp.value='';if(out.length){const r=D.relevamientos[SH.id];await patch('relevamientos',SH.id,{fotos:[...(r.fotos||[]),...out]});const el=$('#relFotos');if(el)el.innerHTML=photosHtmlRO(D.relevamientos[SH.id].fotos);toast('Fotos agregadas')}return true}
   return false;
 }
 
@@ -2362,7 +2370,7 @@ function vProyectos(){
   if(PRYTAB==='relevamientos'){
     const l=arr('relevamientos').filter(r=>!q||qn([r.titulo,r.servicio,cliName(r.clienteId),pryName(r.proyectoId),r.direccion].join(' ')).includes(q)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
     return`<div class="vhead"><div><h1>Relevamientos</h1><p class="sub">${l.length} relevamiento${l.length===1?'':'s'} · lo que se midió en la obra antes de cotizar</p></div></div>${tabs}${search}
-    ${l.length?`<div class="list">${l.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),r.servicio].filter(Boolean).join(' · '))}</span></div><span class="muted">${fdate(r.fecha)}</span></div>`).join('')}</div>`
+    ${l.length?`<div class="list">${l.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),r.servicio,(r.items||[]).length?r.items.length+' ítem'+(r.items.length===1?'':'s'):'',(r.fotos||[]).length?r.fotos.length+' foto'+(r.fotos.length===1?'':'s'):''].filter(Boolean).join(' · '))}</span></div><span class="muted">${fdate(r.fecha)}</span></div>`).join('')}</div>`
       :`<div class="empty"><h2>Sin relevamientos</h2><p>Cargá lo que medís en la obra (cámaras, metros, puntos, jornales) y Olumi arma el presupuesto solo.</p>${readonly?'':'<button class="btn pri" data-new="rel">+ Relevamiento</button>'}</div>`}`;
   }
   const l=arr('proyectos').filter(p=>!q||qn([p.nombre,cliName(p.clienteId),p.direccion,p.estado].join(' ')).includes(q)).sort((a,b)=>n0(b.creado||0)-n0(a.creado||0));
@@ -2587,7 +2595,7 @@ function vInventario(){
   if(INVT==='movimientos'){
     const l=arr('movimientos').filter(x=>!q||qn([MOVK[x.tipo],D.productos[x.prodId]?.nombre,D.productos[x.prodId]?.codigo,depName(x.desde),depName(x.hacia),cliName(x.clienteId),x.proveedor,x.doc,x.nota].join(' ')).includes(q))
       .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado)).slice(0,300);
-    return head('Entradas, salidas a obra, transferencias y ajustes',readonly?'':'<button class="btn" data-act="invnew:transf">Transferir</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>')+tabs+search('Buscar por producto, depósito, cliente o proveedor')
+    return head('Entradas, salidas a obra, transferencias y ajustes',readonly?'':'<button class="btn" data-act="invnew:transf">Transferir</button><button class="btn" data-act="invnew:ing">Ingreso con lector</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>')+tabs+search('Buscar por producto, depósito, cliente o proveedor')
       +(l.length?`<div class="list">${l.map(x=>{const p=D.productos[x.prodId];
         return`<div class="row" role="button" tabindex="0" data-open="${x.trabajoId&&D.trabajos[x.trabajoId]?'trab:'+x.trabajoId:'mov:'+x.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p?.nombre||'Producto borrado')} · ${fq(x.cant,p)}</strong><span class="muted">${fdate(x.fecha)} · ${esc([x.desde?depName(x.desde):'',x.hacia?depName(x.hacia):''].filter(Boolean).join(' → '))}${x.clienteId?' · '+esc(cliName(x.clienteId)):''}${x.proveedor?' · '+esc(x.proveedor):''}${x.trabajoId?' · desde un trabajo':''}</span></div><span class="tag ${MOVC[x.tipo]||'t-none'}">${esc(MOVK[x.tipo]||x.tipo)}</span></div>`}).join('')}</div>`
       :`<div class="empty"><h2>Sin movimientos</h2><p>Cargá una entrada con lo que tenés en el depósito, o hacé un ajuste por conteo para arrancar con el stock real.</p></div>`);
@@ -2608,7 +2616,7 @@ function vInventario(){
   const val=sum(prods,p=>Math.max(0,INVD?stockOf(m,p.id,INVD):stockOf(m,p.id))*costoUYU(p)),nb=prods.filter(p=>bajoMin(m,p)).length;
   const cols=INVD?[D.depositos[INVD]].filter(Boolean):ds.slice(0,6);
   const st=p=>{const s=stockOf(m,p.id);return s<0?'<span class="tag t-bad">Negativo</span>':bajoMin(m,p)?'<span class="tag t-warn">Bajo mínimo</span>':s===0?'<span class="tag t-none">Sin stock</span>':''};
-  const tools=readonly?'':`<button class="btn" data-act="invnew:ajuste">Ajuste</button><button class="btn" data-act="invnew:transf">Transferir</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>`;
+  const tools=readonly?'':`<button class="btn" data-act="invnew:ajuste">Ajuste</button><button class="btn" data-act="invnew:transf">Transferir</button><button class="btn" data-act="invnew:ing">Ingreso con lector</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>`;
   const filt=`<div class="mini invfil"><select id="inv_dep" aria-label="Depósito">${depOpts(INVD,'Todos los depósitos')}</select><button class="tgl${INVMIN?' on':''}" data-act="invmin" aria-pressed="${INVMIN}">Bajo mínimo (${nb})</button><button class="btn ghost" data-act="invcsv:stock">Exportar stock</button>${nb?'<button class="btn ghost" data-act="invcsv:compra">Lista de compra</button>':''}</div>`;
   const tot=p=>INVD?stockOf(m,p.id,INVD):stockOf(m,p.id);
   const mob=`<div class="list only-mob">${l.map(p=>`<div class="row" role="button" tabindex="0" data-open="stk:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p.nombre)}</strong><span class="muted">${esc(ds.filter(d=>stockOf(m,p.id,d.id)).map(d=>d.nombre+': '+fq(stockOf(m,p.id,d.id),p)).join(' · ')||'Sin stock')}</span></div><span style="text-align:right"><b class="num">${fq(tot(p),p)}</b><br>${st(p)}</span></div>`).join('')}</div>`;
@@ -2831,7 +2839,7 @@ async function invAct(k,el,arg){
     case'invmin':INVMIN=!INVMIN;sr();return true;
     case'eqf':EQF=arg;sr();return true;
     case'invdep':openSheet('dep',null,{tipo:arg});return true;
-    case'invnew':{const [tipo,prod,dep]=String(arg||'').split(':');openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
+    case'invnew':{const [tipo,prod,dep]=String(arg||'').split(':');if(tipo==='ing'){openSheet('ing',null,{dep:dep||''});return true}openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
     case'invcsv':saveFile(`${arg==='compra'?'Lista de compra':'Stock'} ${today()}.csv`,invCsv(arg));return true;
     case'eqcsv':saveFile(`Equipos instalados ${today()}.csv`,eqCsv());return true;
     case'eqnew':openSheet('eq',null,{cli:arg||''});return true;
@@ -3898,7 +3906,8 @@ function scanApply(ctx,code){
   const p=scanFind(code);
   if(ctx==='prod'){const el=$('#f_barras');if(el){el.value=code;el.dispatchEvent(new Event('input',{bubbles:true}))}return}
   if(ctx==='inv'){INVQ=p?(p.codigo||p.nombre):code;sr();return}
-  if(!p){if(!readonly&&confirm(`No hay ningún producto con el código ${code}. ¿Lo creás ahora?`)){PENDING_BARRAS=code;openSheet('prod',null)}else toast('Código no encontrado: '+code);return}
+  if(!p){if(!readonly&&confirm(`No hay ningún producto con el código ${code}. ¿Lo creás ahora?`)){PENDING_BARRAS=code;if(ctx==='ing'&&ING){ingRead();ING_BACK={code}}openSheet('prod',null)}else toast('Código no encontrado: '+code);return}
+  if(ctx==='ing'){ingAdd(p);return}
   if(ctx==='mov'){const s=$('#mv_prod');if(s){s.value=p.id;s.dispatchEvent(new Event('change',{bubbles:true}))}toast(p.nombre);return}
   if(ctx==='oc'&&OCX){ocRead();const l=OCX.lineas.find(x=>x.prodId===p.id);if(l)l.cant=n0(l.cant)+1;else{const vac=OCX.lineas.find(x=>!x.prodId);const nl={prodId:p.id,cant:1,costo:r2(conv(n0(p.costo),p.moneda||'UYU',OCX.moneda||'UYU')),recibido:0};if(vac)Object.assign(vac,nl);else OCX.lineas.push(nl)}
     $('#ocLines').innerHTML=ocLinesHtml(false,false);const tt=$('#ocTot');if(tt)tt.innerHTML=ocTotHtml();SH.dirty=true;toast(p.nombre+' · '+fq(OCX.lineas.find(x=>x.prodId===p.id).cant,p));return}
@@ -3926,6 +3935,7 @@ document.addEventListener('keydown',e=>{
   if(e.key!=='Enter')return;const t=e.target;
   if(t.id==='scan_manual'){e.preventDefault();const c=t.value.trim();if(c&&SCAN){const d=SCAN.done;t.value='';d(c)}return}
   if(t.id==='mv_code'){e.preventDefault();const c=t.value.trim();if(c){t.value='';scanApply('mov',c)}return}
+  if(t.id==='ing_code'){e.preventDefault();const c=t.value.trim();if(c){t.value='';scanApply('ing',c)}return}
   if(t.id==='oc_code'){e.preventDefault();const c=t.value.trim();if(c){t.value='';scanApply('oc',c)}return}
   if(t.id==='inv_q'&&/^\d{8,14}$/.test(t.value.trim())){const p=scanFind(t.value.trim());if(p){e.preventDefault();INVQ=p.codigo||p.nombre;sr()}}
 });
@@ -3939,6 +3949,123 @@ async function catMonAll(prods,mon){
   if(!prods.length)return;if(!confirm(`¿Pasar ${pl(prods.length,'producto','productos')} a ${mon==='USD'?'dólares (US$)':'pesos ($)'}? El precio y el costo quedan con el mismo número, solo cambia la moneda.`))return;
   for(const p of prods)if((p.moneda||'UYU')!==mon)await put('productos',p.id,{...p,moneda:mon});
   toast('Moneda actualizada');sr();
+}
+
+/* ---------- 1.12: relevamiento de campo (ítems con foto, fotos desde el primer momento, ubicación) · ingreso de mercadería con pistola lectora ---------- */
+/* --- relevamiento: ítems --- */
+let RIIDX=-1;
+const prodDatalist=()=>`<datalist id="prodList">${arr('productos').map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist>`;
+function relItemRow(it,i){
+  return`<div class="ritem" data-i="${i}"><div class="ri-row"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Dónde · ej. Portón 3" aria-label="Ubicación" autocomplete="off"><input class="ri-desc" list="prodList" value="${esc(it.desc||'')}" placeholder="Qué · ej. cámara domo, punto de red, UTP (m)" aria-label="Ítem" autocomplete="off"><input class="ri-cant" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cant??1)}" aria-label="Cantidad">${readonly?'':`<button type="button" class="btn ico" data-act="rifoto:${i}" title="Foto del ítem" aria-label="Foto del ítem">📷</button><button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem">✕</button>`}</div>${(it.fotos||[]).length?photosHtmlRO(it.fotos):''}</div>`;
+}
+function relItemsHtml(items){return(items||[]).length?items.map(relItemRow).join(''):'<p class="muted" style="margin:0">Todavía no cargaste ítems. Tocá “+ Ítem” y anotá dónde, qué y cuántos. Cada ítem puede llevar su foto y después arma el presupuesto solo.</p>'}
+function relReadItems(){
+  const old=(RELJ&&RELJ.items)||[];
+  const rows=[...document.querySelectorAll('#relItems .ritem')];
+  if(!rows.length)return old.map(x=>({...x}));
+  return rows.map(el=>{const o=old[+el.dataset.i]||{};return{id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc:(el.querySelector('.ri-desc')?.value||'').trim(),cant:n0(el.querySelector('.ri-cant')?.value),fotos:o.fotos||[]}});
+}
+const relItemsClean=items=>(items||[]).filter(x=>x.desc||x.ubic||(x.fotos||[]).length);
+function relItemsRender(){const e=$('#relItems');if(e)e.innerHTML=relItemsHtml(RELJ.items);const c=$('#riCount');if(c)c.textContent=relItemsClean(RELJ.items).length?'· '+relItemsClean(RELJ.items).length:''}
+function relToolsHtml(r){
+  if(readonly)return'';
+  return`<div class="reltools">${AS?`<label class="btn pri upl">📷 Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button><button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?'📍 Ubicación guardada':'📍 Guardar ubicación'}</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
+}
+function relGeoHtml(r){return r.geo?`<p class="hint" id="relGeo"><a href="https://maps.google.com/?q=${encodeURIComponent(r.geo.lat+','+r.geo.lng)}" target="_blank" rel="noopener">Ver ubicación en el mapa</a> · ${fdate(new Date(r.geo.at||Date.now()).toISOString().slice(0,10))}</p>`:'<p class="hint" id="relGeo"></p>'}
+function sheetRel(id,p){
+  const r=id?{...D.relevamientos[id]}:{fecha:today(),responsable:ME||'',clienteId:p.cli||(D.proyectos[p.pry]||{}).clienteId||'',proyectoId:p.pry||'',servicio:p.serv||'CCTV',q:{},fotos:[],items:[],jornales:1};
+  r.items=(r.items||[]).map(x=>({...x}));RELJ=r;
+  let body=relToolsHtml(r)+`<div class="grid">${RELF().map(f=>fldv(f,r)).join('')}</div>
+    <section class="rel"><h3>Ítems relevados <span class="muted" id="riCount">${r.items.length?'· '+r.items.length:''}</span></h3><div id="relItems">${relItemsHtml(r.items)}</div>${readonly?'':'<div class="actions"><button type="button" class="btn" data-act="riadd">+ Ítem</button></div>'}${prodDatalist()}<input type="file" id="riFile" accept="image/*" capture="environment" data-up="rifoto" hidden></section>
+    <section class="rel"><h3>Fotos</h3><div id="relFotos">${photosHtmlRO(r.fotos||[])}</div>${AS&&!readonly?`<div class="actions"><label class="btn pri upl">Sacar foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*" multiple data-up="relfoto"></label></div><p class="busy" id="upBusy" hidden></p>`:''}${relGeoHtml(r)}</section>
+    <section class="rel" id="relQ">${relQHtml(r.servicio,r.q)}</section>`;
+  if(id){const pls=r.proyectoId?pryPlanos(r.proyectoId):[];
+    body+=`<section class="rel"><h3>Planos</h3>${r.proyectoId?(pls.length?pls.map(pl=>{const s=planStats(pl);return`<div class="item link" role="button" tabindex="0" data-act="plan:${pl.id}"><span class="grow">${esc(pl.nombre)}</span><span class="muted">${s.total} puntos${Object.keys(s.metros).length?' · '+fmtM(Object.values(s.metros).reduce((a,b)=>a+b,0)):''}</span></div>`}).join(''):'<p class="muted" style="margin:0">El proyecto todavía no tiene planos.</p>')+(AS?`<div class="actions"><label class="btn upl">Subir plano<input type="file" accept="image/*,application/pdf" data-up="planoint" data-pry="${esc(r.proyectoId)}"></label></div><p class="busy" id="plBusy" hidden></p>`:''):'<p class="muted" style="margin:0">Asigná un proyecto para subir y marcar el plano.</p>'}</section>`;
+  }
+  return sheetFrame('Relevamiento',id?(r.titulo||'Relevamiento'):'Nuevo relevamiento',body,{del:!!id,extra:has('presupuestos')&&!readonly?'<button class="btn" data-act="rel2pres">Armar presupuesto</button>':''});
+}
+async function relEnsureSaved(){if(SH&&SH.id)return SH.id;const nid=await saveRel(false);if(nid){SH.id=nid;const t=$('#shTitle');if(t)t.innerHTML=`<span class="kind">Relevamiento</span>${esc(D.relevamientos[nid].titulo||'Relevamiento')}`}return nid}
+async function campoAct(k,el,arg){
+  switch(k){
+    case'riadd':{if(!RELJ)return true;RELJ.items=relReadItems();const last=RELJ.items[RELJ.items.length-1];RELJ.items.push({id:uid(),ubic:last&&last.ubic||'',desc:'',cant:1,fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');const inp=rows[rows.length-1]?.querySelector('.ri-desc');if(inp)inp.focus();return true}
+    case'ridel':{if(!RELJ)return true;RELJ.items=relReadItems();RELJ.items.splice(+arg,1);relItemsRender();SH.dirty=true;return true}
+    case'rifoto':{if(!RELJ)return true;RELJ.items=relReadItems();RIIDX=+arg;const f=$('#riFile');if(f)f.click();return true}
+    case'relgeo':{if(!RELJ)return true;if(!navigator.geolocation){toast('Este dispositivo no da la ubicación.');return true}
+      el.disabled=true;el.textContent='📍 Buscando…';
+      navigator.geolocation.getCurrentPosition(async pos=>{RELJ.geo={lat:Math.round(pos.coords.latitude*1e6)/1e6,lng:Math.round(pos.coords.longitude*1e6)/1e6,acc:Math.round(pos.coords.accuracy||0),at:Date.now()};el.disabled=false;el.textContent='📍 Ubicación guardada';const g=$('#relGeo');if(g)g.outerHTML=relGeoHtml(RELJ);if(SH&&SH.id)await patch('relevamientos',SH.id,{geo:RELJ.geo});else SH.dirty=true;toast('Ubicación guardada'+(RELJ.geo.acc?` (±${RELJ.geo.acc} m)`:''))},
+        ()=>{el.disabled=false;el.textContent='📍 Guardar ubicación';toast('No se pudo obtener la ubicación (¿permiso?).')},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});return true}
+    case'ingdel':{if(!ING)return true;ingRead();ING.lineas.splice(+arg,1);ingRender();SH.dirty=true;return true}
+  }
+  return false;
+}
+async function campoUpload(inp){
+  const k=inp.dataset.up;
+  if(k==='rifoto'){const f=inp.files&&inp.files[0];inp.value='';if(!f||!SH||RIIDX<0||!RELJ)return true;if(!AS){toast('Necesitás permiso de edición para subir fotos.');return true}
+    const idx=RIIDX;RIIDX=-1;RELJ.items=relReadItems();const nid=await relEnsureSaved();if(!nid)return true;
+    try{const b=await shrink(f);const up=await AS.upload(b,{type:b.type||f.type});const it=RELJ.items[idx];if(it){it.fotos=[...(it.fotos||[]),{id:up.id,name:f.name||'foto',type:up.contentType,at:Date.now(),by:ME||''}];await patch('relevamientos',nid,{items:relItemsClean(RELJ.items)});relItemsRender();toast('Foto agregada al ítem')}}catch(e){toast(upErr(e))}
+    return true}
+  if(k==='relfoto'){const files=[...(inp.files||[])];if(!files.length||!SH)return true;if(!AS){toast('Necesitás permiso de edición para subir fotos.');inp.value='';return true}
+    if(RELJ)RELJ.items=relReadItems();const nid=await relEnsureSaved();if(!nid){inp.value='';return true}
+    const busy=$('#upBusy');if(busy){busy.hidden=false;busy.textContent='Subiendo fotos…'}const out=[];
+    for(const f of files){try{const b=await shrink(f);const up=await AS.upload(b,{type:b.type||f.type});out.push({id:up.id,name:f.name||'foto',type:up.contentType,at:Date.now(),by:ME||''})}catch(e){toast(upErr(e))}}
+    if(busy)busy.hidden=true;inp.value='';if(out.length){const r=D.relevamientos[nid];await patch('relevamientos',nid,{fotos:[...(r.fotos||[]),...out]});if(RELJ)RELJ.fotos=D.relevamientos[nid].fotos;const el=$('#relFotos');if(el)el.innerHTML=photosHtmlRO(D.relevamientos[nid].fotos);toast(out.length===1?'Foto agregada':'Fotos agregadas')}return true}
+  return false;
+}
+function relItemsToLines(r,mon,out){
+  const isM=s=>/\b(m|mts?|metros?)\b/i.test(s||'');
+  (r.items||[]).forEach(it=>{if(!it.desc)return;const cant=n0(it.cant)||1;const q=qn(it.desc);
+    let p=arr('productos').find(x=>qn(x.nombre||'')===q)||findProd([it.desc,...it.desc.split(/[\s,.;()]+/).filter(w=>w.length>3)],isM(it.desc)?'metro':'unidad');
+    const l=p?{desc:p.nombre,cant,unidad:p.unidad||'unidad',precio:r2(conv(p.precio,p.moneda,mon))}:{desc:it.desc,cant,unidad:isM(it.desc)?'metro':'unidad',precio:0};
+    const ex=out.find(o=>o.desc===l.desc&&o.unidad===l.unidad);if(ex)ex.cant=r2(ex.cant+cant);else out.push(l)});
+}
+
+/* --- ingreso de mercadería con pistola lectora --- */
+let ING=null,ING_BACK=null;
+function sheetIng(id,pr){
+  if(!deps().length)return sheetFrame('Inventario','Primero creá un depósito','<p>Para ingresar mercadería hace falta al menos un depósito.</p><div class="actions"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button></div>',{saveLabel:'Cerrar'});
+  const x=pr.resume&&ING?ING:{fecha:today(),hacia:pr.dep||(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'',proveedor:'',doc:'',lineas:[]};ING=x;
+  const body=`<p class="hint" style="margin-top:0">Pasá la pistola lectora por cada producto: se suma solo a la lista (el mismo código dos veces suma cantidad). Si un código no existe, te deja crear el producto y vuelve acá.</p>
+  <div class="grid"><label class="fld" for="ing_fecha"><span>Fecha</span><input id="ing_fecha" type="date" value="${esc(x.fecha)}"></label><label class="fld" for="ing_hacia"><span>Entra a</span><select id="ing_hacia">${depOpts(x.hacia)}</select></label><label class="fld" for="ing_prov"><span>Proveedor</span><input id="ing_prov" value="${esc(x.proveedor)}"></label><label class="fld" for="ing_doc"><span>Nº de factura o remito</span><input id="ing_doc" value="${esc(x.doc)}"></label>
+  <div class="fld full"><span>Código de barras o SKU</span><div class="row2"><input id="ing_code" type="text" placeholder="Pistola lectora: código y Enter" autocomplete="off" inputmode="text">${scanBtn('ing')}</div></div></div>
+  <section class="rel"><h3>Productos <span class="muted" id="ingCount">${x.lineas.length?'· '+x.lineas.length:''}</span></h3><div id="ingLines">${ingLinesHtml()}</div><div class="row2" style="margin-top:10px"><select id="ing_pick" aria-label="Agregar producto sin lector">${opts([['','Agregar un producto sin lector…'],...invProds().map(q=>[q.id,prodLabel(q)])],'')}</select></div></section><p class="err" id="shErr" hidden></p>`;
+  setTimeout(()=>{const c=$('#ing_code');if(c)c.focus()},30);
+  return sheetFrame('Inventario','Ingreso de mercadería',body,{saveLabel:'Guardar ingreso'});
+}
+function ingLinesHtml(){const b=isBoss();if(!ING||!ING.lineas.length)return'<p class="muted" style="margin:0">Todavía no escaneaste nada.</p>';
+  return`<div class="ingh"><span class="grow">Producto</span><span class="ing-c">Cantidad</span>${b?'<span class="ing-c">Costo unit. sin IVA</span>':''}<span class="ing-x"></span></div>`+ING.lineas.map((l,i)=>{const p=D.productos[l.prodId]||{};return`<div class="ingl"><span class="grow"><b>${esc(p.nombre||'Producto')}</b>${p.codigo?`<span class="muted code"> ${esc(p.codigo)}</span>`:''}</span><input class="ing-cant ing-c" data-i="${i}" type="number" step="any" min="0" inputmode="decimal" value="${esc(l.cant)}" aria-label="Cantidad">${b?`<input class="ing-costo ing-c" data-i="${i}" type="number" step="any" min="0" inputmode="decimal" value="${l.costo==null?'':esc(l.costo)}" placeholder="${p.moneda==='USD'?'US$':'$'}" aria-label="Costo unitario">`:''}<button type="button" class="btn ico ghost ing-x" data-act="ingdel:${i}" aria-label="Quitar">✕</button></div>`}).join('')}
+function ingRead(){if(!ING)return;ING.fecha=$('#ing_fecha')?.value||today();ING.hacia=$('#ing_hacia')?.value||ING.hacia||'';ING.proveedor=($('#ing_prov')?.value||'').trim();ING.doc=($('#ing_doc')?.value||'').trim();
+  document.querySelectorAll('#ingLines .ing-cant').forEach(e=>{const l=ING.lineas[+e.dataset.i];if(l)l.cant=n0(e.value)});document.querySelectorAll('#ingLines .ing-costo').forEach(e=>{const l=ING.lineas[+e.dataset.i];if(l)l.costo=e.value===''?null:n0(e.value)})}
+function ingRender(){const e=$('#ingLines');if(e)e.innerHTML=ingLinesHtml();const c=$('#ingCount');if(c)c.textContent=ING&&ING.lineas.length?'· '+ING.lineas.length:''}
+function ingAdd(p){if(!ING||!p)return;ingRead();const l=ING.lineas.find(x=>x.prodId===p.id);if(l)l.cant=r2(n0(l.cant)+1);else ING.lineas.push({prodId:p.id,cant:1,costo:n0(p.costo)||null});ingRender();if(SH)SH.dirty=true;
+  toast(p.nombre+' · '+fq(ING.lineas.find(x=>x.prodId===p.id).cant,p));const c=$('#ing_code');if(c){c.value='';c.focus()}}
+async function saveIng(){ingRead();const e=$('#shErr'),bad=t=>{e.textContent=t;e.hidden=false;return false};if(!ING.hacia)return bad('Elegí a qué depósito entra.');const ls=ING.lineas.filter(l=>n0(l.cant)>0&&l.prodId);if(!ls.length)return bad('Escaneá o agregá al menos un producto con cantidad.');
+  let n=0;for(const l of ls){const p=D.productos[l.prodId]||null;const x={creado:Date.now(),by:ME||'',tipo:'entrada',fecha:ING.fecha||today(),prodId:l.prodId,cant:n0(l.cant),desde:'',hacia:ING.hacia,proveedor:ING.proveedor||'',doc:ING.doc||'',nota:'',clienteId:'',proyectoId:''};
+    if(l.costo!=null&&isBoss()){x.costo=n0(l.costo);if(p){const st=Math.max(0,stockOf(stockMap(),l.prodId)),oc=n0(p.costo);const nc=st>0&&oc?r2((st*oc+x.cant*x.costo)/(st+x.cant)):x.costo;await put('productos',l.prodId,{...p,costo:nc,stock:true})}}
+    else if(p&&!p.stock)await put('productos',l.prodId,{...p,stock:true});
+    await put('movimientos',uid(),x);n++}
+  ING=null;toast(`Ingreso guardado: ${n} producto${n===1?'':'s'}`);closeSheet();return true;
+}
+document.addEventListener('change',e=>{if(SH&&SH.type==='ing'&&e.target.id==='ing_pick'&&e.target.value){const v=e.target.value,p=D.productos[v];e.target.value='';if(p)ingAdd({...p,id:v})}});
+
+/* --- pistola lectora en cualquier pantalla (teclado): ráfaga de teclas + Enter --- */
+let WEDGE=[];
+document.addEventListener('keydown',e=>{
+  const t=e.target||document.body,tag=(t.tagName||'').toLowerCase();
+  const typing=tag==='input'||tag==='textarea'||tag==='select'||t.isContentEditable;
+  if(typing&&!/^(scan_manual|mv_code|oc_code|ing_code|inv_q)$/.test(t.id)){WEDGE=[];return}
+  if(e.key&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){WEDGE.push({c:e.key,t:performance.now()});if(WEDGE.length>64)WEDGE.shift();return}
+  if(e.key!=='Enter'){if(e.key!=='Shift')WEDGE=[];return}
+  const w=WEDGE;WEDGE=[];if(typing)return;
+  if(w.length<4)return;const span=w[w.length-1].t-w[0].t;if(span/(w.length-1)>60)return;
+  const code=w.map(x=>x.c).join('').trim();if(!code)return;e.preventDefault();wedgeApply(code);
+},true);
+function wedgeApply(code){
+  const ctx=SH?({ing:'ing',mov:'mov',oc:'oc',prod:'prod'}[SH.type]||''):'';
+  if(ctx){scanApply(ctx,code);return}
+  const p=scanFind(code);
+  if(!p){if(!readonly&&confirm(`No hay ningún producto con el código ${code}. ¿Lo creás ahora?`)){PENDING_BARRAS=code;openSheet('prod',null)}else toast('Código no encontrado: '+code);return}
+  if(VIEW==='inventario'){INVQ=p.codigo||p.nombre;sr()}
+  openSheet(typeof invOn==='function'&&invOn()?'stk':'prod',p.id);
 }
 
 /* ---------- servidor: Supabase ---------- */
