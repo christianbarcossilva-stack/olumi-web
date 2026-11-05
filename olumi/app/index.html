@@ -815,7 +815,7 @@ function render(){
   {const ne=entNuevas().length,p3=$('#navEnt');if(p3){p3.hidden=!ne;p3.textContent=ne}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
+  $('#banner').innerHTML=(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -1746,7 +1746,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.19',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.20',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -4444,7 +4444,7 @@ let ORG=null, ROLE=null, ORGINFO=null, MEMBERS={}, MEMS=[];
 /* ---------- planes (1.1) ---------- */
 // En el iPhone/Android no se muestran precios ni botones de pago (regla de Apple para apps de empresas).
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
-let PLAN=null, PLANS=null, ISADMIN=false, ADM=null, ADM_LOADING=false, WAMSG=[];
+let PLAN=null, PLANS=null, SOPORTE=false, SOPEST=null, ISADMIN=false, ADM=null, ADM_LOADING=false, WAMSG=[];
 const EXTRA_USD=6;
 const has=f=>!PLAN||(PLAN.features||[]).includes(f);
 const FEAT=[['presupuestos','Presupuestos y facturas en PDF'],['abonos','Abonos mensuales con prioridad en tickets'],['gcal','Botón de Google Calendar'],['reportes','Reportes y rentabilidad por proyecto'],['inventario','Inventario por depósito y camioneta, equipos con garantía y mantenimiento'],['whatsapp','WhatsApp automático'],['cfe','Factura electrónica (CFE) con Fixed y exportación para Zureo'],['marca','Logo y colores propios'],['portal','Portal de clientes: piden, siguen sus visitas y aceptan presupuestos']];
@@ -4553,8 +4553,13 @@ function sheetOrg(id){
       <div class="grid"><label class="fld" for="w_pnid"><span>Identificador del número</span><input id="w_pnid" type="text" inputmode="numeric" placeholder="Ej.: 123456789012345"></label><label class="fld" for="w_phone"><span>Número</span><input id="w_phone" type="tel" placeholder="+598 99 123 456"></label>
       <label class="fld full" for="w_tok"><span>Token de acceso permanente</span><input id="w_tok" type="password" autocomplete="off"></label></div>
       <div class="actions" style="margin-top:10px"><button class="btn" data-act="orgwa">Conectar WhatsApp</button></div>`}</section>
+    <section class="rel"><h3>Soporte</h3><div id="orgSop"><p class="muted" style="margin:0">Cargando…</p></div></section>
     <section class="rel"><h3>Cobros</h3><div id="orgBill"><p class="muted" style="margin:0">Cargando…</p></div></section>
     <p class="err" id="shErr" hidden></p>`;
+  setTimeout(async()=>{const box=$('#orgSop');if(!box)return;try{const {data:e,error}=await SB.rpc('soporte_estado',{o:id});if(error)throw error;
+      box.innerHTML=e.activo?`<p style="margin:0 0 10px"><span class="tag t-ok">Habilitado hasta ${sopHasta(e.hasta)}</span></p><div class="actions"><button class="btn pri" data-act="sopentrar:${esc(id)}">Entrar como soporte</button></div><p class="hint">Entrás como administrador de esta empresa, con una marca visible. Todo lo que toques queda registrado y el cliente lo ve.</p>${(e.log||[]).length?`<div class="list" style="margin-top:8px">${soporteLogHtml(e.log,8)}</div>`:''}`
+        :`<p class="muted" style="margin:0">Sin acceso. El dueño o un administrador tiene que habilitarlo en <b>Catálogo y ajustes → Equipo → Soporte de Unity Tech</b>.</p>${(e.log||[]).length?`<div class="list" style="margin-top:8px">${soporteLogHtml(e.log,5)}</div>`:''}`}
+    catch(err){box.innerHTML='<p class="muted" style="margin:0">Falta correr <span class="code">supabase/soporte-1.20.sql</span>.</p>'}},0);
   return sheetFrame('Empresa',o.name,body);
 }
 async function loadBill(id){
@@ -4800,8 +4805,19 @@ document.addEventListener('submit',async e=>{
 /* ---------- equipo (en Ajustes) ---------- */
 const ROLES=[['admin','Administrador'],['encargado','Encargado'],['ventas','Ventas'],['administracion','Administración'],['tecnico','Técnico'],['subcontratista','Subcontratista'],['viewer','Solo lectura']];
 const ROLEN={owner:'Dueño',admin:'Administrador',encargado:'Encargado',ventas:'Ventas',administracion:'Administración',tecnico:'Técnico',viewer:'Solo lectura',pendiente:'Pide entrar',subcontratista:'Subcontratista'};
+const sopHasta=h=>h?new Date(h).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const SOP_ACC={permitir:'habilitó el acceso',cortar:'cortó el acceso',INSERT:'creó',UPDATE:'modificó',DELETE:'borró'};
+function soporteLogHtml(l,n=10){return(l||[]).slice(0,n).map(x=>`<div class="item"><span class="muted">${sopHasta(x.at)}</span><span class="grow">${esc(x.email||'')} ${SOP_ACC[x.accion]||esc(x.accion)}${x.col&&!['permitir','cortar'].includes(x.accion)?' · '+esc(x.col)+(x.detalle?' · '+esc(x.detalle):'')+(x.doc?` <span class="code">${esc(String(x.doc).slice(0,12))}</span>`:''):x.detalle?' · '+esc(x.detalle):''}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin movimientos.</p>'}
+async function loadSoporte(){if(!ORG||!SB)return;try{const {data}=await SB.rpc('soporte_estado',{o:ORG});SOPEST=data||{activo:false,log:[]}}catch(e){SOPEST={activo:false,log:[],error:true}}sr()}
+function soporteHtml(){
+  if(SOPORTE)return'';const e=SOPEST;if(!e){setTimeout(loadSoporte,0);return`<section class="rel"><h3>Soporte de Unity Tech</h3><p class="muted" style="margin:0">Cargando…</p></section>`}
+  return`<section class="rel"><h3>Soporte de Unity Tech</h3><p class="hint">Si necesitás que Unity Tech entre a tu empresa a arreglar algo, habilitalo acá por unos días. Entran con su propio usuario, con una marca visible, y todo lo que toquen queda en esta lista. Lo podés cortar cuando quieras.</p>
+    <p style="margin:0 0 10px">${e.error?'<span class="tag t-warn">Falta correr soporte-1.20.sql en Supabase</span>':e.activo?`<span class="tag t-ok">Habilitado hasta ${sopHasta(e.hasta)}</span>`:'<span class="tag t-none">Sin acceso</span>'}</p>
+    <div class="actions">${e.activo?'<button class="btn ghost danger" data-act="sopcortar">Cortar el acceso</button><button class="btn" data-act="sopdar:7">Extender 7 días</button>':'<button class="btn pri" data-act="sopdar:7">Permitir 7 días</button><button class="btn" data-act="sopdar:1">Solo por hoy</button>'}</div>
+    ${(e.log||[]).length?`<h3 style="margin-top:14px">Registro</h3><div class="list">${soporteLogHtml(e.log,15)}</div>`:''}</section>`;
+}
 function equipoHtml(){
-  if(!ORG)return'';const admin=['owner','admin'].includes(ROLE);
+  if(!ORG)return'';const admin=['owner','admin'].includes(ROLE)&&!SOPORTE;
   const ms=Object.values(MEMBERS).filter(m=>m.role!=='cliente').sort((a,b)=>(a.display_name||a.email||'').localeCompare(b.display_name||b.email||'','es'));
   return`<div class="vhead" style="margin-top:34px"><div><h1>Equipo</h1><p class="sub">Quién usa Olumi en ${esc((ORGINFO&&ORGINFO.name)||'tu empresa')}${PLAN?` · ${PLAN.users} de ${PLAN.max_users} usuarios del plan ${esc(PLAN.nombre)}`:''}</p></div></div>
   ${MEMS.length>1?`<div class="panel" style="margin-bottom:12px"><label class="fld" for="orgsel" style="max-width:420px"><span>Empresa</span><select id="orgsel" data-orgsel>${opts(MEMS.map(m=>[m.org_id,(m.orgs&&m.orgs.name)||m.org_id]),ORG)}</select></label></div>`:''}<div class="panel">${admin?`<p style="margin:0 0 10px">Para sumar a alguien: que instale Olumi, cree su cuenta y elija <b>Unirme a la empresa</b> con este código. Queda esperando hasta que lo apruebes acá abajo y le elijas el rol.</p>
@@ -4809,11 +4825,16 @@ function equipoHtml(){
   <div class="list">${ms.map(m=>`<div class="row" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
     ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un mail para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
   ${admin?inviteHtml():''}
+  ${admin?soporteHtml():''}
   ${admin?`<details class="more" style="margin-top:14px"><summary>Roles y permisos: qué ve cada uno</summary><div class="tablewrap"><table><thead><tr><th>Rol</th><th>Qué ve</th></tr></thead><tbody>${[['owner'],...ROLES].map(([r])=>`<tr><td><b>${esc(ROLEN[r]||r)}</b></td><td>${esc(ROLV_TXT[r]||'')}</td></tr>`).join('')}</tbody></table></div><p class="hint">Para sumar a alguien con un rol fijo (por ejemplo un técnico): invitalo por mail acá abajo con ese rol. Cuando se registre con ese mail entra directo como técnico y no puede elegir otra cosa. Con el código de empresa entra "pendiente" hasta que lo apruebes. Contraseña perdida: botón "Contraseña" al lado de su nombre.</p></details>`:''}
   <div class="actions" style="margin-top:16px"><button class="btn" data-act="logout">Cerrar sesión</button><button class="btn ghost danger" data-act="delacct">Eliminar mi cuenta</button></div></div>`;
 }
 async function teamAct(k,el){
   if(k==='logout'){await pushOff();try{await kvDel('snap-'+ORG);if(!OFF.q.length)await kvDel('cola-'+ORG);['olumi.members.'+ORG,'olumi.mems.'+ME,'olumi.plan.'+ORG,'olumi.org'].forEach(k=>localStorage.removeItem(k))}catch(e){}await SB.auth.signOut();location.reload();return true}
+  if(k==='sopdar'){const d=Number(String(el.dataset.act||'').slice(7))||7;const {data,error}=await SB.rpc('soporte_permitir',{o:ORG,dias:d});if(error){toast('No se pudo habilitar. ¿Está corrido soporte-1.20.sql?');return true}toast('Soporte habilitado hasta '+sopHasta(data));await loadSoporte();return true}
+  if(k==='sopcortar'){if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Cortar? Tocá de nuevo';return true}armed=null;const {error}=await SB.rpc('soporte_cortar',{o:ORG});if(error){toast('No se pudo cortar.');return true}toast('Acceso cortado');await loadSoporte();return true}
+  if(k==='sopsalir'){localStorage.removeItem('olumi.soporte');const real=(MEMS||[]).find(m=>!m.soporte);if(real)lsSet('olumi.org',real.org_id);else localStorage.removeItem('olumi.org');location.reload();return true}
+  if(k==='sopentrar'){const id=String(el.dataset.act||'').slice(10);if(!id)return true;lsSet('olumi.soporte',id);lsSet('olumi.org',id);lsSet('crm.view','hoy');location.reload();return true}
   if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
@@ -4843,8 +4864,11 @@ async function boot(){
   if(error&&netErr(error)){const c=lsJ('olumi.mems.'+ME);if(c&&c.length){mems=c;error=null;OFF.stale=true}}
   if(error){showAuth('login',authErrText(error));return}
   if(!OFF.stale)lsSetJ('olumi.mems.'+ME,mems);
+  /* 1.20: soporte Unity Tech */
+  {const sop=lsGet('olumi.soporte');if(sop&&!mems.some(m=>m.org_id===sop)){let og=null;try{const r=await SB.from('orgs').select('id,name,join_code').eq('id',sop);og=(r.data||[])[0]||null}catch(e){}
+    if(og){mems=[...mems,{org_id:sop,role:'admin',soporte:true,orgs:{name:og.name,join_code:og.join_code}}];lsSet('olumi.org',sop)}else{localStorage.removeItem('olumi.soporte');if(lsGet('olumi.org')===sop)localStorage.removeItem('olumi.org')}}}
   if(!mems.length){clearTimeout(slowT);showAuth('org');return}
-  MEMS=mems;const pick=mems.find(m=>m.org_id===lsGet('olumi.org'))||mems[0];
+  MEMS=mems;const pick=mems.find(m=>m.org_id===lsGet('olumi.org'))||mems[0];SOPORTE=!!pick.soporte;
   ORG=pick.org_id;ROLE=pick.role;ORGINFO={id:ORG,...(pick.orgs||{})};lsSet('olumi.org',ORG);
   readonly=ROLE==='viewer'||ROLE==='cliente'||ROLE==='pendiente';
   if(!lsGet('crm.view')&&!PORTAL())VIEW=isLead()?'hoy':ROLE==='tecnico'||ROLE==='subcontratista'?'campo':'tickets';
