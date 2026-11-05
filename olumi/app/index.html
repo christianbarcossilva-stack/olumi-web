@@ -573,6 +573,8 @@ th{font-size:11px;letter-spacing:.07em}
 .ri-row2{margin-top:4px}.ri-row2 .ri-m,.ri-row2 .ri-alt{flex:0 0 108px}.ri-row2 .ri-canal{flex:0 0 150px;margin:0}
 @media (max-width:600px){.ri-row2 .ri-m,.ri-row2 .ri-alt{flex:1 1 90px}.ri-row2 .ri-canal{flex:1 1 120px}}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
+/* 1.18: técnico ve solo su parte */
+body.tec nav [data-view]:not([data-view=campo]):not([data-view=calendario]):not([data-view=tickets]):not([data-view=trabajos]):not([data-view=proyectos]):not([data-view=tecnicos]):not([data-view=inventario]):not([data-view=clientes]):not([data-view=menu]),body.tec nav .navsec:last-of-type{display:none!important}
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -805,7 +807,7 @@ function render(){
   if(!VIEWS[VIEW])VIEW='pipeline';
   $('#themeSide').innerHTML='<span class="hint">Apariencia</span>'+themeSeg();
   applyBrand();
-  const nb=NEWBY[VIEW];$('#topNew').dataset.new=nb[0];$('#topNew .lbl-long').textContent=nb[1];$('#topNew').hidden=!!readonly;
+  const nb=NEWBY[VIEW];$('#topNew').dataset.new=nb[0];$('#topNew .lbl-long').textContent=nb[1];$('#topNew').hidden=!!readonly||(isTec()&&['inventario','bandeja','mas','plan','admin'].includes(VIEW));
   const nh=$('#navHoy');if(nh)nh.hidden=!isLead();
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current',b.dataset.view===VIEW?'page':'false'));
   const ov=overdueCount(),pill=$('#navOver');pill.hidden=!ov;pill.textContent=ov;
@@ -1380,7 +1382,8 @@ function vMenu(){
   const it=[...(isLead()?[['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['mas','Catálogo y ajustes','Productos, datos de la empresa, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
-  return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${it.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
+  const itv=isTec()?it.filter(([v])=>['proyectos','tecnicos','inventario','trabajos','clientes'].includes(v)):it;
+  return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
 }
 
 const VIEWS={bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
@@ -1740,7 +1743,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.17',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.18',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2618,11 +2621,13 @@ const mantPend=()=>arr('equipos').filter(e=>e.estado!=='retirado'&&eqState(e).ve
 let INVT='stock',INVD='',INVQ='',INVMIN=false,EQF='todos';
 function vInventario(){
   if(!invOn())return`<div class="vhead"><div><h1>Inventario</h1></div></div><div class="empty">${fiberArt}<h2>Inventario incluido en Pro y Empresa</h2><p>Stock por depósito y por camioneta, materiales descontados desde cada trabajo, equipos instalados con número de serie, garantía y mantenimiento preventivo.</p><button class="btn pri" data-view="plan">Ver planes</button></div>`;
-  const boss=isBoss(),m=stockMap(),ds=deps(),q=qn(INVQ),mp=mantPend().length;
-  const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${[['stock','Stock'],['movimientos','Movimientos'],['compras','Compras'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']].map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
+  const boss=isBoss(),m=stockMap(),q=qn(INVQ),mp=mantPend().length;
+  const tec=isTec();const ds=tec?deps().filter(d=>d.tecnicoId===ME||arr('cuadrillas').some(c=>c.depositoId===d.id&&(c.miembros||[]).includes(ME))):deps();
+  if(tec&&!['stock','equipos'].includes(INVT))INVT='stock';
+  const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${(tec?[['stock','Mi camioneta'],['equipos','Equipos'+(mp?` (${mp})`:'')]]:[['stock','Stock'],['movimientos','Movimientos'],['compras','Compras'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']]).map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
   const search=ph=>`<div class="row2" style="align-items:center"><input type="search" class="tfq" id="inv_q" value="${esc(INVQ)}" placeholder="${ph}" aria-label="Buscar" style="flex:1">${INVT==='stock'?scanBtn('inv'):''}</div>`;
   const kpi=(n,v)=>`<div class="kpi"><span class="k">${n}</span><b class="num">${v}</b></div>`;
-  const head=(sub,tools='')=>`<div class="vhead"><div><h1>Inventario</h1><p class="sub">${sub}</p></div>${tools?`<div class="tools">${tools}</div>`:''}</div>`;
+  const head=(sub,tools='')=>`<div class="vhead"><div><h1>${tec?'Mi camioneta':'Inventario'}</h1><p class="sub">${tec?'Lo que llevás cargado. Lo que usás en cada trabajo se descuenta desde el informe de la visita; la carga la hace la empresa.':sub}</p></div>${tools&&!tec?`<div class="tools">${tools}</div>`:''}</div>`;
   if(INVT==='compras')return vCompras(head,tabs);
   if(INVT==='depositos'){
     return head(`${ds.length} depósito${ds.length===1?'':'s'} y camioneta${ds.length===1?'':'s'}`,readonly?'':'<button class="btn" data-act="invdep:vehiculo">+ Camioneta</button><button class="btn pri" data-act="invdep:deposito">+ Depósito</button>')+tabs
@@ -2648,14 +2653,16 @@ function vInventario(){
       :`<div class="empty"><h2>${all.length?'Ningún equipo coincide':'Sin equipos instalados'}</h2><p>Los equipos con número de serie se cargan solos cuando el técnico los saca del stock en un trabajo. También podés cargarlos a mano.</p></div>`);
   }
   // stock
+  if(tec&&!ds.length)return head('')+tabs+`<div class="empty">${fiberArt}<h2>Todavía no tenés camioneta asignada</h2><p>Pedile a la empresa que te asigne una camioneta en Inventario → Depósitos.</p></div>`;
   if(!ds.length)return head('Stock por depósito y camioneta')+tabs+`<div class="empty">${fiberArt}<h2>Empezá por los depósitos</h2><p>Creá el depósito de la empresa y una camioneta por técnico. Después cargá una entrada o un ajuste por conteo con lo que tenés hoy.</p>${readonly?'':'<div class="actions" style="justify-content:center"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button><button class="btn" data-act="invdep:vehiculo">+ Camioneta</button></div>'}</div>`;
   const prods=arr('productos').filter(p=>p.stock||m[p.id]).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
   const l=prods.filter(p=>(!INVD||stockOf(m,p.id,INVD)!==0)&&(!INVMIN||bajoMin(m,p))&&(!q||qn([p.nombre,p.codigo,p.servicio].join(' ')).includes(q)));
   const val=sum(prods,p=>Math.max(0,INVD?stockOf(m,p.id,INVD):stockOf(m,p.id))*costoUYU(p)),nb=prods.filter(p=>bajoMin(m,p)).length;
+  if(tec&&!ds.some(d=>d.id===INVD))INVD=ds[0]?.id||'';
   const cols=INVD?[D.depositos[INVD]].filter(Boolean):ds.slice(0,6);
   const st=p=>{const s=stockOf(m,p.id);return s<0?'<span class="tag t-bad">Negativo</span>':bajoMin(m,p)?'<span class="tag t-warn">Bajo mínimo</span>':s===0?'<span class="tag t-none">Sin stock</span>':''};
   const tools=readonly?'':`<button class="btn" data-act="invnew:ajuste">Ajuste</button><button class="btn" data-act="invnew:transf">Transferir</button><button class="btn" data-act="invnew:ing">Ingreso con lector</button><button class="btn pri" data-act="invnew:entrada">+ Entrada</button>`;
-  const filt=`<div class="mini invfil"><select id="inv_dep" aria-label="Depósito">${depOpts(INVD,'Todos los depósitos')}</select><button class="tgl${INVMIN?' on':''}" data-act="invmin" aria-pressed="${INVMIN}">Bajo mínimo (${nb})</button><button class="btn ghost" data-act="invcsv:stock">Exportar stock</button>${nb?'<button class="btn ghost" data-act="invcsv:compra">Lista de compra</button>':''}</div>`;
+  const filt=tec?`<div class="mini invfil"><select id="inv_dep" aria-label="Camioneta">${opts(ds.map(d=>[d.id,(d.tipo==='vehiculo'?'🚐 ':'')+d.nombre]),INVD)}</select><button class="tgl${INVMIN?' on':''}" data-act="invmin" aria-pressed="${INVMIN}">Bajo mínimo (${nb})</button></div>`:`<div class="mini invfil"><select id="inv_dep" aria-label="Depósito">${depOpts(INVD,'Todos los depósitos')}</select><button class="tgl${INVMIN?' on':''}" data-act="invmin" aria-pressed="${INVMIN}">Bajo mínimo (${nb})</button><button class="btn ghost" data-act="invcsv:stock">Exportar stock</button>${nb?'<button class="btn ghost" data-act="invcsv:compra">Lista de compra</button>':''}</div>`;
   const tot=p=>INVD?stockOf(m,p.id,INVD):stockOf(m,p.id);
   const mob=`<div class="list only-mob">${l.map(p=>`<div class="row" role="button" tabindex="0" data-open="stk:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p.nombre)}</strong><span class="muted">${esc(ds.filter(d=>stockOf(m,p.id,d.id)).map(d=>d.nombre+': '+fq(stockOf(m,p.id,d.id),p)).join(' · ')||'Sin stock')}</span></div><span style="text-align:right"><b class="num">${fq(tot(p),p)}</b><br>${st(p)}</span></div>`).join('')}</div>`;
   const dsk=`<div class="tablewrap only-dsk"><table><thead><tr><th>Producto</th>${cols.map(d=>`<th class="n">${esc(d.nombre)}</th>`).join('')}${INVD?'':'<th class="n">Total</th>'}<th class="n">Mínimo</th>${boss?'<th class="n">Valor (costo)</th>':''}<th></th></tr></thead>
@@ -2670,6 +2677,8 @@ function vInventario(){
 /* --- hoja: depósito o camioneta --- */
 const DEPF=()=>[{k:'nombre',l:'Nombre',w:'full',ph:'Ej.: Depósito central · Camioneta Juan'},{k:'tipo',l:'Tipo',t:'select',o:[['deposito','Depósito'],['vehiculo','Camioneta o vehículo']]},{k:'tecnicoId',l:'Responsable',t:'person'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
 function sheetDep(id,p){
+  if(isTec()){const d=id?D.depositos[id]:null;if(!d)return tecNoFrame('Inventario','Sin permiso','<p class="muted">Los depósitos los administra la empresa.</p>');const m=stockMap();const its=Object.keys(m).filter(pid=>stockOf(m,pid,id)>0);
+    return tecNoFrame('Camioneta',d.nombre,`<p class="hint">Solo lectura: la carga la hace la empresa. Lo que usás se descuenta desde el informe de cada visita.</p><div class="list">${its.map(pid=>`<div class="item"><span class="grow">${esc(D.productos[pid]?.nombre||'')}</span><b class="num">${fq(stockOf(m,pid,id),D.productos[pid])}</b></div>`).join('')||'<p class="muted">Sin stock cargado.</p>'}</div>`)}
   const d=id?D.depositos[id]:{tipo:p.tipo||'deposito',tecnicoId:''};
   let body=`<div class="grid">${DEPF().map(f=>fld(f,d[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
   if(id){const m=stockMap(),its=Object.keys(m).filter(pid=>stockOf(m,pid,id)!==0&&D.productos[pid]).map(pid=>D.productos[pid]&&{...D.productos[pid],id:pid}).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
@@ -2685,14 +2694,15 @@ function sheetStk(pid){
   const p=D.productos[pid]||{},m=stockMap(),boss=isBoss();
   const movs=arr('movimientos').filter(x=>x.prodId===pid).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado)).slice(0,40);
   const body=`<div class="contact">${p.codigo?`<span class="code">${esc(p.codigo)}</span>`:''}<strong>${fq(stockOf(m,pid),p)} en total</strong>${n0(p.stockMin)?`<span class="muted">mínimo ${fq(p.stockMin,p)}</span>`:''}${bajoMin(m,{...p,id:pid})?'<span class="tag t-warn">Bajo mínimo</span>':''}${boss&&n0(p.costo)?`<span class="muted">costo ${money(p.costo,p.moneda,2)}</span>`:''}</div>
-    ${readonly?'':`<div class="actions"><button class="btn pri" data-act="invnew:entrada:${pid}">+ Entrada</button><button class="btn" data-act="invnew:transf:${pid}">Transferir</button><button class="btn" data-act="invnew:ajuste:${pid}">Ajuste por conteo</button>${boss?`<button class="btn ghost" data-open="prod:${pid}">Editar producto</button>`:''}</div>`}
-    <section class="rel"><h3>Por depósito</h3>${deps().map(d=>`<div class="item"><span class="grow">${d.tipo==='vehiculo'?'🚐 ':''}${esc(d.nombre)}</span><b class="num">${fq(stockOf(m,pid,d.id),p)}</b></div>`).join('')}</section>
+    ${readonly||isTec()?'':`<div class="actions"><button class="btn pri" data-act="invnew:entrada:${pid}">+ Entrada</button><button class="btn" data-act="invnew:transf:${pid}">Transferir</button><button class="btn" data-act="invnew:ajuste:${pid}">Ajuste por conteo</button>${boss?`<button class="btn ghost" data-open="prod:${pid}">Editar producto</button>`:''}</div>`}
+    <section class="rel"><h3>Por depósito</h3>${(isTec()?deps().filter(d=>d.tecnicoId===ME||d.tipo!=='vehiculo'):deps()).map(d=>`<div class="item"><span class="grow">${d.tipo==='vehiculo'?'🚐 ':''}${esc(d.nombre)}</span><b class="num">${fq(stockOf(m,pid,d.id),p)}</b></div>`).join('')}</section>
     <section class="rel"><h3>Últimos movimientos</h3>${movs.map(x=>`<div class="item link" role="button" tabindex="0" data-open="${x.trabajoId&&D.trabajos[x.trabajoId]?'trab:'+x.trabajoId:'mov:'+x.id}"><span>${fdate(x.fecha)}</span><span class="grow">${esc(MOVK[x.tipo]||'')}${x.clienteId?' · '+esc(cliName(x.clienteId)):''}<br><span class="muted">${esc([x.desde?depName(x.desde):'',x.hacia?depName(x.hacia):''].filter(Boolean).join(' → '))}</span></span><b class="num">${x.hacia&&!x.desde?'+':x.desde&&!x.hacia?'−':''}${fq(x.cant,p)}</b></div>`).join('')||'<p class="muted" style="margin:0">Sin movimientos.</p>'}</section>`;
   return sheetFrame('Stock',p.nombre||'Producto',body,{saveLabel:'Cerrar'});
 }
 
 /* --- hoja: movimiento --- */
 function sheetMov(id,pr){
+  if(isTec()&&!id){toast('El stock lo carga la empresa. Lo que usás se descuenta desde el informe de la visita.');return tecNoFrame('Inventario','Sin permiso','<p class="muted">Pedile a la empresa que cargue el stock.</p>')}
   const x=id?{...D.movimientos[id]}:{tipo:pr.tipo||'entrada',fecha:today(),prodId:pr.prod||'',cant:'',desde:'',hacia:'',...(pr.mv||{})};
   if(!id&&!pr.mv){const dd=pr.dep||(x.tipo==='entrada'||x.tipo==='devol'?(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id:myDep())||'';
     if(x.tipo==='entrada'||x.tipo==='devol')x.hacia=dd;else x.desde=dd;
@@ -2796,7 +2806,7 @@ function msRows(j){
   return(j._ms||[]).map((l,i)=>{const p=D.productos[l.p];
     return`<div class="msrow"><select data-ms="${i}:p" aria-label="Producto">${opts([['','Elegí el producto'],...ps.map(q=>[q.id,prodLabel(q)])],l.p)}</select>
       <input type="number" data-ms="${i}:c" value="${esc(l.c??'')}" step="any" min="0" inputmode="decimal" placeholder="Cant." aria-label="Cantidad">
-      <select data-ms="${i}:d" aria-label="Sale de">${depOpts(l.d)}</select>
+      <select data-ms="${i}:d" aria-label="Sale de">${isTec()?opts([['','Sale de…'],...deps().filter(d=>d.tipo!=='vehiculo'||d.tecnicoId===ME||arr('cuadrillas').some(c=>c.depositoId===d.id&&(c.miembros||[]).includes(ME))).map(d=>[d.id,(d.tipo==='vehiculo'?'🚐 ':'🏭 ')+d.nombre])],l.d):depOpts(l.d)}</select>
       <button class="btn ghost" data-act="msdel:${i}" aria-label="Quitar">✕</button>
       ${p&&p.serie?`<input type="text" class="full" data-ms="${i}:s" value="${esc(l.s||'')}" placeholder="Nº de serie (si son varios, separalos con coma)" aria-label="Números de serie">`:''}
       ${msWarn(l,m,i)}</div>`}).join('')||'<p class="muted" style="margin:0">Sin materiales del stock.</p>';
@@ -2877,7 +2887,7 @@ async function invAct(k,el,arg){
     case'invmin':INVMIN=!INVMIN;sr();return true;
     case'eqf':EQF=arg;sr();return true;
     case'invdep':openSheet('dep',null,{tipo:arg});return true;
-    case'invnew':{const [tipo,prod,dep]=String(arg||'').split(':');if(tipo==='ing'){openSheet('ing',null,{dep:dep||''});return true}openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
+    case'invnew':{if(isTec()){toast('El stock lo carga la empresa.');return true}const [tipo,prod,dep]=String(arg||'').split(':');if(tipo==='ing'){openSheet('ing',null,{dep:dep||''});return true}openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
     case'invcsv':saveFile(`${arg==='compra'?'Lista de compra':'Stock'} ${today()}.csv`,invCsv(arg));return true;
     case'eqcsv':saveFile(`Equipos instalados ${today()}.csv`,eqCsv());return true;
     case'eqnew':openSheet('eq',null,{cli:arg||''});return true;
@@ -3246,7 +3256,9 @@ function ajustes16Html(){
 
 /* --- subcontratistas: solo su día, sus tareas y su historial --- */
 const SUBV=['campo','proyectos','trabajos','menu'];
-function subGuard(){if(ROLE!=='subcontratista')return;document.body.classList.add('sub');if(!SUBV.includes(VIEW))VIEW='campo';PRYTAB='tareas'}
+const TECV=['campo','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','menu'];
+function subGuard(){if(ROLE==='tecnico'&&!PORTAL()){document.body.classList.add('tec');if(!TECV.includes(VIEW))VIEW='campo';return}
+  if(ROLE!=='subcontratista')return;document.body.classList.add('sub');if(!SUBV.includes(VIEW))VIEW='campo';PRYTAB='tareas'}
 
 /* --- acciones --- */
 async function rubAct(k,el,arg){
@@ -4079,6 +4091,7 @@ function relItemsToLines(r,mon,out){
 /* --- ingreso de mercadería con pistola lectora --- */
 let ING=null,ING_BACK=null;
 function sheetIng(id,pr){
+  if(isTec()){toast('El ingreso de mercadería lo hace la empresa.');return tecNoFrame('Inventario','Sin permiso','<p class="muted">Pedile a la empresa que cargue la mercadería.</p>')}
   if(!deps().length)return sheetFrame('Inventario','Primero creá un depósito','<p>Para ingresar mercadería hace falta al menos un depósito.</p><div class="actions"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button></div>',{saveLabel:'Cerrar'});
   const x=pr.resume&&ING?ING:{fecha:today(),hacia:pr.dep||(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'',proveedor:'',doc:'',lineas:[]};ING=x;
   const body=`<p class="hint" style="margin-top:0">Pasá la pistola lectora por cada producto: se suma solo a la lista (el mismo código dos veces suma cantidad). Si un código no existe, te deja crear el producto y vuelve acá.</p>
@@ -4126,7 +4139,18 @@ function wedgeApply(code){
 }
 
 /* ---------- 1.13: Bandeja de entrada (pedidos que llegan por WhatsApp y mail) · posibles clientes dentro del ticket ---------- */
-const ENT_TIPO={trabajo:['Trabajo nuevo','t-acc'],falla:['Falla o reclamo','t-bad'],presupuesto:['Pide presupuesto','t-warn'],consulta:['Consulta','t-none'],otro:['Otro','t-none'],charla:['Charla','t-none'],proveedor:['Proveedor','t-none'],spam:['Publicidad','t-none']};
+const ENT_TIPO={trabajo:['Trabajo nuevo','t-acc'],falla:['Falla o reclamo','t-bad'],presupuesto:['Pide presupuesto','t-warn'],consulta:['Consulta','t-none'],otro:['Otro','t-none'],charla:['Charla','t-none'],proveedor:['Proveedor','t-none'],spam:['Publicidad','t-none'],informe:['Informe de técnico','t-acc']};
+/* 1.18: informes de técnicos · rol técnico acotado */
+const isTec=()=>['tecnico','subcontratista'].includes(ROLE)&&!PORTAL();
+const tecNoFrame=(kind,title,msg)=>`<header class="sh-h"><h2 id="shTitle"><span class="kind">${kind}</span>${esc(title)}</h2><button class="x" data-act="close" aria-label="Cerrar">✕</button></header><div class="sh-b">${msg}</div><footer class="sh-f"><span class="sp"></span><button class="btn" data-act="close">Cerrar</button></footer>`;
+const memberByName=n=>{const q=qn(n||'');if(!q)return'';const hit=Object.keys(NAMES||{}).find(id=>{const nm=qn(NAMES[id]?.name||'');return nm&&(nm===q||nm.startsWith(q)||q.startsWith(nm.split(' ')[0]))});return hit||''};
+function entInformeHtml(e){
+  if(e.tipo!=='informe')return'';
+  const mats=(e.materiales||[]).map(x=>`<li>${x.cant?esc(String(x.cant))+' ':''}${esc(x.desc||'')}</li>`).join('');
+  return`<section class="rel"><h3>Reporte del técnico</h3><div class="grid"><div class="fld"><span>Técnico</span><b>${esc(e.tecnico||'—')}</b></div><div class="fld"><span>Cliente que menciona</span><b>${esc(e.clienteNombre||'—')}</b></div><div class="fld"><span>Estado</span><b>${({terminado:'Terminado',en_curso:'En curso',con_problema:'Con problema'})[e.estadoObra]||'—'}</b></div></div>
+    ${mats?`<p style="margin:8px 0 4px"><b>Materiales que dijo usar</b></p><ul style="margin:0 0 8px 18px">${mats}</ul>`:''}${e.pendientes?`<p><b>Pendiente:</b> ${esc(e.pendientes)}</p>`:''}
+    ${(e.fotos||[]).length?photosHtmlRO(e.fotos):''}<p class="hint">Elegí el cliente arriba si el técnico no lo nombró y tocá “Crear informe de visita”: queda como trabajo terminado con las fotos, lo que se hizo y los materiales para descontar del stock.</p></section>`;
+}
 /* 1.17: charla en la bandeja */
 const ENT_CHARLA=['charla','proveedor','spam'];const entCharla=e=>ENT_CHARLA.includes(e.tipo);
 const ENT_TEMA={trabajo:'Instalación o trabajo',obra:'Obra en curso',soporte:'Soporte técnico',comercial:'Comercial',coordinar:'Coordinación',charla:'Charla',proveedor:'Proveedor',spam:'Publicidad'};
@@ -4167,9 +4191,10 @@ function sheetEnt(id,p){
   let body=`<div class="grid">${ENTF_FIELDS().map(f=>fld(f,v[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
   if(id){
     const tk=e.ticketId&&D.tickets[e.ticketId];const tel=c.telefono||D.clientes[e.clienteId]?.telefono||'';
+    body+=entInformeHtml(e);
     if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Qué hacer con este pedido</h3><p class="hint">${e.clienteId?'Es de un cliente registrado.':c.telefono||c.nombre?'No está registrado como cliente: queda como <b>posible cliente</b> y se registra solo cuando le hagas un presupuesto o una factura.':''}</p>
-      <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Crear ticket</button>`}<button class="btn" data-act="ent2trab">Agendar visita</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
+      <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Crear ticket</button>`}<button class="btn${e.tipo==='informe'?' pri':''}" data-act="ent2trab">${e.tipo==='informe'?'Crear informe de visita':'Agendar visita'}</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
       <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por mail</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
   }
   return sheetFrame('Bandeja',id?(e.titulo||'Pedido'):'Anotar pedido',body,{del:!!id});
@@ -4199,7 +4224,11 @@ async function entAct(k,el,arg){
     case'entreg':{if(!e)return true;const cid=await registrarContacto(e.contacto||{});await patch('entradas',SH.id,{clienteId:cid});if(e.ticketId&&D.tickets[e.ticketId]&&!D.tickets[e.ticketId].clienteId)await patch('tickets',e.ticketId,{clienteId:cid});openSheet('ent',SH.id);return true}
     case'ent2tk':{if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
       openSheet('tk',null,{cli:e.clienteId||'',draft:{titulo:e.titulo||'',descripcion:e.texto||'',mensaje:e.texto||'',tipo,origen:e.canal==='mail'?'Email':e.canal==='llamada'?'Llamada':e.canal==='web'?'Web':'WhatsApp',contacto:e.clienteId?null:c,entradaId:SH.id,waFrom:(c.telefono||'').replace(/\D/g,''),waNombre:c.nombre||''}});SH.dirty=true;return true}
-    case'ent2trab':{if(!e)return true;const c=e.contacto||{};openSheet('trab',null,{cli:e.clienteId||''});const t=$('#f_titulo');if(t&&!t.value){t.value=e.titulo||'';}const o=$('#f_obra');if(o&&!o.value&&c.empresa)o.value=c.empresa;const n=$('#f_notas');if(n&&!n.value)n.value=(e.texto||'')+(c.nombre||c.telefono?`\nContacto: ${[c.nombre,c.telefono].filter(Boolean).join(' · ')}`:'');SH.dirty=true;return true}
+    case'ent2trab':{if(!e)return true;const c=e.contacto||{};
+      if(e.tipo==='informe'){const eid=SH.id;const cid=e.clienteId||$('#f_clienteId')?.value||'';const tid=memberByName(e.tecnico);const id=uid();
+        const j={creado:Date.now(),actualizado:Date.now(),estado:'terminado',terminadoEn:Date.now(),fecha:e.creado?new Date(e.creado).toISOString().slice(0,10):today(),hora:'',duracion:2,tecnicos:tid?[tid]:[],ticketId:'',proyectoId:'',clienteId:cid,titulo:e.titulo||'Informe de visita',obra:cid?'':(e.clienteNombre||''),notas:'Reporte enviado por '+(e.tecnico||'el técnico')+' por WhatsApp'+(e.origen?' ('+e.origen+')':'')+'.',informe:e.resumen||e.texto||'',materiales:(e.materiales||[]).map(x=>(x.cant?x.cant+' ':'')+(x.desc||'')).join(', '),pendientes:e.pendientes||'',fotos:(e.fotos||[]).map(f=>({...f})),planos:[],entradaId:eid};
+        await put('trabajos',id,j);D.trabajos[id]=j;const ne={...e,estado:'ticket',trabajoId:id,clienteId:cid||e.clienteId||'',actualizado:Date.now()};delete ne.id;await put('entradas',eid,ne);D.entradas[eid]=ne;toast('Informe de visita creado');openSheet('trab',id);return true}
+      openSheet('trab',null,{cli:e.clienteId||''});const t=$('#f_titulo');if(t&&!t.value){t.value=e.titulo||'';}const o=$('#f_obra');if(o&&!o.value&&c.empresa)o.value=c.empresa;const n=$('#f_notas');if(n&&!n.value)n.value=(e.texto||'')+(c.nombre||c.telefono?`\nContacto: ${[c.nombre,c.telefono].filter(Boolean).join(' · ')}`:'');SH.dirty=true;return true}
     case'ent2rel':{if(!e)return true;const c=e.contacto||{};openSheet('rel',null,{cli:e.clienteId||''});const t=$('#f_titulo');if(t)t.value=e.titulo||'';const ct=$('#f_contacto');if(ct)ct.value=[c.nombre,c.telefono].filter(Boolean).join(' · ');const d=$('#f_direccion');if(d&&c.empresa)d.value=c.empresa;SH.dirty=true;return true}
     case'ent2pres':{if(!e)return true;let cid=e.clienteId;if(!cid){cid=await registrarContacto(e.contacto||{});await patch('entradas',SH.id,{clienteId:cid})}
       openSheet('pres',null,{copy:quoteDraft({clienteId:cid,lineas:[],notas:e.titulo||''})});SH.dirty=true;return true}
@@ -4763,12 +4792,13 @@ function equipoHtml(){
   ${MEMS.length>1?`<div class="panel" style="margin-bottom:12px"><label class="fld" for="orgsel" style="max-width:420px"><span>Empresa</span><select id="orgsel" data-orgsel>${opts(MEMS.map(m=>[m.org_id,(m.orgs&&m.orgs.name)||m.org_id]),ORG)}</select></label></div>`:''}<div class="panel">${admin?`<p style="margin:0 0 10px">Para sumar a alguien: que instale Olumi, cree su cuenta y elija <b>Unirme a la empresa</b> con este código. Queda esperando hasta que lo apruebes acá abajo y le elijas el rol.</p>
     <div class="actions" style="margin-bottom:16px;align-items:center"><span class="num" style="font-size:24px;letter-spacing:.18em">${esc((ORGINFO&&ORGINFO.join_code)||'')}</span><button class="btn" data-act="copycode">Copiar código</button><button class="btn ghost" data-act="newcode">Cambiar código</button></div>`:''}
   <div class="list">${ms.map(m=>`<div class="row" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
-    ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
+    ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un mail para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
   ${admin?inviteHtml():''}
   <div class="actions" style="margin-top:16px"><button class="btn" data-act="logout">Cerrar sesión</button><button class="btn ghost danger" data-act="delacct">Eliminar mi cuenta</button></div></div>`;
 }
 async function teamAct(k,el){
   if(k==='logout'){await pushOff();try{await kvDel('snap-'+ORG);if(!OFF.q.length)await kvDel('cola-'+ORG);['olumi.members.'+ORG,'olumi.mems.'+ME,'olumi.plan.'+ORG,'olumi.org'].forEach(k=>localStorage.removeItem(k))}catch(e){}await SB.auth.signOut();location.reload();return true}
+  if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
   if(k==='delacct'){

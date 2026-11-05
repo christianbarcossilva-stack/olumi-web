@@ -19,7 +19,7 @@
   },
   {
    "parameters": {
-    "jsCode": "\n// Convierte el aviso de Evolution API en algo simple. Devuelve vacío si no hay que hacer nada.\nconst b = $json.body || $json;\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}; const key = d.key || {}; const jid = String(key.remoteJid || '');\nif (!/@s\\.whatsapp\\.net$/.test(jid)) return [];                      // grupos, estados y newsletters: no\nconst m = d.message || {};\nconst owner = String(b.sender || '').replace(/:\\d+@/, '@');\nconst text = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst ctx = m.extendedTextMessage?.contextInfo || m.audioMessage?.contextInfo || m.imageMessage?.contextInfo || {};\nconst fromMe = !!key.fromMe;\nconst self = fromMe && jid === owner;\nconst mine = fromMe && !self;                                         // lo que le escribo a un cliente (a mano o desde mi chat)\nif (self && /^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return [];        // mensajes del propio asistente\nif (!text && !audioB64) return [];\nif (mine) { const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};  // respuestas automáticas: no son mías\n  if (sd.auto[key.id] || (text && sd.auto['t:' + jid] === text)) return [];\n  for (const k of Object.keys(sd.auto)) if (Date.now() - (sd.auto[k].ts || sd.auto[k] || 0) > 3 * 864e5 && typeof sd.auto[k] !== 'string') delete sd.auto[k]; }\nreturn [{ json: { from: jid.replace(/@.*/, ''), jid, fromMe, self, mine, text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg',\n  msgId: key.id || '', quotedId: ctx.stanzaId || '', nombre: d.pushName || '', owner, ownerNum: owner.replace(/@.*/, '') } }];\n"
+    "jsCode": "\n// Convierte el aviso de Evolution API en algo simple. Devuelve vacío si no hay que hacer nada.\nconst b = $json.body || $json;\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}; const key = d.key || {}; const jid = String(key.remoteJid || '');\nconst grupo = /@g\\.us$/.test(jid);\nif (!grupo && !/@s\\.whatsapp\\.net$/.test(jid)) return [];              // estados y newsletters: no\nconst m = d.message || {};\nconst owner = String(b.sender || '').replace(/:\\d+@/, '@');\nconst text = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst fotoB64 = grupo && m.imageMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst ctx = m.extendedTextMessage?.contextInfo || m.audioMessage?.contextInfo || m.imageMessage?.contextInfo || {};\nconst fromMe = !!key.fromMe;\nconst self = !grupo && fromMe && jid === owner;\nconst mine = !grupo && fromMe && !self;\nif (grupo) { if (/^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return []; if (!text && !audioB64 && !fotoB64) return [];\n  const part = String(key.participant || d.participant || '').replace(/:\\d+@/, '@');\n  return [{ json: { grupo: true, jid, from: part.replace(/@.*/, ''), fromMe, self: false, mine: false, text, audioB64, fotoB64, fotoMime: m.imageMessage?.mimetype || 'image/jpeg', mime: m.audioMessage?.mimetype || 'audio/ogg', msgId: key.id || '', quotedId: '', nombre: fromMe ? 'Christian' : (d.pushName || ''), owner, ownerNum: owner.replace(/@.*/, '') } }]; }                                         // lo que le escribo a un cliente (a mano o desde mi chat)\nif (self && /^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return [];        // mensajes del propio asistente\nif (!text && !audioB64) return [];\nif (mine) { const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};  // respuestas automáticas: no son mías\n  if (sd.auto[key.id] || (text && sd.auto['t:' + jid] === text)) return [];\n  for (const k of Object.keys(sd.auto)) if (Date.now() - (sd.auto[k].ts || sd.auto[k] || 0) > 3 * 864e5 && typeof sd.auto[k] !== 'string') delete sd.auto[k]; }\nreturn [{ json: { from: jid.replace(/@.*/, ''), jid, fromMe, self, mine, text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg',\n  msgId: key.id || '', quotedId: ctx.stanzaId || '', nombre: d.pushName || '', owner, ownerNum: owner.replace(/@.*/, '') } }];\n"
    },
    "name": "Leer mensaje",
    "type": "n8n-nodes-base.code",
@@ -162,6 +162,39 @@
      "conditions": [
       {
        "id": "c1",
+       "leftValue": "={{ !!$json.grupo }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es de un grupo?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1440,
+    900
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
        "leftValue": "={{ $json.mine }}",
        "rightValue": "",
        "operator": {
@@ -182,6 +215,108 @@
     1440,
     560
    ]
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "http://evolution:8080/group/fetchAllGroups/christian?getParticipants=false",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth"
+   },
+   "name": "Grupos de WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1700,
+    1000
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Solo el grupo de instalaciones / técnicos de Phitel. Se reconoce por el nombre del grupo.\nconst m = $('¿Es de un grupo?').item.json; const lista = Array.isArray($json) ? $json : ($json.groups || []);\nconst g = lista.find(x => x.id === m.jid); const nombre = g ? String(g.subject || '') : '';\nif (!/instalaci|t[eé]cnic|phitel|fitel|obra|cuadrilla/i.test(nombre)) return [];\nreturn [{ json: { ...m, grupoNombre: nombre } }];\n"
+   },
+   "name": "¿Grupo de técnicos?",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1940,
+    1000
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Phitel (instalaciones en Uruguay). En el grupo de WhatsApp de los técnicos, cada técnico manda reportes de lo que hizo en cada cliente: texto, audio transcripto o fotos. Te paso el MENSAJE (quién lo manda y qué dice). Devolvé SOLO un JSON con: esReporte (true si cuenta un trabajo hecho o en curso, materiales usados, un problema en obra o algo que hay que anotar del cliente; false si es charla del grupo, un chiste, coordinación interna breve como 'voy saliendo' o 'ok'), cliente (nombre del cliente, empresa o lugar que menciona, o ''), titulo (máximo 60 letras: qué se hizo y dónde), resumen (lo que se hizo, en 1 a 3 frases, en tercera persona), materiales (lista de {desc, cant} con lo que usó, o []), pendientes (lo que quedó para después, o ''), estado (terminado | en_curso | con_problema). No inventes nada que no esté en el mensaje.\" }, { role: 'user', content: 'MENSAJE de ' + ($json.nombre || $json.from) + ' en el grupo ' + $json.grupoNombre + ': ' + ($json.texto || ($json.fotoB64 ? '(foto sin texto)' : '')) } ] }) }}"
+   },
+   "name": "Entender reporte",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2180,
+    1000
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $('¿Grupo de técnicos?').item.json; let j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nif (j.esReporte === false && !m.fotoB64) return [];\nconst mats = (j.materiales || []).map(x => (x.cant ? x.cant + ' ' : '') + (x.desc || '')).filter(Boolean).join(', ');\nconst texto = [(m.esAudio ? '🎤 ' : '') + (m.texto || (m.fotoB64 ? '(foto)' : '')), mats ? 'Materiales: ' + mats : '', j.pendientes ? 'Pendiente: ' + j.pendientes : ''].filter(Boolean).join('\\n');\nreturn [{ json: { org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + m.from, nombre: m.nombre || '', empresa: j.cliente || '', texto, resumen: j.resumen || '', titulo: j.titulo || (j.cliente ? 'Reporte · ' + j.cliente : 'Reporte de ' + (m.nombre || 'técnico')),\n  tipoEntrada: 'informe', tipo: 'mantenimiento', tema: 'obra', intencion: 'informe', destino: 'bandeja', canal: 'whatsapp', origen: 'Grupo ' + m.grupoNombre, msgId: m.msgId, esAudio: !!m.esAudio,\n  tecnico: m.nombre || '', tecnicoTel: '+' + m.from, clienteNombre: j.cliente || '', materiales: j.materiales || [], pendientes: j.pendientes || '', estadoObra: j.estado || '', fotoB64: m.fotoB64 || '', fotoMime: m.fotoMime || '' } }];\n"
+   },
+   "name": "Armar informe",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2420,
+    1000
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}"
+   },
+   "name": "Informe a la bandeja",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    1000
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   }
   },
   {
    "parameters": {
@@ -1521,7 +1656,7 @@
    "main": [
     [
      {
-      "node": "¿Es una respuesta mía a un cliente?",
+      "node": "¿Es de un grupo?",
       "type": "main",
       "index": 0
      }
@@ -1532,7 +1667,69 @@
    "main": [
     [
      {
+      "node": "¿Es de un grupo?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es de un grupo?": {
+   "main": [
+    [
+     {
+      "node": "Grupos de WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
       "node": "¿Es una respuesta mía a un cliente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Grupos de WhatsApp": {
+   "main": [
+    [
+     {
+      "node": "¿Grupo de técnicos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Grupo de técnicos?": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender reporte": {
+   "main": [
+    [
+     {
+      "node": "Armar informe",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar informe": {
+   "main": [
+    [
+     {
+      "node": "Informe a la bandeja",
       "type": "main",
       "index": 0
      }
