@@ -574,7 +574,7 @@ th{font-size:11px;letter-spacing:.07em}
 @media (max-width:600px){.ri-row2 .ri-m,.ri-row2 .ri-alt{flex:1 1 90px}.ri-row2 .ri-canal{flex:1 1 120px}}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.18: técnico ve solo su parte */
-body.tec nav [data-view]:not([data-view=campo]):not([data-view=calendario]):not([data-view=tickets]):not([data-view=trabajos]):not([data-view=proyectos]):not([data-view=tecnicos]):not([data-view=inventario]):not([data-view=clientes]):not([data-view=menu]),body.tec nav .navsec:last-of-type{display:none!important}
+/* 1.19: tabla de roles · la barra se filtra en render() con ROLV */
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -822,7 +822,8 @@ function render(){
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   if(ROLE&&!canMoney()&&MONEYV.includes(VIEW)){VIEW='tickets';lsSet('crm.view',VIEW)}
-  document.querySelectorAll('.nav [data-view]').forEach(b=>{if(MONEYV.includes(b.dataset.view))b.hidden=!!ROLE&&!canMoney()});
+  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
+  document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','reportes','mas','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   $('#main').innerHTML=ready?view():loadingHtml();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
@@ -1281,9 +1282,11 @@ function vCampo(){
   const jobs=arr('trabajos').filter(j=>j.fecha===day&&mineF(j)).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const late=arr('trabajos').filter(j=>j.fecha&&j.fecha<today()&&j.estado!=='terminado'&&mineF(j)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const head=`<div class="vhead"><div><h1>Mi día</h1><p class="sub">${fdateL(day)} · ${jobs.length} trabajo${jobs.length===1?'':'s'}${campoAll?' del equipo':''}</p></div>
-    <div class="tools"><div class="seg" role="group" aria-label="Día">${[[0,'Hoy'],[1,'Mañana']].map(([k,n])=>`<button class="${campoDay===k?'on':''}" data-act="campo:${k}">${n}</button>`).join('')}</div>${ME?`<button class="tgl${campoAll?' on':''}" data-act="campoall" aria-pressed="${campoAll}">Todo el equipo</button>`:''}<button class="btn" data-act="parte">Parte del día</button></div></div>`;
+    <div class="tools"><div class="seg" role="group" aria-label="Día">${[[0,'Hoy'],[1,'Mañana']].map(([k,n])=>`<button class="${campoDay===k?'on':''}" data-act="campo:${k}">${n}</button>`).join('')}</div>${ME?`<button class="tgl${campoAll?' on':''}" data-act="campoall" aria-pressed="${campoAll}">Todo el equipo</button>`:''}${AS&&!readonly&&has('proyectos')?'<button class="btn" data-new="rel">+ Relevamiento</button>':''}<button class="btn" data-act="parte">Parte del día</button></div></div>`;
+  const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
+  const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
-  return head+misTareasHtml()+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
+  return head+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
 }
 
 /* ---------- facturación ---------- */
@@ -1382,7 +1385,7 @@ function vMenu(){
   const it=[...(isLead()?[['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['mas','Catálogo y ajustes','Productos, datos de la empresa, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
-  const itv=isTec()?it.filter(([v])=>['proyectos','tecnicos','inventario','trabajos','clientes'].includes(v)):it;
+  const itv=it.filter(([v])=>viewOk(v));
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div><div class="vhead" style="margin-top:26px"><div><h2 style="font-size:17px">Apariencia</h2><p class="sub">Automático: claro de 7 a 19 h y oscuro el resto del día.</p></div></div>${themeSeg()}`;
 }
 
@@ -1743,7 +1746,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.18',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.19',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3255,10 +3258,22 @@ function ajustes16Html(){
 }
 
 /* --- subcontratistas: solo su día, sus tareas y su historial --- */
+/* 1.19: tabla de roles · qué ve cada rol (null = todo). El dueño y el administrador ven todo. */
 const SUBV=['campo','proyectos','trabajos','menu'];
 const TECV=['campo','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','menu'];
-function subGuard(){if(ROLE==='tecnico'&&!PORTAL()){document.body.classList.add('tec');if(!TECV.includes(VIEW))VIEW='campo';return}
-  if(ROLE!=='subcontratista')return;document.body.classList.add('sub');if(!SUBV.includes(VIEW))VIEW='campo';PRYTAB='tareas'}
+const ROLV={
+  owner:null,admin:null,
+  encargado:['hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','menu'],
+  ventas:['hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','pipeline','clientes','presupuestos','agenda','mas','menu'],
+  administracion:['hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','clientes','presupuestos','facturacion','agenda','reportes','mas','menu'],
+  tecnico:TECV,subcontratista:SUBV,
+  viewer:['hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','menu']};
+const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
+const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
+const viewOk=v=>{const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
+function subGuard(){document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
+  if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
+  if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
 
 /* --- acciones --- */
 async function rubAct(k,el,arg){
@@ -4794,6 +4809,7 @@ function equipoHtml(){
   <div class="list">${ms.map(m=>`<div class="row" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
     ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un mail para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
   ${admin?inviteHtml():''}
+  ${admin?`<details class="more" style="margin-top:14px"><summary>Roles y permisos: qué ve cada uno</summary><div class="tablewrap"><table><thead><tr><th>Rol</th><th>Qué ve</th></tr></thead><tbody>${[['owner'],...ROLES].map(([r])=>`<tr><td><b>${esc(ROLEN[r]||r)}</b></td><td>${esc(ROLV_TXT[r]||'')}</td></tr>`).join('')}</tbody></table></div><p class="hint">Para sumar a alguien con un rol fijo (por ejemplo un técnico): invitalo por mail acá abajo con ese rol. Cuando se registre con ese mail entra directo como técnico y no puede elegir otra cosa. Con el código de empresa entra "pendiente" hasta que lo apruebes. Contraseña perdida: botón "Contraseña" al lado de su nombre.</p></details>`:''}
   <div class="actions" style="margin-top:16px"><button class="btn" data-act="logout">Cerrar sesión</button><button class="btn ghost danger" data-act="delacct">Eliminar mi cuenta</button></div></div>`;
 }
 async function teamAct(k,el){
