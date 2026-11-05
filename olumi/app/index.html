@@ -536,11 +536,12 @@ th{font-size:11px;letter-spacing:.07em}
 /* 1.12: relevamiento de campo e ingreso con lector */
 .reltools{position:sticky;top:-1px;z-index:3;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0 10px;margin:-6px 0 10px;background:var(--surface);border-bottom:1px solid var(--line-2)}
 .reltools .btn{white-space:nowrap}
+@media (max-width:600px){.reltools{gap:6px}.reltools .btn{padding:7px 10px;font-size:13px}}
 .ritem{padding:8px 0;border-bottom:1px solid var(--line-2)}
 .ritem:last-child{border-bottom:0}
 .ri-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ri-row input{min-width:0;margin:0}
-.ri-ubic{flex:1 1 34%}.ri-desc{flex:2 1 46%}.ri-cant{flex:0 0 84px}
+.ri-ubic{flex:1 1 30%}.ri-desc{flex:2 1 40%}.ri-cant{flex:0 0 76px}.ri-u{flex:0 0 74px;margin:0}
 .ritem .photos{margin-top:6px}
 .btn.ico{padding:7px 10px;line-height:1}
 #ingLines .ingh,#ingLines .ingl{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line-2)}
@@ -550,7 +551,7 @@ th{font-size:11px;letter-spacing:.07em}
 #ingLines .ing-x{flex:0 0 36px;padding:6px 0;text-align:center}
 #ingLines .grow{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:600px){#ingLines .ing-c{flex-basis:72px}}
-@media (max-width:600px){.ri-ubic{flex:1 1 100%}.ri-desc{flex:1 1 calc(100% - 180px)}.ri-cant{flex:0 0 76px}}
+@media (max-width:600px){.ri-ubic{flex:1 1 100%}.ri-desc{flex:1 1 100%}.ri-cant{flex:0 0 76px}}
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -3956,20 +3957,20 @@ async function catMonAll(prods,mon){
 let RIIDX=-1;
 const prodDatalist=()=>`<datalist id="prodList">${arr('productos').map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist>`;
 function relItemRow(it,i){
-  return`<div class="ritem" data-i="${i}"><div class="ri-row"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Dónde · ej. Portón 3" aria-label="Ubicación" autocomplete="off"><input class="ri-desc" list="prodList" value="${esc(it.desc||'')}" placeholder="Qué · ej. cámara domo, punto de red, UTP (m)" aria-label="Ítem" autocomplete="off"><input class="ri-cant" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cant??1)}" aria-label="Cantidad">${readonly?'':`<button type="button" class="btn ico" data-act="rifoto:${i}" title="Foto del ítem" aria-label="Foto del ítem">📷</button><button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem">✕</button>`}</div>${(it.fotos||[]).length?photosHtmlRO(it.fotos):''}</div>`;
+  return`<div class="ritem" data-i="${i}"><div class="ri-row"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Sección o lugar · ej. Puntos nuevos de AP" aria-label="Sección o lugar" autocomplete="off"><input class="ri-desc" list="prodList" value="${esc(it.desc||'')}" placeholder="Material o tarea · ej. Caño daisa 1″" aria-label="Material o tarea" autocomplete="off"><input class="ri-cant" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cant??1)}" aria-label="Cantidad"><select class="ri-u" aria-label="Unidad">${opts([['unidad','u'],['metro','m'],['jornal','jornal'],['hora','h']],it.unidad||'unidad')}</select>${readonly?'':`<button type="button" class="btn ico" data-act="rifoto:${i}" title="Foto del ítem" aria-label="Foto del ítem">📷</button><button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem">✕</button>`}</div>${(it.fotos||[]).length?photosHtmlRO(it.fotos):''}</div>`;
 }
 function relItemsHtml(items){return(items||[]).length?items.map(relItemRow).join(''):'<p class="muted" style="margin:0">Todavía no cargaste ítems. Tocá “+ Ítem” y anotá dónde, qué y cuántos. Cada ítem puede llevar su foto y después arma el presupuesto solo.</p>'}
 function relReadItems(){
   const old=(RELJ&&RELJ.items)||[];
   const rows=[...document.querySelectorAll('#relItems .ritem')];
   if(!rows.length)return old.map(x=>({...x}));
-  return rows.map(el=>{const o=old[+el.dataset.i]||{};return{id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc:(el.querySelector('.ri-desc')?.value||'').trim(),cant:n0(el.querySelector('.ri-cant')?.value),fotos:o.fotos||[]}});
+  return rows.map(el=>{const o=old[+el.dataset.i]||{};return{id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc:(el.querySelector('.ri-desc')?.value||'').trim(),cant:n0(el.querySelector('.ri-cant')?.value),unidad:el.querySelector('.ri-u')?.value||'unidad',fotos:o.fotos||[]}});
 }
 const relItemsClean=items=>(items||[]).filter(x=>x.desc||x.ubic||(x.fotos||[]).length);
 function relItemsRender(){const e=$('#relItems');if(e)e.innerHTML=relItemsHtml(RELJ.items);const c=$('#riCount');if(c)c.textContent=relItemsClean(RELJ.items).length?'· '+relItemsClean(RELJ.items).length:''}
 function relToolsHtml(r){
   if(readonly)return'';
-  return`<div class="reltools">${AS?`<label class="btn pri upl">📷 Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button><button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?'📍 Ubicación guardada':'📍 Guardar ubicación'}</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
+  return`<div class="reltools">${AS?`<label class="btn pri upl">📷 Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button><button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?'📍 Guardada':'📍 Ubicación'}</button><button type="button" class="btn ghost" data-act="relshare" title="Copiar o compartir como texto">Compartir</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
 }
 function relGeoHtml(r){return r.geo?`<p class="hint" id="relGeo"><a href="https://maps.google.com/?q=${encodeURIComponent(r.geo.lat+','+r.geo.lng)}" target="_blank" rel="noopener">Ver ubicación en el mapa</a> · ${fdate(new Date(r.geo.at||Date.now()).toISOString().slice(0,10))}</p>`:'<p class="hint" id="relGeo"></p>'}
 function sheetRel(id,p){
@@ -3987,13 +3988,14 @@ function sheetRel(id,p){
 async function relEnsureSaved(){if(SH&&SH.id)return SH.id;const nid=await saveRel(false);if(nid){SH.id=nid;const t=$('#shTitle');if(t)t.innerHTML=`<span class="kind">Relevamiento</span>${esc(D.relevamientos[nid].titulo||'Relevamiento')}`}return nid}
 async function campoAct(k,el,arg){
   switch(k){
-    case'riadd':{if(!RELJ)return true;RELJ.items=relReadItems();const last=RELJ.items[RELJ.items.length-1];RELJ.items.push({id:uid(),ubic:last&&last.ubic||'',desc:'',cant:1,fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');const inp=rows[rows.length-1]?.querySelector('.ri-desc');if(inp)inp.focus();return true}
+    case'riadd':{if(!RELJ)return true;RELJ.items=relReadItems();const last=RELJ.items[RELJ.items.length-1];RELJ.items.push({id:uid(),ubic:last&&last.ubic||'',desc:'',cant:1,unidad:'unidad',fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');const inp=rows[rows.length-1]?.querySelector('.ri-desc');if(inp)inp.focus();return true}
     case'ridel':{if(!RELJ)return true;RELJ.items=relReadItems();RELJ.items.splice(+arg,1);relItemsRender();SH.dirty=true;return true}
     case'rifoto':{if(!RELJ)return true;RELJ.items=relReadItems();RIIDX=+arg;const f=$('#riFile');if(f)f.click();return true}
     case'relgeo':{if(!RELJ)return true;if(!navigator.geolocation){toast('Este dispositivo no da la ubicación.');return true}
       el.disabled=true;el.textContent='📍 Buscando…';
-      navigator.geolocation.getCurrentPosition(async pos=>{RELJ.geo={lat:Math.round(pos.coords.latitude*1e6)/1e6,lng:Math.round(pos.coords.longitude*1e6)/1e6,acc:Math.round(pos.coords.accuracy||0),at:Date.now()};el.disabled=false;el.textContent='📍 Ubicación guardada';const g=$('#relGeo');if(g)g.outerHTML=relGeoHtml(RELJ);if(SH&&SH.id)await patch('relevamientos',SH.id,{geo:RELJ.geo});else SH.dirty=true;toast('Ubicación guardada'+(RELJ.geo.acc?` (±${RELJ.geo.acc} m)`:''))},
-        ()=>{el.disabled=false;el.textContent='📍 Guardar ubicación';toast('No se pudo obtener la ubicación (¿permiso?).')},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});return true}
+      navigator.geolocation.getCurrentPosition(async pos=>{RELJ.geo={lat:Math.round(pos.coords.latitude*1e6)/1e6,lng:Math.round(pos.coords.longitude*1e6)/1e6,acc:Math.round(pos.coords.accuracy||0),at:Date.now()};el.disabled=false;el.textContent='📍 Guardada';const g=$('#relGeo');if(g)g.outerHTML=relGeoHtml(RELJ);if(SH&&SH.id)await patch('relevamientos',SH.id,{geo:RELJ.geo});else SH.dirty=true;toast('Ubicación guardada'+(RELJ.geo.acc?` (±${RELJ.geo.acc} m)`:''))},
+        ()=>{el.disabled=false;el.textContent='📍 Ubicación';toast('No se pudo obtener la ubicación (¿permiso?).')},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});return true}
+    case'relshare':await relShare();return true;
     case'ingdel':{if(!ING)return true;ingRead();ING.lineas.splice(+arg,1);ingRender();SH.dirty=true;return true}
   }
   return false;
@@ -4011,11 +4013,26 @@ async function campoUpload(inp){
     if(busy)busy.hidden=true;inp.value='';if(out.length){const r=D.relevamientos[nid];await patch('relevamientos',nid,{fotos:[...(r.fotos||[]),...out]});if(RELJ)RELJ.fotos=D.relevamientos[nid].fotos;const el=$('#relFotos');if(el)el.innerHTML=photosHtmlRO(D.relevamientos[nid].fotos);toast(out.length===1?'Foto agregada':'Fotos agregadas')}return true}
   return false;
 }
+function relText(r){
+  const U={unidad:'',metro:'m',jornal:'jornal',hora:'h'};const L=[];
+  L.push((r.titulo||'Relevamiento')+(r.clienteId?' · '+cliName(r.clienteId):''));L.push(fdate(r.fecha)+(r.direccion?' · '+r.direccion:'')+(r.responsable?' · '+personName(r.responsable).replace(' (vos)',''):''));
+  const secs=[];(r.items||[]).forEach(it=>{const k=it.ubic||'';let s=secs.find(x=>x.k===k);if(!s){s={k,l:[]};secs.push(s)}s.l.push(it)});
+  secs.forEach(s=>{L.push('');if(s.k)L.push(s.k+':');s.l.forEach(it=>{const u=U[it.unidad||'unidad']||'';L.push(`(${r2(it.cant||0).toLocaleString('es-UY')}${u?' '+u:''}) ${it.desc||''}`.trim())})});
+  const q=(RSERV[r.servicio]||[]).filter(f=>(r.q||{})[f.k]).map(f=>f.t==='checkbox'?f.l:`${f.l}: ${(r.q||{})[f.k]}`);if(q.length){L.push('');L.push(...q)}
+  if(n0(r.jornales)){L.push('');L.push(`Tiempo: ${r2(r.jornales)} jornal${r.jornales==1?'':'es'}${r.dificultad&&r.dificultad!=='Normal'?' · dificultad '+r.dificultad.toLowerCase():''}`)}
+  if(r.notas){L.push('');L.push(r.notas)}
+  if(r.geo)L.push(`Ubicación: https://maps.google.com/?q=${r.geo.lat},${r.geo.lng}`);
+  return L.join('\n');
+}
+async function relShare(){if(!RELJ)return;const r={...RELJ,...readForm(RELF()),items:relItemsClean(relReadItems())};const t=relText(r);
+  if(navigator.share){try{await navigator.share({title:r.titulo||'Relevamiento',text:t});return}catch(e){if(e&&e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(t);toast('Texto copiado: pegalo en WhatsApp o en un mail.')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Texto copiado')}catch(_){toast('No se pudo copiar')}ta.remove()}}
 function relItemsToLines(r,mon,out){
   const isM=s=>/\b(m|mts?|metros?)\b/i.test(s||'');
   (r.items||[]).forEach(it=>{if(!it.desc)return;const cant=n0(it.cant)||1;const q=qn(it.desc);
-    let p=arr('productos').find(x=>qn(x.nombre||'')===q)||findProd([it.desc,...it.desc.split(/[\s,.;()]+/).filter(w=>w.length>3)],isM(it.desc)?'metro':'unidad');
-    const l=p?{desc:p.nombre,cant,unidad:p.unidad||'unidad',precio:r2(conv(p.precio,p.moneda,mon))}:{desc:it.desc,cant,unidad:isM(it.desc)?'metro':'unidad',precio:0};
+    const un=it.unidad||(isM(it.desc)?'metro':'unidad');
+    let p=arr('productos').find(x=>qn(x.nombre||'')===q)||findProd([it.desc,...it.desc.split(/[\s,.;()]+/).filter(w=>w.length>3)],un);
+    const l=p?{desc:p.nombre,cant,unidad:p.unidad||un,precio:r2(conv(p.precio,p.moneda,mon))}:{desc:it.desc,cant,unidad:un,precio:0};
     const ex=out.find(o=>o.desc===l.desc&&o.unidad===l.unidad);if(ex)ex.cant=r2(ex.cant+cant);else out.push(l)});
 }
 
