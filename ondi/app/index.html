@@ -4,8 +4,10 @@
 <script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a7fa3">
+<meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101419" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Ondi by Unity Tech: monitoreo multicliente de redes UniFi y multimarca, con pantallas para monitores y avisos por WhatsApp.">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ondi">
@@ -337,6 +339,10 @@ main{min-width:0;padding-block:26px 48px;padding-left:max(28px,env(safe-area-ins
 .unpl{display:flex;flex-direction:column;gap:6px}
 .unp{display:flex;gap:8px;align-items:center;font-size:13px}
 .unp span:nth-child(2){flex:1;min-width:0}
+.plane.img{background-image:var(--img);background-size:contain;background-repeat:no-repeat;background-position:center}
+.levels .plane.img{background-color:var(--plane)}
+.w-page{font-family:var(--f-mono);font-size:13px;color:var(--w-muted)}
+.form-note{font-size:13px;color:var(--muted);margin:0}
 .plan-empty{padding:28px;display:flex;flex-direction:column;gap:16px}
 .plan-empty h2{margin:0 0 6px;font-family:var(--f-display);font-weight:500}
 .plan-empty p{margin:0}
@@ -423,6 +429,7 @@ main{min-width:0;padding-block:26px 48px;padding-left:max(28px,env(safe-area-ins
 .empty{padding:28px 20px;text-align:center;color:var(--muted)}
 
 @media (max-width:860px){
+  html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
   .app{grid-template-columns:1fr}
   .side{display:none}
   .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding-block:11px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
@@ -435,9 +442,10 @@ main{min-width:0;padding-block:26px 48px;padding-left:max(28px,env(safe-area-ins
   .tabs button[aria-current="page"]{color:var(--accent)}
   .tabs .count{position:absolute;top:0;left:calc(50% + 5px);min-width:18px;height:17px;font-size:11px;padding:0 5px}
   .head h1{font-size:26px}
-  .summary,.sitebar{grid-template-columns:1fr 1fr}
-  .summary>div:nth-child(3),.sitebar>div:nth-child(3){border-left:0}
-  .summary>div:nth-child(n+3),.sitebar>div:nth-child(n+3){border-top:1px solid var(--line)}
+  .summary{grid-template-columns:repeat(4,1fr)}
+  .sitebar{grid-template-columns:1fr 1fr}
+  .sitebar>div:nth-child(3){border-left:0}
+  .sitebar>div:nth-child(n+3){border-top:1px solid var(--line)}
   .grid2,.set,.screens,.routing{grid-template-columns:minmax(0,1fr)}
   .routing>div{border-left:0;border-top:1px solid var(--line)}
   .routing>div:first-child{border-top:0}
@@ -455,7 +463,10 @@ main{min-width:0;padding-block:26px 48px;padding-left:max(28px,env(safe-area-ins
   .w-stats{margin-left:0;width:100%;order:3}
 }
 @media (max-width:860px){.plan-wrap{grid-template-columns:minmax(0,1fr)}.stage.v3d{--lift:56px}.levels{width:92%}}
-@media (max-width:600px){.pin .pl{display:none}.zone span{font-size:10px;left:4px;top:3px}}
+@media (max-width:600px){.pin .pl{display:none}.zone span{font-size:10px;left:4px;top:3px}
+  .summary{grid-template-columns:1fr 1fr}
+  .summary>div:nth-child(3){border-left:0}
+  .summary>div:nth-child(n+3){border-top:1px solid var(--line)}}
 @media (max-width:420px){.fields{grid-template-columns:1fr}.devs{grid-template-columns:1fr}.logos{gap:6px}.mini{width:90px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -480,6 +491,7 @@ main{min-width:0;padding-block:26px 48px;padding-left:max(28px,env(safe-area-ins
 </div>
 <div id="wall"></div>
 <div id="modal"></div>
+<input type="file" id="planFile" accept="image/*" hidden aria-label="Imagen del plano">
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
@@ -661,7 +673,8 @@ const PLANS = {c0:{levels:[
   {id:'mz', name:'Mezzanine', zones:[['Mezzanine X',3,5,30,52],['Mezzanine Z',34,5,26,52]]}
 ]}};
 
-const S = {view:'panel', site:null, siteTab:'equipos', pv:'3d', pl:'pb', layer:'estado', editPins:false, prop:{}, alertFilter:'abiertas', clientFilter:'todos', q:'', sim:true, flash:null, wall:null, logo:'radar',
+const S = {view:'panel', site:null, siteTab:'equipos', pv:'3d', pl:'pb', layer:'estado', editPins:false, prop:{}, alertFilter:'abiertas', clientFilter:'todos', q:'', sim:true, flash:null, wall:null, wallPage:0, fromWall:null, logo:'radar',
+  contacts:[{name:'Técnico de guardia', role:'1.º aviso', ch:'WhatsApp · Push'},{name:'Supervisor', role:'Escalamiento · 2.º aviso', ch:'WhatsApp'},{name:'Oficina', role:'Horario de oficina', ch:'Correo'}],
   cfg:{waTec:true, waCli:false, push:true, mail:false, quiet:true, escal:true, olumi:true}};
 
 
@@ -731,7 +744,21 @@ function renderNav(){
   const html = NAV.map(([k,l,ic])=>`<button type="button" data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ic}<span>${l}</span>${k==='alertas'&&n?`<span class="count">${n}</span>`:''}</button>`).join('');
   $('#nav').innerHTML = html; $('#tabs').innerHTML = html;
 }
-function go(v,siteId){ S.view=v; S.site=siteId||null; if(siteId){ S.siteTab = PLANS[siteId]?'plano':'equipos'; S.editPins=false; } render(); window.scrollTo(0,0); }
+function go(v,siteId,fromHash){ S.view=v; S.site=siteId||null; S.fromWall=null; if(siteId){ S.siteTab = PLANS[siteId]?'plano':'equipos'; S.editPins=false; } render(); window.scrollTo(0,0); if(!fromHash) syncHash(); }
+/* Enlaces directos: #panel, #clientes, #cliente-c1, #pantallas, #pantalla-p1, #alertas, #ajustes */
+const VIEW2HASH = {panel:'panel', sitios:'clientes', pantallas:'pantallas', alertas:'alertas', ajustes:'ajustes'};
+function hashFor(){ if(S.wall) return 'pantalla-'+S.wall; if(S.view==='sitios' && S.site) return 'cliente-'+S.site; return VIEW2HASH[S.view]||'panel'; }
+function syncHash(){ const h='#'+hashFor(); if(location.hash!==h){ try{ location.hash=h; }catch(e){} } }
+function route(){
+  const h=(location.hash||'#panel').slice(1); let m;
+  if((m=h.match(/^pantalla-(p\d+)$/)) && screen(m[1])){ openWall(m[1], true); return; }
+  S.wall=null;
+  if((m=h.match(/^cliente-(c\d+)$/)) && site(m[1])){ go('sitios', m[1], true); return; }
+  const v = Object.keys(VIEW2HASH).find(k=>VIEW2HASH[k]===h);
+  go(v||'panel', null, true);
+}
+window.addEventListener('hashchange', ()=>{ if('#'+hashFor()!==location.hash) route(); });
+window.addEventListener('popstate', ()=>{ if('#'+hashFor()!==location.hash) route(); });
 
 function saludo(){ const h=new Date().getHours(); return h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches'; }
 function vPanel(){
@@ -746,7 +773,7 @@ function vPanel(){
       <div class="health"><i style="flex:${ok};background:var(--ok)"></i><i style="flex:${warn};background:var(--warn)"></i><i style="flex:${down};background:var(--crit)"></i></div></div>
     <div><span class="lab">Caídos</span><span class="big ${down?'down':''}">${down}</span><span class="sub">requieren visita o reinicio</span></div>
     <div><span class="lab">Atención</span><span class="big ${warn?'warn':''}">${warn}</span><span class="sub">disco, PoE, canal o firmware</span></div>
-    <div><span class="lab">Disponibilidad 30 d</span><span class="big">99,7 %</span><span class="sub">promedio de todos los clientes</span></div>
+    <div><span class="lab">Disponibilidad</span><span class="big">${num((SITES.reduce((a,s)=>a+s.up,0)/SITES.length).toFixed(1))} %</span><span class="sub">últimos 30 días, todos los clientes</span></div>
   </section>
   <div class="grid2">
     <section><div class="sec-title"><h2>Alertas abiertas</h2><button class="btn sm" data-go="alertas" type="button">Ver todas</button></div>
@@ -791,12 +818,12 @@ function vSite(){
   const groups = (s.real?'<p class="realnote">Ejemplo armado a partir de un sitio real, con los nombres cambiados. Estado y clientes son simulados.</p>':'')
     + `<div class="seg site-tabs" role="group" aria-label="Vistas del cliente">${tabs.map(([k,l])=>`<button type="button" data-stab="${k}" aria-pressed="${S.siteTab===k}">${l}</button>`).join('')}</div>`
     + (S.siteTab==='plano'?vPlano(s):S.siteTab==='topologia'?vTopo(s):S.siteTab==='revision'?vRev(F):vDevices(s));
-  return `<div class="head"><div><button class="crumb" type="button" data-go="sitios">${I.back}Clientes</button><h1>${esc(s.name)}</h1><p>${esc(s.city)} · contacto ${esc(s.contact)} · plan ${s.plan}</p></div>
-    <button class="btn" type="button" data-report="${s.id}">${I.doc}Reporte del mes</button></div>
+  return `<div class="head"><div><button class="crumb" type="button" data-go="sitios">${I.back}Clientes</button><h1>${esc(s.name)}</h1><p>${esc(s.city)}${s.contact&&s.contact!=='—'?' · contacto '+esc(s.contact):''} · plan ${s.plan}${s.discovering?' · <b>leyendo la consola…</b>':''}</p></div>
+    <div class="acts">${S.fromWall?`<button class="btn" type="button" data-wall="${S.fromWall}">${I.full}Volver a ${esc(screen(S.fromWall).name)}</button>`:''}<button class="btn" type="button" data-report="${s.id}">${I.doc}Reporte del mes</button></div></div>
     <section class="card sitebar">
       <div><div class="lab">Estado</div><div class="val"><span class="pill ${w}">${w==='ok'?'Todo en línea':w==='warn'?'Requiere atención':'Hay equipos caídos'}</span></div></div>
       <div><div class="lab">Conexión</div><div class="val">${s.link==='unifi'?'UniFi':'Agente Ondi'}<span class="muted" style="font-weight:400;font-size:13px">${s.link==='unifi'?esc(s.console):'Raspberry Pi'}</span></div></div>
-      <div><div class="lab">Uptime 30 días</div><div class="val mono">${num(s.up.toFixed(2))} %</div></div>
+      <div><div class="lab">Disponibilidad 30 días</div><div class="val mono">${num(s.up.toFixed(2))} %</div></div>
       <div><div class="lab"><label for="scr-sel">Se muestra en</label></div><div class="val"><select id="scr-sel" data-screen-for="${s.id}">
         ${SCREENS.map(p=>`<option value="${p.id}" ${s.screen===p.id?'selected':''}>${p.name}</option>`).join('')}<option value="" ${!s.screen?'selected':''}>Ninguna (solo avisos)</option></select></div></div>
     </section>
@@ -828,17 +855,18 @@ function getProp(id){
 }
 function vPlano(s){
   const P = PLANS[s.id];
-  if(!P) return `<div class="card plan-empty"><div style="max-width:56ch"><h2>Este cliente todavía no tiene plano</h2><p class="muted">Subí una imagen o PDF del plano, marcá las zonas y arrastrá cada equipo a donde está instalado. Con eso Ondi muestra el estado sobre el mapa y detecta qué AP se pisan entre sí.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-toast="Subir plano (demo)">Subir plano</button><button class="btn" type="button" data-site-plan="c0">Ver el ejemplo del parque logístico</button></div></div>`;
+  if(!P) return `<div class="card plan-empty"><div style="max-width:56ch"><h2>Este cliente todavía no tiene plano</h2><p class="muted">Subí una imagen del plano (una foto, una captura de Google Earth o un plano escaneado) y arrastrá cada equipo a donde está instalado. Con eso Ondi muestra el estado sobre el mapa y detecta qué AP se pisan entre sí.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-upload>${I.plus}Subir plano</button><button class="btn" type="button" data-site-plan="c0">Ver el ejemplo del parque logístico</button></div></div>`;
+  if(S.pv==='2d' && !P.levels.some(l=>l.id===S.pl)) S.pl = P.levels[0].id;
   const ds = siteDevs(s.id), prop = getProp(s.id);
   const chOf = S.layer==='propuesta' ? (x=>prop[x.id]) : (x=>x.radios[0].ch);
   const showCh = S.layer==='canal' || S.layer==='propuesta';
   const lines = showCh ? conflicts(s.id, chOf) : [];
   const levels = S.pv==='3d' ? P.levels : P.levels.filter(l=>l.id===S.pl);
   const pin = x => { const t=st(x); let cls='pin '+t, inner='', sty=`left:${x.pos[0]}%;top:${x.pos[1]}%`;
-    if(showCh && t==='ok' || showCh && t==='warn'){ const c=chOf(x); cls+=' ch c'+c; inner=c; if(S.layer==='propuesta' && c!==x.radios[0].ch) cls+=' changed'; }
+    if(showCh && x.radios && (t==='ok' || t==='warn')){ const c=chOf(x); cls+=' ch c'+c; inner=c; if(S.layer==='propuesta' && c!==x.radios[0].ch) cls+=' changed'; }
     if(S.layer==='clientes'){ const n=nCl(x); sty+=`;--halo:${16+n*2.4}px`; cls+=' halo'; inner=n||''; }
     return `<button type="button" class="${cls}" style="${sty}" data-pin="${x.id}" aria-label="${esc(x.name)}" title="${esc(x.name)}"><span class="pd">${inner}</span><span class="pl">${esc(shortName(x))}</span></button>`; };
-  const plane = (L,i) => `<div class="plane" data-level="${L.id}" style="--i:${i}"><span class="plane-name">${L.name}</span>
+  const plane = (L,i) => `<div class="plane ${L.img?'img':''}" data-level="${L.id}" style="--i:${i}${L.img?`;--img:url(${L.img})`:''}"><span class="plane-name">${esc(L.name)}</span>
     ${L.zones.map(z=>{ const zd=ds.filter(x=>x.zone===z[0]); return `<div class="zone ${zd.length?worst(zd):''}" style="left:${z[1]}%;top:${z[2]}%;width:${z[3]}%;height:${z[4]}%"><span>${esc(z[0])}</span></div>`; }).join('')}
     <svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines.filter(p=>p[0].pos[2]===L.id).map(([a,b])=>`<line x1="${a.pos[0]}" y1="${a.pos[1]}" x2="${b.pos[0]}" y2="${b.pos[1]}"/>`).join('')}</svg>
     ${ds.filter(x=>x.pos && x.pos[2]===L.id).map(pin).join('')}</div>`;
@@ -848,14 +876,14 @@ function vPlano(s){
   if(S.layer==='estado') side = `<h3>Estado en el plano</h3><div class="sstat"><span><b>${onPlan.filter(x=>st(x)==='ok').length}</b>en línea</span><span class="w"><b>${onPlan.filter(x=>st(x)==='warn').length}</b>atención</span><span class="d"><b>${onPlan.filter(x=>['down','unreach'].includes(st(x))).length}</b>caídos</span></div><p class="muted">Tocá un equipo para ver su detalle. Cada zona toma el peor estado de sus equipos.</p>`;
   if(S.layer==='clientes'){ const top=[...onPlan].sort((a,b)=>nCl(b)-nCl(a)).slice(0,5);
     side = `<h3>Más clientes conectados</h3><ol class="toplist">${top.map(x=>`<li><span>${esc(shortName(x))} · ${esc(x.zone)}</span><b class="mono">${nCl(x)}</b></li>`).join('')}</ol><p class="muted">El círculo crece con la cantidad de clientes. Muestra dónde se concentra la gente y si un AP carga con todo.</p>`; }
-  if(S.layer==='canal'){ const by={}; onPlan.filter(x=>x.status!=='down'&&!x.unreach).forEach(x=>{ const c=x.radios[0].ch; by[c]=(by[c]||0)+1; }); const mx=Math.max(1,...Object.values(by));
+  if(S.layer==='canal'){ const by={}; onPlan.filter(x=>x.radios&&x.status!=='down'&&!x.unreach).forEach(x=>{ const c=x.radios[0].ch; by[c]=(by[c]||0)+1; }); const mx=Math.max(1,...Object.values(by));
     side = `<h3>Canales de 2,4 GHz</h3><div class="chbars">${[1,6,11].map(c=>`<div><span class="chk c${c}">${c}</span><i><b style="width:${(by[c]||0)/mx*100}%"></b></i><span class="mono">${by[c]||0} AP</span></div>`).join('')}</div>
       <p><b>${now} ${now===1?'par':'pares'}</b> de AP cercanos usan el mismo canal (líneas rojas). Se turnan para transmitir y el Wi-Fi se pone lento.</p><button class="btn sm primary" type="button" data-layer="propuesta" style="align-self:flex-start">Ver propuesta de canales</button>`; }
   if(S.layer==='propuesta'){ const chg=onPlan.filter(x=>prop[x.id] && prop[x.id]!==x.radios[0].ch);
     side = `<h3>Propuesta de canales</h3><p>AP cercanos en el mismo canal: <b>${now}</b> → <b>${after}</b></p>
       ${chg.length?`<ul class="changes">${chg.map(x=>`<li><span>${esc(shortName(x))} · ${esc(x.zone)}</span><span class="mono">${x.radios[0].ch} → ${prop[x.id]}</span></li>`).join('')}</ul><button class="btn sm primary" type="button" data-apply="${s.id}" style="align-self:flex-start">Aplicar en UniFi</button><p class="muted" style="font-size:12px">En la versión real se aplica con la clave de API local de la consola, de a un AP y fuera de horario.</p>`:'<p class="muted">Los canales actuales ya son la mejor combinación posible.</p>'}`; }
-  const unplaced = ds.filter(x=>x.type==='ap' && !x.pos);
-  if(unplaced.length) side += `<h3 style="margin-top:6px">Sin ubicar</h3><div class="unpl">${unplaced.map(x=>`<div class="unp"><span class="dot ${st(x)}"></span><span>${esc(x.name)}</span>${S.editPins?`<button class="linkbtn" type="button" data-place="${x.id}">Ubicar</button>`:''}</div>`).join('')}</div>`;
+  const unplaced = ds.filter(x=>!x.pos && !x.spare);
+  if(unplaced.length) side += `<h3 style="margin-top:6px">Sin ubicar · ${unplaced.length}</h3>${S.editPins?'':'<p class="muted" style="font-size:13px">Tocá «Mover equipos» para ubicarlos.</p>'}<div class="unpl">${unplaced.slice(0,12).map(x=>`<div class="unp"><span class="dot ${st(x)}"></span><span>${esc(x.name)}</span>${S.editPins?`<button class="linkbtn" type="button" data-place="${x.id}">Ubicar</button>`:''}</div>`).join('')}${unplaced.length>12?`<div class="muted" style="font-size:13px">y ${unplaced.length-12} más</div>`:''}</div>`;
   const legend = showCh
     ? `<span><span class="chk c1">1</span>Canal 1</span><span><span class="chk c6">6</span>Canal 6</span><span><span class="chk c11">11</span>Canal 11</span><span><i class="lg-line"></i>Mismo canal y cerca</span>${S.layer==='propuesta'?'<span><span class="chk ring">·</span>Cambia de canal</span>':''}`
     : `<span><span class="dot ok"></span>En línea</span><span><span class="dot warn"></span>Atención</span><span><span class="dot down"></span>Caído</span><span><span class="dot spare"></span>Repuesto</span>${S.editPins?'<span><b>Arrastrá los equipos para moverlos</b></span>':''}`;
@@ -863,7 +891,7 @@ function vPlano(s){
       <div class="seg" role="group" aria-label="Vista">${[['2d','2D'],['3d','3D']].map(([k,l])=>`<button type="button" data-pv="${k}" aria-pressed="${S.pv===k}">${l}</button>`).join('')}</div>
       ${S.pv==='2d'?`<div class="seg" role="group" aria-label="Nivel">${P.levels.map(L=>`<button type="button" data-pl="${L.id}" aria-pressed="${S.pl===L.id}">${L.name}</button>`).join('')}</div>`:''}
       <div class="seg" role="group" aria-label="Capa">${[['estado','Estado'],['clientes','Clientes'],['canal','Canal 2,4 GHz'],['propuesta','Propuesta']].map(([k,l])=>`<button type="button" data-layer="${k}" aria-pressed="${S.layer===k}">${l}</button>`).join('')}</div>
-      ${S.pv==='2d'?`<button class="btn sm ${S.editPins?'primary':''}" type="button" data-edit>${S.editPins?'Listo':'Mover equipos'}</button>`:''}
+      ${S.pv==='2d'?`<button class="btn sm ${S.editPins?'primary':''}" type="button" data-edit>${S.editPins?'Listo':'Mover equipos'}</button><button class="btn sm" type="button" data-upload title="Reemplaza la imagen de este nivel">Subir imagen</button><button class="btn sm" type="button" data-addlevel>${I.plus}Nivel</button>`:''}
     </div>
     <div class="plan-wrap">
       <div class="card plan-card ${S.editPins?'editing':''}"><div class="stage v${S.pv}">${S.pv==='3d'?`<div class="levels">${levels.map(plane).join('')}</div>`:plane(levels[0],0)}</div><div class="legend">${legend}</div></div>
@@ -924,7 +952,7 @@ function devCard(x){
 function vScreens(){
   const mini = p => SITES.filter(s=>s.screen===p.id).sort((a,b)=>rank(a)-rank(b)).map(s=>`<i class="${worst(siteDevs(s.id))}"></i>`).join('');
   return `<div class="head"><div><h1>Pantallas</h1><p>Cada pantalla muestra en grande a los clientes que elijas. Abrila en el navegador de un televisor o monitor de la oficina, en pantalla completa.</p></div>
-    <button class="btn" type="button" data-toast="Pantalla nueva creada (demo)">${I.plus}Nueva pantalla</button></div>
+    <button class="btn" type="button" data-newscreen>${I.plus}Nueva pantalla</button></div>
   <section class="card routing">
     <div><h3>${I.screen}Clientes en una pantalla</h3><ul><li>La alerta aparece en la pantalla y la tarjeta se pone en rojo.</li><li>Además llega un push al iPhone del técnico.</li><li>No se manda WhatsApp porque alguien ya lo está viendo.</li></ul></div>
     <div><h3>${I.bell}Clientes fuera de pantalla</h3><ul><li>WhatsApp al técnico de guardia y push al iPhone.</li><li>Si nadie la reconoce en 10 min, avisa al siguiente contacto.</li><li>Opcional: aviso al cliente si la caída dura más de 10 min.</li></ul></div>
@@ -972,11 +1000,8 @@ function vSettings(){
         <div class="field"><label for="f-fw">Firmware desactualizado</label><select id="f-fw"><option selected>Avisar una vez</option><option>No avisar</option></select></div>
       </div></section>
     <section class="card panel"><h2>Contactos de guardia</h2>
-      <div class="contacts">
-        <div class="contact"><span class="av">TG</span><div>Técnico de guardia<div class="muted" style="font-size:12px">1.º aviso</div></div><span class="x">WhatsApp<br>Push</span></div>
-        <div class="contact"><span class="av">SU</span><div>Supervisor<div class="muted" style="font-size:12px">Escalamiento · 2.º aviso</div></div><span class="x">WhatsApp</span></div>
-        <div class="contact"><span class="av">OF</span><div>Oficina<div class="muted" style="font-size:12px">Horario de oficina</div></div><span class="x">Correo</span></div>
-      </div><button class="btn sm" type="button" data-toast="Contacto agregado (demo)" style="align-self:flex-start">${I.plus}Agregar contacto</button></section>
+      <div class="contacts">${S.contacts.map((c,i)=>`<div class="contact"><span class="av">${esc(c.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())}</span><div>${esc(c.name)}<div class="muted" style="font-size:12px">${esc(c.role)}</div></div><span class="x">${esc(c.ch)}</span>${i>0?`<button class="linkbtn" type="button" data-delcontact="${i}" aria-label="Quitar a ${esc(c.name)}" style="margin-left:10px;font-size:12px">Quitar</button>`:''}</div>`).join('')}</div>
+      <button class="btn sm" type="button" data-addcontact style="align-self:flex-start">${I.plus}Agregar contacto</button></section>
     <section class="card panel"><h2>Integraciones y planes</h2>
       <div>${tg('olumi','Olumi by Unity Tech','Crear tickets automáticos con prioridad para clientes con abono')}
       <div class="opt"><div><div class="t">WhatsApp Business</div><div class="d">Los avisos salen desde el número de tu empresa</div></div><span class="pill ok">Conectado</span></div></div>
@@ -988,12 +1013,15 @@ function vSettings(){
   </div>`;
 }
 
+const WALL_PAGE = 6;
 function vWall(id){
   const p = screen(id);
   const list = SITES.filter(s=>s.screen===id).sort((a,b)=>rank(a)-rank(b));
-  const ds = act(DEV).filter(x=>!x.unreach && list.some(s=>s.id===x.site));
-  const down = ds.filter(x=>x.status==='down').length, warn = ds.filter(x=>x.status==='warn').length;
-  const tiles = list.map(s=>{
+  const ds = act(DEV).filter(x=>list.some(s=>s.id===x.site));
+  const down = ds.filter(x=>x.status==='down'||x.unreach).length, warn = ds.filter(x=>x.status==='warn'&&!x.unreach).length;
+  let shown = list, pageTxt = '';
+  if(p.rotate && list.length>WALL_PAGE){ const pages=Math.ceil(list.length/WALL_PAGE), pg=S.wallPage%pages; shown=list.slice(pg*WALL_PAGE,(pg+1)*WALL_PAGE); pageTxt=`<span class="w-page">página ${pg+1} de ${pages}</span>`; }
+  const tiles = shown.map(s=>{
     const sd = siteDevs(s.id), w = worst(sd);
     const probs = openAlerts().filter(a=>dev(a.dev).site===s.id).sort((a,b)=>(a.sev==='down'?0:1)-(b.sev==='down'?0:1)).slice(0,3);
     return `<button type="button" class="tile ${w}" data-wsite="${s.id}">
@@ -1002,17 +1030,58 @@ function vWall(id){
       ${probs.length?`<div class="probs">${probs.map(a=>`<div><span class="dot ${a.sev}"></span><span>${esc(dev(a.dev).name)} · ${esc(a.title)}</span><span class="w">${rel(a.at).replace('hace ','')}</span></div>`).join('')}</div>`:'<div class="okline">Todos los equipos responden.</div>'}
       <div class="foot"><span>${s.link==='unifi'?'UniFi · '+esc(s.console):'Agente Ondi'}</span><span>${num(s.up.toFixed(2))} % · 30 d</span></div></button>`;}).join('');
   const recent = ALERTS.filter(a=>list.some(s=>s.id===dev(a.dev).site)).sort((a,b)=>b.at-a.at).slice(0,4);
-  return `<div class="w-head">${logoHTML(30,false,true)}<span class="w-title"><b>${p.name}</b> · ${esc(p.place)}</span>
+  return `<div class="w-head">${logoHTML(30,false,true)}<span class="w-title"><b>${esc(p.name)}</b> · ${esc(p.place)}</span>${pageTxt}
       <div class="w-stats"><span class="w-stat"><b>${list.length}</b>clientes</span><span class="w-stat ok"><b>${ds.length-down-warn}</b>en línea</span><span class="w-stat warn"><b>${warn}</b>atención</span><span class="w-stat down"><b>${down}</b>caídos</span></div>
       <span class="w-clock" id="wclock">${clock(Date.now(),true)}</span><button class="w-exit" type="button" data-wexit>Salir</button></div>
     <div class="w-grid">${tiles||'<div class="okline">Esta pantalla no tiene clientes. Elegilos en Pantallas.</div>'}</div>
     <div class="w-ticker">${recent.map(a=>`<span>${clock(a.at)} · <b>${esc(site(dev(a.dev).site).name)}</b> · ${esc(dev(a.dev).name)} · ${a.state==='done'?'volvió a funcionar':esc(a.title)}</span>`).join('')}</div>`;
 }
-function renderWall(){ const el=$('#wall'); el.innerHTML = S.wall ? `<div class="wall" role="region" aria-label="Modo pantalla">${vWall(S.wall)}</div>` : ''; }
-function openWall(id){ S.wall=id; closeModal(); renderWall(); try{ const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().catch(()=>{}); }catch(e){} }
-function closeWall(){ S.wall=null; try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){} render(); }
+let wallHTML = '';
+function renderWall(){
+  const el=$('#wall'), html = S.wall ? `<div class="wall" role="region" aria-label="Modo pantalla">${vWall(S.wall)}</div>` : '';
+  // Solo se vuelve a dibujar si algo cambió: así las tarjetas en alarma no reinician su animación cada vez.
+  const cmp = html.replace(/id="wclock">[^<]*/,''); if(cmp===wallHTML) return; wallHTML=cmp; el.innerHTML=html;
+}
+function openWall(id, fromHash){ S.wall=id; S.wallPage=0; closeModal(); renderWall(); if(!fromHash){ syncHash(); try{ const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().catch(()=>{}); }catch(e){} } }
+function closeWall(){ S.wall=null; try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){} render(); syncHash(); }
+setInterval(()=>{ if(S.wall && S.sim){ const p=screen(S.wall); if(p && p.rotate && SITES.filter(s=>s.screen===S.wall).length>WALL_PAGE){ S.wallPage++; renderWall(); } } }, 20000);
 
 function closeModal(){ $('#modal').innerHTML=''; }
+/* Formulario genérico en una hoja: fields = [{id,label,type,options,required,placeholder,value}] */
+function formModal(kind, title, sub, fields, btn){
+  const f = x => `<div class="field"${x.wide?' style="grid-column:1/-1"':''}><label for="fm-${x.id}">${x.label}</label>${x.type==='select'
+    ? `<select id="fm-${x.id}" name="${x.id}">${x.options.map(o=>`<option value="${esc(o[0])}" ${o[0]===x.value?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`
+    : `<input id="fm-${x.id}" name="${x.id}" type="${x.type||'text'}" ${x.required?'required':''} placeholder="${esc(x.placeholder||'')}" value="${esc(x.value||'')}" autocomplete="off">`}</div>`;
+  $('#modal').innerHTML = `<div class="scrim" data-close><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mt" style="width:min(560px,100%)">
+    <div class="sheet-h"><div><h2 id="mt">${title}</h2>${sub?`<div class="muted" style="font-size:13px">${sub}</div>`:''}</div><button class="x" type="button" data-close aria-label="Cerrar">×</button></div>
+    <form class="sheet-b" data-form="${kind}"><div class="fields">${fields.map(f).join('')}</div><div style="display:flex;gap:8px"><button class="btn primary" type="submit">${btn}</button><button class="btn" type="button" data-close>Cancelar</button></div></form></div></div>`;
+  const first = $('#modal input, #modal select'); if(first) first.focus();
+}
+function formData(form){ const o={}; new FormData(form).forEach((v,k)=>o[k]=String(v).trim()); return o; }
+let newId = 100;
+/* Alta de cliente: crea el sitio con su gateway y, a los segundos, "descubre" el resto de los equipos como haría la consola. */
+function createSite(d){
+  const id='c'+(newId++), unifi=d.link==='unifi';
+  const s={id, name:d.name, city:d.city||'—', plan:d.plan||'Pro', link:d.link, console:unifi?(d.console||'Consola UniFi'):'Agente Ondi', contact:d.contact||'—', screen:d.screen||null, up:100, discovering:true};
+  SITES.push(s);
+  if(unifi) gw(id, d.console||'Cloud Gateway Ultra', '10.'+(newId%250)+'.0.1', 'Antel fibra 300/30');
+  else mk(id,'rt','Router','MikroTik','hEX S','192.168.88.1','SNMP','ok',3,'Internet','Antel fibra 300/30');
+  setTimeout(()=>{ if(!SITES.includes(s)) return;
+    const b = '10.'+(newId%250)+'.0.';
+    if(unifi){ sw(id,'Switch PoE','USW Lite 16 PoE',b+'2','40 / 45 W'); ap(id,'AP principal','U7 Pro',b+'21','ok',11); ap(id,'AP oficina','U7 Pro Wall',b+'22','ok',6); unvr(id,'UNVR',b+'40','12 % · 4 TB'); pcam(id,'Entrada','G5 Bullet',b+'51'); pcam(id,'Depósito','G5 Bullet',b+'52'); }
+    else { mk(id,'sw','Switch PoE','TP-Link','TL-SG1210P','192.168.88.2','SNMP','ok',3,'PoE en uso','31 / 61 W'); mk(id,'nvr','NVR','Hikvision','DS-7608NI-K2','192.168.88.20','ISAPI','ok',4,'Disco','20 % · 2 TB'); ['Entrada','Caja','Depósito'].forEach((n,i)=>mk(id,'cam',n,'Hikvision','DS-2CD2143G2-I','192.168.88.3'+(i+1),'ONVIF','ok',6,'Grabación','4 MP · 20 fps')); mk(id,'ap','AP salón','TP-Link Omada','EAP225','192.168.88.51','API Omada','ok',5,'Clientes','8 conectados'); }
+    s.discovering=false; toast(`${s.name}: ${siteDevs(id).length} equipos descubiertos`, unifi?'Leídos desde la consola UniFi':'Leídos por el agente en la red del cliente'); render();
+  }, 7000);
+  return s;
+}
+/* Imagen de plano: se reduce antes de guardarla para que la app siga liviana */
+function loadPlanImage(file, cb){
+  const img = new Image(); const url = URL.createObjectURL(file);
+  img.onload = ()=>{ const W=1600, k=Math.min(1, W/img.width); const c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg',.82)); };
+  img.onerror = ()=>{ URL.revokeObjectURL(url); toast('No pude leer esa imagen','Probá con un JPG o PNG','down'); };
+  img.src = url;
+}
 function devModal(id){
   const x = dev(id), s = site(x.site), dn = x.status==='down';
   const evs = ALERTS.filter(a=>a.dev===id).map(a=>`<div><span class="when">${clock(a.at)}</span><span>${esc(a.title)}${a.state==='done'?' · resuelta':''}</span></div>`).join('');
@@ -1069,7 +1138,7 @@ function render(){
 function toast(msg,sub,sev='ok'){
   const t = document.createElement('div'); t.className='toast';
   t.innerHTML = `<span class="dot ${sev}"></span><div>${esc(msg)}${sub?`<small>${esc(sub)}</small>`:''}</div>`;
-  $('#toasts').appendChild(t); setTimeout(()=>t.remove(), 5000);
+  const box=$('#toasts'); box.appendChild(t); while(box.children.length>3) box.firstElementChild.remove(); setTimeout(()=>t.remove(), 5000);
 }
 
 document.addEventListener('click', e=>{
@@ -1077,7 +1146,7 @@ document.addEventListener('click', e=>{
   if(t.dataset.close!==undefined && (e.target===t || t.classList.contains('x'))){ closeModal(); return; }
   if(t.dataset.go){ go(t.dataset.go); return; }
   if(t.dataset.site){ go('sitios', t.dataset.site); return; }
-  if(t.dataset.wsite){ const id=t.dataset.wsite; S.wall=null; try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(err){} go('sitios', id); return; }
+  if(t.dataset.wsite){ const id=t.dataset.wsite, from=S.wall; S.wall=null; try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(err){} go('sitios', id); S.fromWall=from; render(); return; }
   if(t.dataset.wall){ openWall(t.dataset.wall); return; }
   if(t.dataset.wexit!==undefined){ closeWall(); return; }
   if(t.dataset.dev){ devModal(t.dataset.dev); return; }
@@ -1085,8 +1154,17 @@ document.addEventListener('click', e=>{
   if(t.dataset.af){ S.alertFilter=t.dataset.af; render(); return; }
   if(t.dataset.cf){ S.clientFilter=t.dataset.cf; render(); return; }
   if(t.dataset.logo){ S.logo=t.dataset.logo; try{localStorage.setItem('ondi-logo',S.logo);}catch(err){} render(); toast('Logo '+LOGOS[S.logo].name+' aplicado'); return; }
-  if(t.dataset.copy){ const txt='unitytech.uy/ondi/pantalla/'+t.dataset.copy; const ok=()=>toast('Enlace copiado',txt), bad=()=>toast('Enlace de la pantalla',txt);
+  if(t.dataset.copy){ const txt=location.origin+location.pathname+'#pantalla-'+t.dataset.copy; const ok=()=>toast('Enlace copiado','Abrilo en el navegador del televisor: entra directo en modo pantalla'), bad=()=>toast('Enlace de la pantalla',txt);
     try{ navigator.clipboard.writeText(txt).then(ok,bad); }catch(err){ bad(); } return; }
+  if(t.dataset.newscreen!==undefined){ formModal('screen','Nueva pantalla','Después elegís qué clientes muestra.',[{id:'name',label:'Nombre',required:true,value:'Pantalla '+(SCREENS.length+1)},{id:'place',label:'Dónde está',placeholder:'Ej.: Recepción',required:true}],'Crear pantalla'); return; }
+  if(t.dataset.addsite!==undefined){ formModal('site','Nuevo cliente','Si tiene consola UniFi, Ondi lee sus equipos desde la nube. Si no, se instala el agente en su red.',[
+      {id:'name',label:'Nombre del cliente',required:true,placeholder:'Ej.: Farmacia Central',wide:true},{id:'city',label:'Ciudad',placeholder:'Montevideo'},{id:'contact',label:'Contacto',placeholder:'Nombre'},
+      {id:'link',label:'Conexión',type:'select',options:[['unifi','Consola UniFi (sin instalar nada)'],['agent','Agente Ondi (otras marcas)']]},{id:'console',label:'Modelo de consola',placeholder:'UDM Pro, Cloud Gateway…'},
+      {id:'plan',label:'Plan',type:'select',options:[['Básico','Básico · USD 10'],['Pro','Pro · USD 20'],['Empresa','Empresa · USD 40']],value:'Pro'},{id:'screen',label:'Se muestra en',type:'select',options:[['','Ninguna (solo avisos)'],...SCREENS.map(p=>[p.id,p.name])]}],'Crear cliente'); return; }
+  if(t.dataset.addcontact!==undefined){ formModal('contact','Agregar contacto de guardia','',[{id:'name',label:'Nombre',required:true,wide:true},{id:'role',label:'Rol',type:'select',options:[['Escalamiento · siguiente aviso','Escalamiento (siguiente aviso)'],['Técnico de guardia','Técnico de guardia'],['Horario de oficina','Solo en horario de oficina']]},{id:'ch',label:'Avisar por',type:'select',options:[['WhatsApp','WhatsApp'],['WhatsApp · Push','WhatsApp y push'],['Correo','Correo']]}],'Agregar'); return; }
+  if(t.dataset.delcontact){ const c=S.contacts.splice(+t.dataset.delcontact,1)[0]; render(); toast('Contacto quitado', c.name); return; }
+  if(t.dataset.upload!==undefined){ const inp=$('#planFile'); inp.value=''; inp.click(); return; }
+  if(t.dataset.addlevel!==undefined){ const P=PLANS[S.site]; const L={id:'n'+Date.now().toString(36), name:'Nivel '+(P.levels.length+1), zones:[]}; P.levels.push(L); S.pl=L.id; S.pv='2d'; render(); toast('Nivel agregado', 'Subile una imagen y ubicá sus equipos'); return; }
   if(t.dataset.ack){ const a=ALERTS.find(a=>a.id==t.dataset.ack); a.state='ack'; toast('Alerta reconocida','Se detiene el escalamiento'); render(); return; }
   if(t.dataset.ticket){ const a=ALERTS.find(a=>a.id==t.dataset.ticket); a.ticket='OL-'+(ticketN++); a.state='ack'; toast(`Ticket ${a.ticket} creado en Olumi`, 'Prioridad: '+(a.sev==='down'?'emergencia':'normal')); render(); return; }
   if(t.dataset.test){ const x=dev(t.dataset.test); t.disabled=true; t.textContent='Probando…'; setTimeout(()=>{ if(x.status==='down') toast('Sigue sin responder', x.name+' · 3 de 3 intentos fallaron','down'); else toast('Responde bien', `${x.name} · ${x.lat} ms`); t.disabled=false; t.textContent='Probar ahora'; },1200); return; }
@@ -1108,7 +1186,6 @@ document.addEventListener('click', e=>{
     ALERTS.push(a); S.flash=a.id; render(); toast(`${sw.name} sin respuesta`, `1 alerta en lugar de ${kids.length+1} · ${kids.length} equipos quedan sin acceso`,'down'); return; }
   if(t.dataset.restsw){ recover(dev(t.dataset.restsw),'Switch restablecido'); return; }
   if(t.dataset.toast){ toast(t.dataset.toast); return; }
-  if(t.dataset.addsite!==undefined){ toast('Alta de cliente (demo)','Elegís su consola UniFi o generás un código para el agente'); return; }
   if(t.id==='toggleSim'){ S.sim=!S.sim; document.body.classList.toggle('paused',!S.sim); t.textContent=S.sim?'Pausar simulación':'Reanudar simulación'; $('#liveTxt').textContent=S.sim?'En vivo · UniFi cada 60 s':'Simulación en pausa'; return; }
 });
 document.addEventListener('change', e=>{
@@ -1117,6 +1194,20 @@ document.addEventListener('change', e=>{
   if(el.dataset.screenFor!==undefined){ const s=site(el.dataset.screenFor); s.screen=el.value||null; toast(s.screen?`${s.name} se ve en ${screen(s.screen).name}`:`${s.name} pasa a solo avisos`, s.screen?'Sus alertas se muestran en la pantalla':'Sus alertas llegan por WhatsApp y push'); render(); }
   if(el.dataset.pick){ const s=site(el.dataset.s); s.screen = el.checked ? el.dataset.pick : null; toast(el.checked?`${s.name} agregado a ${screen(el.dataset.pick).name}`:`${s.name} quitado de la pantalla`, el.checked?'':'Ahora avisa por WhatsApp y push'); render(); }
   if(el.dataset.rot){ screen(el.dataset.rot).rotate = el.checked; }
+});
+document.addEventListener('submit', e=>{
+  const form = e.target.closest('form[data-form]'); if(!form) return; e.preventDefault();
+  const d = formData(form), kind = form.dataset.form;
+  if(kind==='screen'){ const p={id:'p'+(SCREENS.length+1), name:d.name, place:d.place, rotate:false}; while(screen(p.id)) p.id='p'+(parseInt(p.id.slice(1))+1); SCREENS.push(p); closeModal(); render(); toast(`${p.name} creada`, 'Marcá qué clientes muestra'); }
+  if(kind==='site'){ const s=createSite(d); closeModal(); go('sitios', s.id); toast(`${s.name} creado`, s.link==='unifi'?'Leyendo su consola UniFi…':'Esperando al agente en su red…'); }
+  if(kind==='contact'){ S.contacts.push({name:d.name, role:d.role, ch:d.ch}); closeModal(); render(); toast('Contacto agregado', d.name); }
+});
+document.addEventListener('change', e=>{
+  if(e.target.id!=='planFile' || !e.target.files[0]) return;
+  const file=e.target.files[0], sid=S.site; if(!sid) return;
+  loadPlanImage(file, url=>{ const P = PLANS[sid] || (PLANS[sid]={levels:[]}); let L = P.levels.find(l=>l.id===S.pl);
+    if(!L){ L={id:'n'+Date.now().toString(36), name:P.levels.length?'Nivel '+(P.levels.length+1):'Planta', zones:[]}; P.levels.push(L); S.pl=L.id; }
+    L.img=url; S.pv='2d'; S.layer='estado'; S.editPins=true; S.siteTab='plano'; render(); toast('Plano cargado', 'Arrastrá cada equipo a su lugar y tocá «Listo»'); });
 });
 document.addEventListener('input', e=>{ if(e.target.id==='q'){ S.q=e.target.value; const pos=e.target.selectionStart; render(); const q=$('#q'); if(q){ q.focus(); q.setSelectionRange(pos,pos); } } });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if($('#modal').innerHTML) closeModal(); else if(S.wall) closeWall(); } });
@@ -1156,17 +1247,35 @@ setInterval(()=>{
   DEV.forEach(x=>{ if(x.status==='down'||x.unreach) return; const v=Math.max(1,Math.round(x.base*(0.7+Math.random()*0.6))+(x.latHigh?300:0)); x.lat=v; x.hist.push(v); x.hist.shift(); });
   if(tick%8===3 && !simDev){
     const [sid,name] = SIMS[Math.floor(tick/8)%2];
-    simDev = devBy(sid,name); const s = site(sid);
+    const cand = devBy(sid,name); const s = site(sid);
+    if(!cand || cand.spare || cand.unreach || cand.status==='down') return;
+    simDev = cand;
     simDev.status='down'; simDev.lat=null; simDev.hist[23]=null; simDev.mval='Desconectado'; simDev.uptime='—';
     const a = {id:++aid, dev:simDev.id, sev:'down', title:'Access Point desconectado', at:Date.now(), state:'open', notified:routeFor(sid,'down'), ticket:S.cfg.olumi?'OL-'+(ticketN++):null};
     ALERTS.push(a); S.flash=a.id;
     toast(`${name} desconectado`, `${s.name} · ${s.screen?'se ve en '+screen(s.screen).name+' y push al iPhone':a.notified.join(' y ')}${a.ticket?' · ticket '+a.ticket:''}`,'down');
   } else if(tick%8===7 && simDev){ const x=simDev; simDev=null; recover(x, site(x.site).name+' · se recuperó solo'); return; }
   const typing = (document.activeElement && document.activeElement.id==='q') || S.editPins || drag;
-  if(!$('#modal').innerHTML && S.view!=='ajustes' && !typing) render(); else { renderNav(); renderWall(); }
+  const sig = signature();
+  if(sig!==lastSig){ lastSig=sig; if(!$('#modal').innerHTML && !typing) render(); else { renderNav(); renderWall(); } }
+  else patchLive();
 }, 3000);
+/* Firma del estado visible: si no cambia, no se redibuja la vista (así no se pierden clics ni hover). */
+let lastSig = '';
+function signature(){
+  return [ DEV.map(x=>x.status+(x.spare?'s':'')+(x.unreach?'u':'')+x.mval).join(','), ALERTS.map(a=>a.id+a.state+(a.ticket||'')).join(','),
+    SITES.map(s=>s.id+(s.screen||'')+(s.discovering?'d':'')).join(','), SCREENS.length, S.contacts.length, Math.floor(Date.now()/60000) ].join('|');
+}
+/* Entre cambios, solo se actualizan en el lugar las latencias y los gráficos de respuesta. */
+function patchLive(){
+  document.querySelectorAll('.dev[data-dev]').forEach(el=>{ const x=dev(el.dataset.dev); if(!x || x.status==='down' || x.unreach || x.spare) return;
+    const lat=el.querySelector('.row .mono'); if(lat) lat.textContent=x.lat+' ms';
+    const sp=el.querySelector('.spark'); if(sp) sp.outerHTML=spark(x.hist,x.status); });
+}
 
-render();
+let booted=false;
+function boot(){ if(!booted){ booted=true; render(); } route(); }
+boot();
 </script>
 
 <script>if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>

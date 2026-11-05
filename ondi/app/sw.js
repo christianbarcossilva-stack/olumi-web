@@ -1,5 +1,5 @@
 // Ondi: guarda la app en el equipo para que abra aunque no haya señal. Siempre intenta la red primero.
-const CACHE = 'ondi-app-v1';
+const CACHE = 'ondi-app-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icono-192.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));
