@@ -569,6 +569,10 @@ th{font-size:11px;letter-spacing:.07em}
   #sheet.wide .rte{min-height:220px}
 }
 .rte img{max-width:100%;height:auto;display:block;border-radius:10px;margin:8px 0;border:1px solid var(--line-2)}
+/* 1.16: croquis e ítems con cable */
+.ri-row2{margin-top:4px}.ri-row2 .ri-m,.ri-row2 .ri-alt{flex:0 0 108px}.ri-row2 .ri-canal{flex:0 0 150px;margin:0}
+@media (max-width:600px){.ri-row2 .ri-m,.ri-row2 .ri-alt{flex:1 1 90px}.ri-row2 .ri-canal{flex:1 1 120px}}
+.pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -1639,6 +1643,7 @@ async function act(a,el){
   if(await obrasAct(k,el,arg))return;
   if(await planosAct(k,el,arg))return;
   if(await campoAct(k,el,arg))return;
+  if(await croquisAct(k,el,arg))return;
   if(await entAct(k,el,arg))return;
   if(await ccAct(k,el,arg))return;
   if(await fichasAct(k,el,arg))return;
@@ -1735,7 +1740,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.15',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.16',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -1820,7 +1825,7 @@ const pryName=id=>(D.proyectos&&D.proyectos[id]?.nombre)||'';
 function pryOpts(cli){const l=arr('proyectos').filter(p=>!cli||p.clienteId===cli).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
   return[['','Sin proyecto'],...l.map(p=>[p.id,p.nombre+(cli?'':' · '+(cliName(p.clienteId)||''))])]}
 const PRYF=()=>[{k:'nombre',l:'Nombre del proyecto',w:'full',ph:'Ej.: CCTV depósito 2026'},{k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},
-  {k:'estado',l:'Estado',t:'select',o:PRYE},{k:'direccion',l:'Dirección de la obra',w:'full'},{k:'inicio',l:'Inicio',t:'date'},{k:'fin',l:'Fin estimado',t:'date'},
+  {k:'estado',l:'Estado',t:'select',o:PRYE},{k:'direccion',l:'Dirección de la obra',w:'full'},{k:'contactoLugar',l:'Contacto en el lugar',ph:'Quién recibe al técnico'},{k:'telLugar',l:'Teléfono del contacto',t:'tel'},{k:'inicio',l:'Inicio',t:'date'},{k:'fin',l:'Fin estimado',t:'date'},
   {k:'descripcion',l:'Descripción',t:'rich',w:'full',ph:'Alcance, equipos, contactos en obra. Usá listas y casillas ☐ para lo pendiente.'}];
 function pryItems(id){
   const tks=arr('tickets').filter(t=>t.proyectoId===id),tkIds=new Set(tks.map(t=>t.id));
@@ -2188,12 +2193,12 @@ async function uploadPlano(inp,replaceId){
       const up=await AS.upload(h.blob,{type:'image/jpeg'});const img={id:up.id,w:h.w,h:h.h};
       if(replaceId){const p=D.planos[replaceId];const vs=[...(p.versiones||[]),{img:p.img,original:p.original||null,at:p.actualizado||p.creado||Date.now(),by:p.actualizadoPor||''}];
         await put('planos',replaceId,{...p,img,original:orig,versiones:vs,actualizado:Date.now(),actualizadoPor:ME||''});ids.push(replaceId);break}
-      const pry=D.proyectos[inp.dataset.pry]||{};const id=uid();
-      await put('planos',id,{nombre:hojas.length>1?`${base} · hoja ${h.page}`:base,proyectoId:inp.dataset.pry||'',clienteId:pry.clienteId||'',img,original:orig,versiones:[],escala:null,puntos:[],recorridos:[],creado:Date.now(),actualizado:Date.now(),por:ME||''});ids.push(id);
+      const pry=D.proyectos[inp.dataset.pry]||{},rel=D.relevamientos[inp.dataset.rel]||{};const id=uid();
+      await put('planos',id,{nombre:hojas.length>1?`${base} · hoja ${h.page}`:base,proyectoId:inp.dataset.pry||rel.proyectoId||'',relevamientoId:inp.dataset.rel||'',clienteId:pry.clienteId||rel.clienteId||'',img,original:orig,versiones:[],escala:null,puntos:[],recorridos:[],creado:Date.now(),actualizado:Date.now(),por:ME||''});ids.push(id);
     }
     inp.value='';if(busy)busy.hidden=true;
     toast(replaceId?'Versión nueva del plano guardada. Los puntos se mantienen.':hojas.length>1?`${hojas.length} hojas subidas`:'Plano subido');
-    if(replaceId){openPlan(replaceId)}else{if(SH&&SH.type==='pry')openSheet('pry',SH.id);if(ids[0])openPlan(ids[0])}
+    if(replaceId){openPlan(replaceId)}else{if(SH&&(SH.type==='pry'||SH.type==='rel'))openSheet(SH.type,SH.id);if(ids[0])openPlan(ids[0])}
   }catch(e){if(busy)busy.hidden=true;inp.value='';console.error(e);toast(e&&e.code?upErr(e):'No se pudo leer el archivo. Probá con un PDF o una imagen JPG o PNG.')}
 }
 
@@ -2204,7 +2209,7 @@ function openPlan(id){
   PV={id,s:1,tx:0,ty:0,mode:'ver',tipo:'cam',rtipo:'utp',draft:null,sel:null,cal:null,ptrs:new Map(),moved:false};
   document.body.style.overflow='hidden';w.hidden=false;renderPv(true);
 }
-function closePlan(){flushPlan();const w=document.getElementById('pv');if(w)w.hidden=true;PV=null;if(!SH)document.body.style.overflow='';if(SH&&SH.type==='pry'&&!SH.dirty)openSheet('pry',SH.id)}
+function closePlan(){flushPlan();const w=document.getElementById('pv');if(w)w.hidden=true;PV=null;if(!SH)document.body.style.overflow='';if(SH&&SH.type==='pry'&&!SH.dirty)openSheet('pry',SH.id);if(SH&&SH.type==='rel'&&SH.id){const el=$('#relPlanos');if(el){el.outerHTML=relPlanosHtml(SH.id,D.relevamientos[SH.id]||{});planUrlsSigned()}}}
 function curPlan(){return PV&&(PV.doc||D.planos[PV.id])}
 function savePlanSoon(){clearTimeout(PVsave);PVsave=setTimeout(flushPlan,500)}
 async function flushPlan(){clearTimeout(PVsave);PVsave=null;if(!PV||!PV.dirty)return;const p=PV.doc||D.planos[PV.id];PV.dirty=false;
@@ -2213,13 +2218,14 @@ function mutPlan(fn){const p=curPlan();const n=JSON.parse(JSON.stringify(p));fn(
 const canEdit=()=>!!AS&&!readonly&&!PORTAL();
 function renderPv(fit){
   const p=curPlan();if(!p)return closePlan();const w=$('#pv');const ed=canEdit();
-  const modes=[['ver','Mirar'],['punto','+ Punto'],['ruta','Recorrido'],['escala','Escala']];
+  const modes=[['ver','Mirar'],['dibujo','Dibujar'],['punto','+ Punto'],['ruta','Recorrido'],['escala','Escala']];
   w.innerHTML=`<header class="pv-h"><button class="btn ghost" data-act="pvclose" aria-label="Cerrar plano">✕</button><div class="pv-t"><b>${esc(p.nombre||'Plano')}</b><span class="muted">${esc(pryName(p.proyectoId)||cliName(p.clienteId)||'')}</span></div>
     <span class="sp"></span>${ed&&has('presupuestos')?'<button class="btn pri" data-act="pv2pres"><span class="only-dsk">Pasar a presupuesto</span><span class="only-mob">Presupuesto</span></button>':''}</header>
     ${ed?`<div class="pv-tools"><div class="seg" role="group" aria-label="Modo">${modes.map(([k,n])=>`<button class="${PV.mode===k?'on':''}" data-act="pvmode:${k}" aria-pressed="${PV.mode===k}">${n}</button>`).join('')}</div>
       ${PV.mode==='punto'?`<div class="pv-chips">${PTIPOS.map(t=>`<button class="pv-chip${PV.tipo===t.k?' on':''}" data-act="pvtipo:${t.k}" style="--pc:${t.c}"><i>${t.l}</i>${t.n}</button>`).join('')}</div>`:''}
+      ${PV.mode==='dibujo'?dibujoChips():''}
       ${PV.mode==='ruta'?`<div class="pv-chips">${RTIPOS.map(t=>`<button class="pv-chip${PV.rtipo===t.k?' on':''}" data-act="pvrtipo:${t.k}" style="--pc:${t.c}"><i>—</i>${t.n}</button>`).join('')}${PV.draft&&PV.draft.length?`<button class="btn" data-act="pvundo">Deshacer</button><button class="btn pri" data-act="pvend">Terminar recorrido</button>`:''}</div>`:''}
-      <p class="hint pv-help">${{ver:'Arrastrá para moverte, pellizcá o usá + y − para el zoom. Tocá un punto para ver su detalle.',punto:'Tocá el plano para ubicar: '+PTK[PV.tipo].n+'.',ruta:p.escala?'Tocá cada quiebre del recorrido y después “Terminar recorrido”.':'Primero calibrá la escala para medir metros (podés dibujar igual).',escala:'Tocá dos puntos de una medida que conozcas (por ejemplo, una pared) y escribí cuántos metros son.'}[PV.mode]}</p></div>`:''}
+      <p class="hint pv-help">${{dibujo:DHELP(),ver:'Arrastrá para moverte, pellizcá o usá + y − para el zoom. Tocá un punto para ver su detalle.',punto:'Tocá el plano para ubicar: '+PTK[PV.tipo].n+'.',ruta:p.escala?'Tocá cada quiebre del recorrido y después “Terminar recorrido”.':'Primero calibrá la escala para medir metros (podés dibujar igual).',escala:'Tocá dos puntos de una medida que conozcas (por ejemplo, una pared) y escribí cuántos metros son.'}[PV.mode]}</p></div>`:''}
     <div class="pv-body"><div class="pv-stage" id="pvStage"><div class="pv-world" id="pvWorld"><img id="pvImg" data-blob="${esc(p.img&&p.img.id||'')}" src="${esc(blobUrl(p.img&&p.img.id))}" alt="Plano ${esc(p.nombre||'')}" draggable="false" width="${p.img.w}" height="${p.img.h}" style="width:${p.img.w}px;height:${p.img.h}px;max-width:none"><svg id="pvSvg" viewBox="0 0 ${p.img.w} ${p.img.h}" width="${p.img.w}" height="${p.img.h}" style="width:${p.img.w}px;height:${p.img.h}px;max-width:none"></svg></div>
       <div class="pv-zoom"><button class="btn" data-act="pvz:in" aria-label="Acercar">+</button><button class="btn" data-act="pvz:out" aria-label="Alejar">−</button><button class="btn" data-act="pvz:fit">Ajustar</button></div></div>
       <aside class="pv-side" id="pvSide"></aside></div><p class="busy" id="pvBusy" hidden></p>`;
@@ -2232,14 +2238,19 @@ function toPlan(e){const st=$('#pvStage').getBoundingClientRect(),p=curPlan();co
 function bindStage(){
   const st=$('#pvStage');if(!st)return;
   st.onwheel=e=>{e.preventDefault();const r=st.getBoundingClientRect();zoomAt(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top)};
-  st.onpointerdown=e=>{st.setPointerCapture(e.pointerId);PV.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});PV.moved=false;PV.down={x:e.clientX,y:e.clientY,t:Date.now(),target:e.target}};
+  st.onpointerdown=e=>{st.setPointerCapture(e.pointerId);PV.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});PV.moved=false;PV.down={x:e.clientX,y:e.clientY,t:Date.now(),target:e.target};
+    if(PV.mode==='dibujo'&&PV.dtool==='libre'&&canEdit()&&PV.ptrs.size===1)PV.free=[toPlan(e)]};
   st.onpointermove=e=>{const pr=PV.ptrs.get(e.pointerId);if(!pr)return;
+    if(PV.free){if(PV.ptrs.size>1){PV.free=null}else{PV.free.push(toPlan(e));PV.moved=true;drawPv();return}}
     if(PV.ptrs.size===2){const [a,b]=[...PV.ptrs.values()];const d0=Math.hypot(a.x-b.x,a.y-b.y);pr.x=e.clientX;pr.y=e.clientY;const [c,dd]=[...PV.ptrs.values()];const d1=Math.hypot(c.x-dd.x,c.y-dd.y);const r=st.getBoundingClientRect();if(d0>0)zoomAt(d1/d0,(c.x+dd.x)/2-r.left,(c.y+dd.y)/2-r.top);PV.moved=true;return}
     const dx=e.clientX-pr.x,dy=e.clientY-pr.y;if(Math.abs(e.clientX-PV.down.x)+Math.abs(e.clientY-PV.down.y)>6)PV.moved=true;
     if(PV.moved){PV.tx+=dx;PV.ty+=dy;applyT()}pr.x=e.clientX;pr.y=e.clientY};
-  st.onpointerup=st.onpointercancel=e=>{const was=PV.ptrs.size;PV.ptrs.delete(e.pointerId);if(was===1&&!PV.moved&&e.type==='pointerup')tapPlan(e)};
+  st.onpointerup=st.onpointercancel=e=>{const was=PV.ptrs.size;PV.ptrs.delete(e.pointerId);
+    if(PV.free){const v=PV.free;PV.free=null;if(v.length>2)mutPlan(p=>{p.dibujo=[...(p.dibujo||[]),{id:uid(),t:'free',v,c:PV.dcol||'#1E1F23'}]});else drawPv();return}
+    if(was===1&&!PV.moved&&e.type==='pointerup')tapPlan(e)};
 }
 function tapPlan(e){
+  if(PV.mode==='dibujo'&&canEdit()){dibujoTap(e);return}
   const tg=(PV.down&&PV.down.target)||e.target;const mk=tg.closest&&tg.closest('[data-pt],[data-rt]');
   if(mk&&PV.mode!=='ruta'&&PV.mode!=='escala'){PV.sel=mk.dataset.pt?{t:'pt',id:mk.dataset.pt}:{t:'rt',id:mk.dataset.rt};drawPv();renderSide();return}
   if(!canEdit()){PV.sel=null;drawPv();renderSide();return}
@@ -2260,10 +2271,11 @@ function drawPv(){
   if(PV.cal&&PV.cal.length){h+=PV.cal.map(v=>`<circle cx="${v[0]*W}" cy="${v[1]*H}" r="${8*k}" fill="none" stroke="#D93A30" stroke-width="${3*k}"/>`).join('');if(PV.cal.length===2)h+=`<line x1="${PV.cal[0][0]*W}" y1="${PV.cal[0][1]*H}" x2="${PV.cal[1][0]*W}" y2="${PV.cal[1][1]*H}" stroke="#D93A30" stroke-width="${3*k}" stroke-dasharray="${8*k} ${6*k}"/>`}
   (p.puntos||[]).forEach(q=>{const t=PTK[q.tipo]||PTIPOS[7],sel=PV.sel&&PV.sel.t==='pt'&&PV.sel.id===q.id,r=(sel?17:14)*k,cx=q.x*W,cy=q.y*H;
     h+=`<g data-pt="${q.id}" style="cursor:pointer"><circle cx="${cx}" cy="${cy}" r="${r+4*k}" fill="${PESTC[q.estado]||PESTC.pendiente}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${t.c}" stroke="#fff" stroke-width="${2*k}"/><text x="${cx}" y="${cy+5*k}" font-size="${13*k}" font-family="Arial" font-weight="700" fill="#fff" text-anchor="middle">${esc(q.etiqueta||t.l)}</text></g>`});
-  svg.innerHTML=h;
+  svg.innerHTML=drawDibujo(p)+h;
 }
 function renderSide(){
   const el=$('#pvSide'),p=curPlan();if(!el||!p)return;const ed=canEdit();
+  if(PV.mode==='dibujo'&&ed){dibujoSide();return}
   if(PV.mode==='escala'&&ed){el.innerHTML=`<h3>Escala</h3>${p.escala?`<p class="muted">Calibrada: 1 m = ${Math.round(1/p.escala.mpp)} px del plano.</p>`:'<p class="muted">Sin calibrar.</p>'}
     ${PV.cal&&PV.cal.length===2?`<label class="fld" for="pv_m"><span>¿Cuántos metros hay entre los dos puntos?</span><input id="pv_m" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ej.: 12,5"></label><div class="actions"><button class="btn pri" data-act="pvcal">Guardar escala</button></div>`:`<p class="hint">Tocaste ${PV.cal?PV.cal.length:0} de 2 puntos.</p>`}`;return}
   if(PV.sel&&PV.sel.t==='pt'){const q=(p.puntos||[]).find(x=>x.id===PV.sel.id);if(!q){PV.sel=null;return renderSide()}const t=PTK[q.tipo]||PTIPOS[7];
@@ -2336,7 +2348,7 @@ function relToLines(r){
   (RSERV[r.servicio]||[]).forEach(f=>{const v=(r.q||{})[f.k];if(!f.kw||!n0(v))return;const cant=f.qty||n0(v);out.push(lineFor(f.kw,f.l.replace(/ estimad[oa]s? \(m\)/,'').replace(/ \(m\)/,''),cant,f.u||'unidad',mon))});
   relItemsToLines(r,mon,out);
   if(n0(r.jornales))out.push(lineFor(['jornal','mano de obra'],'Mano de obra (jornal)',n0(r.jornales),'jornal',mon));
-  if(r.proyectoId){pryPlanos(r.proyectoId).forEach(p=>planToLines(p,10).forEach(l=>{const ex=out.find(o=>o.desc===l.desc);if(ex)ex.cant=Math.max(ex.cant,l.cant);else out.push(l)}))}
+  if(r.id||r.proyectoId){(r.id?relPlanos(r.id):pryPlanos(r.proyectoId)).forEach(p=>planToLines(p,10).forEach(l=>{const ex=out.find(o=>o.desc===l.desc);if(ex)ex.cant=Math.max(ex.cant,l.cant);else out.push(l)}))}
   return out;
 }
 function cliRelHtml(cid,pid){
@@ -2365,8 +2377,8 @@ async function planosAct(k,el,arg){
     case'pv2pres':{await flushPlan();const p=curPlan();const lines=planToLines(p,10);if(!lines.length){toast('Marcá puntos o recorridos en el plano primero.');return true}
       const q=quoteDraft({clienteId:p.clienteId,proyectoId:p.proyectoId,lineas:lines});closePlan();openSheet('pres',null,{copy:q});SH.dirty=true;
       toast(`Presupuesto armado con ${lines.length} línea${lines.length>1?'s':''} (metros +10 % de desperdicio). Revisá los precios.`);return true}
-    case'rel2pres':{const id=await saveRel(false);if(!id)return true;const r=D.relevamientos[id];const lines=relToLines(r);
-      const q=quoteDraft({clienteId:r.clienteId,proyectoId:r.proyectoId,lineas:lines,notas:r.notas});openSheet('pres',null,{copy:q});SH.dirty=true;
+    case'rel2pres':{const id=await saveRel(false);if(!id)return true;const r={...D.relevamientos[id],id};const lines=relToLines(r);
+      const q=quoteDraft({clienteId:r.clienteId,proyectoId:r.proyectoId,lineas:lines,notas:[htmlToPlain(r.notas),ETAPAS_TXT].filter(Boolean).join('\n\n')});q.relevamientoId=id;q.contactoLugar=r.contacto||'';q.obra=r.direccion||'';openSheet('pres',null,{copy:q});SH.dirty=true;
       toast(lines.length?`Presupuesto armado con ${lines.length} línea${lines.length>1?'s':''}. Revisá los precios.`:'Presupuesto vacío: cargá cantidades en el relevamiento.');return true}
   }
   return false;
@@ -2919,7 +2931,8 @@ async function obraFromQuote(q){
   if(q.obraId&&D.proyectos[q.obraId])return q.obraId;
   const o=q.oportunidadId&&D.oportunidades[q.oportunidadId],c=D.clientes[q.clienteId]||{};
   let pid=q.proyectoId&&D.proyectos[q.proyectoId]?q.proyectoId:'';
-  if(!pid){pid=uid();D.proyectos[pid]={nombre:(o&&o.titulo)||`Obra ${q.numero||''} · ${c.nombre||''}`.trim(),clienteId:q.clienteId||'',estado:'activo',inicio:today(),direccion:(o&&o.obra)||c.direccion||'',presupuestoId:q.id,etapas:ETPL.map(e=>({...e})),creado:Date.now()};await put('proyectos',pid,D.proyectos[pid])}
+  if(!pid){pid=uid();D.proyectos[pid]={nombre:(o&&o.titulo)||`Obra ${q.numero||''} · ${c.nombre||''}`.trim(),clienteId:q.clienteId||'',estado:'activo',inicio:today(),direccion:(o&&o.obra)||q.obra||c.direccion||'',contactoLugar:q.contactoLugar||c.contacto||'',telLugar:q.telLugar||'',presupuestoId:q.id,etapas:ETPL.map(e=>({...e})),creado:Date.now()};await put('proyectos',pid,D.proyectos[pid])}
+  if(q.relevamientoId){for(const pl of arr('planos').filter(x=>x.relevamientoId===q.relevamientoId&&!x.proyectoId))await put('planos',pl.id,{...D.planos[pl.id],proyectoId:pid});const rl=D.relevamientos[q.relevamientoId];if(rl&&!rl.proyectoId)await patch('relevamientos',q.relevamientoId,{proyectoId:pid})}
   else if(!(D.proyectos[pid].etapas||[]).length){D.proyectos[pid]={...D.proyectos[pid],etapas:ETPL.map(e=>({...e})),presupuestoId:q.id};await put('proyectos',pid,D.proyectos[pid])}
   const E=D.proyectos[pid].etapas,eid=k=>(E.find(e=>e.id===k)||E[0]).id;
   const ls=(q.lineas||[]).filter(l=>(l.desc||'').trim()&&!['jornal','hora'].includes(l.unidad));
@@ -3984,38 +3997,37 @@ async function catMonAll(prods,mon){
 let RIIDX=-1;
 const prodDatalist=()=>`<datalist id="prodList">${arr('productos').map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist>`;
 function relItemRow(it,i){
-  return`<div class="ritem" data-i="${i}"><div class="ri-row"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Sección o lugar · ej. Puntos nuevos de AP" aria-label="Sección o lugar" autocomplete="off"><input class="ri-desc" list="prodList" value="${esc(it.desc||'')}" placeholder="Material o tarea · ej. Caño daisa 1″" aria-label="Material o tarea" autocomplete="off"><input class="ri-cant" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cant??1)}" aria-label="Cantidad"><select class="ri-u" aria-label="Unidad">${opts([['unidad','u'],['metro','m'],['jornal','jornal'],['hora','h']],it.unidad||'unidad')}</select>${readonly?'':`<button type="button" class="btn ico" data-act="rifoto:${i}" title="Foto del ítem" aria-label="Foto del ítem">📷</button><button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem">✕</button>`}</div>${(it.fotos||[]).length?photosHtmlRO(it.fotos):''}</div>`;
+  return`<div class="ritem" data-i="${i}"><div class="ri-row"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Sección o lugar · ej. Puntos nuevos de AP" aria-label="Sección o lugar" autocomplete="off"><input class="ri-desc" list="prodList" value="${esc(it.desc||'')}" placeholder="Material o tarea · ej. Caño daisa 1″" aria-label="Material o tarea" autocomplete="off"><input class="ri-cant" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cant??1)}" aria-label="Cantidad"><select class="ri-u" aria-label="Unidad">${opts([['unidad','u'],['metro','m'],['jornal','jornal'],['hora','h']],it.unidad||'unidad')}</select>${readonly?'':`<button type="button" class="btn ico" data-act="rifoto:${i}" title="Foto del ítem" aria-label="Foto del ítem">📷</button><button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem">✕</button>`}</div>
+    <div class="ri-row ri-row2"><input class="ri-m" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.metros??'')}" placeholder="Cable m" aria-label="Metros de cable" title="Metros de cable hasta este punto (promedio si no medís)"><select class="ri-canal" aria-label="Canalización">${opts(CANALES,it.canal||'')}</select><input class="ri-alt" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.altura??'')}" placeholder="Altura m" aria-label="Altura"></div>${(it.fotos||[]).length?photosHtmlRO(it.fotos):''}</div>`;
 }
 function relItemsHtml(items){return(items||[]).length?items.map(relItemRow).join(''):'<p class="muted" style="margin:0">Todavía no cargaste ítems. Tocá “+ Ítem” y anotá dónde, qué y cuántos. Cada ítem puede llevar su foto y después arma el presupuesto solo.</p>'}
 function relReadItems(){
   const old=(RELJ&&RELJ.items)||[];
   const rows=[...document.querySelectorAll('#relItems .ritem')];
   if(!rows.length)return old.map(x=>({...x}));
-  return rows.map(el=>{const o=old[+el.dataset.i]||{};return{id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc:(el.querySelector('.ri-desc')?.value||'').trim(),cant:n0(el.querySelector('.ri-cant')?.value),unidad:el.querySelector('.ri-u')?.value||'unidad',fotos:o.fotos||[]}});
+  return rows.map(el=>{const o=old[+el.dataset.i]||{};return{id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc:(el.querySelector('.ri-desc')?.value||'').trim(),cant:n0(el.querySelector('.ri-cant')?.value),unidad:el.querySelector('.ri-u')?.value||'unidad',metros:n0(el.querySelector('.ri-m')?.value)||undefined,canal:el.querySelector('.ri-canal')?.value||'',altura:n0(el.querySelector('.ri-alt')?.value)||undefined,fotos:o.fotos||[]}});
 }
 const relItemsClean=items=>(items||[]).filter(x=>x.desc||x.ubic||(x.fotos||[]).length);
 function relItemsRender(){const e=$('#relItems');if(e)e.innerHTML=relItemsHtml(RELJ.items);const c=$('#riCount');if(c)c.textContent=relItemsClean(RELJ.items).length?'· '+relItemsClean(RELJ.items).length:''}
 function relToolsHtml(r){
   if(readonly)return'';
-  return`<div class="reltools">${AS?`<label class="btn pri upl">📷 Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button><button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?'📍 Guardada':'📍 Ubicación'}</button><button type="button" class="btn ghost" data-act="relshare" title="Copiar o compartir como texto">Compartir</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
+  return`<div class="reltools">${AS?`<label class="btn pri upl">📷 Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button>${AS?'<button type="button" class="btn" data-act="croquis">✏️ Croquis</button>':''}<button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?'📍 Guardada':'📍 Ubicación'}</button><button type="button" class="btn ghost" data-act="relshare" title="Copiar o compartir como texto">Compartir</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
 }
 function relGeoHtml(r){return r.geo?`<p class="hint" id="relGeo"><a href="https://maps.google.com/?q=${encodeURIComponent(r.geo.lat+','+r.geo.lng)}" target="_blank" rel="noopener">Ver ubicación en el mapa</a> · ${fdate(new Date(r.geo.at||Date.now()).toISOString().slice(0,10))}</p>`:'<p class="hint" id="relGeo"></p>'}
 function sheetRel(id,p){
   const r=id?{...D.relevamientos[id]}:{fecha:today(),responsable:ME||'',clienteId:p.cli||(D.proyectos[p.pry]||{}).clienteId||'',proyectoId:p.pry||'',servicio:p.serv||'CCTV',q:{},fotos:[],items:[],jornales:1};
   r.items=(r.items||[]).map(x=>({...x}));RELJ=r;
   let body=relToolsHtml(r)+`<div class="grid">${RELF().map(f=>fldv(f,r)).join('')}</div>
-    <section class="rel"><h3>Ítems relevados <span class="muted" id="riCount">${r.items.length?'· '+r.items.length:''}</span></h3><div id="relItems">${relItemsHtml(r.items)}</div>${readonly?'':'<div class="actions"><button type="button" class="btn" data-act="riadd">+ Ítem</button></div>'}${prodDatalist()}<input type="file" id="riFile" accept="image/*" capture="environment" data-up="rifoto" hidden></section>
+    <section class="rel"><h3>Ítems relevados <span class="muted" id="riCount">${r.items.length?'· '+r.items.length:''}</span></h3><div id="relItems">${relItemsHtml(r.items)}</div>${readonly?'':'<div class="actions"><button type="button" class="btn" data-act="riadd">+ Ítem</button><button type="button" class="btn ghost" data-act="rimat" title="Lo que se termina de definir en la oficina: grampas, caños, conectores…">+ Material</button></div>'}${prodDatalist()}<input type="file" id="riFile" accept="image/*" capture="environment" data-up="rifoto" hidden></section>
     <section class="rel"><h3>Fotos</h3><div id="relFotos">${photosHtmlRO(r.fotos||[])}</div>${AS&&!readonly?`<div class="actions"><label class="btn pri upl">Sacar foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*" multiple data-up="relfoto"></label></div><p class="busy" id="upBusy" hidden></p>`:''}${relGeoHtml(r)}</section>
     <section class="rel" id="relQ">${relQHtml(r.servicio,r.q)}</section>`;
-  if(id){const pls=r.proyectoId?pryPlanos(r.proyectoId):[];
-    body+=`<section class="rel"><h3>Planos</h3>${r.proyectoId?(pls.length?pls.map(pl=>{const s=planStats(pl);return`<div class="item link" role="button" tabindex="0" data-act="plan:${pl.id}"><span class="grow">${esc(pl.nombre)}</span><span class="muted">${s.total} puntos${Object.keys(s.metros).length?' · '+fmtM(Object.values(s.metros).reduce((a,b)=>a+b,0)):''}</span></div>`}).join(''):'<p class="muted" style="margin:0">El proyecto todavía no tiene planos.</p>')+(AS?`<div class="actions"><label class="btn upl">Subir plano<input type="file" accept="image/*,application/pdf" data-up="planoint" data-pry="${esc(r.proyectoId)}"></label></div><p class="busy" id="plBusy" hidden></p>`:''):'<p class="muted" style="margin:0">Asigná un proyecto para subir y marcar el plano.</p>'}</section>`;
-  }
+  body+=relPlanosHtml(id,r);
   return sheetFrame('Relevamiento',id?(r.titulo||'Relevamiento'):'Nuevo relevamiento',body,{del:!!id,extra:has('presupuestos')&&!readonly?'<button class="btn" data-act="rel2pres">Armar presupuesto</button>':''});
 }
 async function relEnsureSaved(){if(SH&&SH.id)return SH.id;const nid=await saveRel(false);if(nid){SH.id=nid;const t=$('#shTitle');if(t)t.innerHTML=`<span class="kind">Relevamiento</span>${esc(D.relevamientos[nid].titulo||'Relevamiento')}`}return nid}
 async function campoAct(k,el,arg){
   switch(k){
-    case'riadd':{if(!RELJ)return true;RELJ.items=relReadItems();const last=RELJ.items[RELJ.items.length-1];RELJ.items.push({id:uid(),ubic:last&&last.ubic||'',desc:'',cant:1,unidad:'unidad',fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');const inp=rows[rows.length-1]?.querySelector('.ri-desc');if(inp)inp.focus();return true}
+    case'riadd':{if(!RELJ)return true;RELJ.items=relReadItems();const last=RELJ.items[RELJ.items.length-1];RELJ.items.push({id:uid(),ubic:last&&last.ubic||'',desc:'',cant:1,unidad:'unidad',canal:last&&last.canal||'',fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');const inp=rows[rows.length-1]?.querySelector('.ri-desc');if(inp)inp.focus();return true}
     case'ridel':{if(!RELJ)return true;RELJ.items=relReadItems();RELJ.items.splice(+arg,1);relItemsRender();SH.dirty=true;return true}
     case'rifoto':{if(!RELJ)return true;RELJ.items=relReadItems();RIIDX=+arg;const f=$('#riFile');if(f)f.click();return true}
     case'relgeo':{if(!RELJ)return true;if(!navigator.geolocation){toast('Este dispositivo no da la ubicación.');return true}
@@ -4044,7 +4056,7 @@ function relText(r){
   const U={unidad:'',metro:'m',jornal:'jornal',hora:'h'};const L=[];
   L.push((r.titulo||'Relevamiento')+(r.clienteId?' · '+cliName(r.clienteId):''));L.push(fdate(r.fecha)+(r.direccion?' · '+r.direccion:'')+(r.responsable?' · '+personName(r.responsable).replace(' (vos)',''):''));
   const secs=[];(r.items||[]).forEach(it=>{const k=it.ubic||'';let s=secs.find(x=>x.k===k);if(!s){s={k,l:[]};secs.push(s)}s.l.push(it)});
-  secs.forEach(s=>{L.push('');if(s.k)L.push(s.k+':');s.l.forEach(it=>{const u=U[it.unidad||'unidad']||'';L.push(`(${r2(it.cant||0).toLocaleString('es-UY')}${u?' '+u:''}) ${it.desc||''}`.trim())})});
+  secs.forEach(s=>{L.push('');if(s.k)L.push(s.k+':');s.l.forEach(it=>{const u=U[it.unidad||'unidad']||'';const ex=[it.metros?`${r2(it.metros)} m de cable`:'',it.canal?CANALN[it.canal]||it.canal:'',it.altura?`a ${r2(it.altura)} m`:''].filter(Boolean).join(', ');L.push(`(${r2(it.cant||0).toLocaleString('es-UY')}${u?' '+u:''}) ${it.desc||''}${ex?' · '+ex:''}`.trim())})});
   const q=(RSERV[r.servicio]||[]).filter(f=>(r.q||{})[f.k]).map(f=>f.t==='checkbox'?f.l:`${f.l}: ${(r.q||{})[f.k]}`);if(q.length){L.push('');L.push(...q)}
   if(n0(r.jornales)){L.push('');L.push(`Tiempo: ${r2(r.jornales)} jornal${r.jornales==1?'':'es'}${r.dificultad&&r.dificultad!=='Normal'?' · dificultad '+r.dificultad.toLowerCase():''}`)}
   if(r.notas){L.push('');L.push(r.notas)}
@@ -4061,6 +4073,7 @@ function relItemsToLines(r,mon,out){
     let p=arr('productos').find(x=>qn(x.nombre||'')===q)||findProd([it.desc,...it.desc.split(/[\s,.;()]+/).filter(w=>w.length>3)],un);
     const l=p?{desc:p.nombre,cant,unidad:p.unidad||un,precio:r2(conv(p.precio,p.moneda,mon))}:{desc:it.desc,cant,unidad:un,precio:0};
     const ex=out.find(o=>o.desc===l.desc&&o.unidad===l.unidad);if(ex)ex.cant=r2(ex.cant+cant);else out.push(l)});
+  relCanalLines(r,mon,out);
 }
 
 /* --- ingreso de mercadería con pistola lectora --- */
@@ -4277,6 +4290,100 @@ document.addEventListener('paste',e=>{const ed=e.target.closest&&e.target.closes
 document.addEventListener('drop',e=>{const ed=e.target.closest&&e.target.closest('.rte');if(!ed||!ed.isContentEditable)return;const f=[...((e.dataTransfer||{}).files||[])].find(x=>x.type.startsWith('image/'));if(!f)return;e.preventDefault();rteDropFile(ed,f)});
 document.addEventListener('dragover',e=>{if(e.target.closest&&e.target.closest('.rte'))e.preventDefault()});
 async function rteDropFile(ed,f){ed.focus();try{const b=await shrinkRte(f);let html;if(AS){const up=await AS.upload(b,{type:b.type||f.type});html=`<img data-fid="${esc(up.id)}" src="${esc(blobUrl(up.id))}" alt="">`}else{const du=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)});html=`<img src="${du}" alt="">`}document.execCommand('insertHTML',false,html+'<p><br></p>');if(SH)SH.dirty=true}catch(e){toast(upErr(e))}}
+
+/* ---------- 1.16: croquis (plano en blanco) y dibujo sobre cualquier plano · planos desde el relevamiento · cable y canalización por ítem · contacto en obra ---------- */
+const DTOOLS=[['pared','Pared'],['linea','Línea'],['rect','Rectángulo'],['texto','Texto'],['libre','Mano alzada'],['borrar','Borrar']];
+const DCOLS=[['#1E1F23','Negro'],['#D93A30','Rojo'],['#2F7FD0','Azul'],['#2FA36B','Verde'],['#E6A800','Amarillo']];
+const CANALES=[['','Canalización…'],['bandeja','Bandeja'],['cano','Caño'],['pvc','Conducto PVC'],['canaleta','Canaleta'],['existente','Existente'],['aereo','Aéreo']];
+const CANALN=Object.fromEntries(CANALES.map(([k,n])=>[k,n]));
+const ETAPAS_TXT='Etapas de la instalación:\n1) Canalización y tendido de cable.\n2) Montaje de los equipos.\n3) Puesta a punto, configuración y etiquetado.';
+const htmlToPlain=h=>{if(!h)return'';if(!/<[a-z][\s\S]*>/i.test(String(h)))return String(h);const d=document.createElement('div');d.innerHTML=h;return rtePlain(d)};
+/* --- planos del relevamiento (propios o del proyecto) --- */
+function relPlanos(rid){const r=D.relevamientos[rid]||{};return arr('planos').filter(p=>p.relevamientoId===rid||(r.proyectoId&&p.proyectoId===r.proyectoId)).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es',{numeric:true}))}
+function relPlanosHtml(id,r){
+  const pls=id?relPlanos(id):[];
+  return`<section class="rel" id="relPlanos"><h3>Planos y croquis${pls.length?` <span class="num">${pls.length}</span>`:''}</h3>
+    <p class="hint" style="margin:0 0 8px">Si el cliente te da el plano, subilo y marcá las cámaras y recorridos encima. Si no, dibujá un croquis: paredes, texto y los puntos. Sirve para cotizar y para explicarle al técnico.</p>
+    ${pls.length?`<div class="planthumbs">${pls.map(p=>{const s=planStats(p);return`<button type="button" class="planthumb" data-act="plan:${p.id}"><img data-blob="${esc(p.img&&p.img.id||'')}" src="${esc(blobUrl(p.img&&p.img.id))}" alt="" loading="lazy"><b>${esc(p.nombre||'Plano')}</b><span class="muted">${s.total} punto${s.total===1?'':'s'}${Object.keys(s.metros).length?' · '+fmtM(Object.values(s.metros).reduce((a,b)=>a+b,0)):''}${p.croquis?' · croquis':''}</span></button>`}).join('')}</div>`:''}
+    ${AS&&!readonly?`<div class="actions"><button type="button" class="btn pri" data-act="croquis">✏️ Dibujar croquis</button><label class="btn upl">Subir plano (PDF o foto)<input type="file" accept="image/*,application/pdf" data-up="planoint" data-rel="${esc(id||'')}" data-pry="${esc(r.proyectoId||'')}"></label></div><p class="busy" id="plBusy" hidden></p>`:''}</section>`;
+}
+async function croquisNuevo({relId,pryId}){
+  if(!AS){toast('Necesitás permiso de edición para dibujar.');return}
+  const W=2000,H=1400;const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);g.strokeStyle='#E6E4DE';g.lineWidth=1;
+  for(let x=0;x<=W;x+=100){g.beginPath();g.moveTo(x+.5,0);g.lineTo(x+.5,H);g.stroke()}for(let y=0;y<=H;y+=100){g.beginPath();g.moveTo(0,y+.5);g.lineTo(W,y+.5);g.stroke()}
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));
+  let up;try{up=await AS.upload(blob,{type:'image/jpeg'})}catch(e){toast(upErr(e));return}
+  const r=relId?D.relevamientos[relId]:null,pry=pryId?D.proyectos[pryId]:null;
+  const n=arr('planos').filter(p=>p.croquis&&((relId&&p.relevamientoId===relId)||(pryId&&p.proyectoId===pryId))).length+1;
+  const id=uid();const doc={nombre:'Croquis '+n,proyectoId:pryId||(r&&r.proyectoId)||'',relevamientoId:relId||'',clienteId:(pry&&pry.clienteId)||(r&&r.clienteId)||'',img:{id:up.id,w:W,h:H},croquis:true,original:null,versiones:[],escala:null,puntos:[],recorridos:[],dibujo:[],creado:Date.now(),actualizado:Date.now(),por:ME||''};
+  await put('planos',id,doc);D.planos[id]=doc;
+  openPlan(id);PV.mode='dibujo';PV.dtool='pared';PV.dcol=DCOLS[0][0];renderPv(true);toast('Croquis creado: dibujá las paredes tocando cada esquina y “Terminar”.');
+}
+/* --- dibujo: capa debajo de los puntos y recorridos --- */
+const dibujoChips=()=>`${PV.draft&&PV.draft.length?`<div class="pv-chips"><button class="btn pri" data-act="pvdend">Terminar ${PV.dtool==='pared'?'pared':'línea'} (${PV.draft.length} punto${PV.draft.length===1?'':'s'})</button><button class="btn" data-act="pvdundo">Deshacer punto</button></div>`:''}<div class="pv-chips">${DTOOLS.map(([k,n])=>`<button class="pv-chip${(PV.dtool||'pared')===k?' on':''}" data-act="pvdtool:${k}" style="--pc:${PV.dcol||'#1E1F23'}"><i>${{pared:'▬',linea:'╱',rect:'▭',texto:'T',libre:'✎',borrar:'✕'}[k]}</i>${n}</button>`).join('')}
+  ${DCOLS.map(([c,n])=>`<button class="pv-chip${(PV.dcol||'#1E1F23')===c?' on':''}" data-act="pvdcol:${c}" style="--pc:${c}" aria-label="${n}"><i></i></button>`).join('')}
+  ${PV.draft&&PV.draft.length?'':`<button class="btn ghost" data-act="pvdundo" title="Quitar el último trazo">Deshacer último</button>`}</div>`;
+const DHELP=()=>({pared:'Tocá cada esquina de la pared y después “Terminar”. Las paredes salen gruesas.',linea:'Tocá los puntos de la línea y después “Terminar”.',rect:'Tocá dos esquinas opuestas (un ambiente, un rack, una mesa).',texto:'Tocá dónde va el texto y escribilo en el panel.',libre:'Dibujá arrastrando el dedo o el mouse.',borrar:'Tocá un trazo o un texto para borrarlo.'})[PV.dtool||'pared'];
+function drawDibujo(p){
+  const W=p.img.w,H=p.img.h,k=1/PV.s;const P=v=>`${v[0]*W},${v[1]*H}`;const pe=PV.mode==='dibujo'&&PV.dtool==='borrar'?'visiblePainted':'none';
+  let h=`<g id="pvDraw" style="pointer-events:${pe}">`;
+  (p.dibujo||[]).forEach(d=>{const c=d.c||'#1E1F23';
+    if(d.t==='pl'||d.t==='free'){if((d.v||[]).length<2)return;h+=`<polyline data-dw="${d.id}" points="${d.v.map(P).join(' ')}" fill="none" stroke="${c}" stroke-width="${d.w==='pared'?12:d.t==='free'?5:4}" stroke-linecap="round" stroke-linejoin="round"/>`}
+    else if(d.t==='rect'){const [a,b]=d.v;const x=Math.min(a[0],b[0])*W,y=Math.min(a[1],b[1])*H,w=Math.abs(a[0]-b[0])*W,hh=Math.abs(a[1]-b[1])*H;h+=`<rect data-dw="${d.id}" x="${x}" y="${y}" width="${w}" height="${hh}" fill="${c}" fill-opacity=".06" stroke="${c}" stroke-width="6"/>`}
+    else if(d.t==='txt'){h+=`<text data-dw="${d.id}" x="${d.v[0][0]*W}" y="${d.v[0][1]*H}" font-size="${d.s||40}" font-family="Arial" font-weight="700" fill="${c}" stroke="#fff" stroke-width="6" paint-order="stroke" style="cursor:pointer">${esc(d.txt||'')}</text>`}});
+  h+='</g>';
+  if(PV.mode==='dibujo'){const c=PV.dcol||'#1E1F23';
+    if(PV.draft&&PV.draft.length)h+=`<polyline points="${PV.draft.map(P).join(' ')}" fill="none" stroke="${c}" stroke-width="${PV.dtool==='pared'?12:4}" stroke-dasharray="${12*k} ${8*k}" stroke-linecap="round"/>`+PV.draft.map(v=>`<circle cx="${v[0]*W}" cy="${v[1]*H}" r="${7*k}" fill="${c}"/>`).join('');
+    if(PV.rect)h+=`<circle cx="${PV.rect[0]*W}" cy="${PV.rect[1]*H}" r="${8*k}" fill="none" stroke="${c}" stroke-width="${3*k}"/>`;
+    if(PV.txtAt)h+=`<circle cx="${PV.txtAt[0]*W}" cy="${PV.txtAt[1]*H}" r="${8*k}" fill="${c}"/>`;
+    if(PV.free&&PV.free.length>1)h+=`<polyline points="${PV.free.map(P).join(' ')}" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`}
+  return h;
+}
+function dibujoSide(){
+  const el=$('#pvSide'),p=curPlan();if(!el||!p)return;const n=(p.dibujo||[]).length;
+  el.innerHTML=`<h3>✏️ Dibujo</h3><p class="hint">${DHELP()}</p>
+    ${PV.draft&&PV.draft.length?`<div class="actions"><button class="btn pri" data-act="pvdend">Terminar (${PV.draft.length} punto${PV.draft.length===1?'':'s'})</button><button class="btn" data-act="pvdundo">Deshacer punto</button></div>`:''}
+    ${PV.txtAt?`<label class="fld" for="pv_txt"><span>Texto</span><input id="pv_txt" type="text" placeholder="Ej.: Depósito · Rack · Oficina 2" autocomplete="off"></label><div class="actions"><button class="btn pri" data-act="pvdtxt">Poner el texto</button><button class="btn ghost" data-act="pvdtxtno">Cancelar</button></div>`:''}
+    <p class="muted" style="margin-top:10px">${n?`${n} trazo${n===1?'':'s'} en el plano.`:'Todavía no hay trazos.'} Los puntos (cámaras, racks…) y los recorridos se marcan con los modos “+ Punto” y “Recorrido”; la escala sirve también en el croquis.</p>
+    ${p.croquis?'<p class="hint">Consejo: dibujá primero el contorno con “Pared”, después los ambientes con “Rectángulo” y ponele nombre con “Texto”.</p>':''}`;
+  if(PV.txtAt){const i=$('#pv_txt');if(i){i.focus();i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();pvDTxt()}}}}
+}
+function pvDTxt(){const i=$('#pv_txt');const t=(i&&i.value||'').trim();if(!t||!PV.txtAt){toast('Escribí el texto.');return}const at=PV.txtAt;PV.txtAt=null;mutPlan(p=>{p.dibujo=[...(p.dibujo||[]),{id:uid(),t:'txt',v:[at],txt:t,c:PV.dcol||'#1E1F23',s:40}]})}
+function dibujoTap(e){
+  const tg=(PV.down&&PV.down.target)||e.target;const tool=PV.dtool||'pared';
+  if(tool==='borrar'){const el=tg.closest&&tg.closest('[data-dw]');if(!el){toast('Tocá un trazo para borrarlo.');return}const id=el.dataset.dw;mutPlan(p=>{p.dibujo=(p.dibujo||[]).filter(d=>d.id!==id)});return}
+  const [x,y]=toPlan(e);
+  if(tool==='pared'||tool==='linea'){PV.draft=[...(PV.draft||[]),[x,y]];renderPv();return}
+  if(tool==='rect'){if(!PV.rect){PV.rect=[x,y];drawPv();return}const a=PV.rect;PV.rect=null;if(Math.abs(a[0]-x)<.005&&Math.abs(a[1]-y)<.005)return;mutPlan(p=>{p.dibujo=[...(p.dibujo||[]),{id:uid(),t:'rect',v:[a,[x,y]],c:PV.dcol||'#1E1F23'}]});return}
+  if(tool==='texto'){PV.txtAt=[x,y];drawPv();renderSide();return}
+}
+async function croquisAct(k,el,arg){
+  switch(k){
+    case'croquis':{if(SH&&SH.type==='rel'){if(RELJ)RELJ.items=relReadItems();const rid=await relEnsureSaved();if(!rid)return true;await croquisNuevo({relId:rid});return true}
+      if(SH&&SH.type==='pry'&&SH.id){await croquisNuevo({pryId:SH.id});return true}return true}
+    case'pvdtool':{PV.dtool=arg;PV.draft=null;PV.rect=null;PV.txtAt=null;renderPv();return true}
+    case'pvdcol':{PV.dcol=arg;renderPv();return true}
+    case'pvdundo':{if(PV.draft&&PV.draft.length){PV.draft=PV.draft.slice(0,-1);renderPv();return true}const p=curPlan();if(!(p.dibujo||[]).length){toast('No hay trazos para deshacer.');return true}mutPlan(q=>{q.dibujo=(q.dibujo||[]).slice(0,-1)});return true}
+    case'pvdend':{const d=PV.draft||[];if(d.length<2){toast('Marcá al menos dos puntos.');return true}const w=PV.dtool==='pared'?'pared':'linea';PV.draft=null;mutPlan(p=>{p.dibujo=[...(p.dibujo||[]),{id:uid(),t:'pl',w,v:d,c:PV.dcol||'#1E1F23'}]});renderPv();return true}
+    case'pvdtxt':pvDTxt();return true;
+    case'pvdtxtno':PV.txtAt=null;drawPv();renderSide();return true;
+    case'rimat':{if(!RELJ)return true;RELJ.items=relReadItems();RELJ.items.push({id:uid(),ubic:'Materiales (oficina)',desc:'',cant:1,unidad:'unidad',fotos:[]});relItemsRender();SH.dirty=true;const rows=document.querySelectorAll('#relItems .ritem');rows[rows.length-1]?.querySelector('.ri-desc')?.focus();return true}
+  }
+  return false;
+}
+/* --- cable y canalización por ítem → líneas del presupuesto --- */
+function relCanalLines(r,mon,out){
+  const add=l=>{if(!l||!l.cant)return;const ex=out.find(o=>o.desc===l.desc&&o.unidad===l.unidad);if(ex)ex.cant=r2(ex.cant+l.cant);else out.push(l)};
+  const porCanal={};let cable=0;
+  (r.items||[]).forEach(it=>{const m=n0(it.metros);if(!m)return;const veces=n0(it.cant)||1;const mt=m*veces;cable+=mt;if(it.canal)porCanal[it.canal]=(porCanal[it.canal]||0)+mt});
+  if(cable){const kw=/fibra/i.test(r.servicio||'')?['fibra']:/coax/i.test(JSON.stringify(r.items||''))?['coaxil','coax']:['utp','cat6','cat 6','cable de red'];add(lineFor(kw,'Cable (metros)',Math.ceil(cable*1.1),'metro',mon))}
+  Object.entries(porCanal).forEach(([c,m])=>{const mm=Math.ceil(m*1.1);
+    if(c==='cano'){add(lineFor(['caño','cano','daisa'],'Caño (metros)',mm,'metro',mon));add(lineFor(['grampa','grapa'],'Grampas',Math.ceil(m/1.5),'unidad',mon))}
+    else if(c==='pvc')add(lineFor(['pvc','conducto'],'Conducto PVC (metros)',mm,'metro',mon));
+    else if(c==='canaleta')add(lineFor(['canaleta'],'Canaleta (metros)',mm,'metro',mon));
+    else if(c==='bandeja')add(lineFor(['bandeja'],'Bandeja portacable (metros)',mm,'metro',mon))});
+}
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
