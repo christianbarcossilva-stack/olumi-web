@@ -575,6 +575,17 @@ th{font-size:11px;letter-spacing:.07em}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.18: técnico ve solo su parte */
 /* 1.19: tabla de roles · la barra se filtra en render() con ROLV */
+/* 1.23: pulido · títulos de bloque, pestañas de ajustes, fondo propio */
+#main .vhead:not(:first-child):not(.vhead-top){margin-top:38px;padding-top:4px}
+#main .vhead:not(:first-child):not(.vhead-top) h1{font-size:22px;letter-spacing:-.015em;padding-left:12px;border-left:4px solid var(--accent);line-height:1.15}
+#main .vhead:not(:first-child):not(.vhead-top) .sub{padding-left:16px}
+.ajtabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:0;z-index:3;background:var(--bg);padding:8px 0 10px;margin:-8px 0 12px;border-bottom:1px solid var(--line)}
+.ajtabs button{font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer}
+.ajtabs button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.shell.fondo{background:linear-gradient(color-mix(in srgb,var(--bg) 82%,transparent),color-mix(in srgb,var(--bg) 82%,transparent)),var(--fondo) center/cover fixed no-repeat}
+.shell.fondo .panel,.shell.fondo .kpi,.shell.fondo .row,.shell.fondo .tablewrap,.shell.fondo .empty,.shell.fondo .jobs>*{backdrop-filter:blur(2px)}
+.fondoprev{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.fondoprev img{height:56px;width:120px;object-fit:cover;border:1px solid var(--line);border-radius:8px}
 /* 1.11: editor de notas, historial, chips, escáner */
 .rtew>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .rtbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -707,6 +718,7 @@ function applyBrand(){
   const css=c?`:root[data-mode="light"]{--accent:${c};--accent-soft:color-mix(in srgb,${c} 13%,#ffffff)}:root[data-mode="dark"]{--accent:color-mix(in srgb,${c} 62%,#ffffff);--accent-soft:color-mix(in srgb,${c} 26%,#161d27)}`:'';
   if(st.textContent!==css)st.textContent=css;
   if(id&&!logoData)loadLogoData();
+  const sh=document.querySelector('.shell');const fid=has('marca')&&CFG.fondo?.id;if(sh){if(fid){const u='url("'+blobUrl(fid)+'")';if(sh.style.getPropertyValue('--fondo')!==u)sh.style.setProperty('--fondo',u);sh.classList.add('fondo')}else{sh.classList.remove('fondo');sh.style.removeProperty('--fondo')}}
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
 const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
@@ -997,11 +1009,20 @@ function vMas(){
   :`<div class="empty">${fiberArt}<h2>Catálogo vacío</h2><p>Cargá lo que más cotizás: metro de fibra, cámaras, jornal de técnico, puntos de red. Al escribir una línea de presupuesto se completan unidad y precio.</p><button class="btn pri" data-new="prod">+ Primer producto</button></div>`}
   ${ajustes16Html()}`;
 }
-function vAjustes(){
+const AJ_SLUG=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+let AJTAB='';
+function ajustesTabs(html){
+  const tabs=[];const out=html.replace(/<div class="vhead"( style="[^"]*")?><div><h1>([^<]+)<\/h1>/g,(m,st,t)=>{const id='aj-'+AJ_SLUG(t);const short=t.replace(/^Ajustes de la empresa$/,'Empresa').replace(/^Pedidos desde tu web o WhatsApp$/,'Pedidos web').replace(/^Facturación electrónica$/,'Facturación').replace(/^Ajustes$/,'Cuenta');tabs.push([id,short]);return`<div class="vhead" id="${id}"${st||''}><div><h1>${t}</h1>`});
+  if(tabs.length<2)return out;
+  return`<div class="ajtabs" role="tablist">${tabs.map(([id,n],i)=>`<button type="button" class="${(AJTAB||tabs[0][0])===id?'on':''}" data-act="ajtab:${id}">${esc(n)}</button>`).join('')}</div>`+out;
+}
+function vAjustes(){return ajustesTabs(vAjustesRaw())}
+function vAjustesRaw(){
   const v={...CFG,...(CFGDRAFT||{})};
   return`${PLAN?`<button class="panel" data-view="plan" style="width:100%;text-align:left;display:flex;gap:12px;align-items:center;margin-bottom:22px;cursor:pointer;font:inherit;color:inherit"><b style="font-size:16px">Plan ${esc(PLAN.nombre)}</b><span class="muted">${planLine()}</span><span style="margin-left:auto">›</span></button>`:''}
   ${isBoss()?`<div class="vhead"><div><h1>Ajustes de la empresa</h1><p class="sub">Nombre, logo y color con los que esta empresa usa Olumi. Salen en el menú, los presupuestos y las facturas.</p></div></div>
-  <div class="panel">${has('marca')?'':'<p class="hint" style="margin:0 0 12px">Logo y color propios: incluidos en el plan Empresa. Mientras tanto se usa la marca Olumi.</p>'}<div class="logoprev" style="margin-bottom:14px${has('marca')?'':';display:none'}">${CFG.logo?.id?`<img src="${esc(blobUrl(CFG.logo.id))}" alt="Logo actual">`:'<span class="hint">Sin logo cargado.</span>'}${AS?`<label class="btn upl">${CFG.logo?.id?'Cambiar logo':'Subir logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-up="logo"></label>${CFG.logo?.id?'<button class="btn ghost" data-act="rmlogo">Quitar logo</button>':''}`:''}</div><div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
+  <div class="panel">${has('marca')?'':'<p class="hint" style="margin:0 0 12px">Logo y color propios: incluidos en el plan Empresa. Mientras tanto se usa la marca Olumi.</p>'}<div class="logoprev" style="margin-bottom:14px${has('marca')?'':';display:none'}">${CFG.logo?.id?`<img src="${esc(blobUrl(CFG.logo.id))}" alt="Logo actual">`:'<span class="hint">Sin logo cargado.</span>'}${AS?`<label class="btn upl">${CFG.logo?.id?'Cambiar logo':'Subir logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-up="logo"></label>${CFG.logo?.id?'<button class="btn ghost" data-act="rmlogo">Quitar logo</button>':''}`:''}</div>
+    ${has('marca')?`<div class="fondoprev">${CFG.fondo?.id?`<img src="${esc(blobUrl(CFG.fondo.id))}" alt="Fondo actual">`:'<span class="hint">Sin imagen de fondo: se usa el gris liso.</span>'}${AS?`<label class="btn upl">${CFG.fondo?.id?'Cambiar fondo':'Imagen de fondo'}<input type="file" accept="image/png,image/jpeg,image/webp" data-up="fondo"></label>${CFG.fondo?.id?'<button class="btn ghost" data-act="rmfondo">Quitar fondo</button>':''}`:''}<span class="hint" style="flex-basis:100%">Una foto de la empresa o de una obra, suave, detrás de las pantallas. Se ve atenuada para que el texto se lea bien.</span></div>`:''}<div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
   `:`<div class="vhead"><div><h1>Ajustes</h1><p class="sub">Tu cuenta, el equipo y cómo se ve Olumi en este dispositivo.</p></div></div>`}${pedidoAjustesHtml()}
   ${isBoss()?cfeAjustesHtml():''}
   ${equipoHtml()}
@@ -1236,7 +1257,7 @@ async function onUpload(inp){
   if(await campoUpload(inp))return;
   if(await planosUpload(inp))return;
   if(!AS){toast('Necesitás permiso de edición para subir archivos.');return}
-  const files=[...inp.files];const kind=inp.dataset.up;if(!files.length||(kind!=='logo'&&!SH?.id))return;
+  const files=[...inp.files];const kind=inp.dataset.up;if(!files.length||(kind!=='logo'&&kind!=='fondo'&&!SH?.id))return;
   const busy=kind==='cliplano'?$('#cliBusy'):$('#upBusy');
   if(busy){busy.hidden=false;busy.textContent=`Subiendo ${files.length} archivo${files.length>1?'s':''}…`}
   const out=[];
@@ -1250,6 +1271,7 @@ async function onUpload(inp){
   inp.value='';if(busy)busy.hidden=true;if(!out.length)return;
   try{
     if(kind==='logo'){await saveCfg({...CFG,logo:{id:out[0].id,type:out[0].type}});logoData=null;loadLogoData();sr()}
+    else if(kind==='fondo'){await saveCfg({...CFG,fondo:{id:out[0].id,type:out[0].type}});applyBrand();sr()}
     else if(kind==='cliplano'){const c=D.clientes[SH.id];if(!c)return;await patch('clientes',SH.id,{archivos:[...(c.archivos||[]),...out]});const el=$('#cliFiles');if(el)el.innerHTML=cliFilesHtml(SH.id)}
     else{const j=D.trabajos[SH.id];if(!j)return;const key=kind==='foto'?'fotos':'planos';await patch('trabajos',SH.id,{[key]:[...(j[key]||[]),...out]});refreshJob()}
     toast(out.length>1?`${out.length} archivos subidos`:'Archivo subido');
@@ -1674,6 +1696,7 @@ async function act(a,el){
       closeSheet();break;
     case'pview':pView=arg;lsSet('crm.pview',arg);sr();break;
     case'theme':themePref=arg;lsSet('crm.theme',arg);applyTheme();sr();toast(arg==='auto'?'Automático: claro de 7 a 19 h, oscuro el resto':arg==='dark'?'Modo oscuro':'Modo claro');break;
+    case'rmfondo':{const old=CFG.fondo;const c={...CFG};delete c.fondo;await saveCfg(c);applyBrand();sr();if(old&&AS)AS.delete(old.id).catch(()=>{});toast('Fondo quitado');break}
     case'rmlogo':{const old=CFG.logo;const c={...CFG};delete c.logo;await saveCfg(c);logoData=null;sr();if(old&&AS)AS.delete(old.id).catch(()=>{});toast('Logo quitado');break}
     case'tkf':tkFilter=arg;sr();break;
     case'fat':faTab=arg;sr();break;
@@ -1752,7 +1775,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.22',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.23',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2724,7 +2747,7 @@ function sheetMov(id,pr){
   const where=t==='ajuste'?x.desde||x.hacia:t==='entrada'||t==='devol'?x.hacia:x.desde;
   let g=(id?`<label class="fld" for="mv_tipo"><span>Tipo de movimiento</span><select id="mv_tipo" disabled>${opts(MOVT,t)}</select></label>`:sel('tipo','Tipo de movimiento',t,opts(MOVT,t)))+inp('fecha','Fecha',x.fecha,'type="date"')
     +`<label class="fld full" for="mv_prod"><span>Producto</span><select id="mv_prod">${opts([['','Elegí el producto'],...ps.map(q=>[q.id,prodLabel(q)])],x.prodId)}</select></label>`
-    +(id?'':`<div class="fld full"><span>Código de barras o SKU</span><div class="row2"><input id="mv_code" type="text" placeholder="Pasá el lector o escribí el código y Enter" autocomplete="off" inputmode="text">${scanBtn('mov')}</div></div>`);
+    +(id?'':`<div class="fld full"><span>Código del producto</span><div class="row2"><input id="mv_code" type="text" placeholder="Pasá el lector o escribí el código y Enter" autocomplete="off" inputmode="text">${scanBtn('mov')}</div></div>`);
   if(t==='entrada')g+=sel('hacia','Entra a',x.hacia,depOpts(x.hacia));
   if(t==='salida')g+=sel('desde','Sale de',x.desde,depOpts(x.desde));
   if(t==='transf')g+=sel('desde','Desde',x.desde,depOpts(x.desde))+sel('hacia','Hacia',x.hacia,depOpts(x.hacia));
@@ -4013,7 +4036,9 @@ document.addEventListener('keydown',e=>{
   if(t.id==='oc_code'){e.preventDefault();const c=t.value.trim();if(c){t.value='';scanApply('oc',c)}return}
   if(t.id==='inv_q'&&/^\d{8,14}$/.test(t.value.trim())){const p=scanFind(t.value.trim());if(p){e.preventDefault();INVQ=p.codigo||p.nombre;sr()}}
 });
-const scanBtn=(ctx,label='Escanear')=>readonly?'':`<button type="button" class="btn" data-act="scan:${ctx}">📷 ${label}</button>`;
+/* 1.23: pulido */
+const CAM_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8h4.6L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>';
+const scanBtn=(ctx,label='Leer código con la cámara')=>readonly?'':`<button type="button" class="btn ico" data-act="scan:${ctx}" title="${esc(label)}" aria-label="${esc(label)}">${CAM_SVG}</button>`;
 
 /* --- moneda rápida en el catálogo --- */
 let CATQ='';
@@ -4115,9 +4140,9 @@ function sheetIng(id,pr){
   if(isTec()){toast('El ingreso de mercadería lo hace la empresa.');return tecNoFrame('Inventario','Sin permiso','<p class="muted">Pedile a la empresa que cargue la mercadería.</p>')}
   if(!deps().length)return sheetFrame('Inventario','Primero creá un depósito','<p>Para ingresar mercadería hace falta al menos un depósito.</p><div class="actions"><button class="btn pri" data-act="invdep:deposito">+ Depósito</button></div>',{saveLabel:'Cerrar'});
   const x=pr.resume&&ING?ING:{fecha:today(),hacia:pr.dep||(deps().find(d=>d.tipo!=='vehiculo')||deps()[0])?.id||'',proveedor:'',doc:'',lineas:[]};ING=x;
-  const body=`<p class="hint" style="margin-top:0">Pasá la pistola lectora por cada producto: se suma solo a la lista (el mismo código dos veces suma cantidad). Si un código no existe, te deja crear el producto y vuelve acá.</p>
+  const body=`<p class="hint" style="margin-top:0">Cargá el código de cada producto: con el lector conectado a la compu (lee el código y da Enter solo) o escribiéndolo a mano. El mismo código dos veces suma cantidad. Si un código no existe, te deja crear el producto y vuelve acá.</p>
   <div class="grid"><label class="fld" for="ing_fecha"><span>Fecha</span><input id="ing_fecha" type="date" value="${esc(x.fecha)}"></label><label class="fld" for="ing_hacia"><span>Entra a</span><select id="ing_hacia">${depOpts(x.hacia)}</select></label><label class="fld" for="ing_prov"><span>Proveedor</span><input id="ing_prov" value="${esc(x.proveedor)}"></label><label class="fld" for="ing_doc"><span>Nº de factura o remito</span><input id="ing_doc" value="${esc(x.doc)}"></label>
-  <div class="fld full"><span>Código de barras o SKU</span><div class="row2"><input id="ing_code" type="text" placeholder="Pistola lectora: código y Enter" autocomplete="off" inputmode="text">${scanBtn('ing')}</div></div></div>
+  <div class="fld full"><span>Código del producto</span><div class="row2"><input id="ing_code" type="text" placeholder="Código de barras o SKU + Enter" autocomplete="off" inputmode="text">${scanBtn('ing')}</div></div></div>
   <section class="rel"><h3>Productos <span class="muted" id="ingCount">${x.lineas.length?'· '+x.lineas.length:''}</span></h3><div id="ingLines">${ingLinesHtml()}</div><div class="row2" style="margin-top:10px"><select id="ing_pick" aria-label="Agregar producto sin lector">${opts([['','Agregar un producto sin lector…'],...invProds().map(q=>[q.id,prodLabel(q)])],'')}</select></div></section><p class="err" id="shErr" hidden></p>`;
   setTimeout(()=>{const c=$('#ing_code');if(c)c.focus()},30);
   return sheetFrame('Inventario','Ingreso de mercadería',body,{saveLabel:'Guardar ingreso'});
@@ -4849,6 +4874,7 @@ async function teamAct(k,el){
   if(k==='sopcortar'){if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Cortar? Tocá de nuevo';return true}armed=null;const {error}=await SB.rpc('soporte_cortar',{o:ORG});if(error){toast('No se pudo cortar.');return true}toast('Acceso cortado');await loadSoporte();return true}
   if(k==='sopsalir'){localStorage.removeItem('olumi.soporte');const real=(MEMS||[]).find(m=>!m.soporte);if(real)lsSet('olumi.org',real.org_id);else localStorage.removeItem('olumi.org');location.reload();return true}
   if(k==='sopentrar'){const id=String(el.dataset.act||'').slice(10);if(!id)return true;lsSet('olumi.soporte',id);lsSet('olumi.org',id);lsSet('crm.view','hoy');location.reload();return true}
+  if(k==='ajtab'){const id=String(el.dataset.act||'').slice(6);AJTAB=id;document.querySelectorAll('.ajtabs button').forEach(b=>b.classList.toggle('on',b.dataset.act==='ajtab:'+id));const t=document.getElementById(id);if(t){const y=t.getBoundingClientRect().top+window.scrollY-70;window.scrollTo({top:y,behavior:'smooth'})}return true}
   if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
