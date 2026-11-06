@@ -64,6 +64,8 @@ canvas{display:block;width:100%;height:100%;cursor:pointer;touch-action:manipula
 .pop{position:absolute;min-width:220px;max-width:270px;background:var(--glass-strong);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border:1px solid var(--chip-b);border-radius:18px;padding:14px 16px;box-shadow:0 20px 50px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.05);animation:popin .22s cubic-bezier(.2,.8,.2,1)}
 @keyframes popin{from{opacity:0;transform:scale(.96) translateY(4px)}to{opacity:1;transform:none}}
 .pop h3{margin:0 0 2px;font:600 17px var(--f-display);letter-spacing:-.02em}.pop p{margin:0 0 8px;color:var(--muted);font-size:13px}
+.mechip{cursor:pointer;font:inherit;color:inherit}.medot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.pop .fns{margin:0 0 10px;padding-left:16px;font-size:13px;line-height:1.45}.pop .fns li{margin:2px 0}.pop .row{flex-wrap:wrap}
 .pop .x{position:absolute;right:10px;top:10px;width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);font-size:14px;line-height:24px;color:var(--muted);cursor:pointer;padding:0}
 .panel{background:var(--card);border-radius:30px;padding:8px;min-width:0;box-shadow:var(--shadow)}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--fill);border-radius:12px;padding:2px}
@@ -155,7 +157,6 @@ html.en-app .ev[data-feed]{cursor:pointer}html.en-app .ev[data-feed]:hover{backg
     <div class="tabs" role="tablist">
       <button role="tab" id="t-vivo" aria-selected="true" data-tab="vivo">En vivo</button>
       <button role="tab" id="t-armar" aria-selected="false" data-tab="armar">Armar mi oficina</button>
-      <button role="tab" id="t-pres" aria-selected="false" data-tab="pres">Presupuestar</button>
     </div>
     <div class="body" id="body"></div>
   </aside>
@@ -420,7 +421,7 @@ function frame(now){T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/100
   drawFX();requestAnimationFrame(frame)}
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
-function renderHud(){hud.innerHTML=`<span class="chip"><span class="live"></span><b>${S.people.length}</b>personas</span><span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
+function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.length}</b>personas</span><span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
 let TAB='vivo',STEP=0,TOOL='cam',AREA=null,DEPV='stock',PEDQ={},OPENVAN=null;
 const body=document.getElementById('body');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -449,6 +450,17 @@ const AREAS={rec:{menu:'Bandeja',ic:'inbox',col:'#34c759',sub:'Los WhatsApp, cor
 const areaName=k=>k==='est'?'Estacionamiento':(ROOMS.find(r=>r.id===k)||{}).n;
 function areaAt(w){if(w.x>=0&&w.x<=W&&w.y>=19.2&&w.y<=24.2)return 'est';const r=ROOMS.find(r=>w.x>=r.x&&w.x<r.x+r.w&&w.y>=r.y&&w.y<r.y+r.h);return r?r.id:null}
 const roomOfP=p=>{const d=deskOf(p);return d?d.room:null};
+// lo que hace cada rol: al tocar a una persona (o a vos) se ven sus funciones y los atajos
+const ROLEFN={recepcion:['Atiende la bandeja: WhatsApp, correos y pedidos','Crea tickets y agenda visitas','Avisa a los técnicos'],
+  admin:['Clientes, facturas y cobros','Revisa las facturas de compra de los técnicos','Proveedores y compras'],
+  gerencia:['Ve toda la empresa: reportes y equipo','Aprueba presupuestos y precios','Arma y reparte el trabajo'],
+  tecnico:['Ve su día y sus visitas','Sube fotos, informes y facturas de compra','Lleva el stock de su camioneta'],
+  ventas:['CRM y oportunidades','Presupuestos y seguimientos','Relevamientos con el cliente']};
+const VIEWOF={recepcion:['bandeja','Abrir la bandeja'],admin:['clientes','Abrir clientes'],gerencia:['reportes','Ver reportes'],tecnico:['campo','Ver su día'],ventas:['pipeline','Abrir el CRM']};
+function personPop(p,where){const me=S.me&&p.id===S.me,r=ROLES[p.role]||['Equipo','#8e8e93'],d=deskOf(p),v=VIEWOF[p.role];
+  return `<h3>${me?'Vos · ':''}${esc(p.n)}</h3><p><span style="color:${r[1]}">●</span> ${r[0]}${d?' · '+esc(d.n):''}</p><p>Ahora: <b>${p.out?'en la calle':where}</b></p>
+    <ul class="fns">${(ROLEFN[p.role]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="row">${roomOfP(p)?`<button class="btn" id="b_ar" data-room="${roomOfP(p)}">${me?'Ver mi área':'Ver su área'}</button>`:''}${p.role==='tecnico'?`<button class="btn acc" id="b_ped">Preparar su pedido</button>`:''}${APP&&v?`<button class="btn pri" id="b_go" data-go="${v[0]}">${me?v[1].replace('su día','mi día'):v[1]}</button>`:''}</div>`}
 const inOffice=()=>S.people.filter(p=>!p.inVan);
 const stState=k=>{const q=S.stock[k].q,m=PROD[k].min;return q<=0?'<span class="pill">Sin stock</span>':q<m?'<span class="pill mid">Reponer</span>':'<span class="pill ok">OK</span>'};
 const lowCount=()=>Object.keys(PROD).filter(k=>S.stock[k].q<PROD[k].min).length;
@@ -477,7 +489,7 @@ function areaHtml(k){const a=AREAS[k];let h=`<button class="back" data-act="back
       <div class="list">${Object.entries(PROD).map(([q,pp])=>`<div class="li"><span class="grow">${pp.n}<small>hay ${S.stock[q].q} ${pp.u==='m'?'m':'u'}</small></span><div class="stp"><button data-act="q-:${q}" aria-label="Menos">−</button><span id="q_${q}">${PEDQ[q]||0}${pp.u==='m'?' m':''}</span><button data-act="q+:${q}" aria-label="Más">+</button></div></div>`).join('')}</div>
       <div class="acts">${btn('ped','Preparar pedido','pri')}</div><p class="msg" id="m_ped" hidden></p><p class="hint" style="margin-top:12px">El técnico pasa por el depósito, lo lleva a la camioneta y el stock se mueve solo: sale del depósito y queda en la camioneta.</p>`}
   const acts=APP?{rec:[['go:bandeja','Abrir la Bandeja','pri'],['new:tk','Nuevo ticket','']],adm:[['go:clientes','Abrir Clientes','pri'],['new:pres','Nuevo presupuesto',''],['go:facturacion','Facturación','']],ger:[['go:reportes','Ver reportes','pri'],['go:hoy','Lo urgente de hoy','']],tec:[['go:tickets','Ver tickets','pri'],['go:calendario','Calendario de técnicos',''],['goped','Preparar pedido de materiales',''],['new:rel','Nuevo relevamiento','']],coc:[['go:ajustes','Equipo y roles','pri']],sal:[['go:calendario','Ver el calendario','pri'],['go:agenda','Seguimientos','']],est:[['go:inventario','Camionetas y stock','pri']]}[k]||[]:{rec:[['wa','Simular un WhatsApp','pri'],['mail','Simular un correo',''],['nav:Bandeja','Abrir la Bandeja','']],
-    adm:[['pres','Nuevo presupuesto','pri'],['mail','Simular un correo',''],['nav:Cobros','Ver cobros pendientes','']],
+    adm:[['mail','Simular un correo','pri'],['nav:Presupuestos','Nuevo presupuesto',''],['nav:Cobros','Ver cobros pendientes','']],
     ger:[['nav:Reportes','Reporte del día','pri'],['nav:Ajustes › Equipo','Roles y permisos','']],
     tec:[['disp','Mandar un técnico a un ticket','pri'],['goped','Preparar pedido de materiales',''],['plan','Nuevo relevamiento','']],
     coc:[['cafe','Todos al café','']],sal:[['reunion','Convocar reunión ahora','pri'],['nav:Agenda','Ver el calendario','']],est:[['nav:Vehículos','Sumar un vehículo','']]}[k]||[];
@@ -549,11 +561,13 @@ function unP(sx,sy){const a=(sx-ox)/(COS*sc),b=(sy-oy)/(SIN*sc);return{x:(a+b)/2
 cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const h=hits.slice().reverse().find(o=>Math.hypot(o.x-x,o.y-y)<o.r);
   if(TAB==='pres'){if(h&&h.k==='item'){S.items=S.items.filter(i=>i.id!==h.id);renderBody();return}const w=unP(x,y);if(w.x>0.3&&w.x<W-.3&&w.y>0.3&&w.y<Hb-.3&&S.built){S.items.push({id:'i'+Math.random().toString(36).slice(2,7),k:TOOL,x:w.x,y:w.y,a:Math.atan2(Hb/2-w.y,W/2-w.x)});renderBody()}return}
   if(!h){const a=S.built&&TAB==='vivo'?areaAt(unP(x,y)):null;if(a)openArea(a);else hidePop();return}sel=h;let html='';
-  if(h.k==='person'){const p=S.people.find(q=>q.id===h.id);const where=p.carry?'llevando un pedido a la camioneta':p.tx!=null?'caminando':p.busy?'atendiendo un ticket':'en su escritorio';html=`<h3>${esc(p.n)}</h3><p>${ROLES[p.role][0]} · ${esc(deskOf(p).n)}</p><p>Ahora: <b>${where}</b></p>`}
-  if(h.k==='desk'){const d=S.desks.find(q=>q.id===h.id);const ppl=S.people.filter(p=>p.desk===d.id);html=`<h3>${esc(d.n)}</h3><p>${esc(ROOMS.find(r=>r.id===d.room).n)} · ${ppl.map(p=>esc(p.n)).join(', ')||'libre'}</p><div class="row"><button class="btn" id="b_ar" data-room="${d.room}">Ver el área</button><button class="btn acc" id="b_pr">Presupuestar</button></div>`}
+  if(h.k==='person'){const p=S.people.find(q=>q.id===h.id);const where=p.carry?'llevando un pedido a la camioneta':p.tx!=null?'caminando':p.busy?'atendiendo un ticket':'en su escritorio';html=personPop(p,where)}
+  if(h.k==='desk'){const d=S.desks.find(q=>q.id===h.id);const ppl=S.people.filter(p=>p.desk===d.id);html=`<h3>${esc(d.n)}</h3><p>${esc(ROOMS.find(r=>r.id===d.room).n)} · ${ppl.map(p=>esc(p.n)).join(', ')||'libre'}</p><div class="row"><button class="btn" id="b_ar" data-room="${d.room}">Ver el área</button></div>`}
   if(h.k==='van'){const v=S.vans.find(q=>q.id===h.id);const dr=S.people.find(p=>p.id===v.driver);html=`<h3>${esc(v.n)}</h3><p>${esc(v.plate)} · ${v.out?'en la calle con <b>'+esc(dr?dr.n:'')+'</b>':'en el estacionamiento'}</p><p>Lleva: ${Object.keys(v.stock).length?fmtItems(v.stock):'nada cargado'}</p>`}
-  pop.innerHTML=`<button class="x" aria-label="Cerrar">×</button>`+html;pop.className='pop';pop.hidden=false;let px=x+14,py=y-20;if(px+260>VW)px=x-274;if(py+140>VH)py=VH-150;if(py<8)py=8;pop.style.left=px+'px';pop.style.top=py+'px';
-  pop.querySelector('.x').onclick=hidePop;const ba=pop.querySelector('#b_ar');if(ba)ba.onclick=()=>openArea(ba.dataset.room);const bp=pop.querySelector('#b_pr');if(bp)bp.onclick=()=>{AREA=null;TAB='pres';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab==='pres'));hidePop();renderBody()}});
+  showPop(html,x,y)});
+hud.addEventListener('click',e=>{if(!e.target.closest('[data-me]'))return;const p=S.people.find(q=>q.id===S.me);if(!p)return;sel={k:'person',id:p.id};const where=p.carry?'llevando un pedido a la camioneta':p.tx!=null?'caminando':p.busy?'atendiendo un ticket':'en su escritorio';showPop(personPop(p,where),12,58)});
+function showPop(html,x,y){pop.innerHTML=`<button class="x" aria-label="Cerrar">×</button>`+html;pop.className='pop';pop.hidden=false;let px=x+14,py=y-20;if(px+260>VW)px=x-274;if(px<8)px=8;if(py+140>VH)py=VH-150;if(py<8)py=8;pop.style.left=px+'px';pop.style.top=py+'px';
+  pop.querySelector('.x').onclick=hidePop;const ba=pop.querySelector('#b_ar');if(ba)ba.onclick=()=>openArea(ba.dataset.room);const bq=pop.querySelector('#b_ped');if(bq)bq.onclick=()=>{const pid=sel&&sel.id;openArea('dep');DEPV='ped';renderBody();const f=document.getElementById('f_pt');if(f&&pid){f.value=pid;f.dispatchEvent(new Event('change',{bubbles:true}))}};const bg=pop.querySelector('#b_go');if(bg)bg.onclick=()=>{post({olumiAbrir:bg.dataset.go});hidePop()}}
 document.getElementById('b_theme').addEventListener('click',()=>{const nd=!themeNow();document.documentElement.dataset.theme=nd?'dark':'light';if(!document.documentElement.classList.contains('embed')){try{localStorage.setItem('ut.theme',nd?'dark':'light')}catch(e){}}});
 if(document.documentElement.classList.contains('embed')&&parent!==window){
   addEventListener('message',e=>{const d=e.data||{};if(d.tema==='dark'||d.tema==='light')document.documentElement.dataset.theme=d.tema;if(APP&&d.olumiDatos)applyData(d.olumiDatos)});
@@ -569,6 +583,7 @@ let SEEN=null;
 function layoutDesks(ppl){const used={},desks=[];ppl.forEach(p=>{const room=ROOMOF[p.role]||'adm',sl=SLOTS[room],i=(used[room]=(used[room]||0)+1)-1;
   if(i<sl.length){const id='d_'+room+i;desks.push({id,room,x:sl[i][0],y:sl[i][1],n:p.n});p.desk=id}else{p.desk='d_'+room+(i%sl.length)}});return desks}
 function applyData(d){
+  S.me=d.me||null;
   if(d.nombre&&S.name!==d.nombre){S.name=d.nombre;const c=document.getElementById('coName');if(c)c.textContent=S.name}
   // productos: los del depósito principal (y los que llevan las camionetas)
   for(const k of Object.keys(PROD))delete PROD[k];S.stock={};

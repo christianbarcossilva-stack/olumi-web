@@ -643,6 +643,8 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .gfotos{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.gfotos figure{position:relative;margin:0}.gfotos img{width:120px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
 .gfotos figure .btn{position:absolute;top:4px;right:4px;min-width:28px;height:28px;padding:0;background:var(--surface)}
 .gthumb{width:44px;height:52px;border-radius:8px;object-fit:cover;background:var(--soft,var(--line));display:block}
+/* 1.36: inicio */
+.ofihoy{margin-top:22px}
 /* 1.33: oficina */
 .ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}
 /* 1.25: en vivo */
@@ -952,7 +954,7 @@ function render(){
   document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
-  if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){ofiPost();return}
+  if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){const oh=$('#ofiHoy');if(oh){const x=ofiHoy();if(oh.dataset.k!==x){oh.dataset.k=x;oh.innerHTML=x}}ofiPost();return}
   $('#main').innerHTML=ready?view():loadingHtml();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
@@ -1915,7 +1917,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.35',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.36',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3862,8 +3864,8 @@ async function pushInit(){
 async function pushOff(){const t=PUSH.tok||lsGet('olumi.push');if(t&&SB)try{await SB.rpc('push_token_del',{t})}catch(e){}}
 
 /* ---------- 1.9: Hoy · el tablero del dueño y del encargado ---------- */
-function vHoy(){
-  if(!isLead()){VIEW='campo';lsSet('crm.view',VIEW);return vCampo()}
+function vHoy(sinCab){
+  if(!isLead()){if(sinCab)return'';VIEW='campo';lsSet('crm.view',VIEW);return vCampo()}
   const hoy=today(),boss=isBoss(),lim=addDays(hoy,30);
   const tks=arr('tickets').filter(tkOpen),emer=tks.filter(t=>t.tipo==='emergencia'),sinResp=emer.filter(t=>!t.responsable);
   const web=tks.filter(t=>t.origen==='Web'&&(t.estado||'nuevo')==='nuevo');
@@ -3878,8 +3880,8 @@ function vHoy(){
   const mant=invOn()?arr('equipos').filter(e=>e.estado!=='retirado'&&e.proxMant&&e.proxMant<=lim):[];
   const pend=boss?pendMembers():[];
   const kpi=(l,v,s,go)=>`<div class="kpi${go?' link':''}"${go?` role="button" tabindex="0" data-view="${go}"`:''}><span>${l}</span><b>${v}</b><small>${s}</small></div>`;
-  let h=`<div class="vhead"><div><h1>Hoy</h1><p class="sub">${fdateL(hoy)} · ${esc(CFG.nombre||ORGINFO?.name||'')}</p></div>
-    <div class="tools"><button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button><button class="btn" data-act="wa">Pegar WhatsApp</button></div></div>
+  let h=(sinCab?'':`<div class="vhead"><div><h1>Hoy</h1><p class="sub">${fdateL(hoy)} · ${esc(CFG.nombre||ORGINFO?.name||'')}</p></div>
+    <div class="tools"><button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button></div></div>`)+`
     ${flujoHtml()}${bandejaHoyHtml()}<div class="kpis">${kpi('Emergencias',emer.length,sinResp.length?`<span style="color:var(--bad)">${sinResp.length} sin responsable</span>`:'todas con responsable','tickets')}
     ${kpi('Visitas de hoy',jobs.length,atras.length?`<span style="color:var(--bad)">${atras.length} atrasada${atras.length>1?'s':''}</span>`:'nada atrasado','calendario')}
     ${kpi('Tareas de obra',tareas.length,tarVenc.length?`<span style="color:var(--bad)">${tarVenc.length} vencida${tarVenc.length>1?'s':''}</span>`:(tarSin.length?`${tarSin.length} sin asignar`:'al día'),'proyectos')}
@@ -4842,7 +4844,8 @@ function p3anim(to){const f={ph:P3.ph,th:P3.th},t0=performance.now();P3.auto=fal
 const OFI={ready:false,frame:null,last:''};
 const OFI_ROL={owner:'gerencia',admin:'gerencia',administracion:'admin',viewer:'admin',ventas:'ventas',encargado:'recepcion',tecnico:'tecnico',subcontratista:'tecnico'};
 const ofiHM=ts=>{const d=new Date(Number(ts));return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
-function ofiData(){
+function ofiData(){return{...ofiData0(),me:ME||null}}
+function ofiData0(){
   const m=stockMap(),hoy=today(),dep=deps().find(d=>d.tipo!=='vehiculo'),vans=deps().filter(d=>d.tipo==='vehiculo');
   const enCurso=new Set();arr('trabajos').forEach(j=>{if(j.estado==='en_curso'&&(!j.fecha||j.fecha===hoy))(j.tecnicos||[]).forEach(t=>enCurso.add(t))});
   const people=Object.entries(MEMBERS||{}).filter(([id,mb])=>mb&&OFI_ROL[mb.role]).map(([id,mb])=>({id,n:String((NAMES[id]&&NAMES[id].name)||(mb.email||'Compañero').split('@')[0]).split(' ')[0],role:OFI_ROL[mb.role],out:enCurso.has(id)}));
@@ -4871,9 +4874,13 @@ function ofiData(){
 function ofiPost(){const f=$('#ofiFrame');if(!f||!OFI.ready)return;const tema=document.documentElement.dataset.mode==='dark'?'dark':'light';
   let d;try{d=ofiData()}catch(e){console.warn('oficina',e);return}const key=JSON.stringify(d)+tema;if(key===OFI.last)return;OFI.last=key;
   try{f.contentWindow.postMessage({tema,olumiDatos:d},'*')}catch(e){}}
+/* 1.36: inicio oficina */
+const ofiHoy=()=>isLead()?`<div class="ofihoy">${vHoy(true)}</div>`:'';
 function vOficina(){OFI.ready=false;OFI.last='';
-  return`<div class="vhead"><div><h1>Oficina</h1><p class="sub">Tu empresa en vivo. Tocá un área para abrirla, o el depósito para cargar mercadería y preparar el pedido de un técnico.</p></div></div>
-  <div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div>`}
+  return`<div class="vhead"><div><h1>${esc(saludo())}</h1><p class="sub">${fdateL(today())} · ${esc(CFG.nombre||ORGINFO?.name||'')} en vivo. Tocá un área, una persona o tu avatar.</p></div>
+    <div class="tools">${readonly?'':'<button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button>'}</div></div>
+  <div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
+function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].name)||'').split(' ')[0];return(h<12?'Buen día':h<20?'Buenas tardes':'Buenas noches')+(n?', '+n:'')}
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
   if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
@@ -5437,6 +5444,7 @@ async function boot(){
   ORG=pick.org_id;ROLE=pick.role;ORGINFO={id:ORG,...(pick.orgs||{})};lsSet('olumi.org',ORG);
   readonly=ROLE==='viewer'||ROLE==='cliente'||ROLE==='pendiente';
   if(!lsGet('crm.view')&&!PORTAL())VIEW=isLead()?'hoy':ROLE==='tecnico'||ROLE==='subcontratista'?'campo':'tickets';
+  try{if(!PORTAL()&&isLead()&&viewOk('oficina')&&!sessionStorage.getItem('olumi.ses')){VIEW='oficina';lsSet('crm.view',VIEW)}sessionStorage.setItem('olumi.ses','1')}catch(e){}
   DB=SBDB;USER=SBUSER;AS=(readonly&&ROLE!=='cliente')?null:SBAS;DL=SBDL;SAMPLE=null;
   hideAuth();mode='live';await offLoadQ();
   {const cp=lsJ('olumi.plan.'+ORG);if(cp)PLAN=cp}
