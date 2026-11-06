@@ -16,3 +16,8 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 - Los instaladores de Windows y Mac están en la release `ondi-escritorio`, armados por GitHub Actions (`.github/workflows/ondi-escritorio.yml`) desde `servidor/escritorio-ondi/` cada vez que cambia la app. Ahí también queda `ondi-app.zip`, el proyecto de iPhone/Android (`servidor/ondi-app/`).
 - La app tiene enlaces directos: `#panel`, `#clientes`, `#cliente-c1`, `#pantallas`, `#pantalla-p1` (abre el modo pantalla, para televisores), `#alertas`, `#ajustes`.
 - La versión pública (`ondi/app/`) se genera desde la demo privada sin nombres reales de clientes; no editarla a mano.
+
+## Estiba (vista previa)
+- `estiba/`: página de Estiba (software de logística: andenes y patio, depósito, personal, autoelevadores y parque logístico), con calculadora de ahorro. Nombre provisorio.
+- `estiba/maqueta/`: maqueta 3D de un parque de ejemplo (motor WebGL propio, sin librerías). Sin nombres reales de clientes: la versión con nombres reales queda privada.
+- Está en vista previa: franja "Vista previa", `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.

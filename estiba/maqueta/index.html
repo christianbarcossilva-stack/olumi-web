@@ -1,0 +1,1226 @@
+<!doctype html>
+<html lang="es-UY">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icono.svg" type="image/svg+xml">
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Estiba · Parque logístico en 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: lienzo 3D a pantalla completa; paneles de vidrio flotando en las esquinas (barra, indicadores, capas, actividad, ficha); en celular la ficha es una hoja inferior.
+   Marca Estiba: grafito de base (familia Unity Tech), verde pino como acento, cian solo para red y datos en vivo (lo que aporta Ondi). */
+:root{
+  --bg:#EEF1F2; --ink:#1B242B; --muted:#5D6973; --faint:#88939B;
+  --glass:rgba(255,255,255,.84); --glass-strong:rgba(255,255,255,.95);
+  --line:rgba(27,36,43,.09); --line-strong:rgba(27,36,43,.17);
+  --accent:#0F7A55; --accent-ink:#0B5E41; --accent-soft:rgba(15,122,85,.12); --on-accent:#FFFFFF;
+  --live:#0E9DB3; --live-soft:rgba(14,157,179,.12);
+  --ok:#1D9862; --warn:#C08208; --crit:#D33D43;
+  --ok-soft:rgba(29,152,98,.12); --warn-soft:rgba(192,130,8,.14); --crit-soft:rgba(211,61,67,.12);
+  --shadow:0 12px 32px rgba(20,32,42,.10),0 1px 2px rgba(20,32,42,.08);
+  --f-ui:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --gl:max(16px, env(safe-area-inset-left, 0px));
+  --gr:max(16px, env(safe-area-inset-right, 0px));
+  --gt:calc(env(safe-area-inset-top, 0px) + 12px);
+  --gb:calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1215; --ink:#E3EAED; --muted:#98A5AD; --faint:#6C7981;
+    --glass:rgba(21,28,33,.82); --glass-strong:rgba(23,31,37,.95);
+    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.16);
+    --accent:#3DDC97; --accent-ink:#7BE8B8; --accent-soft:rgba(61,220,151,.14); --on-accent:#06261A;
+    --live:#27C3D9; --live-soft:rgba(39,195,217,.15);
+    --ok:#3EC488; --warn:#E8B03C; --crit:#F2656B;
+    --ok-soft:rgba(62,196,136,.14); --warn-soft:rgba(232,176,60,.15); --crit-soft:rgba(242,101,107,.15);
+    --shadow:0 12px 32px rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1215; --ink:#E3EAED; --muted:#98A5AD; --faint:#6C7981;
+  --glass:rgba(21,28,33,.82); --glass-strong:rgba(23,31,37,.95);
+  --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.16);
+  --accent:#3DDC97; --accent-ink:#7BE8B8; --accent-soft:rgba(61,220,151,.14); --on-accent:#06261A;
+  --live:#27C3D9; --live-soft:rgba(39,195,217,.15);
+  --ok:#3EC488; --warn:#E8B03C; --crit:#F2656B;
+  --ok-soft:rgba(62,196,136,.14); --warn-soft:rgba(232,176,60,.15); --crit-soft:rgba(242,101,107,.15);
+  --shadow:0 12px 32px rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;overflow:hidden;
+  padding-left:var(--gl);padding-right:var(--gr);-webkit-font-smoothing:antialiased;touch-action:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;outline:none}
+#scene.drag{cursor:grabbing}
+#scene.hot{cursor:pointer}
+.vignette{position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 45%, transparent 55%, color-mix(in srgb, var(--bg) 70%, transparent) 100%)}
+.glass{background:var(--glass);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);
+  border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600}
+
+.topbar{position:fixed;top:var(--gt);left:var(--gl);right:var(--gr);height:58px;display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding:0 10px 0 14px;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{flex:none}
+.brand b{display:block;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.brand span{display:block;font-size:12px;color:var(--muted);white-space:nowrap}
+.search{position:relative;max-width:460px;width:100%;justify-self:center}
+.search input{width:100%;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--glass-strong);
+  padding:0 12px 0 36px;font:inherit;color:var(--ink);outline:none}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search > svg{position:absolute;left:11px;top:11px;color:var(--faint)}
+.results{position:absolute;left:0;right:0;top:44px;padding:6px;display:grid;gap:2px;z-index:40}
+.results button{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:8px;text-align:left;
+  border:0;background:transparent;padding:8px;border-radius:8px;cursor:pointer}
+.results button:hover,.results button.on{background:var(--accent-soft)}
+.results b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.results small{color:var(--muted);font-size:12px}
+.results .none{padding:10px;color:var(--muted)}
+.tr{display:flex;align-items:center;gap:10px}
+.site{display:flex;align-items:center;gap:9px;padding:5px 10px 5px 6px;border-radius:10px;border:1px solid var(--line);background:var(--glass-strong)}
+.site i{font-style:normal;font-size:11px;font-weight:700;color:var(--on-accent);background:var(--accent);border-radius:7px;padding:5px 6px;letter-spacing:.02em}
+.site b{display:block;font-size:13px;font-weight:600}
+.site span{display:block;font-size:11.5px;color:var(--muted)}
+.live{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ok);background:var(--ok-soft);
+  border-radius:999px;padding:6px 11px;white-space:nowrap}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--glass-strong);display:grid;place-items:center;cursor:pointer;position:relative}
+.iconbtn:hover{border-color:var(--line-strong)}
+.bell em{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--crit);color:#fff;
+  font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+
+.kpis{position:fixed;top:calc(var(--gt) + 70px);left:var(--gl);display:flex;gap:10px;z-index:10}
+.kpi{width:192px;padding:11px 13px;display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 10px;align-items:center}
+.kpi .ic{grid-row:span 2;width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center}
+.kpi small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.kpi b{font-size:21px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:6px}
+.kpi b em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--muted)}
+.kpi b em.up{color:var(--ok)} .kpi b em.al{color:var(--crit)}
+
+.layers{position:fixed;left:var(--gl);bottom:var(--gb);width:214px;padding:12px;z-index:10;display:grid;gap:4px}
+.layers .eyebrow{padding:0 4px 6px}
+.lay{display:grid;grid-template-columns:18px minmax(0,1fr) 30px;align-items:center;gap:9px;border:0;background:transparent;
+  padding:7px 6px;border-radius:9px;cursor:pointer;text-align:left}
+.lay:hover{background:var(--accent-soft)}
+.lay .sw{width:30px;height:18px;border-radius:9px;background:var(--line-strong);position:relative;transition:background .2s}
+.lay .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--glass-strong);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.lay[aria-pressed="true"] .sw{background:var(--accent)}
+.lay[aria-pressed="true"] .sw::after{transform:translateX(12px)}
+.lay svg{color:var(--muted)}
+.lay span{font-weight:500}
+.note{font-size:11px;color:var(--faint);padding:8px 6px 0;border-top:1px solid var(--line);margin-top:6px;line-height:1.45}
+
+.feed{position:fixed;bottom:var(--gb);left:calc(var(--gl) + 228px);width:min(460px, calc(100% - 228px - 380px - var(--gl) - var(--gr)));padding:12px 14px;z-index:10}
+.feed .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.feed ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.feed li{display:grid;grid-template-columns:44px 8px minmax(0,1fr);gap:8px;align-items:center;padding:5px 0;font-size:12.5px;cursor:pointer;border-radius:6px}
+.feed li:hover span{color:var(--accent-ink)}
+.feed li time{font-family:var(--f-mono);font-size:11.5px;color:var(--faint)}
+.feed li i{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.feed li i.crit{background:var(--crit)} .feed li i.warn{background:var(--warn)} .feed li i.ok{background:var(--ok)}
+.feed li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed li.new{animation:slidein .5s ease}
+@keyframes slidein{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.controls{position:fixed;right:var(--gr);bottom:var(--gb);display:flex;gap:6px;padding:6px;z-index:10}
+.controls button{width:36px;height:36px;border-radius:9px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.controls button:hover{background:var(--accent-soft);color:var(--accent-ink)}
+
+.panel{position:fixed;top:calc(var(--gt) + 70px);right:var(--gr);width:360px;max-height:calc(100% - var(--gt) - 70px - var(--gb) - 62px);
+  overflow:auto;padding:16px;z-index:15;display:grid;gap:14px;align-content:start;background:var(--glass-strong)}
+.panel .ph{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:start}
+.panel .av{width:42px;height:42px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center}
+.panel h2{margin:2px 0 2px;font-size:19px;font-weight:700;letter-spacing:-.015em;text-wrap:balance}
+.panel .sub{color:var(--muted);font-size:12.5px}
+.x{width:30px;height:30px;border-radius:8px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--muted)}
+.x:hover{background:var(--accent-soft);color:var(--ink)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px;width:max-content}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--ok);background:var(--ok-soft)} .pill.warn{color:var(--warn);background:var(--warn-soft)}
+.pill.crit{color:var(--crit);background:var(--crit-soft)} .pill.info{color:var(--accent-ink);background:var(--accent-soft)}
+.sec{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:4px 0 -8px}
+.rows{display:grid;border-top:1px solid var(--line);margin:0}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.row dt{color:var(--muted);font-size:12.5px}
+.row dd{margin:0;font-weight:600;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:-2px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .6s}
+.bar.warn i{background:var(--warn)} .bar.ok i{background:var(--ok)}
+.diag{border-radius:10px;padding:10px 12px;background:var(--crit-soft);color:var(--ink);font-size:12.5px;line-height:1.5}
+.diag.warn{background:var(--warn-soft)} .diag.info{background:var(--accent-soft)}
+.diag b{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--crit);margin-bottom:3px}
+.diag.warn b{color:var(--warn)} .diag.info b{color:var(--accent-ink)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.steps div{display:grid;gap:5px;font-size:11px;color:var(--faint);text-align:center}
+.steps div::before{content:"";height:4px;border-radius:2px;background:var(--line-strong)}
+.steps div.done{color:var(--muted)} .steps div.done::before{background:var(--accent)}
+.steps div.now{color:var(--accent-ink);font-weight:600} .steps div.now::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.btn{height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--line-strong);background:transparent;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.pri:hover{filter:brightness(1.06);color:var(--on-accent)}
+.foot{font-size:11px;color:var(--faint)}
+
+#labels{position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;pointer-events:auto;will-change:transform;transition:opacity .25s}
+.lbl.off{opacity:0;pointer-events:none}
+.chip{position:relative;display:flex;align-items:center;gap:8px;padding:6px 11px 6px 9px;border-radius:10px;border:1px solid var(--line);
+  background:var(--glass-strong);box-shadow:var(--shadow);cursor:pointer;white-space:nowrap;text-align:left}
+.chip b{font-size:13px;font-weight:700;display:block;line-height:1.15}
+.chip b em{font-style:normal;color:var(--faint);font-weight:600;margin-right:4px}
+.chip span{font-size:11px;color:var(--muted);display:block}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.chip i.crit{background:var(--crit)} .chip i.warn{background:var(--warn)} .chip i.free{background:transparent;border:1.5px dashed var(--accent)}
+.chip.free{border-style:dashed;border-color:var(--accent)}
+.chip.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
+.chip::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:inherit;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+#labels.far .chip span{display:none}
+#labels.far .chip{padding:4px 9px 4px 8px}
+#labels.far .chip b{font-size:12px}
+.poi{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--glass);
+  border:1px solid var(--line);border-radius:6px;padding:3px 7px;white-space:nowrap;cursor:pointer}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid var(--glass-strong);cursor:pointer;box-shadow:var(--shadow)}
+.pin svg{transform:rotate(45deg)}
+.pin.crit{background:var(--crit);color:#fff;animation:bob 1.6s ease-in-out infinite}
+.pin.warn{background:var(--warn);color:#fff}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 -4px}}
+.tag{font-family:var(--f-mono);font-size:11.5px;font-weight:500;background:var(--accent);color:var(--on-accent);border-radius:6px;padding:3px 7px;white-space:nowrap;box-shadow:var(--shadow)}
+
+.camview{position:fixed;top:calc(var(--gt) + 148px);right:calc(var(--gr) + 372px);width:440px;max-width:calc(100% - var(--gl) - var(--gr));
+  z-index:16;padding:8px;background:var(--glass-strong)}
+.camview .scr{position:relative;aspect-ratio:16/9;max-width:100%;border-radius:9px;overflow:hidden;background:#0b0e10}
+.camview canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.camview .fx{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 1px, transparent 1px 3px), radial-gradient(120% 100% at 50% 50%, transparent 60%, rgba(0,0,0,.45));
+  mix-blend-mode:multiply}
+.osd{position:absolute;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.osd .rec{color:#ff5a5f}
+.osd2{position:absolute;left:10px;bottom:8px;font-family:var(--f-mono);font-size:11px;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.nosig{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-size:15px;letter-spacing:.12em;text-shadow:0 1px 3px #000}
+.camview .bar2{display:flex;justify-content:space-between;align-items:center;padding:8px 4px 2px}
+.camview .bar2 b{font-size:13px}
+.camview .bar2 span{font-size:12px;color:var(--muted)}
+
+.toast{position:fixed;top:calc(var(--gt) + 72px);left:50%;transform:translateX(-50%);z-index:50;padding:10px 16px;font-weight:600;font-size:13px;
+  display:flex;gap:8px;align-items:center;background:var(--glass-strong)}
+.toast::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.inside{position:fixed;top:calc(var(--gt) + 148px);left:var(--gl);z-index:12;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;font-size:13px;font-weight:600}
+.inside i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.fallback{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);z-index:1}
+
+@media (max-width: 1180px){
+  .kpi{width:170px} .kpi b{font-size:18px} .kpi small{font-size:11px}
+  .feed{display:none}
+}
+@media (max-width: 760px){
+  .topbar{height:auto;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"b r" "s s";row-gap:8px;padding:10px}
+  .brand{grid-area:b} .tr{grid-area:r} .search{grid-area:s;max-width:none}
+  .site{display:none} .brand span{display:none} .brand b{font-size:15px}
+  .live{font-size:0;gap:6px;padding:6px 9px} .live .mono{font-size:12px}
+  .kpis{top:calc(var(--gt) + 112px);left:0;right:0;padding-left:var(--gl);padding-right:var(--gr);overflow-x:auto;scrollbar-width:none;scroll-snap-type:x mandatory;padding-bottom:6px}
+  .kpis::-webkit-scrollbar{display:none}
+  .kpi{width:158px;flex:none;scroll-snap-align:start;padding:9px 10px;grid-template-columns:28px minmax(0,1fr)}
+  .kpi .ic{width:28px;height:28px}
+  .layers{left:0;right:0;width:auto;bottom:var(--gb);display:flex;overflow-x:auto;gap:6px;padding:8px var(--gr) 8px var(--gl);
+    background:transparent;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0;scrollbar-width:none}
+  .layers::-webkit-scrollbar{display:none}
+  .layers .eyebrow,.layers .note{display:none}
+  .lay{flex:none;grid-template-columns:16px auto;background:var(--glass-strong);border:1px solid var(--line);box-shadow:var(--shadow);padding:8px 12px;border-radius:999px}
+  .lay .sw{display:none}
+  .lay[aria-pressed="true"]{border-color:var(--accent);color:var(--accent-ink)}
+  .lay[aria-pressed="true"] svg{color:var(--accent-ink)}
+  .lay[aria-pressed="false"]{opacity:.6}
+  .controls{flex-direction:column;bottom:calc(var(--gb) + 58px)}
+  .controls button{width:34px;height:34px}
+  .panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:58%;border-radius:18px 18px 0 0;padding:16px var(--gr) calc(env(safe-area-inset-bottom,0px) + 16px) var(--gl)}
+  .camview{top:calc(var(--gt) + 176px);left:var(--gl);right:var(--gr);width:auto}
+  .inside{top:calc(var(--gt) + 176px)}
+  .chip{padding:4px 8px 4px 7px;gap:6px} .chip b{font-size:12px} .chip span{display:none}
+  .poi{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="Maqueta 3D de un parque logístico de ejemplo. Arrastrá para mover, rueda o pellizco para acercar."></canvas>
+<div class="vignette"></div>
+<div id="labels"></div>
+
+<header class="topbar glass">
+  <a class="brand" href="../" style="text-decoration:none;color:inherit" aria-label="Volver a Estiba">
+    <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="#0F7A55"/><rect x="24" y="74" width="70" height="15" rx="4.5" fill="#fff"/><rect x="24" y="53" width="54" height="15" rx="4.5" fill="#fff" fill-opacity=".82"/><rect x="24" y="32" width="38" height="15" rx="4.5" fill="#fff" fill-opacity=".62"/><circle cx="87" cy="38" r="10.5" fill="#3DDC97"/></svg>
+    <div><b>Estiba · Parque de ejemplo</b><span>Vista 3D del parque · demo</span></div>
+  </a>
+  <div class="search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" autocomplete="off" placeholder="Buscar empresa, nave, cámara o matrícula" aria-label="Buscar">
+    <div class="results glass" id="results" hidden></div>
+  </div>
+  <div class="tr">
+    <div class="site"><i>PL</i><div><b>Parque de ejemplo</b><span id="siteSub">naves</span></div></div>
+    <div class="live">En vivo <span class="mono" id="clock">--:--</span></div>
+    <button class="iconbtn bell" id="bell" aria-label="Ver alertas">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
+      <em id="bellN">2</em>
+    </button>
+  </div>
+</header>
+
+<section class="kpis" aria-label="Indicadores">
+  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg></div><small>Camiones en el predio</small><b id="kTr">0</b></div>
+  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-7h10v7M7 17h10"/></svg></div><small>Andenes ocupados</small><b id="kDk">0</b></div>
+  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.6-4 3.4-6.5 7-6.5s6.4 2.5 7 6.5"/></svg></div><small>Operarios en turno</small><b id="kOp">0</b></div>
+  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg></div><small>Equipos en línea</small><b id="kEq">0</b></div>
+</section>
+
+<aside class="layers glass" aria-label="Capas">
+  <div class="eyebrow">Capas</div>
+  <button class="lay" data-l="cli" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg><span>Empresas</span><i class="sw"></i></button>
+  <button class="lay" data-l="red" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg><span>Fibra y Wi-Fi</span><i class="sw"></i></button>
+  <button class="lay" data-l="cam" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h12l4-3v14l-4-3H3z"/></svg><span>Cámaras</span><i class="sw"></i></button>
+  <button class="lay" data-l="acc" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Accesos</span><i class="sw"></i></button>
+  <button class="lay" data-l="log" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/></svg><span>Camiones</span><i class="sw"></i></button>
+  <div class="note">Parque, empresas y datos de ejemplo. Red y cámaras monitoreadas con Ondi.</div>
+</aside>
+
+<section class="feed glass" aria-label="Actividad">
+  <div class="hd"><span class="eyebrow">Actividad en vivo</span></div>
+  <ul id="feed"></ul>
+</section>
+
+<div class="controls glass" role="toolbar" aria-label="Controles de vista">
+  <button id="zin" aria-label="Acercar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button id="zout" aria-label="Alejar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+  <button id="rl" aria-label="Girar a la izquierda"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg></button>
+  <button id="rr" aria-label="Girar a la derecha"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg></button>
+  <button id="home" aria-label="Vista general"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></button>
+</div>
+
+<div class="inside glass" id="inside" hidden><i></i><span id="insideT">Adentro</span><button class="btn" id="insideX">Ver techo</button></div>
+
+<aside class="panel glass" id="panel" hidden aria-live="polite">
+  <div class="ph">
+    <div class="av" id="pAv"></div>
+    <div><div class="eyebrow" id="pEy"></div><h2 id="pT"></h2><div class="sub" id="pS"></div></div>
+    <button class="x" id="pX" aria-label="Cerrar ficha"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div id="pBody" style="display:grid;gap:14px"></div>
+  <div class="acts" id="pActs"></div>
+  <div class="foot">Datos de ejemplo · se conectan con UniFi, NVR, lectores, credenciales BLE y el sistema del depósito</div>
+</aside>
+
+<div class="camview glass" id="camview" hidden>
+  <div class="scr">
+    <canvas id="camcanvas"></canvas>
+    <canvas id="noise" hidden></canvas>
+    <div class="fx"></div>
+    <div class="nosig" id="nosig" hidden>SIN SEÑAL</div>
+    <div class="osd"><span id="osdL"></span><span><span class="rec">● REC</span> <span id="osdT"></span></span></div>
+    <div class="osd2" id="osd2"></div>
+  </div>
+  <div class="bar2"><div><b id="cvT"></b> <span id="cvS"></span></div><button class="x" id="cvX" aria-label="Cerrar cámara"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+</div>
+
+<div class="toast glass" id="toast" hidden></div>
+<div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const narrow = () => innerWidth < 760;
+
+/* ---------- matemática ---------- */
+const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+const C = c => typeof c === 'string' ? hex(c) : c;
+const mulc = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const nrm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => 1 - Math.pow(1 - t, 3);
+const wrapA = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+const seeded = s => () => (s = (s * 16807) % 2147483647, (s - 1) / 2147483646);
+const yawOf = (vx, vz) => Math.atan2(-vz, vx);
+const I4 = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+const M = {
+  mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; },
+  ortho(l, r, b, t, n, f) { const o = new Float32Array(16); o[0] = 2 / (r - l); o[5] = 2 / (t - b); o[10] = -2 / (f - n); o[12] = -(r + l) / (r - l); o[13] = -(t + b) / (t - b); o[14] = -(f + n) / (f - n); o[15] = 1; return o; },
+  persp(fy, a, n, f) { const t = 1 / Math.tan(fy / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f); return o; },
+  look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross(u, z)), y = cross(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); },
+  trs(tx, ty, tz, ry = 0, rz = 0, s = 1) { const cy = Math.cos(ry), sy = Math.sin(ry), cz = Math.cos(rz), sz = Math.sin(rz);
+    return new Float32Array([cy * cz * s, sz * s, -sy * cz * s, 0, -cy * sz * s, cz * s, sy * sz * s, 0, sy * s, 0, cy * s, 0, tx, ty, tz, 1]); },
+  xf(m, p) { return [m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12], m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13], m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14]]; },
+  clip(m, p) { return [m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12], m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13], m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14], m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15]]; }
+};
+
+/* ---------- geometría ---------- */
+class Geo {
+  constructor() { this.p = []; this.n = []; this.c = []; this.mn = [1e9, 1e9, 1e9]; this.mx = [-1e9, -1e9, -1e9]; }
+  v(p, n, c, e) { this.p.push(p[0], p[1], p[2]); this.n.push(n[0], n[1], n[2]); this.c.push(c[0], c[1], c[2], e);
+    for (let i = 0; i < 3; i++) { if (p[i] < this.mn[i]) this.mn[i] = p[i]; if (p[i] > this.mx[i]) this.mx[i] = p[i]; } }
+  quad(a, b, c, d, n, ca, cb, cc, cd, e = 0) { this.v(a, n, ca, e); this.v(b, n, cb, e); this.v(c, n, cc, e); this.v(a, n, ca, e); this.v(c, n, cc, e); this.v(d, n, cd, e); }
+  tri(a, b, c, col, e = 0, ctr) { let n = nrm(cross(sub(b, a), sub(c, a)));
+    if (ctr) { const m = [(a[0] + b[0] + c[0]) / 3 - ctr[0], (a[1] + b[1] + c[1]) / 3 - ctr[1], (a[2] + b[2] + c[2]) / 3 - ctr[2]]; if (dot(n, m) < 0) n = [-n[0], -n[1], -n[2]]; }
+    this.v(a, n, col, e); this.v(b, n, col, e); this.v(c, n, col, e); }
+  box(x0, y0, z0, x1, y1, z1, col, o = {}) {
+    const c = C(col), t = o.top ? C(o.top) : c, e = o.e || 0, k = o.ao === false ? 1 : (o.ao || 0.86), b = mulc(c, k);
+    this.quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [0, 1, 0], t, t, t, t, e);
+    if (o.onlyTop) return;
+    this.quad([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], [1, 0, 0], b, c, c, b, e);
+    this.quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0], b, b, c, c, e);
+    this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], b, b, c, c, e);
+    this.quad([x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0], [0, 0, -1], b, c, c, b, e);
+  }
+  flat(x0, z0, x1, z1, y, col, e = 0) { const c = C(col); this.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], [0, 1, 0], c, c, c, c, e); }
+  disc(cx, cz, r, y, col, e = 0, n = 12) { const c = C(col); for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+    this.v([cx, y, cz], [0, 1, 0], c, e); this.v([cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r], [0, 1, 0], c, e); this.v([cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r], [0, 1, 0], c, e); } }
+  prism(cx, y0, cz, r, h, n, col, o = {}) { const c = C(col), t = o.top ? C(o.top) : c, e = o.e || 0, b = mulc(c, o.ao || 0.9);
+    for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, am = (a0 + a1) / 2;
+      const p0 = [cx + Math.cos(a0) * r, y0, cz + Math.sin(a0) * r], p1 = [cx + Math.cos(a1) * r, y0, cz + Math.sin(a1) * r];
+      this.quad(p0, p1, [p1[0], y0 + h, p1[2]], [p0[0], y0 + h, p0[2]], [Math.cos(am), 0, Math.sin(am)], b, b, c, c, e);
+      this.v([cx, y0 + h, cz], [0, 1, 0], t, e); this.v([p1[0], y0 + h, p1[2]], [0, 1, 0], t, e); this.v([p0[0], y0 + h, p0[2]], [0, 1, 0], t, e); } }
+  blob(cx, cy, cz, r, col, o = {}) { const c = C(col), rings = o.rings || 4, seg = o.seg || 7, sy = o.sy || 1, rot = o.rot || 0, ctr = [cx, cy, cz];
+    const P = (i, j) => { const la = -Math.PI / 2 + i / rings * Math.PI, lo = rot + j / seg * Math.PI * 2; return [cx + Math.cos(la) * Math.cos(lo) * r, cy + Math.sin(la) * r * sy, cz + Math.cos(la) * Math.sin(lo) * r]; };
+    for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = P(i, j), b = P(i, j + 1), d = P(i + 1, j), e2 = P(i + 1, j + 1);
+      const cc = mulc(c, 0.9 + 0.1 * (i / rings));
+      if (i > 0) this.tri(a, b, e2, cc, 0, ctr); if (i < rings - 1) this.tri(a, e2, d, cc, 0, ctr); } }
+  strip(pts, w, y, col, e = 0) { const c = C(col), h = w / 2;
+    for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1, px = -dz / l * h, pz = dx / l * h;
+      const q = [[ax + px, y, az + pz], [bx + px, y, bz + pz], [bx - px, y, bz - pz], [ax - px, y, az - pz]];
+      this.v(q[0], [0, 1, 0], c, e); this.v(q[1], [0, 1, 0], c, e); this.v(q[2], [0, 1, 0], c, e); this.v(q[0], [0, 1, 0], c, e); this.v(q[2], [0, 1, 0], c, e); this.v(q[3], [0, 1, 0], c, e); }
+    for (const [x, z] of pts) this.disc(x, z, h, y, c, e, 8); }
+  win(x0, z0, x1, z1, y, h, col, e) { const w = 1.5, gap = 0.45, t = 0.08;
+    for (let x = x0 + 0.5; x + w <= x1 - 0.3; x += w + gap) { this.box(x, y, z0 - t, x + w, y + h, z0, col, { e, ao: 1 }); this.box(x, y, z1, x + w, y + h, z1 + t, col, { e, ao: 1 }); }
+    for (let z = z0 + 0.5; z + w <= z1 - 0.3; z += w + gap) { this.box(x0 - t, y, z, x0, y + h, z + w, col, { e, ao: 1 }); this.box(x1, y, z, x1 + t, y + h, z + w, col, { e, ao: 1 }); } }
+}
+
+/* ---------- motor WebGL2 ---------- */
+const VS = `#version 300 es
+layout(location=0) in vec3 aP; layout(location=1) in vec3 aN; layout(location=2) in vec4 aC;
+uniform mat4 uVP; uniform mat4 uM; uniform mat4 uL;
+out vec3 vN; out vec4 vC; out vec4 vL; out vec3 vW;
+void main(){ vec4 w=uM*vec4(aP,1.0); vW=w.xyz; vN=mat3(uM)*aN; vC=aC; vL=uL*w; gl_Position=uVP*w; }`;
+const FS = `#version 300 es
+precision highp float; precision highp sampler2DShadow;
+in vec3 vN; in vec4 vC; in vec4 vL; in vec3 vW;
+uniform sampler2DShadow uS; uniform vec3 uLd; uniform vec3 uSunC; uniform float uSun; uniform vec3 uSky; uniform vec3 uGnd; uniform float uAmb;
+uniform vec3 uTint; uniform float uTintA; uniform vec3 uClear; uniform float uTexel; uniform vec2 uFade; uniform vec2 uCtr;
+out vec4 o;
+float sh(float d){ vec3 p=vL.xyz/vL.w*0.5+0.5; if(p.x<0.0||p.x>1.0||p.y<0.0||p.y>1.0||p.z>1.0) return 1.0;
+  float b=0.00025+0.0009*(1.0-d); float s=0.0;
+  for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) s+=texture(uS, vec3(p.xy+vec2(float(x),float(y))*uTexel*1.2, p.z-b));
+  return s/9.0; }
+void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh(d):1.0;
+  vec3 hemi=mix(uGnd,uSky,n.y*0.5+0.5);
+  vec3 lit=vC.rgb*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s));
+  vec3 col=mix(lit, vC.rgb, vC.a);
+  col=mix(col,uTint,uTintA);
+  float f=smoothstep(uFade.x,uFade.y,length(vW.xz-uCtr)); col=mix(col,uClear,f);
+  o=vec4(col,1.0); }`;
+const VSD = `#version 300 es
+layout(location=0) in vec3 aP; uniform mat4 uL; uniform mat4 uM; void main(){ gl_Position=uL*uM*vec4(aP,1.0); }`;
+const FSD = `#version 300 es
+precision mediump float; out vec4 o; void main(){ o=vec4(1.0); }`;
+function compile(gl, vs, fs) {
+  const mk = (t, s) => { const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh); if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); return sh; };
+  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p;
+}
+class Renderer {
+  constructor(canvas, shadowSize) {
+    const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+    if (!gl) throw new Error('sin webgl2');
+    this.gl = gl; this.canvas = canvas; this.cache = new Map(); this.ss = shadowSize;
+    this.p = compile(gl, VS, FS); this.pd = compile(gl, VSD, FSD);
+    const U = (p, names) => Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)]));
+    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uCtr']);
+    this.ud = U(this.pd, ['uL', 'uM']);
+    this.st = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.st);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, shadowSize, shadowSize);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    this.fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.st, 0);
+    gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.enable(gl.DEPTH_TEST);
+  }
+  mesh(o) {
+    let m = this.cache.get(o); if (m && m.v === o.version) return m; const gl = this.gl;
+    if (m) { gl.deleteVertexArray(m.vao); m.bufs.forEach(b => gl.deleteBuffer(b)); }
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const bufs = [];
+    const put = (arr, loc, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0); bufs.push(b); };
+    put(o.geo.p, 0, 3); put(o.geo.n, 1, 3); put(o.geo.c, 2, 4); gl.bindVertexArray(null);
+    m = { vao, bufs, count: o.geo.p.length / 3, v: o.version }; this.cache.set(o, m); return m;
+  }
+  render(vp, objs, env, fade, noTint) {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb); gl.viewport(0, 0, this.ss, this.ss); gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(this.pd); gl.uniformMatrix4fv(this.ud.uL, false, env.lvp);
+    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.6, 3);
+    for (const o of objs) { if (!o.on || o.noShadow) continue; const m = this.mesh(o); gl.uniformMatrix4fv(this.ud.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
+    gl.disable(gl.POLYGON_OFFSET_FILL); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.clearColor(env.clear[0], env.clear[1], env.clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(this.p); const u = this.u;
+    gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniformMatrix4fv(u.uL, false, env.lvp);
+    gl.uniform3fv(u.uLd, env.ld); gl.uniform3fv(u.uSunC, env.sunC); gl.uniform1f(u.uSun, env.sun); gl.uniform3fv(u.uSky, env.sky); gl.uniform3fv(u.uGnd, env.gnd);
+    gl.uniform1f(u.uAmb, env.amb); gl.uniform3fv(u.uClear, env.clear); gl.uniform1f(u.uTexel, 1 / this.ss); gl.uniform2fv(u.uFade, fade); gl.uniform2fv(u.uCtr, env.ctr); gl.uniform3fv(u.uTint, env.tint);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.st); gl.uniform1i(u.uS, 0);
+    for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.uniform1f(u.uTintA, noTint ? 0 : (o.tintA || 0)); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
+    gl.bindVertexArray(null);
+  }
+}
+
+/* ---------- paletas ---------- */
+const PAL = {
+  light: { clear: '#EEF1F2', ground: '#DCE6DE', grass: '#CFE0D2', field: '#E4DECF', site: '#F2F4F5', apron: '#E9EDEF', road: '#D2D8DE', hwy: '#C9D0D6', mark: '#FFFFFF', markY: '#E5C35A',
+    gravel: '#E8E4DA', sand: '#E8D7B1', water: '#A6C9C3', log: '#B08D6A',
+    wall: '#FBFCFD', base: '#D2D9DF', roof: '#E7ECF0', parapet: '#D9E0E5', fascia: '#2B333B', door: '#AAB5BF', frame: '#59636C', glass: '#B4CEDC', glassE: 0, sky: '#D3E6EE',
+    solar: '#3D5466', hvac: '#C6CED5', tree: '#94C3A0', tree2: '#7FB38D', trunk: '#9C7D64', pole: '#B6BFC7', lamp: '#EEF1F3', lampE: 0, pool: null,
+    house: ['#F1EEE8', '#E6E1D8', '#DDE3E6'], hroof: ['#B9705A', '#8E9AA3', '#A85F4B', '#C9CFD3'],
+    pallet: '#CBA779', pbase: '#A98C68', goods: ['#CBA779', '#E8ECEF', '#BFC9D0', '#D8B98E', '#9FB4C2', '#C7A36F'], rack: '#E0812B', upright: '#3E5A75', floor: '#E3E7EA',
+    cab: ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA'], trailer: '#FFFFFF', tire: '#2E343A', fork: '#F0B50A', vest: '#F2A516', skin: '#E2B48C', pants: '#3A4651',
+    car: ['#F4F6F8', '#F4F6F8', '#C9CFD4', '#8C959C', '#3A4148', '#B9473F', '#41607A'],
+    fiber: '#11B4CA', dev: '#F6F8F9', devD: '#38414A', ok: '#21A86B', warn: '#E5A020', crit: '#E5484D', acc: '#12A8BF', barrier: '#E5484D', screen: '#27C3D9',
+    sunC: [1, .97, .92], sun: .5, sky3: [.88, .92, .95], gnd3: [.78, .78, .76], amb: .7, tint: '#18A06D' },
+  dark: { clear: '#0D1215', ground: '#121A17', grass: '#16201C', field: '#1E1D1A', site: '#1A2126', apron: '#1E252B', road: '#252D34', hwy: '#2A333A', mark: '#56616B', markY: '#8E7A3A',
+    gravel: '#1D1F1F', sand: '#2C2A22', water: '#14302D', log: '#3B3128',
+    wall: '#3E4954', base: '#2B333B', roof: '#38444E', parapet: '#46525D', fascia: '#12171B', door: '#46525C', frame: '#1A2025', glass: '#D9B266', glassE: .62, sky: '#2D4A57',
+    solar: '#1B2935', hvac: '#3B454E', tree: '#2D5140', tree2: '#274838', trunk: '#4A3D33', pole: '#58636D', lamp: '#FFE3AA', lampE: 1, pool: '#2B2E2C',
+    house: ['#2F3439', '#34393E', '#2B3136'], hroof: ['#4E3029', '#3A4248', '#46302A', '#4A5056'],
+    pallet: '#7C6649', pbase: '#5E4D38', goods: ['#7C6649', '#8C969D', '#5D6A73', '#80694D', '#4F6271', '#6E5A41'], rack: '#A85E1F', upright: '#2B3F52', floor: '#262D33',
+    cab: ['#1A2025', '#C5CDD3', '#3E5C6F', '#7C8992'], trailer: '#C7CFD5', tire: '#111518', fork: '#C99A12', vest: '#E89A10', skin: '#9C7A5E', pants: '#20272E',
+    car: ['#A9B1B7', '#A9B1B7', '#7D878E', '#4F5961', '#20262B', '#6B302B', '#2C4558'],
+    fiber: '#2FDDF2', dev: '#AEB8C0', devD: '#1E252B', ok: '#3BD08E', warn: '#F2B23A', crit: '#FF5A60', acc: '#2FD3E8', barrier: '#E5484D', screen: '#2FDDF2',
+    sunC: [.66, .74, .9], sun: .42, sky3: [.5, .58, .7], gnd3: [.32, .33, .35], amb: .84, tint: '#18A06D' }
+};
+let P = PAL.light;
+
+/* ---------- plano real (coordenadas de la imagen satelital) ---------- */
+const K = 0.5, X = px => (px - 539) * K, Z = py => (py - 572) * K, S = 0.6, DS = 0.8, MPX = 0.85;
+const R = (a, b, c, d) => ({ x0: X(a), z0: Z(b), x1: X(c), z1: Z(d), area: Math.round((c - a) * (d - b) * MPX * MPX / 100) * 100 });
+const m2 = n => n.toLocaleString('es-UY');
+const NAVES = [
+  { id: 'E7', name: 'Moda Sur', rubro: 'Moda · e-commerce', ...R(70, 232, 230, 316), face: 'E', road: 'yard', h: 8.5, extra: [['Pedidos web hoy', '1.284']] },
+  { id: 'E6', name: null, rubro: 'Empresa a confirmar', ...R(70, 316, 230, 408), face: 'E', road: 'yard', h: 8.5, free: true },
+  { id: 'E5', name: 'Lácteos del Este', rubro: 'Lácteos · cadena de frío', ...R(70, 408, 230, 465), face: 'E', road: 'yard', h: 8.5, extra: [['Cámara de frío', '3,6 °C · estable']] },
+  { id: 'E4', name: 'Operador 3PL', rubro: 'Operador logístico', ...R(70, 465, 230, 560), face: 'E', road: 'yard', h: 8.5, extra: [['Pedidos preparados hoy', '412']] },
+  { id: 'E2', name: 'Cristalería', rubro: 'Vidrios', ...R(68, 560, 212, 680), face: 'E', road: 'yard', h: 8.5, extra: [['Racks de vidrio en stock', '86']] },
+  { id: 'E8', name: 'Consumo Norte', rubro: 'Consumo masivo', ...R(270, 293, 410, 465), face: 'S', road: 'e8', h: 9, extra: [['Stock en pallets', '3.150']] },
+  { id: 'E1', name: 'Deportes · TV', tenants: ['Retail deportivo', 'TV satelital'], rubro: 'Nave compartida', ...R(268, 545, 392, 670), face: 'E', road: 'r428', h: 8.5, solar: [0.04, 0.34], dr: [9, 30], extra: [['Stock retail deportivo', '1.860 pallets']] },
+  { id: 'E9', name: 'Bebidas Andes', rubro: 'Alimentos y bebidas', ...R(443, 258, 615, 355), face: 'S', road: 'e9', h: 9, extra: [['Stock en pallets', '2.410']] },
+  { id: 'E10', name: 'Lácteos del Este', rubro: 'Lácteos · centro de distribución', ...R(595, 690, 768, 1000), face: 'W', road: 'r570', h: 10, extra: [['Cámara de frío', '2,8 °C · estable']] },
+  { id: 'DY', name: 'Fábrica vecina', rubro: 'Industria', ...R(632, 1012, 712, 1068), face: 'N', h: 7, factory: true, free: true, nodocks: true }
+];
+const naveById = id => NAVES.find(n => n.id === id);
+const tenantNaves = () => NAVES.filter(n => !n.free);
+function face(N) {
+  const f = N.face;
+  if (f === 'E') return { o: [1, 0], a: [0, 1], p0: [N.x1, N.z0], L: N.z1 - N.z0, D: N.x1 - N.x0 };
+  if (f === 'W') return { o: [-1, 0], a: [0, 1], p0: [N.x0, N.z0], L: N.z1 - N.z0, D: N.x1 - N.x0 };
+  if (f === 'S') return { o: [0, 1], a: [1, 0], p0: [N.x0, N.z1], L: N.x1 - N.x0, D: N.z1 - N.z0 };
+  return { o: [0, -1], a: [1, 0], p0: [N.x0, N.z0], L: N.x1 - N.x0, D: N.z1 - N.z0 };
+}
+const fp = (f, t, d) => [f.p0[0] + f.a[0] * t + f.o[0] * d, f.p0[1] + f.a[1] * t + f.o[1] * d];
+function fbox(g, f, t0, t1, d0, d1, y0, y1, col, o) { const A = fp(f, t0, d0), B = fp(f, t1, d1); g.box(Math.min(A[0], B[0]), y0, Math.min(A[1], B[1]), Math.max(A[0], B[0]), y1, Math.max(A[1], B[1]), col, o); }
+
+const NODES = Object.fromEntries(Object.entries({ S0: [38, 1300], S1: [38, 693], GATE: [72, 693], A1: [255, 693], A2: [428, 693], A3: [570, 693], Y2: [255, 490], R2: [428, 490], R3: [428, 385] }).map(([k, [a, b]]) => [k, { x: X(a), z: Z(b) }]));
+const EDGES = [['S0', 'S1'], ['S1', 'GATE'], ['GATE', 'A1'], ['A1', 'A2'], ['A2', 'A3'], ['A1', 'Y2'], ['A2', 'R2'], ['R2', 'R3']];
+const ROADS = { yard: { node: 'A1', axis: 'x', v: X(255) }, r428: { node: 'A2', axis: 'x', v: X(428) }, e8: { node: 'Y2', axis: 'z', v: Z(490) }, e9: { node: 'R3', axis: 'z', v: Z(385) }, r570: { node: 'A3', axis: 'x', v: X(570) } };
+const GATE = NODES.GATE;
+
+const DOCKS = [];
+const DSP = 3.7;
+for (const N of NAVES) {
+  N.cx = (N.x0 + N.x1) / 2; N.cz = (N.z0 + N.z1) / 2; N.f = face(N); N.docks = [];
+  if (N.nodocks) continue;
+  const f = N.f, t0 = N.dr ? N.dr[0] : 10.5, t1 = N.dr ? N.dr[1] : f.L - 3; let k = 1;
+  for (let t = t0; t <= t1; t += DSP, k++) { const door = fp(f, t, 0), slot = fp(f, t, 5.4), rd = ROADS[N.road];
+    const A = rd.axis === 'x' ? { x: rd.v, z: door[1] } : { x: door[0], z: rd.v };
+    const d = { nave: N, k, t, door, slot: { x: slot[0], z: slot[1] }, head: yawOf(f.o[0], f.o[1]), A, occ: null }; N.docks.push(d); if (!N.free) DOCKS.push(d); }
+}
+
+const DEV = []; const addDev = d => (DEV.push(Object.assign({ status: 'ok', y: 0 }, d)), d);
+let cn = 1, an = 1, rn = 1; const cid = () => 'C-' + String(cn++).padStart(2, '0'), aid = () => 'AP-' + String(an++).padStart(2, '0'), rid = () => 'R-' + String(rn++).padStart(2, '0');
+addDev({ id: cid(), type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'canopy', x: GATE.x + 2, y: 4.3, z: GATE.z + 1.4, yaw: Math.PI, loc: 'Portería · carril de entrada' });
+addDev({ id: cid(), type: 'cam', kind: 'Domo PTZ 25x', mount: 'dome', x: GATE.x - 1, y: 3.1, z: GATE.z + 6.5, yaw: Math.PI * 0.75, loc: 'Portería · techo de la caseta' });
+addDev({ id: aid(), type: 'ap', kind: 'UniFi U7 Outdoor', x: GATE.x, y: 4.2, z: GATE.z - 4.3, yaw: Math.PI, loc: 'Portería · techo de la entrada', cli: 6 });
+addDev({ id: rid(), type: 'rd', kind: 'Lector de tarjeta y matrícula', x: GATE.x + 5, y: 0, z: GATE.z + 3.9, yaw: 0, loc: 'Portería · entrada', hoy: 214 });
+addDev({ id: rid(), type: 'rd', kind: 'Lector de tarjeta', x: GATE.x - 5, y: 0, z: GATE.z - 3.9, yaw: 0, loc: 'Portería · salida', hoy: 197 });
+[[140, 'Avenida principal'], [330, 'Avenida principal'], [500, 'Avenida principal'], [700, 'Avenida principal']].forEach(([px, l], i) =>
+  addDev({ id: cid(), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'pole', x: X(px), y: 0, z: GATE.z - 4.8, yaw: i % 2 ? Math.PI : 0, loc: l + ' · columna ' + (i + 1) }));
+addDev({ id: cid(), type: 'cam', kind: 'Bullet 8 MP con IR', mount: 'pole', x: X(80), y: 0, z: Z(30), yaw: -Math.PI / 4, loc: 'Playa de autos · esquina noroeste' });
+addDev({ id: cid(), type: 'cam', kind: 'Domo PTZ 25x', mount: 'pole', x: X(585), y: 0, z: Z(222), yaw: 3 * Math.PI / 4, loc: 'Playa de autos · esquina sureste' });
+for (const N of NAVES) { if (N.free) continue; const f = N.f, out = 0.4;
+  const pa = fp(f, 9.6, out), pb = fp(f, f.L - 0.6, out), pc = fp(f, f.L / 2, -f.D - out);
+  const ya = yawOf(f.a[0] + f.o[0] * 0.5, f.a[1] + f.o[1] * 0.5), yb = yawOf(-f.a[0] + f.o[0] * 0.5, -f.a[1] + f.o[1] * 0.5), yc = yawOf(-f.o[0], -f.o[1]);
+  addDev({ id: cid(), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'wall', x: pa[0], y: N.h - 1, z: pa[1], yaw: ya, nave: N.id, loc: `${N.id} ${N.name} · andenes (inicio)` });
+  addDev({ id: cid(), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'wall', x: pb[0], y: N.h - 1, z: pb[1], yaw: yb, nave: N.id, loc: `${N.id} ${N.name} · andenes (final)` });
+  addDev({ id: cid(), type: 'cam', kind: 'Domo 4 MP', mount: 'wall', x: pc[0], y: N.h - 1, z: pc[1], yaw: yc, nave: N.id, loc: `${N.id} ${N.name} · fondo de la nave` });
+  for (const fr of [0.42, 0.78]) { const p = fp(f, lerp(10, f.L, fr), 0.3); addDev({ id: aid(), type: 'ap', kind: 'UniFi U7 Outdoor', x: p[0], y: 5.2, z: p[1], yaw: Math.atan2(f.o[0], f.o[1]), nave: N.id, loc: `${N.id} ${N.name} · fachada de andenes`, cli: 14 + ((an * 7) % 23) }); }
+  const pr = fp(f, 8.9, 1.6); addDev({ id: rid(), type: 'rd', kind: 'Lector de tarjeta', x: pr[0], y: 0, z: pr[1], yaw: 0, nave: N.id, loc: `${N.id} ${N.name} · puerta de oficinas`, hoy: 18 + (rn * 13) % 40 });
+}
+const OFF = { x0: X(272), z0: Z(506), x1: X(312), z1: Z(538) };
+addDev({ id: aid(), type: 'ap', kind: 'UniFi U7 Pro', x: OFF.x1 + 0.3, y: 4.6, z: (OFF.z0 + OFF.z1) / 2, yaw: Math.PI / 2, loc: 'Oficinas del parque · planta alta', cli: 34 });
+addDev({ id: rid(), type: 'rd', kind: 'Molinete con tarjeta y PIN', x: OFF.x1 + 2, y: 0, z: OFF.z0 + 3, yaw: 0, loc: 'Oficinas del parque · acceso de personal', hoy: 71 });
+addDev({ id: 'RK-01', type: 'rack', kind: 'Rack core · fibra 12 hilos', x: OFF.x1 + 1.4, y: 0, z: OFF.z1 - 2.5, yaw: 0, loc: 'Sala técnica · Oficinas del parque' });
+const camOff = DEV.find(d => d.type === 'cam' && d.nave === 'E7' && d.loc.includes('final')); camOff.status = 'crit';
+const apWarn = DEV.find(d => d.type === 'ap' && d.nave === 'E9'); apWarn.status = 'warn';
+const offRd = DEV.find(d => d.loc.startsWith('Oficinas') && d.type === 'rd');
+
+const px2 = (a, b) => [X(a), Z(b)];
+const FIBER = { segs: [
+  [px2(312, 522), px2(318, 522), px2(318, 490)], [px2(255, 490), px2(428, 490)], [px2(255, 245), px2(255, 693)], [px2(72, 693), px2(570, 693)],
+  [px2(428, 385), px2(428, 693)], [px2(428, 385), px2(529, 385)], [px2(570, 693), px2(570, 990)]
+] };
+for (const N of tenantNaves()) { const f = N.f, c = fp(f, f.L / 2, 0.3), rd = ROADS[N.road]; const a = rd.axis === 'x' ? [rd.v, c[1]] : [c[0], rd.v]; FIBER.segs.push([a, c]); }
+
+/* ---------- objetos ---------- */
+const OBJ = []; const OBJID = new Map();
+function obj(id, props) { let o = OBJID.get(id); if (!o) { o = { id, on: true, version: 0, layer: 'base' }; OBJ.push(o); OBJID.set(id, o); } Object.assign(o, props); o.version++; return o; }
+function hwyLine() { return [[250, -60], [440, 50], [620, 118], [820, 155], [1140, 200]].map(([a, b]) => [X(a), Z(b)]); }
+function offsetLine(pts, d) { return pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1; return [p[0] - dz / l * d, p[1] + dx / l * d]; }); }
+let LOTCOUNT = 0;
+function buildBase() {
+  const g = new Geo(), r = seeded(11);
+  g.flat(-1100, -900, 1100, 900, -0.06, P.ground);
+  const pad = (a, b, c, d, col, y = 0) => g.flat(X(a), Z(b), X(c), Z(d), y, col);
+  pad(60, 225, 442, 700, P.site); pad(440, 236, 642, 364, P.site); pad(628, 244, 712, 332, P.apron, 0.004); pad(448, 364, 624, 688, P.field, 0.003);
+  pad(556, 682, 786, 1086, P.site); pad(118, 732, 226, 908, P.site); pad(290, 703, 536, 916, P.site); pad(168, 905, 276, 1122, P.site); pad(40, 938, 176, 1122, P.site);
+  pad(60, 18, 332, 230, P.gravel, 0.002); pad(332, 88, 602, 230, P.gravel, 0.002); pad(655, 255, 835, 326, P.water, 0.003); pad(812, 468, 1068, 862, P.sand, 0.002);
+  pad(40, 686, 790, 700, P.road, 0.02);
+  g.flat(X(28), Z(-80), X(48), Z(1300), 0.02, P.hwy); for (let y = -60; y < 1280; y += 18) g.flat(X(37.6), Z(y), X(38.4), Z(y + 9), 0.04, P.mark);
+  const hl = hwyLine(); g.strip(offsetLine(hl, -6), 10, 0.02, P.hwy); g.strip(offsetLine(hl, 6), 10, 0.02, P.hwy);
+  for (const side of [-6, 6]) { const L = offsetLine(hl, side); for (let i = 0; i < L.length - 1; i++) { const [ax, az] = L[i], [bx, bz] = L[i + 1], n = Math.floor(Math.hypot(bx - ax, bz - az) / 7);
+    for (let k = 0; k < n; k += 1) { const t0 = k / n, t1 = (k + 0.5) / n; g.strip([[lerp(ax, bx, t0), lerp(az, bz, t0)], [lerp(ax, bx, t1), lerp(az, bz, t1)]], 0.3, 0.04, P.mark); } } }
+  const road = (pts, w = 8) => g.strip(pts.map(([a, b]) => [X(a), Z(b)]), w, 0.021, P.road);
+  road([[255, 238], [255, 693]], 9); road([[428, 248], [428, 693]], 8); road([[255, 490], [428, 490]], 7); road([[428, 385], [628, 385]], 7); road([[628, 240], [628, 693]], 7);
+  road([[570, 693], [570, 1086]], 8); road([[240, 246], [640, 246]], 7); road([[40, 693], [72, 693]], 8);
+  for (let x = 46; x < 784; x += 10) g.flat(X(x), Z(692.7), X(x + 5), Z(693.3), 0.045, P.mark);
+  for (let y = 248; y < 688; y += 10) g.flat(X(254.7), Z(y), X(255.3), Z(y + 5), 0.045, P.mark);
+  for (const N of tenantNaves()) for (const d of N.docks) { const f = N.f; const a = fp(f, d.t - DSP / 2, 0), b = fp(f, d.t - DSP / 2 + 0.15, 9); g.flat(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), 0.04, P.markY); }
+  const ctx = (a, b, c, d, h, solar) => { const x0 = X(a), z0 = Z(b), x1 = X(c), z1 = Z(d); g.box(x0, 0, z0, x1, h, z1, P.wall, { top: P.roof, ao: 0.84 });
+    g.box(x0 - 0.04, h, z0 - 0.04, x1 + 0.04, h + 0.5, z0 + 0.35, P.parapet); g.box(x0 - 0.04, h, z1 - 0.35, x1 + 0.04, h + 0.5, z1 + 0.04, P.parapet);
+    if (solar) for (let x = x0 + 2; x < x1 - 3; x += 2.6) for (let z = z0 + 2; z < z1 - 2; z += 1.9) g.box(x, h + 0.2, z, x + 2.3, h + 0.38, z + 1.55, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 });
+    else for (let z = z0 + 4; z < z1 - 3; z += 6) g.box(x0 + 3, h + 0.02, z, x1 - 3, h + 0.2, z + 1.1, P.sky, { ao: 1 }); };
+  ctx(130, 745, 212, 895, 7.5); ctx(82, 862, 130, 895, 5); ctx(300, 725, 388, 905, 8, true); ctx(402, 710, 520, 895, 8, true); ctx(176, 912, 266, 1110, 8); ctx(56, 948, 168, 1000, 6);
+  ctx(240, 172, 275, 198, 3.5); ctx(595, 232, 612, 248, 3);
+  for (const y of [622, 648]) { g.prism(X(410), 0, Z(y), 4.4, 9, 14, P.wall, { top: P.parapet }); g.prism(X(410), 9, Z(y), 1.4, 0.8, 10, P.hvac); }
+  const tree = (x, z, s = 1) => { g.prism(x, 0, z, 0.25 * s, 1.4 * s, 5, P.trunk); g.blob(x, 2.8 * s, z, 1.8 * s, r() > 0.5 ? P.tree : P.tree2, { rings: 4, seg: 7, sy: 0.92, rot: r() * 3 }); };
+  for (let y = 230; y < 1140; y += 13) if (y < 680 || y > 712) tree(X(54) + (r() - 0.5) * 2, Z(y), 0.9 + r() * 0.3);
+  for (let y = 20; y < 225; y += 14) tree(X(56), Z(y), 0.85);
+  for (let x = 840; x < 1075; x += 9) tree(X(x), Z(462) + (r() - 0.5) * 3, 1 + r() * 0.3);
+  for (let x = 785; x < 1075; x += 9) tree(X(x), Z(880) + (r() - 0.5) * 3, 1 + r() * 0.3);
+  for (let i = 0; i < 46; i++) { const x = 660 + r() * 400, y = 340 + r() * 120; if (x < 845 || y > 445) tree(X(x), Z(y), 0.8 + r() * 0.4); }
+  for (let i = 0; i < 30; i++) tree(X(800 + r() * 260), Z(900 + r() * 220), 0.8 + r() * 0.4);
+  for (let i = 0; i < 16; i++) tree(X(220 + r() * 70), Z(705 + r() * 190), 0.8 + r() * 0.3);
+  g.blob(X(872), 0, Z(650), 30, P.sand, { rings: 6, seg: 16, sy: 0.17 }); g.blob(X(890), 0, Z(780), 15, P.sand, { rings: 5, seg: 12, sy: 0.24 });
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) g.box(X(930 + i * 18), 0, Z(705 + j * 30), X(945 + i * 18), 1.6 + r() * 1.2, Z(725 + j * 30), P.log, { ao: 0.85 });
+  for (let x = 650; x < 1075; x += 21) for (let y = 4; y < 128; y += 19) { const hy = 118 + (x - 620) * 0.19 - 22; if (y > hy) continue; if (r() < 0.18) continue;
+    const w = 3 + r() * 1.5, d = 2.6 + r() * 1.2, h = 2 + r() * 1.6, x0 = X(x) + r() * 2, z0 = Z(y) + r() * 2;
+    g.box(x0, 0, z0, x0 + w, h, z0 + d, P.house[Math.floor(r() * 3)], { top: P.hroof[Math.floor(r() * 4)] }); }
+  for (let x = 90; x <= 780; x += 42) { const lx = X(x), lz = GATE.z - 4.8; g.prism(lx, 0, lz, 0.14, 7, 6, P.pole); g.box(lx - 0.08, 7.05, lz, lx + 0.08, 7.2, lz + 1.7, P.pole);
+    g.box(lx - 0.32, 6.85, lz + 1.1, lx + 0.32, 7.1, lz + 1.9, P.lamp, { e: P.lampE, ao: false }); if (P.pool) g.disc(lx, lz + 3, 4, 0.05, P.pool, 1, 14); }
+  for (let y = 270; y <= 670; y += 50) { const lx = X(242), lz = Z(y); g.prism(lx, 0, lz, 0.14, 7, 6, P.pole); g.box(lx, 7.05, lz - 0.08, lx + 1.7, 7.2, lz + 0.08, P.pole);
+    g.box(lx + 1.1, 6.85, lz - 0.32, lx + 1.9, 7.1, lz + 0.32, P.lamp, { e: P.lampE, ao: false }); if (P.pool) g.disc(lx + 3, lz, 4, 0.05, P.pool, 1, 14); }
+  const gx = GATE.x, gz = GATE.z;
+  g.box(gx - 2.4, 0, gz + 4.6, gx + 1.2, 2.6, gz + 8.2, P.wall, { top: P.roof }); g.box(gx - 2.48, 1.1, gz + 4.52, gx + 1.28, 2.1, gz + 8.28, P.glass, { e: P.glassE });
+  g.box(gx - 2.8, 2.6, gz + 4.2, gx + 1.6, 2.9, gz + 8.6, P.parapet);
+  for (const [dx, dz] of [[-4, -4.2], [-4, 4.2], [4, -4.2], [4, 4.2]]) g.box(gx + dx - 0.18, 0, gz + dz - 0.18, gx + dx + 0.18, 4.5, gz + dz + 0.18, P.pole);
+  g.box(gx - 4.6, 4.5, gz - 4.8, gx + 4.6, 4.9, gz + 4.8, P.wall, { top: P.roof }); g.box(gx - 4.65, 4.5, gz - 4.85, gx + 4.65, 4.62, gz + 4.85, P.tint, { e: 0.5 });
+  g.box(gx - 0.3, 0, gz - 3.4, gx + 0.3, 0.25, gz + 3.4, P.parapet);
+  g.box(gx + 4.6, 0, gz + 3.1, gx + 5.2, 0.9, gz + 3.7, P.devD); g.box(gx - 5.2, 0, gz - 3.7, gx - 4.6, 0.9, gz - 3.1, P.devD);
+  obj('base', { geo: g, layer: 'base' });
+  const lg = new Geo(), lr = seeded(5); let n = 0; const car = (x, z, along) => { const c = P.car[Math.floor(lr() * P.car.length)], L = 1.3, Wd = 0.55, x0 = along ? x - L : x - Wd, x1 = along ? x + L : x + Wd, z0 = along ? z - Wd : z - L, z1 = along ? z + Wd : z + L;
+    lg.box(x0, 0.1, z0, x1, 0.72, z1, c, { top: mulc(C(c), 0.92), ao: 0.85 }); n++; };
+  for (let i = 0; i < 12; i++) for (const off of [0, 3.6]) { const x = 80 + i * 13.4 + off; for (let y = 34; y < 212; y += 5.6) if (lr() > 0.14) car(X(x), Z(y), false); }
+  for (let j = 0; j < 9; j++) { const y = 100 + j * 13.5; for (let x = 252; x < 594; x += 5.8) { const lim = 60 + (x - 420) * 0.33 + 22; if (y < lim || (x < 282 && y > 165 && y < 205)) continue; if (lr() > 0.16) car(X(x), Z(y), true); } }
+  LOTCOUNT = n; obj('lot', { geo: lg, layer: 'base', pick: true, kind: 'lot' });
+  const og = new Geo(); og.box(OFF.x0, 0, OFF.z0, OFF.x1, 6.4, OFF.z1, P.wall, { top: P.roof }); for (const y of [1.1, 3.8]) og.win(OFF.x0, OFF.z0, OFF.x1, OFF.z1, y, 1.8, P.glass, P.glassE);
+  og.box(OFF.x0 - 0.1, 6.4, OFF.z0 - 0.1, OFF.x1 + 0.1, 6.8, OFF.z1 + 0.1, P.parapet); og.box(OFF.x1, 0, OFF.z0 + 1.5, OFF.x1 + 2.6, 2.6, OFF.z0 + 5, P.parapet);
+  og.box(OFF.x0 + 3, 6.8, OFF.z0 + 3, OFF.x0 + 6, 7.8, OFF.z0 + 5.5, P.hvac);
+  const cars2 = seeded(3); for (let i = 0; i < 16; i++) { const x = X(322 + (i % 8) * 11), z = Z(i < 8 ? 506 : 528), c = P.car[Math.floor(cars2() * P.car.length)]; og.box(x - 0.55, 0.1, z - 1.3, x + 0.55, 0.72, z + 1.3, c, { top: mulc(C(c), 0.92) }); }
+  obj('admin', { geo: og, layer: 'base', pick: true, kind: 'admin' });
+}
+
+function buildNave(N, cut) {
+  const g = new Geo(), { x0, x1, z0, z1, h } = N, f = N.f;
+  g.box(x0 - 0.06, 0, z0 - 0.06, x1 + 0.06, 0.8, z1 + 0.06, P.base, { ao: 0.92 });
+  if (cut) { const t = 0.35, wh = 2.2; g.box(x0, 0, z0, x1, wh, z0 + t, P.wall); g.box(x0, 0, z1 - t, x1, wh, z1, P.wall); g.box(x0, 0, z0, x0 + t, wh, z1, P.wall); g.box(x1 - t, 0, z0, x1, wh, z1, P.wall);
+    obj(N.id, { geo: g, layer: 'base', pick: true, kind: 'nave' }); return; }
+  g.box(x0, 0, z0, x1, h, z1, P.wall, { top: P.roof, ao: 0.82 });
+  const pt = 0.35, ph = 0.55;
+  g.box(x0 - 0.04, h, z0 - 0.04, x1 + 0.04, h + ph, z0 + pt, P.parapet); g.box(x0 - 0.04, h, z1 - pt, x1 + 0.04, h + ph, z1 + 0.04, P.parapet);
+  g.box(x0 - 0.04, h, z0, x0 + pt, h + ph, z1, P.parapet); g.box(x1 - pt, h, z0, x1 + 0.04, h + ph, z1, P.parapet);
+  if (!N.factory) fbox(g, f, 9, f.L, 0, 0.1, h - 1.7, h - 0.45, P.fascia, { ao: 1 });
+  const longX = (x1 - x0) >= (z1 - z0);
+  if (N.solar) { const za = lerp(z0, z1, N.solar[0]), zb = lerp(z0, z1, N.solar[1]); for (let x = x0 + 2; x < x1 - 3; x += 2.6) for (let z = za; z < zb - 1.5; z += 1.9) g.box(x, h + 0.2, z, x + 2.3, h + 0.38, z + 1.55, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 }); }
+  if (longX) { for (let z = z0 + 4; z < z1 - 3; z += 6.5) g.box(x0 + 3, h + 0.02, z, x1 - 3, h + 0.2, z + 1.1, P.sky, { ao: 1 }); }
+  else { for (let x = x0 + 4; x < x1 - 3; x += 6.5) g.box(x, h + 0.02, z0 + 3, x + 1.1, h + 0.2, z1 - 3, P.sky, { ao: 1 }); }
+  for (let i = 0; i < 3; i++) { const cx = lerp(x0, x1, 0.25 + i * 0.25), cz = lerp(z0, z1, 0.5); g.box(cx - 1.2, h + 0.1, cz - 1, cx + 1.2, h + 1.2, cz + 1, P.hvac); g.disc(cx, cz, 0.7, h + 1.22, mulc(C(P.hvac), 0.7)); }
+  if (N.factory) { g.prism(x1 - 6, h, z0 + 6, 1.2, 9, 10, P.parapet, { top: P.devD }); g.box(x0 + 4, h, z0 + 4, x0 + 14, h + 3, z0 + 10, P.hvac); }
+  else {
+    fbox(g, f, 0.6, 8.6, -5.5, 1.4, 0, 6.2, P.wall, { top: P.roof }); const A = fp(f, 0.6, -5.5), B = fp(f, 8.6, 1.4);
+    for (const y of [1.0, 3.6]) g.win(Math.min(A[0], B[0]), Math.min(A[1], B[1]), Math.max(A[0], B[0]), Math.max(A[1], B[1]), y, 1.8, P.glass, P.glassE);
+    fbox(g, f, 0.5, 8.7, -5.6, 1.5, 6.2, 6.55, P.parapet); }
+  for (const d of N.docks) { const t = d.t;
+    fbox(g, f, t - 1.45, t + 1.45, 0, 0.22, 0.6, 3.3, P.frame, { ao: 1 }); fbox(g, f, t - 1.2, t + 1.2, 0, 0.28, 0.8, 3.1, P.door, { ao: 0.93 });
+    for (let y = 1.2; y < 3.0; y += 0.45) fbox(g, f, t - 1.2, t + 1.2, 0, 0.3, y, y + 0.04, mulc(C(P.door), 0.88), { ao: 1 });
+    fbox(g, f, t - 1.6, t + 1.6, 0, 1.0, 3.45, 3.62, P.parapet); }
+  obj(N.id, { geo: g, layer: 'base', pick: true, kind: 'nave' });
+}
+
+function devGeo(d) {
+  const g = new Geo(), st = d.status === 'crit' ? P.crit : d.status === 'warn' ? P.warn : P.ok;
+  if (d.type === 'cam') {
+    let y = 0;
+    if (d.mount === 'pole') { y = 8.2; g.box(-0.4, 0, -0.4, 0.4, 0.4, 0.4, P.pole); g.prism(0, 0.4, 0, 0.16, 7.8, 6, P.pole); }
+    if (d.mount === 'wall') g.box(-0.9, -0.15, -0.12, 0, 0.15, 0.12, P.devD);
+    if (d.mount === 'canopy') g.box(-0.1, 0, -0.1, 0.1, 0.9, 0.1, P.devD);
+    if (d.kind.includes('Domo')) { g.prism(0, y - 0.3, 0, 0.7, 0.3, 10, P.dev); g.blob(0, y - 0.35, 0, 0.55, P.devD, { rings: 3, seg: 8, sy: 0.8 }); g.box(-0.2, y, -0.2, 0.2, y + 0.4, 0.2, P.dev); }
+    else { g.box(-0.35, y - 0.32, -0.3, 1.25, y + 0.32, 0.3, P.dev); g.box(-0.4, y + 0.32, -0.38, 1.45, y + 0.42, 0.38, P.dev, { ao: 1 }); g.box(1.25, y - 0.22, -0.2, 1.3, y + 0.22, 0.2, P.devD); }
+    g.box(-0.42, y + 0.05, -0.12, -0.36, y + 0.25, 0.12, st, { e: 1, ao: 1 }); g.box(-0.2, y + 0.44, -0.1, 0.2, y + 0.56, 0.1, st, { e: 1, ao: 1 });
+  } else if (d.type === 'ap') {
+    g.box(-0.6, -0.8, -0.1, 0.6, 0.8, 0.45, P.dev); g.box(-0.45, -0.65, 0.45, 0.45, 0.65, 0.5, st, { e: 0.9, ao: 1 });
+  } else if (d.type === 'rd') {
+    g.box(-0.2, 0, -0.2, 0.2, 1.3, 0.2, P.devD); g.box(-0.3, 1.3, -0.3, 0.3, 1.9, 0.3, P.devD); g.box(-0.22, 1.42, 0.3, 0.22, 1.8, 0.34, P.acc, { e: 0.9, ao: 1 }); g.box(-0.22, 1.42, -0.34, 0.22, 1.8, -0.3, P.acc, { e: 0.9, ao: 1 });
+  } else if (d.type === 'rack') {
+    g.box(-0.8, 0, -1.1, 0.8, 2.6, 1.1, P.devD); for (let y = 0.5; y < 2.3; y += 0.32) g.box(0.8, y, -0.8, 0.84, y + 0.08, -0.4, y > 1.6 ? P.ok : P.acc, { e: 1, ao: 1 });
+    g.box(-0.85, 2.6, -1.15, 0.85, 2.75, 1.15, P.pole);
+  }
+  return g;
+}
+function buildDevices() {
+  for (const d of DEV) { const layer = d.type === 'cam' ? 'cam' : d.type === 'ap' || d.type === 'rack' ? 'red' : 'acc'; const y = d.type === 'cam' && d.mount !== 'pole' ? d.y : d.type === 'ap' ? d.y : 0;
+    obj(d.id, { geo: devGeo(d), layer, pick: true, kind: d.type, model: M.trs(d.x, y, d.z, d.yaw, 0, DS), inflate: 1.2 }); }
+}
+function buildFiber() { const g = new Geo(); for (const s of FIBER.segs) g.strip(s, 0.55, 0.075, P.fiber, 0.95); obj('fiber', { geo: g, layer: 'red', noShadow: true }); }
+
+/* ---------- vehículos y personas ---------- */
+const CARRIERS = ['Fletes Arazá', 'Transportes Ceibo', 'Logística Tacuarí', 'Frío Yerbal', 'Cargas Olimar', 'Transportes Quebracho', 'Fletes Cuareim'];
+const PLATES = ['SBX', 'SCD', 'SAF', 'AAK', 'ABF', 'SDA', 'MAB', 'FTB', 'SCG', 'ATP'];
+const plate = () => PLATES[Math.floor(Math.random() * PLATES.length)] + ' ' + (1000 + Math.floor(Math.random() * 8999));
+function truckGeo(v) {
+  const g = new Geo(), cab = P.cab[v % P.cab.length], stripe = [P.tint, P.fascia, '#B5684F', P.solar, P.acc][v % 5];
+  g.box(-8.4, 0.75, -1.1, 8.3, 1.2, 1.1, P.tire);
+  g.box(-8.4, 1.2, -1.3, 4.6, 5.0, 1.3, P.trailer, { ao: 0.9 });
+  g.box(-8.0, 1.6, -1.33, 4.2, 1.95, 1.33, stripe, { ao: 1 });
+  g.box(5.0, 0.95, -1.25, 8.4, 4.3, 1.25, cab, { ao: 0.9 });
+  g.box(8.4, 2.8, -1.1, 8.46, 3.95, 1.1, P.glass, { e: P.glassE * 0.5, ao: 1 });
+  g.box(5.2, 2.85, -1.28, 7.6, 3.85, 1.28, P.glass, { e: P.glassE * 0.5, ao: 1 });
+  g.box(5.0, 4.3, -1.15, 6.7, 4.85, 1.15, cab);
+  for (const x of [-7.1, -5.7, 3.2, 6.9]) for (const z of [-1.3, 0.85]) g.box(x - 0.55, 0, z, x + 0.55, 1.1, z + 0.45, P.tire);
+  return g;
+}
+function carGeo(v) { const g = new Geo(), c = P.car[v % P.car.length]; g.box(-2.1, 0.35, -0.95, 2.1, 1.25, 0.95, c); g.box(-1.1, 1.25, -0.85, 1.0, 1.95, 0.85, mulc(C(c), 0.8)); return g; }
+function forkGeo(loaded) {
+  const g = new Geo();
+  g.box(-1.2, 0.35, -0.75, 1.0, 1.5, 0.75, P.fork); g.box(-1.45, 0.35, -0.72, -0.9, 1.8, 0.72, mulc(C(P.fork), 0.82));
+  for (const [x, z] of [[-0.95, -0.7], [-0.95, 0.6], [0.55, -0.7], [0.55, 0.6]]) g.box(x, 1.5, z, x + 0.1, 2.75, z + 0.1, P.devD);
+  g.box(-1.0, 2.75, -0.72, 0.65, 2.88, 0.72, P.devD);
+  g.box(1.0, 0.2, -0.6, 1.2, 3.3, 0.6, P.devD); g.box(1.2, 0.15, -0.45, 2.7, 0.27, -0.25, P.devD); g.box(1.2, 0.15, 0.25, 2.7, 0.27, 0.45, P.devD);
+  g.blob(-0.3, 2.1, 0, 0.3, P.skin, { rings: 3, seg: 6 }); g.box(-0.55, 1.5, -0.35, -0.05, 1.85, 0.35, P.vest);
+  for (const [x, z] of [[-0.9, -0.85], [-0.9, 0.62], [0.6, -0.85], [0.6, 0.62]]) g.box(x - 0.32, 0, z, x + 0.32, 0.65, z + 0.23, P.tire);
+  if (loaded) { g.box(1.25, 0.3, -0.7, 2.75, 0.5, 0.7, P.pbase); g.box(1.3, 0.5, -0.65, 2.7, 1.8, 0.65, P.pallet); }
+  return g;
+}
+function personGeo(cart) {
+  const g = new Geo();
+  g.box(-0.12, 0, -0.17, 0.12, 0.5, -0.02, P.pants, { ao: 1 }); g.box(-0.12, 0, 0.02, 0.12, 0.5, 0.17, P.pants, { ao: 1 });
+  g.box(-0.15, 0.5, -0.22, 0.15, 0.95, 0.22, P.vest, { ao: 0.95 }); g.blob(0, 1.08, 0, 0.13, P.skin, { rings: 3, seg: 6 });
+  g.box(0.14, 0.72, -0.08, 0.26, 0.8, 0.08, P.devD); g.box(0.26, 0.74, -0.06, 0.27, 0.79, 0.06, P.screen, { e: 1, ao: 1 });
+  if (cart) { g.box(0.35, 0.15, -0.35, 1.2, 0.2, 0.35, P.devD); g.box(0.4, 0.2, -0.3, 1.15, 0.75, 0.3, P.pallet); g.box(0.32, 0.2, -0.35, 0.36, 1.0, 0.35, P.devD); }
+  return g;
+}
+function armGeo() { const g = new Geo(); for (let i = 0; i < 8; i++) g.box(i * 0.8, -0.13, -0.09, i * 0.8 + 0.8, 0.13, 0.09, i % 2 ? '#FFFFFF' : P.barrier, { ao: 1 }); return g; }
+function packetGeo() { const g = new Geo(); g.box(-0.6, 0, -0.25, 0.6, 0.25, 0.25, P.fiber, { e: 1, ao: 1 }); return g; }
+
+const TRUCKS = [], PACKETS = [], HWY = [];
+const ARMS = [{ id: 'arm-in', x: GATE.x + 5, z: GATE.z + 3.4, yaw: Math.PI / 2, lane: GATE.z + 1.3 }, { id: 'arm-out', x: GATE.x - 5, z: GATE.z - 3.4, yaw: -Math.PI / 2, lane: GATE.z - 1.3 }].map(a => ({ ...a, open: 0 }));
+function buildDynamicGeos() {
+  TRUCKS.forEach(t => obj(t.id, { geo: truckGeo(t.v), layer: 'log', pick: true, kind: 'truck', inflate: 0.3 }));
+  PACKETS.forEach(p => obj(p.id, { geo: packetGeo(), layer: 'red', noShadow: true }));
+  ARMS.forEach(a => obj(a.id, { geo: armGeo(), layer: 'base' }));
+  HWY.forEach(h => obj(h.id, { geo: h.truck ? truckGeo(h.v) : carGeo(h.v), layer: 'base' }));
+}
+
+/* ---------- rutas ---------- */
+const ADJ = {}; for (const [a, b] of EDGES) { (ADJ[a] = ADJ[a] || []).push(b); (ADJ[b] = ADJ[b] || []).push(a); }
+function route(from, to) { const dist = { [from]: 0 }, prev = {}, Q = new Set(Object.keys(NODES));
+  while (Q.size) { let u = null; for (const q of Q) if (dist[q] !== undefined && (u === null || dist[q] < dist[u])) u = q; if (u === null) break; Q.delete(u); if (u === to) break;
+    for (const v of ADJ[u] || []) { const d = dist[u] + Math.hypot(NODES[u].x - NODES[v].x, NODES[u].z - NODES[v].z); if (dist[v] === undefined || d < dist[v]) { dist[v] = d; prev[v] = u; } } }
+  const out = [to]; while (out[0] !== from) out.unshift(prev[out[0]]); return out; }
+const LANE = 1.3;
+function lanePath(pts) {
+  const out = []; for (let i = 0; i < pts.length; i++) { const p = pts[i], a = pts[i - 1], b = pts[i + 1];
+    const nOf = (u, v) => { const dx = v.x - u.x, dz = v.z - u.z, l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l]; };
+    let n; if (!a) n = nOf(p, b); else if (!b) n = nOf(a, p); else { const n1 = nOf(a, p), n2 = nOf(p, b), dd = 1 + n1[0] * n2[0] + n1[1] * n2[1]; n = dd < 0.2 ? n1 : [(n1[0] + n2[0]) / dd, (n1[1] + n2[1]) / dd]; }
+    out.push({ ...p, x: p.x + n[0] * LANE, z: p.z + n[1] * LANE }); } return out; }
+function arrivePath(d) {
+  const N = d.nave, rd = ROADS[N.road], nodes = route('S0', rd.node).map(k => ({ x: NODES[k].x, z: NODES[k].z, k }));
+  const en = NODES[rd.node], dx = d.A.x - en.x, dz = d.A.z - en.z, l = Math.hypot(dx, dz) || 1, over = { x: d.A.x + dx / l * 6.5, z: d.A.z + dz / l * 6.5 };
+  const pts = lanePath([...nodes, { x: d.A.x, z: d.A.z }, over]).map(p => ({ ...p, sp: p.k === 'S0' ? 12 : p.k === 'GATE' ? 3 : 7 }));
+  for (const p of pts) { if (p.k === 'GATE') { p.wait = 1.8; p.ev = 'gate'; } }
+  pts.push({ x: d.slot.x, z: d.slot.z, sp: 1.8, rev: true, ev: 'dock' }); return pts;
+}
+function leavePath(d) {
+  const N = d.nave, rd = ROADS[N.road], nodes = route(rd.node, 'S0').map(k => ({ x: NODES[k].x, z: NODES[k].z, k }));
+  const pts = lanePath([{ x: d.A.x, z: d.A.z }, ...nodes, { x: NODES.S0.x, z: NODES.S0.z + 80 }]).map(p => ({ ...p, sp: p.k === 'GATE' ? 3 : 7 }));
+  for (const p of pts) if (p.k === 'GATE') { p.wait = 1.1; p.ev = 'exit'; }
+  pts[pts.length - 1].ev = 'gone'; pts[pts.length - 1].sp = 12;
+  return [{ x: lerp(d.slot.x, d.A.x, 0.5), z: lerp(d.slot.z, d.A.z, 0.5), sp: 2.5 }, ...pts];
+}
+
+/* ---------- simulación ---------- */
+const NOW0 = Date.now();
+let INGRESOS = 196, lastSpawn = 0;
+const fmt = d => d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false });
+const simMinSince = t => Math.max(1, Math.round((Date.now() - t) / 1000 * 20 / 60));
+const moving = () => TRUCKS.filter(t => t.state === 'arriving' || t.state === 'leaving').length;
+function newTruck(i) { return { id: 'tr-' + i, v: i, plate: plate(), carrier: CARRIERS[i % CARRIERS.length], x: 0, z: 2000, head: 0, path: [], idx: 0, wait: 0, state: 'idle', idle: 0, dock: null, tIn: Date.now(), stage: 0 }; }
+function startArrival(t) { const f = DOCKS.filter(d => !d.occ); if (!f.length) return false; const d = f[Math.floor(Math.random() * f.length)];
+  d.occ = t; t.dock = d; t.plate = plate(); t.carrier = CARRIERS[Math.floor(Math.random() * CARRIERS.length)]; t.path = arrivePath(d); t.idx = 0;
+  t.x = t.path[0].x; t.z = t.path[0].z + 60; t.head = Math.PI / 2; t.state = 'arriving'; t.stage = 0; t.tIn = Date.now(); return true; }
+function initSim() {
+  const rr = seeded(21); let i = 0;
+  for (const d of DOCKS) { if (rr() > 0.42) continue; const t = newTruck(i++); TRUCKS.push(t); d.occ = t; t.dock = d; t.x = d.slot.x; t.z = d.slot.z; t.head = d.head; t.state = 'docked'; t.stage = 2;
+    t.dwell = 15 + rr() * 260; t.tIn = Date.now() - (10 + rr() * 60) * 60000 / 20; t.plate = plate(); d.nave.lastIn = fmt(new Date(Date.now() - (5 + rr() * 50) * 60000)) + ' · ' + t.plate; }
+  for (let k = 0; k < 6; k++) { const t = newTruck(i++); t.idle = 1 + k * 4; TRUCKS.push(t); }
+  FIBER.segs.forEach((r, ri) => { const L = []; let acc = 0; for (let i2 = 0; i2 < r.length - 1; i2++) { const l = Math.hypot(r[i2 + 1][0] - r[i2][0], r[i2 + 1][1] - r[i2][1]); L.push(l); acc += l; }
+    if (acc < 8) return; const n = acc > 120 ? 3 : 1; for (let k = 0; k < n; k++) PACKETS.push({ id: 'pk-' + ri + '-' + k, route: r, lens: L, total: acc, s: (k / n + ri * 0.17) * acc % acc, sp: 16 + (ri % 4) * 3 }); });
+  const hl = hwyLine(); for (let k = 0; k < 12; k++) { const dir = k % 2 ? 1 : -1, line = offsetLine(hl, dir * (k % 4 < 2 ? 4 : 8)); const L = []; let acc = 0;
+    for (let j = 0; j < line.length - 1; j++) { const l = Math.hypot(line[j + 1][0] - line[j][0], line[j + 1][1] - line[j][1]); L.push(l); acc += l; }
+    HWY.push({ id: 'hw-' + k, v: k, truck: k % 3 === 0, route: dir > 0 ? line : [...line].reverse(), lens: dir > 0 ? L : [...L].reverse(), total: acc, s: (k / 12) * acc, sp: 22 + (k % 5) * 3 }); }
+}
+function stepTruck(t, dt) {
+  if (t.state === 'idle') { t.idle -= dt; if (t.idle <= 0 && moving() < 4 && performance.now() - lastSpawn > 6500) { if (startArrival(t)) lastSpawn = performance.now(); else t.idle = 5; } return; }
+  if (t.state === 'docked') { t.head += wrapA(t.dock.head - t.head) * Math.min(1, dt * 2); t.dwell -= dt;
+    if (t.dwell <= 0) { if (moving() >= 4) { t.dwell = 6; return; } t.state = 'leaving'; t.stage = 3; t.path = leavePath(t.dock); t.idx = 0; } return; }
+  if (t.wait > 0) { t.wait -= dt; return; }
+  const w = t.path[t.idx]; if (!w) return;
+  const dx = w.x - t.x, dz = w.z - t.z, dist = Math.hypot(dx, dz), step = w.sp * dt;
+  if (dist > 0.01) { let th = Math.atan2(-dz, dx); if (w.rev) th += Math.PI; const rate = w.rev ? 1.1 : 2.6; t.head += clamp(wrapA(th - t.head), -dt * rate, dt * rate); }
+  if (dist <= step) { t.x = w.x; t.z = w.z; t.idx++; if (w.wait) t.wait = w.wait; if (w.ev) truckEvent(t, w.ev); }
+  else { t.x += dx / dist * step; t.z += dz / dist * step; }
+}
+function truckEvent(t, ev) {
+  const d = t.dock, N = d && d.nave;
+  if (ev === 'gate') { INGRESOS++; DEV.find(x => x.loc === 'Portería · entrada').hoy++; log('info', `Cámara de matrículas leyó ${t.plate} en portería · va a ${N.id} ${N.name}`, t.id); t.stage = 1; }
+  if (ev === 'dock') { t.state = 'docked'; t.stage = 2; t.dwell = 40 + Math.random() * 90; N.lastIn = fmt(new Date()) + ' · ' + t.plate; log('ok', `${t.plate} quedó en el andén ${d.k} de ${N.id} ${N.name}`, t.id); }
+  if (ev === 'exit') { if (d) d.occ = null; log('info', `${t.plate} salió del predio · ${simMinSince(t.tIn)} min adentro`, t.id); t.dock = null; }
+  if (ev === 'gone') { t.state = 'idle'; t.idle = 3 + Math.random() * 10; t.z = 2000; if (SEL === t.id) closePanel(); }
+}
+function along(p, dt) { p.s = (p.s + p.sp * dt) % p.total; let s = p.s;
+  for (let i = 0; i < p.lens.length; i++) { if (s <= p.lens[i]) { const a = p.route[i], b = p.route[i + 1], t = s / p.lens[i]; p.x = lerp(a[0], b[0], t); p.z = lerp(a[1], b[1], t); p.head = Math.atan2(-(b[1] - a[1]), b[0] - a[0]); return; } s -= p.lens[i]; } }
+function stepArms(dt) { for (const a of ARMS) { const open = TRUCKS.some(t => t.state !== 'idle' && t.state !== 'docked' && Math.abs(t.z - a.lane) < 1.2 && Math.abs(t.x - GATE.x) < 11 && !(t.wait > 0.7)); a.open += ((open ? 1 : 0) - a.open) * Math.min(1, dt * 3); } }
+function syncModels() {
+  for (const t of TRUCKS) { const o = OBJID.get(t.id); o.model = M.trs(t.x, 0, t.z, t.head, 0, S); o.on = t.state !== 'idle' && LAYERS.log; }
+  for (const p of PACKETS) { const o = OBJID.get(p.id); o.model = M.trs(p.x || 0, 0.08, p.z || 0, p.head || 0); o.on = LAYERS.red; }
+  for (const h of HWY) { const o = OBJID.get(h.id); o.model = M.trs(h.x || 0, 0, h.z || 0, h.head || 0, 0, S); }
+  for (const a of ARMS) { const o = OBJID.get(a.id); o.model = M.trs(a.x, 0.85, a.z, a.yaw, a.open * 1.4, S); }
+  if (INSIDE) for (const w of INSIDE.actors) { const o = OBJID.get(w.id); if (o) { const p = fp(INSIDE.N.f, w.t, -w.d); o.model = M.trs(p[0], w.y || 0, p[1], w.head, 0, w.s); o.on = true; } }
+}
+
+/* ---------- adentro de la nave: racks, puestos, operarios, autoelevadores ---------- */
+let INSIDE = null;
+const OPS = {};
+function opsOf(N) { if (OPS[N.id]) return OPS[N.id]; const r = seeded(N.id.charCodeAt(1) * 31 + N.f.L | 0), L = N.f.L, D = N.f.D;
+  const st = clamp(Math.floor((L - 14) / 6.5), 3, 12), ops = clamp(Math.round(L * D / 260), 8, 46);
+  return OPS[N.id] = { stations: st, stationsOn: Math.max(2, st - Math.floor(r() * 3)), workers: ops, forks: clamp(Math.round(L / 22), 2, 8), forksCharging: 1, terminals: ops + 2, terminalsOn: ops, orders: 180 + Math.floor(r() * 900) }; }
+function enterInside(N) {
+  exitInside(true); const f = N.f, L = f.L, D = f.D, r = seeded(N.id.charCodeAt(1) * 7 + 3), g = new Geo(), O = opsOf(N);
+  const P2 = (t, d) => fp(f, t, -d); const box = (t0, t1, d0, d1, y0, y1, col, o) => fbox(g, f, t0, t1, -d0, -d1, y0, y1, col, o);
+  box(0.35, L - 0.35, 0.35, D - 0.35, 0.82, 0.86, P.floor, { ao: 1, onlyTop: true });
+  box(1, L - 1, 9.6, 9.8, 0.87, 0.88, P.markY, { ao: 1, onlyTop: true });
+  const actors = [];
+  const stations = [];
+  for (let i = 0; i < O.stations; i++) { const t = 12 + i * 6.5; if (t > L - 4) break; const id = `P-${String(i + 1).padStart(2, '0')}`, on = i < O.stationsOn;
+    box(t - 1.3, t + 1.3, 6.2, 7.2, 0.86, 1.62, P.hvac); box(t - 1.35, t + 1.35, 6.15, 7.25, 1.62, 1.7, P.dev);
+    box(t - 0.4, t + 0.4, 7.0, 7.12, 1.7, 2.25, P.devD); box(t - 0.34, t + 0.34, 6.98, 7.0, 1.76, 2.2, on ? P.screen : P.devD, { e: on ? 1 : 0, ao: 1 });
+    box(t + 0.5, t + 1.1, 6.4, 6.9, 1.7, 2.1, P.pallet); stations.push({ id, t, on, op: on ? 'Operario ' + String(i + 1).padStart(2, '0') : null, pph: 24 + Math.floor(r() * 30) });
+    if (on) actors.push({ id: 'in-w' + i, kind: 'worker', role: 'Embalaje', num: i + 1, t, d: 7.9, base: 7.9, head: yawOf(f.o[0], f.o[1]), s: 1, mode: 'station', ph: r() * 6, y: 0.86, picks: 30 + Math.floor(r() * 60) }); }
+  const aisles = []; let d = 12.5; const gapA = L * 0.5;
+  while (d + 2.4 < D - 2) { for (const [ta, tb] of [[3, gapA - 2.2], [gapA + 2.2, L - 3]]) { if (tb - ta < 4) continue;
+      box(ta, tb, d, d + 2.2, 0.86, 0.9, P.pbase, { ao: 1 });
+      for (let t = ta; t <= tb + 0.01; t += 2.9) { box(t - 0.07, t + 0.07, d, d + 0.12, 0.86, 5.9, P.upright, { ao: 1 }); box(t - 0.07, t + 0.07, d + 2.08, d + 2.2, 0.86, 5.9, P.upright, { ao: 1 }); }
+      for (const y of [2.3, 3.8, 5.3]) { box(ta, tb, d, d + 0.1, y - 0.12, y, P.rack, { ao: 1 }); box(ta, tb, d + 2.1, d + 2.2, y - 0.12, y, P.rack, { ao: 1 }); }
+      for (let t = ta + 0.15; t + 2.6 <= tb; t += 2.9) for (const y of [0.9, 2.3, 3.8, 5.3]) for (const [d0, d1] of [[d + 0.15, d + 1.05], [d + 1.15, d + 2.05]]) {
+        if (r() < 0.22) continue; const gc = P.goods[Math.floor(r() * P.goods.length)]; const hh = 0.8 + r() * 0.5;
+        box(t + 0.1, t + 1.3, d0, d1, y, y + 0.12, P.pbase, { ao: 1 }); box(t + 0.15, t + 1.25, d0 + 0.04, d1 - 0.04, y + 0.12, y + 0.12 + Math.min(hh, 1.3), gc, { ao: 0.9 });
+        if (r() < 0.8) { box(t + 1.42, t + 2.62, d0, d1, y, y + 0.12, P.pbase, { ao: 1 }); box(t + 1.47, t + 2.57, d0 + 0.04, d1 - 0.04, y + 0.12, y + 0.12 + Math.min(hh, 1.3), gc, { ao: 0.9 }); } } }
+    aisles.push(d + 2.2 + 1.7); d += 2.2 + 3.4; }
+  if (!aisles.length) aisles.push(D / 2);
+  const walkers = Math.min(O.workers - actors.length, 26);
+  for (let i = 0; i < walkers; i++) { const ad = aisles[i % aisles.length], t = 4 + r() * (L - 8), cart = r() < 0.45;
+    actors.push({ id: 'in-p' + i, kind: 'worker', role: 'Picking', num: actors.length + 1, t, d: ad + (r() - 0.5) * 0.8, base: ad, head: 0, s: 1, mode: 'walk', dir: r() < 0.5 ? 1 : -1, sp: 0.9 + r() * 0.5, cart, ta: 3, tb: L - 3, pause: r() * 3, term: 'TP-' + String(i + 1).padStart(2, '0'), bat: 35 + Math.floor(r() * 60), picks: 40 + Math.floor(r() * 140), y: 0.86 }); }
+  for (let i = 0; i < O.forks; i++) { const ad = aisles[(i * 2 + 1) % aisles.length], charging = i === 0;
+    actors.push({ id: 'in-f' + i, kind: 'fork', num: i + 1, t: charging ? L - 2.5 : 5 + r() * (L - 10), d: charging ? 4 : ad, head: 0, s: S, mode: charging ? 'charge' : 'drive', dir: r() < 0.5 ? 1 : -1, sp: 2.2 + r(), ta: 4, tb: L - 4, pause: 0, loaded: r() < 0.5, bat: charging ? 18 : 40 + Math.floor(r() * 55), moves: 30 + Math.floor(r() * 90), type: i % 3 === 2 ? 'Apilador eléctrico' : 'Autoelevador', y: 0.86 }); }
+  obj('inside', { geo: g, layer: 'base', on: true });
+  for (const a of actors) { a.geoA = a.kind === 'fork' ? forkGeo(false) : personGeo(a.cart); a.geoB = a.kind === 'fork' ? forkGeo(true) : a.geoA; obj(a.id, { geo: a.loaded ? a.geoB : a.geoA, layer: 'base', pick: true, kind: a.kind === 'fork' ? 'ifork' : 'worker', inflate: a.kind === 'fork' ? 0.4 : 0.35 }); }
+  for (const s of stations) { const p = P2(s.t, 6.7); const sg = new Geo(); sg.box(-1.3, 0.8, -0.5, 1.3, 2.3, 0.5, P.dev); obj('st-' + s.id, { geo: sg, layer: 'base', pick: true, kind: 'station', model: M.trs(p[0], 0, p[1], 0), on: false, pickOnly: true }); }
+  INSIDE = { N, actors, stations };
+  buildNave(N, true); $('#inside').hidden = false; $('#insideT').textContent = `Adentro de ${N.id}${N.name ? ' · ' + N.name : ''}`;
+}
+function exitInside(silent) {
+  if (!INSIDE) return; const N = INSIDE.N;
+  for (const o of OBJ) if (o.id === 'inside' || o.id.startsWith('in-') || o.id.startsWith('st-')) { o.on = false; o.pick = false; }
+  INSIDE = null; buildNave(N, false); $('#inside').hidden = true; if (!silent && SEL && (SEL.startsWith('in-') || SEL.startsWith('st-'))) closePanel();
+}
+function stepInside(dt) {
+  if (!INSIDE) return; const f = INSIDE.N.f;
+  for (const a of INSIDE.actors) {
+    if (a.mode === 'station') { a.ph += dt; a.d = a.base + Math.sin(a.ph * 0.9) * 0.15; continue; }
+    if (a.mode === 'charge') continue;
+    if (a.pause > 0) { a.pause -= dt; continue; }
+    a.t += a.dir * a.sp * dt; if (a.t > a.tb || a.t < a.ta) { a.t = clamp(a.t, a.ta, a.tb); a.dir *= -1; a.pause = a.kind === 'fork' ? 1.5 : 0.8 + Math.random() * 2;
+      if (a.kind === 'fork') { a.loaded = !a.loaded; a.moves++; const o = OBJID.get(a.id); o.geo = a.loaded ? a.geoB : a.geoA; o.version++; } else a.picks++; }
+    if (a.kind === 'worker' && Math.random() < dt * 0.15) a.pause = 1.5 + Math.random() * 2;
+    a.head = yawOf(f.a[0] * a.dir, f.a[1] * a.dir); }
+}
+
+/* ---------- cámara de la vista ---------- */
+const HOME = () => ({ tx: narrow() ? -70 : -92, tz: narrow() ? -10 : -26, yaw: 0.64, pitch: 0.66, zoom: narrow() ? 330 : 212 });
+const cam = Object.assign({}, HOME());
+let tween = null;
+function flyTo(to, dur = 1.1) { const from = { ...cam }; if (to.yaw !== undefined) to.yaw = from.yaw + wrapA(to.yaw - from.yaw); tween = { from, to: { ...from, ...to }, t: 0, dur: RM ? 0.001 : dur }; }
+function view(w, h) {
+  const a = w / h, cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), d = [cp * Math.sin(cam.yaw), sp, cp * Math.cos(cam.yaw)];
+  const t = [cam.tx, 0, cam.tz], e = [t[0] + d[0] * 900, d[1] * 900, t[2] + d[2] * 900];
+  const z = nrm(d), x = nrm(cross([0, 1, 0], z)), y = cross(z, x), hh = cam.zoom, hw = hh * a;
+  return { vp: M.mul(M.ortho(-hw, hw, -hh, hh, 1, 2400), M.look(e, t, [0, 1, 0])), e, d, x, y, hw, hh };
+}
+function ray(V, px, py, w, h) { const nx = px / w * 2 - 1, ny = 1 - py / h * 2;
+  const o = [V.e[0] + V.x[0] * nx * V.hw + V.y[0] * ny * V.hh, V.e[1] + V.x[1] * nx * V.hw + V.y[1] * ny * V.hh, V.e[2] + V.x[2] * nx * V.hw + V.y[2] * ny * V.hh];
+  return { o, d: [-V.d[0], -V.d[1], -V.d[2]] }; }
+function groundAt(px, py) { const r = ray(view(W, H), px, py, W, H), t = -r.o[1] / r.d[1]; return [r.o[0] + r.d[0] * t, r.o[2] + r.d[2] * t]; }
+
+/* ---------- estado e interfaz ---------- */
+const LAYERS = { cli: true, red: true, cam: true, acc: true, log: true };
+let SEL = null, HOVER = null, W = 1, H = 1, main, camR = null, CAMDEV = null;
+const canvas = $('#scene');
+function env() {
+  const ld = nrm([-0.9, 1.05, 0.38]), lp = [ld[0] * 900, ld[1] * 900, ld[2] * 900], c = [-20, 30];
+  return { ld, lvp: M.mul(M.ortho(-340, 340, -340, 340, 10, 1900), M.look([lp[0] + c[0], lp[1], lp[2] + c[1]], [c[0], 0, c[1]], [0, 1, 0])), sunC: P.sunC, sun: P.sun, sky: P.sky3, gnd: P.gnd3, amb: P.amb, clear: C(P.clear), tint: C(P.tint), ctr: c };
+}
+function isDark() { const t = document.documentElement.getAttribute('data-theme'); if (t === 'dark') return true; if (t === 'light') return false; return matchMedia('(prefers-color-scheme: dark)').matches; }
+function buildAll() { P = isDark() ? PAL.dark : PAL.light; buildBase(); NAVES.forEach(N => buildNave(N, false)); buildDevices(); buildFiber(); buildDynamicGeos(); if (INSIDE) { const N = INSIDE.N; INSIDE = null; enterInside(N); } applyLayers(); }
+function applyLayers() { for (const o of OBJ) { if (['cam', 'red', 'acc'].includes(o.layer)) o.on = LAYERS[o.layer]; } }
+
+function entity(id) {
+  if (!id) return null; const N = naveById(id); if (N) return { t: 'nave', N };
+  const d = DEV.find(x => x.id === id); if (d) return { t: d.type, d };
+  const tr = TRUCKS.find(x => x.id === id); if (tr) return { t: 'truck', tr };
+  if (INSIDE) { const a = INSIDE.actors.find(x => x.id === id); if (a) return { t: a.kind === 'fork' ? 'ifork' : 'worker', a, N: INSIDE.N };
+    if (id.startsWith('st-')) { const s = INSIDE.stations.find(x => 'st-' + x.id === id); if (s) return { t: 'station', s, N: INSIDE.N }; } }
+  if (id === 'gate') return { t: 'gate' }; if (id === 'admin') return { t: 'admin' }; if (id === 'lot') return { t: 'lot' }; return null;
+}
+function entPos(id) { const e = entity(id); if (!e) return null;
+  if (e.t === 'nave') return [e.N.cx, e.N.h, e.N.cz]; if (e.t === 'truck') return [e.tr.x, 3, e.tr.z];
+  if (e.t === 'worker' || e.t === 'ifork') { const p = fp(e.N.f, e.a.t, -e.a.d); return [p[0], e.t === 'ifork' ? 2.6 : 2.1, p[1]]; }
+  if (e.t === 'station') { const p = fp(e.N.f, e.s.t, -6.7); return [p[0], 2.6, p[1]]; }
+  if (e.t === 'gate') return [GATE.x, 5.5, GATE.z]; if (e.t === 'admin') return [(OFF.x0 + OFF.x1) / 2, 7.5, (OFF.z0 + OFF.z1) / 2]; if (e.t === 'lot') return [X(330), 2, Z(130)];
+  const d = e.d; const y = d.type === 'cam' ? (d.mount === 'pole' ? 8.2 * DS : d.y) : d.type === 'ap' ? d.y : 2; return [d.x, y, d.z]; }
+
+const ICON = {
+  nave: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-7h10v7M7 17h10"/></svg>',
+  cam: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h12l4-3v14l-4-3H3z"/></svg>',
+  ap: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>',
+  truck: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>',
+  fork: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18V8h6l2 5v5M15 4v14h6"/><circle cx="6" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/></svg>',
+  worker: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.6-4 3.4-6.5 7-6.5s6.4 2.5 7 6.5"/></svg>',
+  station: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1.5"/><path d="M8 20h8M12 15v5"/></svg>',
+  rd: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  rack: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 7h8M8 11h8M8 15h8"/></svg>',
+  lot: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 16l1.5-5h11L19 16M4 16h16v3H4zM7 19v1.5M17 19v1.5"/></svg>'
+};
+ICON.gate = ICON.rd; ICON.admin = ICON.nave; ICON.ifork = ICON.fork;
+const row = (k, v) => `<div class="row"><dt>${k}</dt><dd>${v}</dd></div>`;
+const bar = (p, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.round(clamp(p, 0, 1) * 100)}%"></i></div>`;
+const nName = N => N.name || 'Empresa a confirmar';
+function naveStats(N) {
+  const occ = N.docks.filter(d => d.occ && d.occ.state === 'docked').length, cams = DEV.filter(d => d.nave === N.id && d.type === 'cam'), aps = DEV.filter(d => d.nave === N.id && d.type === 'ap');
+  return { occ, cams, aps, camOn: cams.filter(c => c.status !== 'crit').length, alerts: DEV.filter(d => d.nave === N.id && d.status !== 'ok'), cli: aps.reduce((s, a) => s + a.cli, 0) };
+}
+function panelContent(id) {
+  const e = entity(id); if (!e) return null; let ey = '', t = '', s = '', pill = '', body = '', acts = '';
+  if (e.t === 'nave') { const N = e.N, S2 = naveStats(N);
+    ey = N.factory ? 'Fábrica vecina' : 'Nave ' + N.id + (N.free ? ' · sin datos' : ''); t = N.factory ? N.name : N.free ? N.id + ' · a confirmar' : N.name; s = N.rubro + ' · ≈ ' + m2(N.area) + ' m²';
+    if (N.free) { pill = '<span class="pill info">' + (N.factory ? 'Cliente potencial' : 'Datos a cargar') + '</span>';
+      body = `<dl class="rows">${N.docks.length ? row('Andenes', N.docks.length) : ''}${row('Superficie aprox.', m2(N.area) + ' m²')}${row('Red y cámaras', 'Sin datos')}</dl>
+      <div class="diag info"><b>Oportunidad</b>${N.factory ? 'Está pegada al parque. Se le ofrece el mismo paquete: cámaras, red, control de acceso y monitoreo.' : 'Cuando se confirme la empresa se carga su operación y se le ofrece fibra, Wi-Fi, cámaras, accesos y monitoreo.'}</div>`;
+      acts = '<button class="btn pri" data-act="quote">Cotizar instalación</button>'; }
+    else { const O = opsOf(N);
+      pill = S2.alerts.length ? `<span class="pill ${S2.alerts.some(a => a.status === 'crit') ? 'crit' : 'warn'}">${S2.alerts.length} alerta${S2.alerts.length > 1 ? 's' : ''}</span>` : '<span class="pill ok">Todo en orden</span>';
+      body = `<dl class="rows">${N.tenants ? row('Empresas', N.tenants.join(', ')) : ''}${row('Andenes ocupados', S2.occ + ' de ' + N.docks.length)}${bar(S2.occ / N.docks.length)}
+        ${(N.extra || []).map(([k, v]) => row(k, v)).join('')}${row('Último ingreso', N.lastIn || '—')}</dl>
+        <div class="sec">Operación ahora</div>
+        <dl class="rows">${row('Operarios en turno', O.workers)}${row('Terminales de picking', O.terminalsOn + ' de ' + O.terminals + ' en línea')}${row('Puestos de trabajo', O.stationsOn + ' de ' + O.stations + ' activos')}${row('Autoelevadores', O.forks + ' · ' + O.forksCharging + ' cargando')}${row('Pedidos preparados hoy', O.orders)}</dl>
+        <div class="sec">Infraestructura</div>
+        <dl class="rows">${row('Cámaras', S2.camOn + ' de ' + S2.cams.length + ' en línea')}${row('Wi-Fi', S2.aps.length + ' AP · ' + S2.cli + ' dispositivos')}</dl>`;
+      const al = S2.alerts[0]; if (al) body += `<div class="diag ${al.status === 'warn' ? 'warn' : ''}"><b>${al.id} · ${al.status === 'crit' ? 'sin señal' : 'atención'}</b>${al.type === 'cam' ? 'Cámara de ' + al.loc.split(' · ')[1] + ' sin imagen.' : 'Interferencia alta en 2,4 GHz: afecta las terminales de picking.'} Tocá el pin para ver el diagnóstico.</div>`;
+      const inside = INSIDE && INSIDE.N === N;
+      acts = `<button class="btn pri" data-act="inside">${inside ? 'Ver techo' : 'Ver adentro'}</button><button class="btn" data-act="cams" data-id="${S2.cams[0].id}">Ver cámaras</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>`; } }
+  else if (e.t === 'worker') { const a = e.a; ey = 'Operario · ' + a.role.toLowerCase(); t = 'Operario ' + String(a.num).padStart(2, '0'); s = e.N.id + ' · ' + nName(e.N);
+    pill = a.mode === 'station' ? '<span class="pill ok">En su puesto</span>' : a.pause > 0 ? '<span class="pill info">Tomando mercadería</span>' : '<span class="pill ok">Recorriendo pasillo</span>';
+    body = `<dl class="rows">${a.term ? row('Terminal de picking', a.term + ' · ' + a.bat + ' %') + bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok') : ''}${row(a.mode === 'station' ? 'Pedidos embalados hoy' : 'Ítems pickeados hoy', a.picks)}${row('Turno', '22:00 a 06:00')}${row('Ubicación', 'Credencial BLE · ±1 m')}</dl>`; }
+  else if (e.t === 'station') { const st = e.s; ey = 'Puesto de trabajo · ' + st.id; t = st.on ? 'Puesto de embalaje' : 'Puesto libre'; s = e.N.id + ' · ' + nName(e.N);
+    pill = st.on ? '<span class="pill ok">Activo</span>' : '<span class="pill info">Sin operario</span>';
+    body = `<dl class="rows">${row('Operario', st.op || '—')}${row('Pedidos por hora', st.on ? st.pph : '—')}${row('Impresora de etiquetas', 'En línea')}${row('Balanza', 'Calibrada')}</dl>`; }
+  else if (e.t === 'ifork') { const a = e.a; ey = a.type; t = (a.type === 'Autoelevador' ? 'AE-' : 'AP-') + String(a.num).padStart(2, '0'); s = e.N.id + ' · ' + nName(e.N);
+    pill = a.mode === 'charge' ? '<span class="pill warn">Cargando batería</span>' : '<span class="pill ok">Operando</span>';
+    body = `<dl class="rows">${row('Estado', a.mode === 'charge' ? 'En el cargador' : a.pause > 0 ? 'Levantando pallet' : a.loaded ? 'Llevando pallet' : 'Volviendo vacío')}${row('Batería', a.bat + ' %')}${bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok')}${row('Movimientos hoy', a.moves)}${row('Horas de uso', (1200 + a.num * 317) + ' h')}${row('Próximo service', a.num % 2 ? 'en 38 h' : 'en 112 h')}</dl>`; }
+  else if (e.t === 'cam') { const d = e.d; ey = 'Cámara · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || d.loc;
+    pill = d.status === 'crit' ? `<span class="pill crit">Sin señal desde ${fmt(new Date(NOW0 - 14 * 60000))}</span>` : '<span class="pill ok">Grabando</span>';
+    body = `<dl class="rows">${row('Tipo', d.kind)}${row('Grabación', 'NVR · 30 días')}${row('Disponibilidad 30 días', d.status === 'crit' ? '97,1 %' : '99,9 %')}${row('Último movimiento', d.status === 'crit' ? '—' : fmt(new Date(Date.now() - 60000 * (2 + Math.abs(d.x | 0) % 9))))}</dl>`;
+    if (d.status === 'crit') body += `<div class="diag"><b>Diagnóstico de Ondi</b>El switch de la nave responde, pero el puerto 7 dejó de entregar PoE. Revisar el cable o el inyector antes de cambiar la cámara.</div>`;
+    acts = `<button class="btn pri" data-act="live" data-id="${d.id}">Ver en vivo</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>`; }
+  else if (e.t === 'ap') { const d = e.d; ey = 'Access point · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
+    pill = d.status === 'warn' ? '<span class="pill warn">Interferencia alta</span>' : '<span class="pill ok">En línea</span>';
+    body = `<dl class="rows">${row('Modelo', d.kind)}${row('Dispositivos conectados', d.cli)}${row('Canal 2,4 GHz', d.status === 'warn' ? '6 · 71 % ocupado' : '11 · 18 % ocupado')}${row('Canal 5 GHz', '36 · 80 MHz')}${row('Enlace', d.nave ? 'Fibra → switch de la nave' : 'Fibra → rack core')}</dl>`;
+    if (d.status === 'warn') body += `<div class="diag warn"><b>Recomendación de Ondi</b>Pasar el 2,4 GHz al canal 1 y bajar la potencia a media. Las terminales de picking de los operarios se conectan en esa banda.</div>`;
+    acts = '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
+  else if (e.t === 'rd') { const d = e.d; ey = 'Control de acceso · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
+    pill = '<span class="pill ok">En servicio</span>'; body = `<dl class="rows">${row('Tipo', d.kind)}${row('Accesos hoy', d.hoy)}${row('Último acceso', fmt(new Date(Date.now() - 180000)))}${row('Rechazados hoy', d.loc === 'Portería · entrada' ? '2' : '0')}</dl>`; }
+  else if (e.t === 'rack') { ey = 'Sala técnica · RK-01'; t = 'Rack core del parque'; s = 'Oficinas del parque';
+    pill = '<span class="pill ok">En línea</span>'; body = `<dl class="rows">${row('Fibra', '12 hilos a ' + tenantNaves().length + ' naves y portería')}${row('Switch core', '10 Gb/s · 24 puertos SFP+')}${row('UPS', 'Autonomía 48 min')}${row('Temperatura', '24 °C')}${row('Tráfico ahora', (380 + Math.round(Math.random() * 60)) + ' Mb/s')}</dl>`; }
+  else if (e.t === 'truck') { const tr = e.tr, d = tr.dock; ey = 'Camión'; t = tr.plate; s = tr.carrier;
+    const stages = ['Portería', 'Recorrido', 'Andén', 'Salida'], st = tr.stage;
+    pill = `<span class="pill info">${['Llegando a portería', 'Camino al andén', 'Descargando en andén', 'Saliendo del predio'][st]}</span>`;
+    body = `<div class="steps">${stages.map((n, i) => `<div class="${i < st ? 'done' : i === st ? 'now' : ''}">${n}</div>`).join('')}</div>
+      <dl class="rows">${row('Destino', d ? d.nave.id + ' ' + d.nave.name + ' · andén ' + d.k : '—')}${row('Ingreso', st > 0 ? fmt(new Date(Date.now() - simMinSince(tr.tIn) * 60000)) : '—')}${row('Tiempo en el predio', st > 0 ? simMinSince(tr.tIn) + ' min' : '—')}${row('Lectura de matrícula', st > 0 ? 'C-01 · portería' : 'Pendiente')}</dl>`;
+    acts = '<button class="btn" data-act="follow">Seguir camión</button>'; }
+  else if (e.t === 'gate') { ey = 'Control de acceso'; t = 'Portería principal'; s = 'Entrada y salida de camiones';
+    pill = '<span class="pill ok">Barreras en servicio</span>'; body = `<dl class="rows">${row('Ingresos hoy', INGRESOS)}${row('Lectura de matrículas', 'C-01 · 98 % de acierto')}${row('Camiones en espera', TRUCKS.filter(x => x.wait > 0).length)}</dl>`; }
+  else if (e.t === 'admin') { ey = 'Administración'; t = 'Oficinas del parque'; s = 'Entre E8 y E1';
+    pill = '<span class="pill ok">Todo en orden</span>'; body = `<dl class="rows">${row('Sala técnica', 'Rack core · fibra a todo el parque')}${row('Accesos de personal hoy', offRd.hoy)}${row('Wi-Fi', '34 dispositivos')}</dl>`; }
+  else if (e.t === 'lot') { ey = 'Patio de vehículos'; t = 'Playa de autos 0 km'; s = 'Arriba de E7';
+    pill = '<span class="pill ok">2 cámaras en línea</span>'; body = `<dl class="rows">${row('Vehículos en el patio', m2(LOTCOUNT) + ' (estimado)')}${row('Cámaras', '2 · esquinas noroeste y sureste')}</dl>
+      <div class="diag info"><b>Idea para vender</b>Conteo automático de autos por cámara con IA para el inventario diario del patio, con aviso si entra o sale un vehículo sin registrar.</div>`;
+    acts = '<button class="btn pri" data-act="quote">Cotizar conteo con IA</button>'; }
+  return { ey, t, s, pill, body, acts, icon: ICON[e.t] || ICON.nave };
+}
+const panel = $('#panel');
+function renderPanel(full) {
+  const c = panelContent(SEL); if (!c) { closePanel(); return; }
+  if (full) { $('#pAv').innerHTML = c.icon; $('#pActs').innerHTML = c.acts; }
+  $('#pEy').textContent = c.ey; $('#pT').textContent = c.t; $('#pS').textContent = c.s;
+  $('#pBody').innerHTML = c.pill + c.body;
+}
+let FOLLOW = false;
+function select(id, focus = true) {
+  SEL = id; FOLLOW = false; panel.hidden = !id; if (!id) return;
+  const e = entity(id); if (INSIDE && e.t === 'nave' && e.N !== INSIDE.N) exitInside(true);
+  renderPanel(true); const p = entPos(id);
+  if (focus && p) { const z = e.t === 'nave' ? clamp(Math.max(e.N.f.L, e.N.f.D) * 0.75, 45, 130) * (narrow() ? 1.4 : 1) : e.t === 'truck' ? (narrow() ? 40 : 28) : e.t === 'lot' ? 90 : ['worker', 'ifork', 'station'].includes(e.t) ? (narrow() ? 20 : 14) : (narrow() ? 30 : 22);
+    flyTo(Object.assign(focusTarget(p, z), { zoom: z })); }
+  if (e.t === 'truck') FOLLOW = true;
+  updateChips();
+}
+function focusTarget(p, zoom) {
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), d = [cp * Math.sin(cam.yaw), sp, cp * Math.cos(cam.yaw)];
+  let gx = p[0] - d[0] * p[1] / d[1], gz = p[2] - d[2] * p[1] / d[1]; const u = 2 * zoom / H;
+  if (narrow()) { const L = (H * 0.2) * u / sp; gx += Math.sin(cam.yaw) * L; gz += Math.cos(cam.yaw) * L; }
+  else { const R2 = 190 * u; gx += Math.cos(cam.yaw) * R2; gz -= Math.sin(cam.yaw) * R2; }
+  return { tx: gx, tz: gz };
+}
+function closePanel() { SEL = null; FOLLOW = false; panel.hidden = true; updateChips(); }
+$('#pX').onclick = () => { if (INSIDE) exitInside(true); closePanel(); };
+$('#insideX').onclick = () => { const N = INSIDE && INSIDE.N; exitInside(); if (N && SEL === N.id) renderPanel(true); };
+$('#pActs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.act;
+  if (a === 'ticket') { const n = 2300 + Math.floor(Math.random() * 600); toast('Ticket OL-' + n + ' creado en Olumi (demo)'); const c = panelContent(SEL); log('info', `Ticket OL-${n} creado · ${c.t}`, SEL); }
+  if (a === 'quote') toast('Cotización armada (demo)');
+  if (a === 'live' || a === 'cams') openCam(b.dataset.id);
+  if (a === 'follow') FOLLOW = true;
+  if (a === 'inside') { const e = entity(SEL); if (INSIDE && INSIDE.N === e.N) exitInside(); else { enterInside(e.N); const p = [e.N.cx, 0, e.N.cz], z = clamp(Math.max(e.N.f.L, e.N.f.D) * 0.62, 34, 110) * (narrow() ? 1.4 : 1); flyTo(Object.assign(focusTarget(p, z), { zoom: z, pitch: 0.78 })); } renderPanel(true); } });
+let toastT; function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+const FEED = [];
+function log(kind, text, id, when) { FEED.unshift({ kind, text, id, when: when || new Date(), fresh: !when }); FEED.length = Math.min(FEED.length, 6); drawFeed(); }
+function drawFeed() { $('#feed').innerHTML = FEED.slice(0, 5).map((f, i) => `<li class="${f.fresh && i === 0 ? 'new' : ''}" data-id="${f.id || ''}"><time>${fmt(f.when)}</time><i class="${f.kind}"></i><span>${f.text}</span></li>`).join(''); FEED.forEach(f => f.fresh = false); }
+$('#feed').addEventListener('click', ev => { const li = ev.target.closest('li'); if (li && li.dataset.id && entity(li.dataset.id)) { const e = entity(li.dataset.id); if (e.t === 'truck' && e.tr.state === 'idle') return; select(li.dataset.id); } });
+
+const LBL = []; const labels = $('#labels');
+function addLabel(html, pos, layer, id, cls) { const el = document.createElement('div'); el.className = 'lbl'; el.innerHTML = html; labels.appendChild(el); const L = { el, pos, layer, id, cls }; LBL.push(L);
+  el.addEventListener('click', () => id && select(id)); el.addEventListener('pointerenter', () => { HOVER = id; }); el.addEventListener('pointerleave', () => { HOVER = null; }); return L; }
+function makeLabels() {
+  for (const N of NAVES) N.chip = addLabel(`<button class="chip ${N.free ? 'free' : ''}"><i class="${N.free ? 'free' : ''}"></i><div><b>${N.factory ? N.name : `<em>${N.id}</em>${N.name || 'a confirmar'}`}</b><span></span></div></button>`, () => [N.cx, N.h + 1, N.cz], 'cli', N.id);
+  addLabel('<span class="poi">Portería</span>', () => [GATE.x, 6.5, GATE.z], 'cli', 'gate');
+  addLabel('<span class="poi">Oficinas del parque</span>', () => [(OFF.x0 + OFF.x1) / 2, 8.5, (OFF.z0 + OFF.z1) / 2], 'cli', 'admin');
+  addLabel('<span class="poi">Playa de autos 0 km</span>', () => [X(330), 3, Z(120)], 'cli', 'lot');
+  addLabel('<span class="poi">Sala técnica</span>', () => [OFF.x1 + 1.4, 3.6, OFF.z1 - 2.5], 'red', 'RK-01');
+  for (const d of DEV.filter(d => d.status !== 'ok')) addLabel(`<button class="pin ${d.status}" aria-label="Alerta ${d.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`, () => { const p = entPos(d.id); return [p[0], p[1] + 1.6, p[2]]; }, d.type === 'cam' ? 'cam' : 'red', d.id, 'pin');
+  addLabel('<span class="tag"></span>', () => entPos(SEL) || [0, -999, 0], 'sel', null);
+  $('#siteSub').textContent = `${NAVES.filter(n => !n.factory).length} naves · ${new Set(tenantNaves().flatMap(n => n.tenants || [n.name])).size} empresas`;
+}
+function updateChips() {
+  for (const N of NAVES) { const el = N.chip.el.querySelector('.chip'); el.classList.toggle('sel', SEL === N.id); if (N.free) { el.querySelector('span').textContent = N.factory ? 'Cliente potencial' : 'Sin datos'; continue; } const S2 = naveStats(N);
+    el.querySelector('span').textContent = `${S2.occ}/${N.docks.length} andenes · ${opsOf(N).workers} operarios`; el.querySelector('i').className = S2.alerts.some(a => a.status === 'crit') ? 'crit' : S2.alerts.length ? 'warn' : ''; }
+}
+function placeLabels(V) {
+  labels.classList.toggle('far', cam.zoom > 120);
+  for (const L of LBL) { let show = L.layer === 'sel' ? !!SEL && !['nave', 'gate', 'admin', 'lot'].includes((entity(SEL) || {}).t) : LAYERS[L.layer];
+    if (INSIDE && L.id === INSIDE.N.id) show = false;
+    if (L.layer === 'sel' && show) { const c = panelContent(SEL); L.el.firstChild.textContent = c ? (c.t.length < 16 ? c.t : c.ey) : ''; }
+    const p = L.pos(), c = M.clip(V.vp, p); const x = (c[0] / c[3] * 0.5 + 0.5) * W, y = (1 - (c[1] / c[3] * 0.5 + 0.5)) * H;
+    if (x < -80 || x > W + 80 || y < -40 || y > H + 40) show = false;
+    L.el.classList.toggle('off', !show);
+    L.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%, calc(-100% - ${L.cls === 'pin' ? 4 : 8}px))`; }
+}
+
+function index() {
+  const out = [];
+  NAVES.forEach(N => out.push({ id: N.id, b: N.factory ? N.name : N.id + ' · ' + (N.name || 'a confirmar'), s: N.rubro, ic: 'nave', k: (N.id + ' nave ' + (N.name || '') + ' ' + (N.tenants || []).join(' ') + ' ' + N.rubro).toLowerCase() }));
+  DEV.forEach(d => out.push({ id: d.id, b: d.id + ' · ' + d.loc.split(' · ')[0], s: d.kind + ' · ' + (d.loc.split(' · ')[1] || ''), ic: d.type, k: (d.id + ' ' + d.loc + ' ' + d.kind + (d.type === 'cam' ? ' camara cámara' : d.type === 'ap' ? ' wifi ap' : ' acceso')).toLowerCase() }));
+  TRUCKS.filter(t => t.state !== 'idle').forEach(t => out.push({ id: t.id, b: t.plate, s: t.carrier + (t.dock ? ' → ' + t.dock.nave.id + ' ' + t.dock.nave.name : ''), ic: 'truck', k: (t.plate + ' ' + t.plate.replace(' ', '') + ' ' + t.carrier + ' camion camión').toLowerCase() }));
+  out.push({ id: 'gate', b: 'Portería', s: 'Barreras, lectores y cámara de matrículas', ic: 'rd', k: 'porteria portería entrada barrera' });
+  out.push({ id: 'admin', b: 'Oficinas del parque', s: 'Administración y sala técnica', ic: 'nave', k: 'oficinas administracion administración polo' });
+  out.push({ id: 'lot', b: 'Playa de autos 0 km', s: 'Patio de vehículos arriba de E7', ic: 'lot', k: 'playa patio autos vehiculos vehículos' });
+  return out;
+}
+const q = $('#q'), res = $('#results'); let hits = [], hi = 0;
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+function search() { const v = norm(q.value.trim().toLowerCase()); if (!v) { res.hidden = true; return; }
+  hits = index().filter(x => v.split(/\s+/).every(w => norm(x.k).includes(w) || norm(x.b.toLowerCase()).includes(w))).slice(0, 7); hi = 0;
+  res.innerHTML = hits.length ? hits.map((h, i) => `<button data-i="${i}" class="${i === hi ? 'on' : ''}">${ICON[h.ic] || ICON.nave}<div style="min-width:0"><b>${h.b}</b><small>${h.s}</small></div></button>`).join('') : '<div class="none">Sin resultados para esa búsqueda</div>'; res.hidden = false; }
+q.addEventListener('input', search); q.addEventListener('focus', search);
+q.addEventListener('keydown', e => { if (e.key === 'Enter' && hits[hi]) pick(hits[hi].id); if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hi = clamp(hi + (e.key === 'ArrowDown' ? 1 : -1), 0, hits.length - 1); [...res.querySelectorAll('button')].forEach((b, i) => b.classList.toggle('on', i === hi)); } if (e.key === 'Escape') { res.hidden = true; q.blur(); } });
+res.addEventListener('click', e => { const b = e.target.closest('button'); if (b) pick(hits[+b.dataset.i].id); });
+function pick(id) { res.hidden = true; q.value = ''; q.blur(); select(id); }
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) res.hidden = true; });
+
+document.querySelectorAll('.lay').forEach(b => b.addEventListener('click', () => { const l = b.dataset.l; LAYERS[l] = !LAYERS[l]; b.setAttribute('aria-pressed', LAYERS[l]); applyLayers(); }));
+$('#zin').onclick = () => flyTo({ zoom: clamp(cam.zoom * 0.72, 8, 420) }, 0.45);
+$('#zout').onclick = () => flyTo({ zoom: clamp(cam.zoom / 0.72, 8, 420) }, 0.45);
+$('#rl').onclick = () => flyTo({ yaw: cam.yaw - Math.PI / 2 }, 0.8);
+$('#rr').onclick = () => flyTo({ yaw: cam.yaw + Math.PI / 2 }, 0.8);
+$('#home').onclick = () => { if (INSIDE) exitInside(true); closePanel(); flyTo(HOME(), 1); };
+let alertIdx = 0; $('#bell').onclick = () => { const al = DEV.filter(d => d.status !== 'ok'); if (al.length) select(al[alertIdx++ % al.length].id); };
+
+const cv = $('#camview'), camCanvas = $('#camcanvas'), noise = $('#noise');
+function openCam(id) {
+  const d = DEV.find(x => x.id === id); if (!d) return; CAMDEV = d; cv.hidden = false;
+  $('#cvT').textContent = d.id; $('#cvS').textContent = d.loc; $('#osdL').textContent = d.id + ' · ' + d.loc.toUpperCase(); $('#osd2').textContent = d.kind;
+  const off = d.status === 'crit'; $('#nosig').hidden = !off; noise.hidden = !off; camCanvas.style.visibility = off ? 'hidden' : 'visible';
+  if (!off && !camR) { try { camR = new Renderer(camCanvas, 2048); } catch (e) { camR = null; } }
+}
+function closeCam() { cv.hidden = true; CAMDEV = null; }
+$('#cvX').onclick = closeCam;
+function camViewMatrix(d, w, h) {
+  const H0 = d.mount === 'pole' ? 8.2 * DS : d.y; const pitch = d.kind.includes('LPR') ? -0.32 : d.kind.includes('PTZ') ? -0.38 : -0.32;
+  const yaw = d.yaw + (d.kind.includes('PTZ') ? Math.sin(performance.now() / 6000) * 0.7 : 0);
+  const f = [Math.cos(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.sin(yaw) * Math.cos(pitch)];
+  const e = [d.x + f[0] * 1.4, H0 + 0.2, d.z + f[2] * 1.4], t = [e[0] + f[0], e[1] + f[1], e[2] + f[2]];
+  return M.mul(M.persp(1.05, w / h, 0.2, 900), M.look(e, t, [0, 1, 0]));
+}
+function drawNoise() { const r = noise.getBoundingClientRect(), w = Math.max(80, (r.width / 3) | 0), h = Math.max(45, (r.height / 3) | 0); if (noise.width !== w) { noise.width = w; noise.height = h; }
+  const x = noise.getContext('2d'), im = x.createImageData(w, h); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 120 | 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } x.putImageData(im, 0, 0); }
+
+const ptrs = new Map(); let dragMoved = 0, last = null, pinch = null;
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragMoved = 0; tween = null;
+  last = { x: e.clientX, y: e.clientY, btn: e.button, shift: e.shiftKey }; if (ptrs.size === 2) pinch = pinchState(); });
+canvas.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) { hoverPick(e.clientX, e.clientY); return; }
+  const pr = ptrs.get(e.pointerId); const dx = e.clientX - pr.x, dy = e.clientY - pr.y; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragMoved += Math.abs(dx) + Math.abs(dy);
+  if (dragMoved > 4) { canvas.classList.add('drag'); FOLLOW = false; }
+  if (ptrs.size === 2 && pinch) { const n = pinchState(); cam.zoom = clamp(cam.zoom * pinch.d / n.d, 8, 420); cam.yaw -= wrapA(n.a - pinch.a);
+    const g0 = groundAt(pinch.mx, pinch.my), g1 = groundAt(n.mx, n.my); cam.tx += g0[0] - g1[0]; cam.tz += g0[1] - g1[1]; pinch = n; return; }
+  if (last && (last.btn === 2 || last.shift)) { cam.yaw -= dx * 0.008; return; }
+  const g0 = groundAt(e.clientX - dx, e.clientY - dy), g1 = groundAt(e.clientX, e.clientY); cam.tx += g0[0] - g1[0]; cam.tz += g0[1] - g1[1]; clampCam(); });
+const up = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); canvas.classList.remove('drag'); if (ptrs.size < 2) pinch = null;
+  if (dragMoved < 6 && ptrs.size === 0 && e.type === 'pointerup') { const id = pickAt(e.clientX, e.clientY); if (id) select(id); else if (SEL) { if (INSIDE) exitInside(true); closePanel(); } } };
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => { e.preventDefault(); tween = null; const g0 = groundAt(e.clientX, e.clientY); cam.zoom = clamp(cam.zoom * Math.exp(e.deltaY * 0.0012), 8, 420);
+  const g1 = groundAt(e.clientX, e.clientY); cam.tx += g0[0] - g1[0]; cam.tz += g0[1] - g1[1]; clampCam(); }, { passive: false });
+canvas.addEventListener('keydown', e => { const k = e.key, s = cam.zoom * 0.08, yw = cam.yaw;
+  const mv = (fx, fz) => { cam.tx += fx * Math.cos(yw) + fz * Math.sin(yw); cam.tz += -fx * Math.sin(yw) + fz * Math.cos(yw); clampCam(); };
+  if (k === 'ArrowLeft') mv(-s, 0); if (k === 'ArrowRight') mv(s, 0); if (k === 'ArrowUp') mv(0, -s); if (k === 'ArrowDown') mv(0, s);
+  if (k === '+' || k === '=') $('#zin').click(); if (k === '-') $('#zout').click(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!cv.hidden) closeCam(); else if (SEL) { if (INSIDE) exitInside(true); closePanel(); } } });
+function pinchState() { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, a: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
+function clampCam() { cam.tx = clamp(cam.tx, -330, 330); cam.tz = clamp(cam.tz, -320, 330); }
+function aabb(o) { const mn = o.geo.mn, mx = o.geo.mx, inf = o.inflate || 0; if (!o.model) return [mn.map(v => v - inf), mx.map(v => v + inf)];
+  const a = [1e9, 1e9, 1e9], b = [-1e9, -1e9, -1e9]; for (let i = 0; i < 8; i++) { const p = M.xf(o.model, [i & 1 ? mx[0] : mn[0], i & 2 ? mx[1] : mn[1], i & 4 ? mx[2] : mn[2]]); for (let k = 0; k < 3; k++) { a[k] = Math.min(a[k], p[k]); b[k] = Math.max(b[k], p[k]); } }
+  return [a.map(v => v - inf), b.map(v => v + inf)]; }
+function rayBox(o, d, mn, mx) { let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-9) { if (o[i] < mn[i] || o[i] > mx[i]) return null; } else { let a = (mn[i] - o[i]) / d[i], b = (mx[i] - o[i]) / d[i]; if (a > b) [a, b] = [b, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) return null; } } return t0; }
+function pickAt(px, py) { const r = ray(view(W, H), px, py, W, H); let best = null, bt = Infinity;
+  for (const o of OBJ) { if (!o.pick || !(o.on || o.pickOnly)) continue; if (INSIDE && o.id === INSIDE.N.id) continue; if (o.pickOnly && !INSIDE) continue;
+    const [mn, mx] = aabb(o); let t = rayBox(r.o, r.d, mn, mx); if (t === null) continue; if (o.id === 'lot') t += 50; if (t < bt) { bt = t; best = o.id; } }
+  if (!best && INSIDE) { const g = groundAt(px, py), N = INSIDE.N; if (g[0] > N.x0 && g[0] < N.x1 && g[1] > N.z0 && g[1] < N.z1) best = N.id; }
+  return best; }
+let hvT = 0; function hoverPick(x, y) { const n = performance.now(); if (n - hvT < 60) return; hvT = n; const id = pickAt(x, y); HOVER = id; canvas.classList.toggle('hot', !!id); }
+canvas.addEventListener('pointerleave', () => { if (!ptrs.size) { HOVER = null; canvas.classList.remove('hot'); } });
+
+function resize() { const dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); }
+addEventListener('resize', resize);
+let prev = performance.now(), acc1 = 0, ENV;
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+  if (!RM) { TRUCKS.forEach(t => stepTruck(t, dt)); PACKETS.forEach(p => along(p, dt)); HWY.forEach(h => along(h, dt)); stepInside(dt); }
+  else if (PACKETS[0] && PACKETS[0].x === undefined) { PACKETS.forEach(p => along(p, 0)); HWY.forEach(h => along(h, 0)); }
+  stepArms(dt); syncModels();
+  if (tween) { tween.t += dt / tween.dur; const k = ease(Math.min(1, tween.t)); for (const key of ['tx', 'tz', 'yaw', 'pitch', 'zoom']) cam[key] = lerp(tween.from[key], tween.to[key], k); if (tween.t >= 1) tween = null; }
+  if (FOLLOW && SEL && !tween) { const e = entity(SEL); if (e && e.t === 'truck' && e.tr.state !== 'idle') { const f = focusTarget([e.tr.x, 2, e.tr.z], cam.zoom); cam.tx = lerp(cam.tx, f.tx, Math.min(1, dt * 2.5)); cam.tz = lerp(cam.tz, f.tz, Math.min(1, dt * 2.5)); } }
+  for (const o of OBJ) o.tintA = o.id === SEL ? 0.22 : o.id === HOVER ? 0.1 : 0;
+  const V = view(W, H); main.render(V.vp, OBJ, ENV, [560, 900]); placeLabels(V);
+  if (CAMDEV && camR && CAMDEV.status !== 'crit') { const r = camCanvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), cw = Math.max(2, Math.round(r.width * dpr)), ch = Math.max(2, Math.round(r.height * dpr));
+    if (camCanvas.width !== cw || camCanvas.height !== ch) { camCanvas.width = cw; camCanvas.height = ch; }
+    camR.render(camViewMatrix(CAMDEV, cw, ch), OBJ.filter(o => o.id !== CAMDEV.id), ENV, [9000, 9001], true); }
+  if (CAMDEV && CAMDEV.status === 'crit') drawNoise();
+  acc1 += dt; if (acc1 > 1) { acc1 = 0; tick(); }
+  requestAnimationFrame(frame);
+}
+function tick() {
+  const now = new Date(); $('#clock').textContent = fmt(now); $('#osdT').textContent = now.toLocaleTimeString('es-UY', { hour12: false });
+  const inside = TRUCKS.filter(t => t.state !== 'idle' && t.x > X(40)).length;
+  $('#kTr').innerHTML = inside + ' <em>en tránsito ' + moving() + '</em>';
+  $('#kDk').innerHTML = DOCKS.filter(d => d.occ && d.occ.state === 'docked').length + ' <em>de ' + DOCKS.length + '</em>';
+  $('#kOp').innerHTML = tenantNaves().reduce((s, N) => s + opsOf(N).workers, 0) + ' <em>en ' + tenantNaves().length + ' naves</em>';
+  const tot = DEV.length, bad = DEV.filter(d => d.status === 'crit').length; $('#kEq').innerHTML = (tot - bad) + ' <em class="al">de ' + tot + '</em>';
+  $('#bellN').textContent = DEV.filter(d => d.status !== 'ok').length;
+  updateChips(); if (SEL) renderPanel(false);
+  if (Math.random() < 0.12) { const msgs = [['ok', 'Cámara de frío E10: 2,8 °C, dentro del rango', 'E10'], ['info', 'Tarjeta aceptada en el molinete de las oficinas', offRd.id], ['ok', 'Respaldo nocturno del NVR verificado', 'RK-01'], ['info', 'E8: 46 terminales de picking conectadas', 'E8'], ['warn', 'E9: autoelevador AE-01 con batería baja, va al cargador', 'E9']];
+    const m = msgs[Math.floor(Math.random() * msgs.length)]; log(m[0], m[1], m[2]); }
+}
+
+try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
+initSim(); buildAll(); makeLabels(); ENV = env(); resize();
+const mins = m => new Date(Date.now() - m * 60000);
+log('crit', `${camOff.id} sin señal · andenes de E7`, camOff.id, mins(14));
+log('warn', `${apWarn.id} con interferencia alta en 2,4 GHz · E9`, apWarn.id, mins(9));
+log('ok', 'Cámara de frío E5: 3,6 °C, dentro del rango', 'E5', mins(6));
+log('info', 'Turno noche iniciado · operarios con credencial en sus naves', 'E8', mins(3));
+const reTheme = () => { buildAll(); ENV = env(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reTheme);
+new MutationObserver(reTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (!RM) { const h = HOME(); Object.assign(cam, h, { zoom: h.zoom * 1.45, yaw: h.yaw - 0.5, pitch: 0.85 }); flyTo(h, 2.2); }
+tick(); requestAnimationFrame(frame);
+window.__dbg = window.__dbg || { cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, enter: id => enterInside(naveById(id)), NAVES };
+})();
+</script>
+
+</body>
+</html>
