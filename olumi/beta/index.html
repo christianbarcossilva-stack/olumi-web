@@ -639,6 +639,10 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .mev span{color:var(--muted);font-family:var(--f-mono);font-size:10.5px}.mev.done{opacity:.55;text-decoration:line-through}.mev.fu{border-left-color:var(--info,#4da3ff)}
 .mmore{font-size:11px;color:var(--muted);padding-left:6px}
 @media (max-width:700px){.mg{grid-template-columns:repeat(7,minmax(0,1fr))}.mday{min-height:64px;padding:4px}.mev{font-size:10px;padding:1px 4px}.mev span{display:none}.mh span{padding:6px 4px;font-size:10px}}
+/* 1.35: gastos */
+.gfotos{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.gfotos figure{position:relative;margin:0}.gfotos img{width:120px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
+.gfotos figure .btn{position:absolute;top:4px;right:4px;min-width:28px;height:28px;padding:0;background:var(--surface)}
+.gthumb{width:44px;height:52px;border-radius:8px;object-fit:cover;background:var(--soft,var(--line));display:block}
 /* 1.33: oficina */
 .ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}
 /* 1.25: en vivo */
@@ -790,7 +794,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -831,7 +835,7 @@ function applyBrand(){
   const sh=document.querySelector('.shell');const fid=has('marca')&&CFG.fondo?.id;if(sh){if(fid){const u='url("'+blobUrl(fid)+'")';if(sh.style.getPropertyValue('--fondo')!==u)sh.style.setProperty('--fondo',u);sh.classList.add('fondo')}else{sh.classList.remove('fondo');sh.style.removeProperty('--fondo')}}
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],oficina:['tk','Ticket'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],oficina:['tk','Ticket'],gastos:['gasto','Factura'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -1363,6 +1367,7 @@ async function patch(col,id,fields){
   if(D[col][id])D[col][id]={...D[col][id],...clean(fields)};
 }
 async function onUpload(inp){
+  if(await gastoUpload(inp))return;
   if(ADJCOL[inp.dataset.up]){await adjUpload(inp);return}
   if(inp.dataset.up==='pfoto'){await portalUpload(inp);return}
   if(await campoUpload(inp))return;
@@ -1435,7 +1440,7 @@ function vCampo(){
   const jobs=arr('trabajos').filter(j=>j.fecha===day&&mineF(j)).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const late=arr('trabajos').filter(j=>j.fecha&&j.fecha<today()&&j.estado!=='terminado'&&mineF(j)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const head=`<div class="vhead"><div><h1>Mi día</h1><p class="sub">${fdateL(day)} · ${jobs.length} trabajo${jobs.length===1?'':'s'}${campoAll?' del equipo':''}</p></div>
-    <div class="tools"><div class="seg" role="group" aria-label="Día">${[[0,'Hoy'],[1,'Mañana']].map(([k,n])=>`<button class="${campoDay===k?'on':''}" data-act="campo:${k}">${n}</button>`).join('')}</div>${ME?`<button class="tgl${campoAll?' on':''}" data-act="campoall" aria-pressed="${campoAll}">Todo el equipo</button>`:''}${geoBtn()}${AS&&!readonly&&has('proyectos')?'<button class="btn" data-new="rel">+ Relevamiento</button>':''}<button class="btn" data-act="parte">Parte del día</button></div></div>`;
+    <div class="tools"><div class="seg" role="group" aria-label="Día">${[[0,'Hoy'],[1,'Mañana']].map(([k,n])=>`<button class="${campoDay===k?'on':''}" data-act="campo:${k}">${n}</button>`).join('')}</div>${ME?`<button class="tgl${campoAll?' on':''}" data-act="campoall" aria-pressed="${campoAll}">Todo el equipo</button>`:''}${geoBtn()}${AS&&!readonly&&has('proyectos')?'<button class="btn" data-new="rel">+ Relevamiento</button>':''}<button class="btn" data-act="parte">Parte del día</button>${AS&&!readonly&&ROLE!=='subcontratista'?'<button class="btn" data-new="gasto">📷 Subir factura</button>':''}</div></div>`;
   const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
   const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
@@ -1537,12 +1542,12 @@ async function genAbonos(){
 function vMenu(){
   const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
-    ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
+    ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['gastos','Gastos',(n=>n&&gastoAdmin()?`${n} factura${n===1?'':'s'} para revisar`:'Facturas de compra de los técnicos')(arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').length)],['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   const itv=it.filter(([v])=>viewOk(v));
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div>${orgSwitchHtml()}<div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
 }
 
-const VIEWS={oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
+const VIEWS={gastos:vGastos,oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1610,7 +1615,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1802,6 +1807,7 @@ function csv(rows){return'﻿'+rows.map(r=>r.map(v=>{v=typeof v==='number'?Strin
 async function act(a,el){
   const ci=a.indexOf(':'),k=ci<0?a:a.slice(0,ci),arg=ci<0?undefined:a.slice(ci+1);
   try{
+  if(await gastoAct(k,arg,el))return;
   if(await teamAct(k,el))return;
   if(await planAct(k,el,arg))return;
   if(await obrasAct(k,el,arg))return;
@@ -1867,12 +1873,12 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
         el.textContent=nOps?`Tiene ${nOps} oportunidad${nOps>1?'es':''}. ¿Eliminar igual?`:'¿Eliminar? Tocá de nuevo';return}
-      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists',oc:'compras',ent:'entradas'}[SH.type];if(!col){closeSheet();break}if(SH.type==='fact'&&D.facturas[SH.id]?.cfeData?.idCFE){armed=null;el.classList.remove('arm');el.textContent=el.dataset.orig||'Eliminar';toast('Tiene CFE emitido: no se puede borrar. Hacé una nota de crédito.');break}
+      const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists',oc:'compras',ent:'entradas',gasto:'gastos'}[SH.type];if(!col){closeSheet();break}if(SH.type==='fact'&&D.facturas[SH.id]?.cfeData?.idCFE){armed=null;el.classList.remove('arm');el.textContent=el.dataset.orig||'Eliminar';toast('Tiene CFE emitido: no se puede borrar. Hacé una nota de crédito.');break}
       const tarPry=SH.type==='tar'&&D.tareas[SH.id]?.proyectoId;
       if(SH.type==='trab')await msDropJob(SH.id);
       await remove(col,SH.id);if(tarPry){delete D.tareas[SH.id];await pryAvSync(tarPry)}toast('Eliminado');closeSheet();break}
@@ -1909,7 +1915,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.34',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.35',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3427,14 +3433,14 @@ function ajustes16Html(){
 /* --- subcontratistas: solo su día, sus tareas y su historial --- */
 /* 1.19: tabla de roles · qué ve cada rol (null = todo). El dueño y el administrador ven todo. */
 const SUBV=['campo','proyectos','trabajos','ajustes','menu'];
-const TECV=['campo','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','ajustes','menu'];
+const TECV=['campo','gastos','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','ajustes','menu'];
 const ROLV={
   owner:null,admin:null,
-  encargado:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
+  encargado:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
   ventas:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
-  administracion:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu'],
+  administracion:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu'],
   tecnico:TECV,subcontratista:SUBV,
-  viewer:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
+  viewer:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
 const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
 const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 /* 1.26: en vivo como extra */
@@ -4897,6 +4903,73 @@ function empresaZonaHtml(){if(!ORG||SOPORTE)return'';const nm=(ORGINFO&&ORGINFO.
   if(ROLE==='owner')return`<details class="more" style="margin-top:14px"><summary>Borrar esta empresa</summary><p class="hint">Se borran todos los datos de <b>${esc(nm)}</b> (clientes, tickets, stock, equipo e invitaciones). No se puede deshacer. Escribí el nombre exacto para confirmar.</p>
     <div class="grid"><label class="fld full" for="myorg_del"><span>Nombre de la empresa</span><input id="myorg_del" type="text" autocomplete="off" placeholder="${esc(nm)}"></label></div><div class="actions" style="margin-top:10px"><button class="btn ghost danger" data-act="myorgdel">Borrar empresa</button></div></details>`;
   return`<div class="actions" style="margin-top:10px"><button class="btn ghost danger" data-act="leaveorg">Salir de ${esc(nm||'esta empresa')}</button></div>`}
+
+
+/* ---------- 1.35: gastos (facturas de compra de los técnicos) ---------- */
+const GCAT=[['materiales','Materiales'],['combustible','Combustible'],['peaje','Peajes y estacionamiento'],['herramientas','Herramientas'],['comida','Viáticos / comida'],['otro','Otro']];
+const GEST={pendiente:['Para revisar','t-warn'],aprobado:['Aprobado','t-ok'],rechazado:['Rechazado','t-bad'],reembolsado:['Reembolsado','t-none']};
+const gastoAdmin=()=>isBoss()||['administracion','encargado'].includes(ROLE);
+let GFOT=[];
+const gMine=g=>!ME||g.por===ME;
+function gTrabOpts(v){const lim=localISO(new Date(Date.now()-10*864e5)).slice(0,10);
+  const js=arr('trabajos').filter(j=>(j.id===v)||((j.fecha||'')>=lim&&(!isTec()||(j.tecnicos||[]).includes(ME)))).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  return[['','Sin trabajo (gasto general)'],...js.map(j=>[j.id,`${fdate(j.fecha)} · ${j.titulo||'Trabajo'}${j.clienteId?' · '+cliName(j.clienteId):''}`])]}
+const GASTOF=v=>[{k:'fecha',l:'Fecha',t:'date'},{k:'monto',l:'Monto total',t:'number',step:'0.01'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','Pesos ($)'],['USD','Dólares (US$)']]},
+  {k:'categoria',l:'Qué es',t:'select',o:GCAT},{k:'proveedor',l:'Dónde lo compraste',ph:'Ej.: Barraca Sur, Ancap Rivera'},{k:'numero',l:'N.º de factura o boleta',ph:'Opcional'},
+  {k:'trabajoId',l:'Para qué trabajo',t:'select',o:gTrabOpts(v&&v.trabajoId),w:'full'},{k:'nota',l:'Nota',t:'textarea',w:'full',ph:'Ej.: 2 rollos de UTP para la obra de Rivera'}];
+function gFotosHtml(edit){return`<div class="gfotos">${GFOT.map((f,i)=>`<figure><a href="${esc(blobUrl(f.id))}" target="_blank" rel="noopener"><img src="${esc(blobUrl(f.id))}" alt="Factura ${i+1}"></a>${edit?`<button class="btn ghost" data-act="gfotodel:${i}" aria-label="Sacar foto">✕</button>`:''}</figure>`).join('')}</div>
+  ${edit?`<div class="actions"><label class="btn pri upl">📷 Sacar foto de la factura<input type="file" accept="image/*" capture="environment" data-up="gasto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*,application/pdf" multiple data-up="gasto"></label></div><p class="busy" id="gBusy" hidden></p>`:''}`}
+function sheetGasto(id){
+  const g=id?{...D.gastos[id]}:{fecha:today(),moneda:'UYU',categoria:'materiales',estado:'pendiente',por:ME||''};
+  GFOT=[...(g.fotos||[])];
+  const mio=!id||g.por===ME,adm=gastoAdmin(),edit=!readonly&&((mio&&(g.estado||'pendiente')==='pendiente')||adm);
+  const st=GEST[g.estado||'pendiente']||GEST.pendiente;
+  const quien=g.por?personName(g.por):'';
+  const body=`${id?`<div class="contact"><span class="tag ${st[1]}">${st[0]}</span>${quien?`<span>Subido por <b>${esc(quien)}</b></span>`:''}${g.creado?`<span class="muted">${fdate(localISO(new Date(g.creado)).slice(0,10))}</span>`:''}</div>`:'<p class="hint" style="margin-top:0">Sacale una foto a la factura o boleta entera, que se lea el total. Después completá el monto y para qué trabajo fue.</p>'}
+    <section class="rel" style="margin-top:6px"><h3>Foto de la factura</h3><div id="gFotos">${gFotosHtml(edit)}</div></section>
+    <div class="grid">${GASTOF(g).map(f=>fld(f,g[f.k])).join('')}</div>
+    ${adm&&id?`<section class="rel"><h3>Revisión</h3><div class="grid">${fld({k:'estado',l:'Estado',t:'select',o:Object.entries(GEST).map(([k,v])=>[k,v[0]])},g.estado||'pendiente','g_')}${fld({k:'notaAdm',l:'Comentario para el técnico',ph:'Ej.: falta el RUT de la empresa'},g.notaAdm||'','g_')}</div></section>`:g.notaAdm?`<p class="note">${esc(g.notaAdm)}</p>`:''}
+    <p class="err" id="shErr" hidden></p>`;
+  if(!edit){setTimeout(()=>document.querySelectorAll('#sheet .sh-b input,#sheet .sh-b select,#sheet .sh-b textarea').forEach(x=>{if(!x.closest('.rel')||x.id.startsWith('f_'))x.disabled=true}),0)}
+  return sheetFrame('Gasto',id?(g.proveedor||'Factura de compra'):'Subir factura',body,{del:!!id&&edit,saveLabel:edit?'Guardar':'Cerrar'});
+}
+async function saveGasto(){
+  const id=SH.id,old=id?D.gastos[id]:null,adm=gastoAdmin();
+  const edit=!readonly&&((!id||old.por===ME)&&((old&&old.estado)||'pendiente')==='pendiente'||adm);if(!edit){closeSheet();return}
+  const v=readForm(GASTOF(old));const e=$('#shErr');
+  if(!GFOT.length){e.textContent='Falta la foto de la factura.';e.hidden=false;return}
+  if(!(v.monto>0)){e.textContent='Poné el monto total de la factura.';e.hidden=false;return}
+  const extra=adm&&id?{estado:$('#g_estado').value,notaAdm:($('#g_notaAdm').value||'').trim()}:{};
+  if(extra.estado&&extra.estado!==(old.estado||'pendiente'))extra.revisadoPor=ME||'',extra.revisadoEn=Date.now();
+  const doc={...(old||{creado:Date.now(),por:ME||'',estado:'pendiente'}),...v,...extra,fotos:GFOT,actualizado:Date.now()};
+  const t=v.trabajoId&&D.trabajos[v.trabajoId];if(t){doc.clienteId=t.clienteId||'';doc.proyectoId=t.proyectoId||''}
+  await put('gastos',id||uid(),doc);toast(id?'Gasto guardado':'Factura subida. Administración la va a revisar.');closeSheet();
+}
+async function gastoUpload(inp){if(inp.dataset.up!=='gasto')return false;
+  const files=[...inp.files];if(!files.length)return true;if(!AS){toast('Necesitás permiso de edición para subir archivos.');return true}
+  const b=$('#gBusy');if(b){b.hidden=false;b.textContent='Subiendo la foto…'}
+  for(const f of files){try{const x=f.type.startsWith('image/')?await shrink(f):f;const r=await AS.upload(x,{type:x.type||f.type||'image/jpeg'});GFOT.push({id:r.id,name:f.name||'factura',type:r.contentType,at:Date.now(),by:ME||''})}catch(err){toast(upErr(err))}}
+  inp.value='';if(b)b.hidden=true;if(SH)SH.dirty=true;const box=$('#gFotos');if(box)box.innerHTML=gFotosHtml(true);return true}
+function vGastos(){
+  const adm=gastoAdmin(),f=lsGet('olumi.gfil')||(adm?'pendiente':'todos');
+  const all=arr('gastos').filter(g=>adm||gMine(g)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado));
+  const ls=f==='todos'?all:all.filter(g=>(g.estado||'pendiente')===f);
+  const tot=m=>all.filter(g=>(g.estado||'pendiente')==='pendiente'&&(g.moneda||'UYU')===m).reduce((a,g)=>a+n0(g.monto),0);
+  const pend=all.filter(g=>(g.estado||'pendiente')==='pendiente').length;
+  const kpis=adm?`<div class="kpis" style="margin-bottom:14px"><div class="kpi"><span>Para revisar</span><b>${pend}</b></div><div class="kpi"><span>Pendiente en pesos</span><b>${money(tot('UYU'),'UYU')}</b></div><div class="kpi"><span>Pendiente en dólares</span><b>${money(tot('USD'),'USD')}</b></div></div>`:'';
+  return`<div class="vhead"><div><h1>Gastos</h1><p class="sub">${adm?'Facturas y boletas que suben los técnicos de lo que compran para los trabajos.':'Sacale una foto a la factura de lo que compres para un trabajo y queda para que administración la revise.'}</p></div>
+    <div class="tools">${readonly?'':'<button class="btn pri" data-new="gasto">📷 Subir factura</button>'}</div></div>${kpis}
+    <div class="seg" role="group" aria-label="Filtro" style="margin-bottom:12px">${[['pendiente','Para revisar'],['aprobado','Aprobados'],['reembolsado','Reembolsados'],['rechazado','Rechazados'],['todos','Todos']].map(([k,n])=>`<button class="${f===k?'on':''}" data-act="gfil:${k}">${n}</button>`).join('')}</div>
+    ${ls.length?`<div class="list">${ls.map(g=>{const st=GEST[g.estado||'pendiente']||GEST.pendiente,t=g.trabajoId&&D.trabajos[g.trabajoId];const ft=(g.fotos||[])[0];
+      return`<div class="row" role="button" tabindex="0" data-open="gasto:${g.id}" style="grid-template-columns:52px minmax(0,1fr) auto;align-items:center">${ft?`<img class="gthumb" src="${esc(blobUrl(ft.id))}" alt="">`:'<span class="gthumb"></span>'}
+        <div class="r-main"><strong>${esc(g.proveedor||(GCAT.find(c=>c[0]===g.categoria)||[,'Gasto'])[1])}</strong><span class="muted">${esc([fdate(g.fecha),adm&&g.por?personName(g.por):'',t?(t.titulo||'Trabajo'):'',g.clienteId?cliName(g.clienteId):''].filter(Boolean).join(' · '))}</span></div>
+        <span style="text-align:right"><b class="num">${money(n0(g.monto),g.moneda||'UYU')}</b><br><span class="tag ${st[1]}">${st[0]}</span></span></div>`}).join('')}</div>`
+      :`<div class="empty"><p>${f==='pendiente'&&adm?'No hay facturas para revisar.':'Todavía no hay gastos acá.'}</p>${readonly?'':'<button class="btn pri" data-new="gasto">📷 Subir la primera factura</button>'}</div>`}`;
+}
+async function gastoAct(k,arg,el){
+  if(k==='gfil'){lsSet('olumi.gfil',arg);sr();return true}
+  if(k==='gfotodel'){GFOT.splice(+arg,1);if(SH)SH.dirty=true;const box=$('#gFotos');if(box)box.innerHTML=gFotosHtml(true);return true}
+  return false}
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
