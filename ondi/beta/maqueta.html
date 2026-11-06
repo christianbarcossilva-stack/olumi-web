@@ -205,6 +205,7 @@ button{font:inherit;color:inherit}
 .chip.free{border-style:dashed;border-color:var(--accent)}
 .chip.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
 .chip::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:inherit;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+.street{font-size:10.5px;font-weight:600;letter-spacing:.05em;color:var(--ink);opacity:.72;white-space:nowrap;text-shadow:0 0 3px var(--glass-strong),0 0 6px var(--glass-strong);pointer-events:none}
 .poi{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--glass);
   border:1px solid var(--line);border-radius:6px;padding:3px 7px;white-space:nowrap;cursor:pointer}
 .pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid var(--glass-strong);cursor:pointer;box-shadow:var(--shadow)}
@@ -716,15 +717,15 @@ const pxs = pts => pts.map(([x, y]) => px(x, y));
 const FACE = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
 const RB = [242, 688], RR = 14; // rotonda
 const ring = (a0, a1) => { const out = []; const st = a1 > a0 ? 30 : -30; for (let a = a0; st > 0 ? a <= a1 + 0.1 : a >= a1 - 0.1; a += st) out.push([RB[0] + RR * Math.cos(a * Math.PI / 180), RB[1] - RR * Math.sin(a * Math.PI / 180)]); return out; };
-const G_IN = [[100, 706], [170, 704], [212, 692]], G_OUT = [[212, 692], [170, 700], [100, 700]];
+const G_IN = [[95, 728.5], [160, 727], [196, 719], [216, 704]], G_OUT = [[216, 702], [203, 712], [186, 717.5]];
 const NORTH = [[242, 660], [240, 620], [249, 545]], EASTR = [[270, 688], [420, 688], [560, 684]];
 // recorridos por nave: entrada desde la portería (eje de calle, en píxeles) y salida hasta la portería
 const ROUTES = {
-  e2e1: { in: [...G_IN, ...ring(180, 450), [242, 660]], out: [[242, 660], ...ring(90, 180), ...G_OUT] },
-  strip: { in: [...G_IN, ...ring(180, 450), ...NORTH], out: [...NORTH.slice().reverse(), ...ring(90, 180), ...G_OUT] },
-  e8: { in: [...G_IN, ...ring(180, 450), ...NORTH, [249, 488]], out: [[249, 488], ...NORTH.slice().reverse(), ...ring(90, 180), ...G_OUT] },
-  e9: { in: [...G_IN, ...ring(180, 360), ...EASTR, [640, 684]], out: [[640, 684], ...EASTR.slice().reverse(), ...ring(0, 180), ...G_OUT] },
-  e10: { in: [...G_IN, ...ring(180, 360), ...EASTR, [563, 684]], out: [[563, 684], ...EASTR.slice().reverse(), ...ring(0, 180), ...G_OUT] }
+  e2e1: { in: [...G_IN, ...ring(210, 450), [242, 660]], out: [[242, 660], ...ring(90, 210), ...G_OUT] },
+  strip: { in: [...G_IN, ...ring(210, 450), ...NORTH], out: [...NORTH.slice().reverse(), ...ring(90, 210), ...G_OUT] },
+  e8: { in: [...G_IN, ...ring(210, 450), ...NORTH, [249, 488]], out: [[249, 488], ...NORTH.slice().reverse(), ...ring(90, 210), ...G_OUT] },
+  e9: { in: [...G_IN, ...ring(210, 360), ...EASTR, [640, 684]], out: [[640, 684], ...EASTR.slice().reverse(), ...ring(0, 210), ...G_OUT] },
+  e10: { in: [...G_IN, ...ring(210, 360), ...EASTR, [563, 684]], out: [[563, 684], ...EASTR.slice().reverse(), ...ring(0, 210), ...G_OUT] }
 };
 for (const k in ROUTES) { ROUTES[k].in = pxs(ROUTES[k].in); ROUTES[k].out = pxs(ROUTES[k].out); }
 const NAVES = [
@@ -753,7 +754,7 @@ function prepNave(N) {
 }
 NAVES.forEach(prepNave);
 const naveById = id => NAVES.find(n => n.id === id);
-const GATE_POS = [...px(84, 703)], ADMIN_POS = px(274, 525);
+const GATE_POS = [...px(62, 727)], ADMIN_POS = px(274, 525);
 const ZONAS = [
   { id: 'sr', name: 'Playa 0 km', ey: 'Playa de autos', s: 'Autos 0 km a la espera de entrega', pos: [...px(330, 120)] },
   { id: 'dy', name: 'Fábrica vecina', ey: 'Fábrica', s: 'Al sur de E10', pos: [...px(673, 1041)], opp: true },
@@ -769,8 +770,8 @@ const yawOf = (fx, fz) => Math.atan2(-fz, fx);
 const DEV = [];
 const addDev = d => { if (d.p) { [d.x, d.z] = px(d.p[0], d.p[1]); delete d.p; } DEV.push(Object.assign({ status: 'ok', y: 0 }, d)); return d; };
 // portería
-addDev({ id: 'C-01', type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'canopy', p: [93, 708], y: 6.1, yaw: Math.PI, loc: 'Portería · carril de entrada' });
-addDev({ id: 'C-02', type: 'cam', kind: 'Domo PTZ 25x', mount: 'dome', p: [67, 719], y: 4.9, yaw: 0.8, loc: 'Portería · techo de la caseta' });
+addDev({ id: 'C-01', type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'canopy', p: [70, 731], y: 6.1, yaw: Math.PI, loc: 'Portería · carril de entrada' });
+addDev({ id: 'C-02', type: 'cam', kind: 'Domo PTZ 25x', mount: 'dome', p: [56, 742], y: 4.9, yaw: 0.8, loc: 'Portería · techo de la caseta' });
 [[330, 697, 0, 'Avenida principal · columna 1'], [500, 674, Math.PI, 'Avenida principal · columna 2'], [258, 420, -Math.PI / 2, 'Calle de las naves E2 a E7'],
  [649, 470, Math.PI / 2, 'Calle de E9'], [553, 900, -Math.PI / 2, 'Calle de E10'], [440, 380, Math.PI / 2, 'Calle este de E8']].forEach(([x, y, yaw, loc], i) =>
   addDev({ id: 'C-' + pad(3 + i), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'pole', p: [x, y], yaw, loc }));
@@ -791,12 +792,12 @@ let an = 1;
 for (const N of NAVES) { if (N.free) continue;
   for (const f of [0.33, 0.72]) { const [x, z] = NP(N, lerp(14, N.L, f), 0.35);
     addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', x, y: 7.2, z, yaw: Math.atan2(N.n[0], N.n[1]), nave: N.id, loc: N.full + ' · fachada de andenes', cli: 18 + ((an * 7) % 23) }); } }
-addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', p: [87, 703], y: 6.2, yaw: 0, loc: 'Portería · bajo el techo', cli: 6, gate: true });
+addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', p: [62, 726.5], y: 6.2, yaw: 0, loc: 'Portería · bajo el techo', cli: 6, gate: true });
 addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', p: [330, 218.5], y: 6.4, yaw: Math.PI, loc: 'Playa 0 km · playa de autos', cli: 9, mount: 'pole', zona: 'sr' });
 addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Pro', p: [292.7, 518], y: 6.8, yaw: Math.PI / 2, loc: 'Oficinas del polo · planta alta', cli: 31, admin: true });
 const apWarn = DEV.find(d => d.nave === 'e9' && d.type === 'ap'); apWarn.status = 'warn';
-addDev({ id: 'R-01', type: 'rd', kind: 'Lector de tarjeta y matrícula', p: [80, 703.8], yaw: 0, loc: 'Portería · entrada', hoy: 132 });
-addDev({ id: 'R-02', type: 'rd', kind: 'Lector de tarjeta', p: [90, 702.2], yaw: 0, loc: 'Portería · salida', hoy: 118 });
+addDev({ id: 'R-01', type: 'rd', kind: 'Lector de tarjeta y matrícula', p: [58.5, 728.2], yaw: 0, loc: 'Portería · entrada', hoy: 132 });
+addDev({ id: 'R-02', type: 'rd', kind: 'Lector de tarjeta', p: [72, 725.6], yaw: 0, loc: 'Portería · salida', hoy: 118 });
 addDev({ id: 'R-03', type: 'rd', kind: 'Molinete con tarjeta y PIN', p: [274, 543.6], yaw: 0, loc: 'Oficinas del polo · acceso de personal', hoy: 64, admin: true });
 let rn = 4;
 for (const N of NAVES) { if (N.free) continue; const [x, z] = NP(N, 6, 3.2); addDev({ id: 'R-' + pad(rn++), type: 'rd', kind: 'Lector de tarjeta', x, y: 0, z, yaw: 0, nave: N.id, loc: N.full + ' · puerta de oficinas', hoy: 20 + rn * 7 }); }
@@ -811,7 +812,7 @@ FIBER.routes = [
   [C0, TW, [256, 413], [228.7, 413]],
   [C0, TW, [256, 470], [228.7, 470]],
   [C0, TW, [256, 568], [210.7, 568]],
-  [C0, TW, [256, 664], [224, 697], [92, 697], [76, 697], [76, 719], [72.7, 719]],
+  [C0, TW, [256, 664], [224, 697], [207, 708.5], [180, 711], [100, 712.5], [69, 712.5], [69, 741], [61.3, 741]],
   [C0, TW, [256, 228], [256, 214.7]],
   [...TE, [437, 300], [441.3, 300]],
   [...TE, [437, 677], [600, 677], [600, 692.3]]
@@ -843,6 +844,10 @@ const GAB_SIZE = { S: { n: 'chico', U: 6, w: 0.6, h: 0.8, d: 0.3 }, M: { n: 'med
 const FIB_COL = ['#0E9DB3', '#E07A1F', '#2E9E5B', '#8E5BD0', '#C9A227', '#D2475F', '#3F7FD6', '#7A8B2E', '#B5684F', '#5E6AD2'];
 const FIBS = [], CABS = {};
 const mkCab = (cap, items) => ({ cap, items: items || [], links: [], ports: {} });
+// balanza de camiones: casilla con rack de pared, cámara de matrículas y domo sobre la carga
+addDev({ id: 'C-BAL1', type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'pole', ph: 6.5, p: [136, 715.6], yaw: 0.05, loc: 'Balanza · matrícula de salida', bal: true });
+addDev({ id: 'C-BAL2', type: 'cam', kind: 'Domo 4 MP', mount: 'pole', ph: 8, p: [167, 716.2], yaw: Math.PI * 0.95, loc: 'Balanza · carga sobre la plataforma', bal: true });
+addDev({ id: 'RK-BAL', type: 'wr', kind: 'Rack de pared 6U', u: 6, p: [176, 711.6], y: 1.3, yaw: 0, loc: 'Balanza · casilla de control', bal: true });
 { const GAB_DEF = [['G-E8', 'e8'], ['G-E1', 'e1'], ['G-E7', 'e7'], ['G-E5', 'e5'], ['G-E4', 'e4'], ['G-E2', 'e2'], ['G-POR', null, 'Portería'], ['G-SR', null, 'Playa 0 km'], ['G-E9', 'e9'], ['G-E10', 'e10']];
   FIBER.routes.forEach((r, i) => { const [gid, nv, lbl] = GAB_DEF[i], a = r.at(-2), b = r.at(-1), L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dir = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
     addDev({ id: gid, type: 'gab', kind: 'Gabinete metálico', size: 'M', x: b[0], y: 0, z: b[1], yaw: Math.atan2(-dir[0], -dir[1]), nave: nv || undefined, zona: gid === 'G-SR' ? 'sr' : undefined, loc: (nv ? naveById(nv).full : lbl) + ' · gabinete exterior' });
@@ -852,11 +857,15 @@ const mkCab = (cap, items) => ({ cap, items: items || [], links: [], ports: {} }
     const devs = DEV.filter(d => ['cam', 'ap', 'rd'].includes(d.type) && (nv ? d.nave === nv : gid === 'G-POR' ? (d.gate || ['C-01', 'C-02', 'R-01', 'R-02'].includes(d.id)) : d.zona === 'sr'));
     c.ports.sw = {}; devs.slice(0, 24).forEach((d, k) => { c.ports.sw['p' + (k + 1)] = { dev: d.id }; });
     CABS[gid] = c; });
+  { const pts = pxs([C0, TW, [256, 664], [224, 697], [207, 707], [176, 707], [176, 710.4]]); FIBS.push({ id: 'FO-11', hilos: 12, pts, from: 'RK-01', to: 'RK-BAL' });
+    const c = mkCab(6, [{ iid: 'pp', type: 'pp12', u: 1 }, { iid: 'sw', type: 'sw8', u: 2 }, { iid: 'org', type: 'org', u: 3 }, { iid: 'ups', type: 'ups', u: 5 }]);
+    c.ports.pp = { f1: { fib: ['FO-11', 1] }, f2: { fib: ['FO-11', 2] } }; c.links.push([['pp', 'f1'], ['sw', 's1']]); c.ports.sw = { p1: { dev: 'C-BAL1' }, p2: { dev: 'C-BAL2' } }; CABS['RK-BAL'] = c; }
   const core = mkCab(12, [{ iid: 'pa', type: 'pp24', u: 1 }, { iid: 'core', type: 'swc', u: 2 }, { iid: 'org', type: 'org', u: 3 }, { iid: 'ofi', type: 'sw24', u: 4 }, { iid: 'nvr', type: 'nvr', u: 5 }, { iid: 'ups', type: 'ups', u: 7 }]);
   core.ports.pa = {}; FIBS.forEach((F, i) => { core.ports.pa['f' + (2 * i + 1)] = { fib: [F.id, 1] }; core.ports.pa['f' + (2 * i + 2)] = { fib: [F.id, 2] }; core.links.push([['pa', 'f' + (2 * i + 1)], ['core', 's' + (i + 1)]]); });
   core.links.push([['ofi', 's1'], ['core', 's16']], [['nvr', 'p1'], ['ofi', 'p24']]);
   core.ports.ofi = {}; DEV.filter(d => d.admin && (d.type === 'ap' || d.type === 'rd')).forEach((d, k) => { core.ports.ofi['p' + (k + 1)] = { dev: d.id }; });
   CABS['RK-01'] = core; }
+const DEF_FIBS = JSON.parse(JSON.stringify(FIBS)), DEF_CABS = JSON.parse(JSON.stringify(CABS));
 const fibById = id => FIBS.find(f => f.id === id);
 function portInfo(cid, iid, pid) { const c = CABS[cid]; if (!c) return {}; const p = (c.ports[iid] || {})[pid] || {};
   const link = c.links.find(l => (l[0][0] === iid && l[0][1] === pid) || (l[1][0] === iid && l[1][1] === pid));
@@ -894,17 +903,25 @@ function buildBase() {
   for (const o of [-9, 9]) { const p = hw.map(([x, y]) => [x + hn[0] * o, y + hn[1] * o]); road(p, 12); dash(p, 12, 5); }
   // calles internas
   const RD = [
-    [[31, 703], [110, 703], [170, 701], [215, 692]],
+    [[31, 727], [110, 726.5], [170, 724], [200, 716], [218, 702], [230, 694]],
     [[256, 688], [420, 688], [560, 684], [640, 684], [772, 680]],
     [[242, 671], [240, 620], [249, 545], [249, 216]],
     [[249, 488], [430, 488]], [[430, 488], [430, 250]], [[249, 264], [430, 264]],
     [[75, 222], [395, 222], [430, 250], [640, 252]], [[640, 252], [640, 684]],
     [[563, 684], [563, 1110]], [[242, 705], [262, 740], [272, 910]], [[563, 1005], [630, 1005]]
   ];
-  road(RD[0], 16, 0.021); RD.slice(1).forEach(p => { road(p, 10); dash(p); });
+  road(RD[0], 18, 0.021); pflat(gg, [40, 118, 714, 737], 0.019, P.road); pflat(gg, [120, 200, 711, 720], 0.019, P.road);
+  pflat(gg, [47, 112, 738, 824], 0.014, P.apron); road([[96, 736], [104, 760], [106, 792]], 9, 0.018); RD.slice(1).forEach(p => { road(p, 10); dash(p); });
   const [rx, rz] = px(...RB); gg.disc(rx, rz, 20, 0.022, P.road, 0, 28); g.prism(rx, 0, rz, 9, 0.35, 24, P.parapet); g.disc(rx, rz, 8.6, 0.36, P.grass, 0, 24);
-  g.box(...[60, 0.0, 702].map((v, i) => i === 0 ? v - OX : i === 2 ? v - OZ : v), 112 - OX, 0.3, 704 - OZ, P.parapet);
-  { const [a, b] = px(84.7, 706.3), [c, d] = px(85.3, 710.5); gg.flat(a, b, c, d, 0.045, P.mark); const [e, f] = px(85.3, 696), [h2, i2] = px(85.9, 700.3); gg.flat(e, f, h2, i2, 0.045, P.mark); }
+  { const [a, b, c, d] = R(50, 66, 725.8, 727.4); g.box(a, 0, b, c, 0.3, d, P.parapet); }
+  { const [a, b] = px(64.6, 727.6), [c, d] = px(65.2, 735); gg.flat(a, b, c, d, 0.045, P.mark); const [e, f] = px(70.4, 718.2), [h2, i2] = px(71, 725.6); gg.flat(e, f, h2, i2, 0.045, P.mark); }
+  // balanza de camiones: plataforma en el carril de salida y casilla de control con el rack
+  { const [a, b, c, d] = R(146, 166, 718.2, 721.8); g.box(a, 0, b, c, 0.18, d, P.parapet, { top: mulc(C(P.road), 1.35) }); for (let x = 146; x <= 166.1; x += 4) { const [e, f, h2, i2] = R(x - 0.08, x + 0.08, 718.2, 721.8); gg.flat(e, f, h2, i2, 0.2, P.markY); }
+    const [k0, k1, k2, k3] = R(145.6, 166.4, 717.8, 718.2); g.box(k0, 0, k1, k2, 0.22, k3, P.markY); const [m0, m1, m2, m3] = R(145.6, 166.4, 721.8, 722.2); g.box(m0, 0, m1, m2, 0.22, m3, P.markY); }
+  { const [a, b, c, d] = pbox(171, 180, 706, 711.6, 3, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); g.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet); }
+  // camiones estacionados esperando turno, al sur de la entrada
+  for (let i = 0; i < 7; i++) { const z0 = 790 + i * 3.7; if (i === 3) continue; const [a, b, c, d] = R(51, 64.5, z0, z0 + 2.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); g.box(a, 0, b + 0.3, a + 1.2, 1.1, d - 0.3, P.tire); g.box(c - 4.5, 0, b + 0.3, c - 1.5, 1.1, d - 0.3, P.tire); }
+  for (let i = 0; i < 3; i++) { const x0 = 84 + i * 4.2; const [a, b, c, d] = R(x0, x0 + 2.5, 770, 783.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); }
   // playas de maniobra, estacionamientos y patios
   [[228, 244, 232, 562], [210, 235, 562, 677], [245, 270, 547, 670], [270, 410, 462, 483], [615, 635, 260, 355], [630, 712, 240, 315], [568, 597, 693, 997], [296, 372, 498, 532], [270, 410, 270, 297]].forEach(rr => pflat(gg, rr, 0.015, P.apron));
   const lrect = (N, u0, u1, v0, v1, y, col) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); gg.flat(Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz), y, col); };
@@ -927,12 +944,12 @@ function buildBase() {
     for (let k = 0; k <= n; k++) { const x = lerp(x0, x1, k / n), z = lerp(z0, z1, k / n); if (!gap(x, z)) g.box(x - 0.12, 0, z - 0.12, x + 0.12, 2.6, z + 0.12, P.fence); }
     for (let k = 0; k < n; k++) { const xa = lerp(x0, x1, k / n), za = lerp(z0, z1, k / n), xb = lerp(x0, x1, (k + 1) / n), zb = lerp(z0, z1, (k + 1) / n); if (gap((xa + xb) / 2, (za + zb) / 2)) continue;
       for (const y of [1.2, 2.45]) { if (Math.abs(xb - xa) < 1e-6 || Math.abs(zb - za) < 1e-6) g.box(Math.min(xa, xb) - 0.05, y, Math.min(za, zb) - 0.05, Math.max(xa, xb) + 0.05, y + 0.1, Math.max(za, zb) + 0.05, P.fence); else g.strip([[xa, za], [xb, zb]], 0.12, y + 0.1, P.fence); } } } };
-  const gz0 = 694 - OZ, gz1 = 713 - OZ;
+  const gz0 = 714 - OZ, gz1 = 739 - OZ;
   fence(pxs([[45, 18], [258, 18], [608, 148], [648, 238], [648, 676], [772, 676], [772, 1100], [45, 1100], [45, 18]]), (x, z) => x < 45 - OX + 2 && z > gz0 && z < gz1);
   // árboles
   const tree = (x, z, s = 1) => { g.prism(x, 0, z, 0.32 * s, 2 * s, 5, P.trunk); g.blob(x, 3.9 * s, z, 2.5 * s, r() > 0.5 ? P.tree : P.tree2, { rings: 4, seg: 7, sy: 0.92, rot: r() * 3 }); };
   const ptree = (x, y, s) => { const [a, b] = px(x, y); tree(a, b, s); };
-  for (let y = 240; y <= 1090; y += 11) if (y < 680 || y > 730) ptree(52 + (r() - 0.5) * 4, y, 1 + r() * 0.4);
+  for (let y = 240; y <= 1090; y += 11) if (y < 708 || y > 750) ptree(52 + (r() - 0.5) * 4, y, 1 + r() * 0.4);
   for (let y = 30; y <= 210; y += 12) ptree(52, y, 0.9 + r() * 0.3);
   for (let x = 60; x <= 760; x += 12) ptree(x + (r() - 0.5) * 3, 1108 + (r() - 0.5) * 3, 0.95 + r() * 0.3);
   for (let x = 830; x <= 1070; x += 8) { ptree(x, 462 + (r() - 0.5) * 4, 1.3 + r() * 0.3); ptree(x - 50, 880 + (r() - 0.5) * 4, 1.25 + r() * 0.3); }
@@ -944,7 +961,8 @@ function buildBase() {
     const lx = X0 + dx * 2, lz = Z0 + dz * 2, hx = dz ? 0.45 : 0.6, hz = dz ? 0.6 : 0.45; g.box(lx - hx, 9.85, lz - hz, lx + hx, 10.15, lz + hz, P.lamp, { e: P.lampE, ao: false });
     if (P.pool) g.disc(X0 + dx * 3, Z0 + dz * 3, 5.5, 0.05, P.pool, 1, 14); };
   for (let x = 290; x <= 760; x += 38) lpole(x, 696, 0, -1);
-  for (let x = 120; x <= 200; x += 40) lpole(x, 713, 0, -1);
+  for (let x = 100; x <= 200; x += 40) lpole(x, 713.5, 0, 1);
+  for (let x = 66; x <= 196; x += 10) ptree(x + (r() - 0.5) * 3, 703 + (r() - 0.5) * 4, 0.85 + r() * 0.3);
   for (let y = 360; y <= 540; y += 45) lpole(258, y, -1, 0);
   for (let y = 290; y <= 660; y += 46) lpole(649, y, -1, 0);
   for (let y = 720; y <= 1080; y += 45) lpole(553, y, 1, 0);
@@ -959,10 +977,10 @@ function buildBase() {
     g.box(a - 0.1, 9.4, b - 0.1, c + 0.1, 10, d + 0.1, P.parapet); pbox(268, 280, 540, 543, 3.6, P.parapet);
     const [h1, h2] = px(262, 516), [h3, h4] = px(280, 527); g.box(h1, 10, h2, h1 + 5, 11.4, h2 + 4, P.hvac); g.box(h3, 10, h4, h3 + 4, 11.2, h4 + 4, P.hvac); }
   // portería: caseta y techo sobre los dos carriles
-  { const [a, b, c, d] = pbox(62, 72, 714, 723, 3.4, P.wall, { top: P.roof }); g.box(a - 0.1, 1.4, b - 0.1, c + 0.1, 2.8, d + 0.1, P.glass, { e: P.glassE }); g.box(a - 0.5, 3.4, b - 0.5, c + 0.5, 3.8, d + 0.5, P.parapet); }
-  for (const [x, y] of [[78, 694.5], [78, 711.5], [96, 694.5], [96, 711.5]]) { const [a, b] = px(x, y); g.box(a - 0.25, 0, b - 0.25, a + 0.25, 6.6, b + 0.25, P.pole); }
-  { const [a, b, c, d] = R(77.4, 96.6, 694, 712); g.box(a, 6.6, b, c, 7.2, d, P.wall, { top: P.roof }); g.box(a - 0.1, 6.6, b - 0.1, c + 0.1, 6.85, d + 0.1, P.acc, { e: 0.55 }); }
-  for (const y of [713, 692.6]) { const [a, b] = px(85, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
+  { const [a, b, c, d] = pbox(51, 60, 737.5, 746, 3.4, P.wall, { top: P.roof }); g.box(a - 0.1, 1.4, b - 0.1, c + 0.1, 2.8, d + 0.1, P.glass, { e: P.glassE }); g.box(a - 0.5, 3.4, b - 0.5, c + 0.5, 3.8, d + 0.5, P.parapet); }
+  for (const [x, y] of [[57.5, 716.5], [57.5, 736.5], [67, 716.5], [67, 736.5]]) { const [a, b] = px(x, y); g.box(a - 0.25, 0, b - 0.25, a + 0.25, 6.6, b + 0.25, P.pole); }
+  { const [a, b, c, d] = R(56.8, 67.7, 716, 737); g.box(a, 6.6, b, c, 7.2, d, P.wall, { top: P.roof }); g.box(a - 0.1, 6.6, b - 0.1, c + 0.1, 6.85, d + 0.1, P.acc, { e: 0.55 }); }
+  for (const [x, y] of [[66, 736.2], [68, 716.8]]) { const [a, b] = px(x, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
   // detalles junto a las naves
   pbox(255, 270, 245, 345, 8, P.wall, { top: P.roof }); pbox(345, 390, 280, 292, 5, P.wall, { top: P.roof }); pbox(395, 407, 550, 575, 5, P.wall, { top: P.roof });
   pbox(570, 597, 790, 837, 8, P.wall, { top: P.roof }); pbox(425, 440, 510, 528, 4, P.wall, { top: P.roof }); pbox(595, 615, 352, 380, 3, P.hvac);
@@ -1103,7 +1121,8 @@ function packetGeo() { const g = new Geo(); g.box(-0.7, 0, -0.32, 0.7, 0.32, 0.3
 
 const TRUCKS = [], FORKS = [], PACKETS = [];
 // barreras de la portería (entrada por la ruta del oeste)
-const ARMS = [{ id: 'arm-in', x: 85 - OX, z: 713 - OZ, yaw: Math.PI / 2, lane: 708 - OZ, open: 0 }, { id: 'arm-out', x: 85 - OX, z: 692.6 - OZ, yaw: -Math.PI / 2, lane: 698 - OZ, open: 0 }];
+const ARMS = [{ id: 'arm-in', x: 66 - OX, z: 735.6 - OZ, yaw: Math.PI / 2, lane: 731 - OZ, open: 0 }, { id: 'arm-out', x: 68 - OX, z: 717.4 - OZ, yaw: -Math.PI / 2, lane: 722 - OZ, open: 0 }];
+const BAL = { hoy: 41, last: '' };
 function buildDynamicGeos() {
   TRUCKS.forEach(t => obj(t.id, { geo: truckGeo(t.v), layer: 'log', pick: true, kind: 'truck', inflate: 0.4 }));
   FORKS.forEach(f => { f.geoA = forkGeo(false); f.geoB = forkGeo(true); obj(f.id, { geo: f.loaded ? f.geoB : f.geoA, layer: 'log', pick: true, kind: 'fork', inflate: 0.8 }); });
@@ -1130,8 +1149,8 @@ const P2 = (x, y, sp, o) => Object.assign({ x: x - OX, z: y - OZ, sp }, o || {})
 function arrivePath(d, fromN) {
   const N = d.nave, s = N.s, dir = [N.t[0] * s, N.t[1] * s], rt = [-dir[1], dir[0]];
   const A = NP(N, d.u + 15 * s, N.Dl), B = NP(N, d.u + 4 * s, Math.min(20, N.Dl - 4));
-  const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(688) - 2, 688, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(722) + 2, 722, 8)];
-  pts.push(P2(48, 708, 7), P2(76, 708, 6, { wait: 1.8, ev: 'gate' }), P2(96, 708, 8, { ev: 'route' }));
+  const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(714) - 2, 714, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(746) + 2, 746, 8)];
+  pts.push(P2(46, 731, 7), P2(60, 731, 6, { wait: 1.8, ev: 'gate' }), P2(82, 731, 8, { ev: 'route' }));
   offsetPath(ROUTES[N.rt].in, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
   pts.push({ x: A[0] + rt[0] * 1.9, z: A[1] + rt[1] * 1.9, sp: 9 }, { x: B[0], z: B[1], sp: 3, rev: true }, { x: d.x, z: d.z, sp: 2.4, rev: true, ev: 'dock' });
   return pts;
@@ -1141,7 +1160,7 @@ function leavePath(d) {
   const F = NP(N, d.u, Math.min(16, N.Dl - 4)), E = NP(N, d.u - 7 * s, N.Dl);
   const pts = [{ x: F[0], z: F[1], sp: 3 }, { x: E[0] + rt[0] * 1.9, z: E[1] + rt[1] * 1.9, sp: 5 }];
   offsetPath(ROUTES[N.rt].out, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
-  pts.push(P2(94.2, 698, 4), P2(94, 698, 2, { wait: 1.2, ev: 'exit' }), P2(55, 698, 7), P2(camX(684) + 2, 684, 8), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
+  pts.push(P2(170, 720, 4), P2(156, 720, 2, { wait: 1.1, ev: 'scale' }), P2(84, 722, 7), P2(72, 722, 2, { wait: 1.2, ev: 'exit' }), P2(48, 722, 6), P2(camX(708) + 2, 708, 8), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
   return pts;
 }
 function startArrival(t) {
@@ -1186,6 +1205,7 @@ function truckEvent(t, ev) {
   const d = t.dock, N = d && d.nave;
   if (ev === 'gate') { INGRESOS++; DEV.find(x => x.id === 'R-01').hoy++; log('info', `Cámara de matrículas leyó ${t.plate} en portería · va a ${N.full}`, t.id); }
   if (ev === 'route') t.stage = 1;
+  if (ev === 'scale') { const kg = (14 + Math.random() * 16).toFixed(1).replace('.', ','); BAL.hoy++; BAL.last = t.plate + ' · ' + kg + ' t'; if (Math.random() < 0.5) log('info', `Balanza: ${t.plate} pesó ${kg} t al salir`, 'RK-BAL'); }
   if (ev === 'dock') { t.state = 'docked'; t.stage = 2; t.dwell = 70 + Math.random() * 60; N.lastIn = fmt(new Date()) + ' · ' + t.plate; log('ok', `${t.plate} quedó en el andén ${d.k} de ${N.full}`, t.id); }
   if (ev === 'exit') { if (d) d.occ = null; log('info', `${t.plate} salió del predio · ${simMinSince(t.tIn)} min adentro`, t.id); t.dock = null; }
   if (ev === 'gone') { t.state = 'idle'; t.idle = 2 + Math.random() * 6; t.x = -500; t.z = -900; if (SEL === t.id) closePanel(); }
@@ -1303,7 +1323,7 @@ function panelContent(id) {
     const fibs = FIBS.filter(F => F.to === d.id || F.from === d.id), bad = devs.map(id => DEV.find(x => x.id === id)).filter(x => x && x.status !== 'ok');
     ey = (d.type === 'gab' ? 'Gabinete · ' : 'Rack · ') + d.id; t = d.loc.split(' · ')[0]; s = d.type === 'gab' ? 'Gabinete metálico ' + GAB_SIZE[d.size || 'M'].n + ' · ' + c.cap + 'U' : d.kind;
     pill = bad.length ? `<span class="pill ${bad.some(x => x.status === 'crit') ? 'crit' : 'warn'}">${bad.length} equipo${bad.length > 1 ? 's' : ''} con alerta</span>` : '<span class="pill ok">Todo en orden</span>';
-    body = `<dl class="rows">${row('Equipos adentro', c.items.length ? c.items.map(it => CAT[it.type].n).join('<br>') : 'Vacío')}${row('Fibras que llegan', fibs.map(F => F.id).join(', ') || '—')}${row('Equipos conectados', devs.length)}</dl>`;
+    body = `<dl class="rows">${row('Equipos adentro', c.items.length ? c.items.map(it => CAT[it.type].n).join('<br>') : 'Vacío')}${row('Fibras que llegan', fibs.map(F => F.id).join(', ') || '—')}${row('Equipos conectados', devs.length)}${d.id === 'RK-BAL' ? row('Pesadas hoy', BAL.hoy) + row('Última pesada', BAL.last || '—') : ''}</dl>`;
     acts = `<button class="btn pri" data-act="cab" data-id="${d.id}">Abrir ${d.type === 'gab' ? 'gabinete' : 'rack'}</button>`; }
   else if (e.t === 'fiber') { const F = e.F, ends = fibEnds(F.id); ey = 'Fibra óptica'; t = F.id; s = F.hilos + ' hilos · ' + fibLen(F) + ' m de recorrido';
     pill = '<span class="pill ok">En servicio</span>';
@@ -1416,6 +1436,10 @@ function chipFor(N) { N.chip = addLabel(`<button class="chip ${N.free ? 'free' :
 function makeLabels() {
   for (const N of NAVES) chipFor(N);
   addLabel('<span class="poi">Portería</span>', () => [GATE_POS[0], 8.5, GATE_POS[1]], 'cli', 'gate');
+  addLabel('<span class="poi">Balanza</span>', () => [px(160, 720)[0], 5, px(160, 720)[1]], 'cli', 'RK-BAL');
+  const street = (t, x, y, mz) => { const L = addLabel(`<span class="street">${t}</span>`, () => [px(x, y)[0], 0.4, px(x, y)[1]], 'cli', null); L.maxZoom = mz || 420; };
+  street('Camino principal', camX(450), 450); street('Camino principal', camX(950), 950, 300); street('Ruta nacional', 300, -63 + 0.269 * 300 - 14, 900); street('Ruta nacional', 820, -63 + 0.269 * 820 - 14, 900);
+  street('Camino vecinal', camX(-170) + 18, -170, 600); street('Calle 1', 340, 264, 260); street('Calle 1', 430, 380, 260);
   addLabel('<span class="poi">Oficinas del polo</span>', () => [ADMIN_POS[0], 11.5, ADMIN_POS[1]], 'cli', 'admin');
   for (const Z of ZONAS) addLabel(`<span class="poi">${Z.name}</span>`, () => Z.pos, 'cli', Z.id);
   for (const d of DEV.filter(d => d.status !== 'ok')) addLabel(`<button class="pin ${d.status}" aria-label="Alerta ${d.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`, () => { const p = entPos(d.id); return p ? [p[0], p[1] + 2.2, p[2]] : [0, -999, 0]; }, d.type === 'cam' ? 'cam' : 'red', d.id, 'pin');
@@ -1612,7 +1636,7 @@ function devTag(d) { rmLabel(TAGS.get(d.id)); TAGS.delete(d.id); if (!['gab', 'w
 const ED = { on: false, tool: 'sel', drag: null, fib: null, box: null, moved: {}, removed: [], meta: {} };
 let ROLE = HOST ? (HOST.role === 'inst' ? 'inst' : 'cli') : (UI.role === 'cli') ? 'cli' : 'inst';
 const canEdit = () => ROLE === 'inst';
-function edState() { return ({ v: 1, naves: NAVES.filter(N => N.custom).map(N => ({ id: N.id, code: N.code, name: N.name, rubro: N.rubro, x0: N.x0, x1: N.x1, z0: N.z0, z1: N.z1, h: N.h, face: N.face })),
+function edState() { return ({ v: 1, rev: 2, naves: NAVES.filter(N => N.custom).map(N => ({ id: N.id, code: N.code, name: N.name, rubro: N.rubro, x0: N.x0, x1: N.x1, z0: N.z0, z1: N.z1, h: N.h, face: N.face })),
   devs: DEV.filter(d => d.custom), moved: ED.moved, removed: ED.removed, fibs: FIBS, cabs: CABS, inner: INNER, meta: ED.meta }); }
 function edSave() { const st = edState(); if (HOST) { try { HOST.save(JSON.parse(JSON.stringify(st))); } catch (e) {} return; } try { localStorage.setItem('po3d-edit', JSON.stringify(st)); } catch (e) {} }
 function edLoad() { let s = null; try { s = HOST ? HOST.state : JSON.parse(localStorage.getItem('po3d-edit') || 'null'); } catch (e) {} if (!s || s.v !== 1) return;
@@ -1623,6 +1647,10 @@ function edLoad() { let s = null; try { s = HOST ? HOST.state : JSON.parse(local
   (s.naves || []).forEach(n => { const N = Object.assign({ rubro: 'Galpón agregado', custom: true }, n); prepNave(N); NAVES.push(N); });
   if (Array.isArray(s.fibs)) { FIBS.length = 0; s.fibs.forEach(f => FIBS.push(f)); }
   if (s.cabs) { for (const k in CABS) delete CABS[k]; Object.assign(CABS, s.cabs); }
+  if ((s.rev || 1) < 2) { const d7 = DEF_FIBS.find(f => f.id === 'FO-07'), f7 = FIBS.find(f => f.id === 'FO-07' && f.to === 'G-POR'); if (f7 && d7) f7.pts = d7.pts.map(q => q.slice());
+    if (!FIBS.some(f => f.id === 'FO-11')) FIBS.push(JSON.parse(JSON.stringify(DEF_FIBS.find(f => f.id === 'FO-11'))));
+    if (!CABS['RK-BAL']) CABS['RK-BAL'] = JSON.parse(JSON.stringify(DEF_CABS['RK-BAL']));
+    const core = CABS['RK-01']; if (core) { core.ports.pa = core.ports.pa || {}; if (!core.ports.pa.f21) { core.ports.pa.f21 = { fib: ['FO-11', 1] }; core.ports.pa.f22 = { fib: ['FO-11', 2] }; core.links.push([['pa', 'f21'], ['core', 's11']]); } } }
   if (s.inner) Object.assign(INNER, s.inner); applyMeta(s.meta); }
 function edReset() { if (HOST) { try { HOST.save(null); } catch (e) {} } else try { localStorage.removeItem('po3d-edit'); } catch (e) {} location.reload(); }
 const nextId = (pre, list) => { let n = 1; const has = new Set(list); while (has.has(pre + pad(n))) n++; return pre + pad(n); };
