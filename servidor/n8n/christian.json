@@ -1,0 +1,1350 @@
+{
+ "name": "Christian · WhatsApp (nuevo)",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "wa-christian",
+    "responseMode": "onReceived",
+    "options": {}
+   },
+   "name": "WhatsApp entrante",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    400
+   ],
+   "webhookId": "olumi-wa-christian"
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Evolution → algo simple. Devuelve vacío si no hay que hacer nada.\nconst BLOQ = {\"59899119340\": \"Mam\\u00e1\", \"59896700019\": \"Sof\\u00eda\", \"59899240460\": \"Giancarlo (Phitel)\", \"59892179190\": \"Victor (Phitel)\"}, BLOQN = new RegExp(\"^(sof[i\\u00ed]a|sofi|mam[a\\u00e1]|mami|pap[a\\u00e1]|papi|amor|mi amor|bebe|hermana?o?|abuel[ao]|t[i\\u00ed][ao]|prim[ao]|cu[\\u00f1n]ad[ao]|suegr[ao]|giancarlo|v[i\\u00ed]ctor m[a\\u00e1]rquez)\\\\b\", 'i');\nconst b = $json.body || $json; const ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}, key = d.key || {}, jid = String(key.remoteJid || '');\nif (!/@s\\.whatsapp\\.net$/.test(jid)) return [];                       // grupos, estados, canales: no\nconst m = d.message || {}, owner = String(b.sender || '').replace(/:\\d+@/, '@'), num = jid.replace(/@.*/, '');\nconst text = (m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '').trim();\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || '') : '';\nconst fromMe = !!key.fromMe, self = fromMe && jid === owner;\nconst sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; sd.bloq = sd.bloq || {};\nif (self && (sd.auto[key.id] || /^(🤖|🧠|🚨|📥|✅)/.test(text))) return [];      // lo que escribió el propio asistente\nconst pn = String(d.pushName || '').trim();\nif (!self && (BLOQ[num] || sd.bloq[num] || (!fromMe && BLOQN.test(pn)))) return [];   // familia, pareja, equipo: ni se anota\nif (!text && !audioB64) return [];\nconst tipo = self ? 'prueba' : fromMe ? 'mio' : 'cliente';\nreturn [{ json: { tipo, jid, from: num, owner, ownerNum: owner.replace(/@.*/, ''), text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg', msgId: key.id || '', nombre: fromMe ? 'Christian' : pn, ts: Date.now() } }];\n"
+   },
+   "name": "Leer mensaje",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!$json.audioB64 }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es audio?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    440,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "operation": "toBinary",
+    "sourceProperty": "audioB64",
+    "options": {
+     "fileName": "audio.ogg",
+     "mimeType": "audio/ogg"
+    }
+   },
+   "name": "Audio a archivo",
+   "type": "n8n-nodes-base.convertToFile",
+   "typeVersion": 1.1,
+   "position": [
+    660,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "contentType": "multipart-form-data",
+    "bodyParameters": {
+     "parameters": [
+      {
+       "parameterType": "formBinaryData",
+       "name": "file",
+       "inputDataFieldName": "data"
+      },
+      {
+       "name": "model",
+       "value": "whisper-large-v3-turbo"
+      },
+      {
+       "name": "language",
+       "value": "es"
+      },
+      {
+       "name": "response_format",
+       "value": "json"
+      }
+     ]
+    }
+   },
+   "name": "Transcribir audio",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    880,
+    300
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "const m = $('Leer mensaje').item.json; return [{ json: { ...m, audioB64: undefined, texto: String($json.text || '').trim() || '(audio que no se pudo leer)', esAudio: true } }];"
+   },
+   "name": "Texto del audio",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1100,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "return [{ json: { ...$json, texto: $json.text, esAudio: false } }];"
+   },
+   "name": "Texto escrito",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    660,
+    500
+   ]
+  },
+  {
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 2
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.tipo }}",
+          "rightValue": "cliente",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "cliente"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 2
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.tipo }}",
+          "rightValue": "mio",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "yo a un cliente"
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 2
+        },
+        "conditions": [
+         {
+          "leftValue": "={{ $json.tipo }}",
+          "rightValue": "prueba",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       },
+       "renameOutput": true,
+       "outputKey": "mi chat (prueba)"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "name": "¿Quién escribe?",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.2,
+   "position": [
+    1320,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + $json.from, nombre: $json.nombre }) }}"
+   },
+   "name": "Contexto en Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1560,
+    160
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3,  response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mensaje de WhatsApp que le llegó a Christian, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). No escribís respuesta. Usá el MENSAJE y el CONTEXTO de Olumi (cliente, tickets, historial). Devolvé SOLO JSON: { \\\"carril\\\": \\\"soporte\\\" | \\\"comercial\\\" | \\\"administrativo\\\" | \\\"coordinar\\\" | \\\"personal\\\" | \\\"proveedor\\\" | \\\"spam\\\", \\\"urgencia\\\": \\\"alta\\\" | \\\"media\\\" | \\\"baja\\\" (alta solo si algo dejó de funcionar y afecta la operación), \\\"nombre\\\": \\\"de la persona o ''\\\", \\\"empresa\\\": \\\"empresa o lugar o ''\\\", \\\"titulo\\\": \\\"máximo 60 letras\\\", \\\"resumen\\\": \\\"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\\\" }. soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden documentos, facturas, carnés, datos de la empresa; coordinar = fechas, horarios, confirmar una visita; personal = no tiene que ver con el trabajo.\" }, { role: 'user', content: 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) } ] }) }}"
+   },
+   "name": "Clasificar (Gemini)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1780,
+    160
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true,
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Clasificar · ¿respondió Gemini?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1980,
+    160
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mensaje de WhatsApp que le llegó a Christian, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). No escribís respuesta. Usá el MENSAJE y el CONTEXTO de Olumi (cliente, tickets, historial). Devolvé SOLO JSON: { \\\"carril\\\": \\\"soporte\\\" | \\\"comercial\\\" | \\\"administrativo\\\" | \\\"coordinar\\\" | \\\"personal\\\" | \\\"proveedor\\\" | \\\"spam\\\", \\\"urgencia\\\": \\\"alta\\\" | \\\"media\\\" | \\\"baja\\\" (alta solo si algo dejó de funcionar y afecta la operación), \\\"nombre\\\": \\\"de la persona o ''\\\", \\\"empresa\\\": \\\"empresa o lugar o ''\\\", \\\"titulo\\\": \\\"máximo 60 letras\\\", \\\"resumen\\\": \\\"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\\\" }. soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden documentos, facturas, carnés, datos de la empresa; coordinar = fechas, horarios, confirmar una visita; personal = no tiene que ver con el trabajo.\" }, { role: 'user', content: 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) } ] }) }}"
+   },
+   "name": "Clasificar (Groq)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1980,
+    320
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Clasificar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2200,
+    160
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $('¿Quién escribe?').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}\nconst carril = ['soporte','comercial','administrativo','coordinar','personal','proveedor','spam'].includes(j.carril) ? j.carril : 'soporte';\nif (carril === 'personal') return [];                                     // no es trabajo: no se anota\nconst urg = ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : 'media';\nconst tipoEntrada = { soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo', proveedor: 'proveedor', spam: 'spam' }[carril] || 'consulta';\nreturn [{ json: { modo: 'registrar', registrar: true, soloGuardar: false, autor: 'cliente', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '',\n  texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '', titulo: j.titulo || '', intencion: carril, tema: carril, tipoEntrada, tipo: urg === 'alta' ? 'emergencia' : 'consulta',\n  destino: 'bandeja', urgente: urg === 'alta', canal: 'whatsapp', origen: 'WhatsApp de Christian', carril, urgencia: urg, msgId: m.msgId, esAudio: m.esAudio, respuestaAuto: '' } }];\n"
+   },
+   "name": "Armar entrada de bandeja",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2420,
+    160
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}"
+   },
+   "name": "A la bandeja de Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2640,
+    160
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $('Armar entrada de bandeja').item.json.urgente && !$json.repetido }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Urgente?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2860,
+    160
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $('¿Quién escribe?').item.json.ownerNum, text: '🚨 Urgente en la bandeja · ' + ($('Armar entrada de bandeja').item.json.nombre || '+' + $('¿Quién escribe?').item.json.from) + ($('Armar entrada de bandeja').item.json.empresa ? ' (' + $('Armar entrada de bandeja').item.json.empresa + ')' : '') + '\\n' + ($('Armar entrada de bandeja').item.json.titulo || $('¿Quién escribe?').item.json.texto.slice(0, 120)) }) }}"
+   },
+   "name": "Avisarme (urgente)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3080,
+    100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'registrar', soloGuardar: true, autor: 'christian', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + $json.from, texto: ($json.esAudio ? '🎤 ' : '') + $json.texto, msgId: $json.msgId, esAudio: $json.esAudio }) }}"
+   },
+   "name": "Guardar lo que escribí",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1560,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst m = $json, sd = $getWorkflowStaticData('global'); sd.prueba = sd.prueba || { desde: 0, soy: '' }; sd.bloq = sd.bloq || {};\nconst low = m.texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();\nconst out = t => [{ json: { ...m, respuesta: '🤖 ' + t, comando: true } }];\nif (/^(ayuda|comandos)$/.test(low)) return out('Modo prueba. Escribime como si fueras un cliente y te contesto acá. Comandos:\\n• reiniciar prueba → empiezo una charla nueva\\n• prueba soy Nombre de Empresa → hago de cuenta que escribe ese cliente de Olumi\\n• bloquear 099123456 → ese número nunca se anota ni se contesta');\nif (/^reiniciar( prueba)?$/.test(low)) { sd.prueba = { desde: Date.now(), soy: '' }; return out('Listo, charla nueva. Escribime como cliente.'); }\nconst soy = m.texto.match(/^prueba soy (.+)$/i); if (soy) { sd.prueba.soy = soy[1].trim(); sd.prueba.desde = Date.now(); return out('Ok, ahora sos ' + sd.prueba.soy + '. Charla nueva: escribime como ese cliente.'); }\nconst bl = low.match(/^bloquear\\s+\\+?(\\d[\\d ]{6,})$/); if (bl) { let n = bl[1].replace(/\\D/g, ''); if (n.startsWith('0')) n = '598' + n.slice(1); sd.bloq[n] = Date.now(); return out('Bloqueado +' + n + ': nunca se anota ni se contesta.'); }\nreturn [{ json: { ...m, comando: false, desde: sd.prueba.desde || 0, soy: sd.prueba.soy || '' } }];\n"
+   },
+   "name": "Comandos y prueba",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1560,
+    680
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.comando }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es un comando?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1780,
+    680
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.ownerNum, text: $json.respuesta }) }}"
+   },
+   "name": "Contestar el comando",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2000,
+    600
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); for (const k of Object.keys(sd.auto)) if (Date.now() - sd.auto[k] > 3 * 864e5) delete sd.auto[k]; return [];"
+   },
+   "name": "Anotar mensaje del asistente",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2220,
+    600
+   ]
+  },
+  {
+   "parameters": {
+    "amount": 15,
+    "unit": "seconds"
+   },
+   "name": "Esperar a que termine de escribir",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    2000,
+    780
+   ],
+   "webhookId": "olumi-espera-christian"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/chat/findMessages/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ where: { key: { remoteJid: $('Comandos y prueba').item.json.owner } }, page: 1, offset: 40, limit: 40 }) }}"
+   },
+   "name": "Leer mi chat (Evolution)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2220,
+    780
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// En mi chat: lo que escribo yo = \"Cliente\"; lo que empieza con 🤖 = \"Asistente\". Solo desde el último \"reiniciar\".\nconst a = $('Comandos y prueba').item.json, sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};\nlet recs = []; for (const r of $input.all().map(i => i.json)) { const x = r.messages?.records || r.records || r.messages || (Array.isArray(r) ? r : []); if (Array.isArray(x)) recs.push(...x); }\nconst txt = mm => { const m = mm.message || {}; return m.conversation || m.extendedTextMessage?.text || (m.audioMessage ? '🎤 audio' : '') || (m.imageMessage ? '📷 foto' : '') || ''; };\nconst tsOf = mm => { const t = Number(mm.messageTimestamp?.low ?? mm.messageTimestamp ?? 0); return t > 1e12 ? t : t * 1000; };\nconst seen = new Set(); recs = recs.filter(r => r && r.key && !seen.has(r.key.id) && seen.add(r.key.id)).sort((x, y) => tsOf(x) - tsOf(y));\nconst hora = t => new Date(t).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Montevideo' });\nlet L = recs.map(r => { const t = String(txt(r) || ''); const asis = !!sd.auto[r.key.id] || /^🤖/.test(t); return { id: r.key.id, ts: tsOf(r), quien: asis ? 'Asistente' : 'Cliente', texto: t.replace(/^🤖\\s*/, '').slice(0, 600) }; })\n  .filter(l => l.texto && l.ts >= (a.desde || 0) && !/^(🧠|🚨|📥|✅)/.test(l.texto) && !/^(ayuda|comandos|reiniciar|prueba soy|bloquear)\\b/i.test(l.texto));\nconst yo = L.find(l => l.id === a.msgId); if (yo && a.esAudio) yo.texto = a.texto;\nif (!yo && !L.length) L = [{ id: a.msgId, ts: a.ts, quien: 'Cliente', texto: a.texto }];\nconst ref = yo ? yo.ts : a.ts - 60000;\nif (L.some(l => l.ts > ref + 500 && l.id !== a.msgId)) return [];          // mandé algo más: contesta esa otra ejecución\nlet k = L.length - 1; while (k >= 0 && L[k].quien === 'Cliente') k--; const nuevos = L.slice(k + 1).map(l => l.texto);\nreturn [{ json: { charla: L.slice(-40).map(l => '[' + hora(l.ts) + '] ' + l.quien + ': ' + l.texto).join('\\n'), lineas: L.slice(-40), nuevos: nuevos.length ? nuevos : [a.texto], soy: a.soy } }];\n"
+   },
+   "name": "Armar la charla de prueba",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2440,
+    780
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+00000000', nombre: ($json.soy || '').split(/ de /i)[0] || '', empresa: ($json.soy || '').split(/ de /i).slice(1).join(' de ') }) }}"
+   },
+   "name": "Olumi (cliente de la prueba)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2660,
+    780
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3,  response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos Christian Barcos, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). Alguien te escribió por WhatsApp. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. Te paso la CHARLA REAL (en orden, con hora: Cliente o Asistente), LO NUEVO que dijo el cliente y lo que sabe OLUMI (cliente, tickets, visitas, presupuestos, notas internas, mails, cómo escribe Christian). Devolvé SOLO JSON: { \\\"ficha\\\": { \\\"quePide\\\": \\\"...\\\", \\\"carril\\\": \\\"soporte|comercial|administrativo|coordinar\\\", \\\"yaSabemos\\\": [ { \\\"dato\\\": \\\"direccion|fecha|hora|equipo|contacto|otro\\\", \\\"valor\\\": \\\"...\\\", \\\"fuente\\\": \\\"whatsapp 10:32 | mail | olumi\\\" } ], \\\"yaAcordado\\\": \\\"\\\", \\\"falta\\\": [\\\"solo lo imprescindible\\\"], \\\"pidioQueNoEscriba\\\": true|false }, \\\"responder\\\": true|false, \\\"porque\\\": \\\"una frase\\\", \\\"respuesta\\\": \\\"el texto exacto o ''\\\" }. REGLAS: 1) Leé TODO antes de escribir. Lo que ya se dijo en cualquier lado (dirección, día, hora, equipo, qué pasó) va en yaSabemos y NO se vuelve a preguntar. Si ya quedó acordado ('vengan el jueves a las 11'), confirmalo, no lo preguntes. 2) Si el cliente pidió que no le escriban más, o dijo que ya está, o que lo habla con otra persona: pidioQueNoEscriba=true y responder=false. 3) Respondé solo si le sirve: una pregunta sin contestar, un pedido nuevo o algo urgente. Si lo último es 'ok', 'gracias', 'dale', un saludo de cierre o un dato que ya confirmamos: responder=false. 4) Como mucho un dato por mensaje, y solo si sin eso no se puede avanzar. Si el Asistente ya lo pidió y no lo dio, no lo pidas de nuevo. 5) Nunca inventes precios, fechas, horarios ni disponibilidad. Si no lo sabés: 'lo veo y te confirmo'. 6) Escribí como Christian: rioplatense con voseo, 1 a 3 frases cortas, cálido y directo. Sin firma, sin 'a la brevedad', 'estimado', 'su solicitud', 'hemos recibido', sin números de ticket, sin decir que sos un asistente. 7) Urgencias: decí que ya lo marcaste urgente y que lo llamás enseguida, sin prometer hora. 8) Pedidos administrativos (carné de salud, facturas, documentos): decí que se lo pasás en un rato; nunca mandes documentos vos.\" }, { role: 'user', content: (($('Armar la charla de prueba').item.json.soy) ? 'QUIÉN ESCRIBE: ' + $('Armar la charla de prueba').item.json.soy + '\\n\\n' : '') + 'LO NUEVO QUE DIJO:\\n' + $('Armar la charla de prueba').item.json.nuevos.map(t => '- ' + t).join('\\n') + '\\n\\nCHARLA REAL (de la más vieja a la más nueva):\\n' + ($('Armar la charla de prueba').item.json.charla || '(sin mensajes anteriores)') + '\\n\\nOLUMI: ' + JSON.stringify($('Olumi (cliente de la prueba)').item.json.ok ? { ...$('Olumi (cliente de la prueba)').item.json, historial: undefined } : {}) } ] }) }}"
+   },
+   "name": "Pensar la respuesta (Gemini)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2880,
+    780
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true,
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Pensar la respuesta · ¿respondió Gemini?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3080,
+    780
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos Christian Barcos, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). Alguien te escribió por WhatsApp. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. Te paso la CHARLA REAL (en orden, con hora: Cliente o Asistente), LO NUEVO que dijo el cliente y lo que sabe OLUMI (cliente, tickets, visitas, presupuestos, notas internas, mails, cómo escribe Christian). Devolvé SOLO JSON: { \\\"ficha\\\": { \\\"quePide\\\": \\\"...\\\", \\\"carril\\\": \\\"soporte|comercial|administrativo|coordinar\\\", \\\"yaSabemos\\\": [ { \\\"dato\\\": \\\"direccion|fecha|hora|equipo|contacto|otro\\\", \\\"valor\\\": \\\"...\\\", \\\"fuente\\\": \\\"whatsapp 10:32 | mail | olumi\\\" } ], \\\"yaAcordado\\\": \\\"\\\", \\\"falta\\\": [\\\"solo lo imprescindible\\\"], \\\"pidioQueNoEscriba\\\": true|false }, \\\"responder\\\": true|false, \\\"porque\\\": \\\"una frase\\\", \\\"respuesta\\\": \\\"el texto exacto o ''\\\" }. REGLAS: 1) Leé TODO antes de escribir. Lo que ya se dijo en cualquier lado (dirección, día, hora, equipo, qué pasó) va en yaSabemos y NO se vuelve a preguntar. Si ya quedó acordado ('vengan el jueves a las 11'), confirmalo, no lo preguntes. 2) Si el cliente pidió que no le escriban más, o dijo que ya está, o que lo habla con otra persona: pidioQueNoEscriba=true y responder=false. 3) Respondé solo si le sirve: una pregunta sin contestar, un pedido nuevo o algo urgente. Si lo último es 'ok', 'gracias', 'dale', un saludo de cierre o un dato que ya confirmamos: responder=false. 4) Como mucho un dato por mensaje, y solo si sin eso no se puede avanzar. Si el Asistente ya lo pidió y no lo dio, no lo pidas de nuevo. 5) Nunca inventes precios, fechas, horarios ni disponibilidad. Si no lo sabés: 'lo veo y te confirmo'. 6) Escribí como Christian: rioplatense con voseo, 1 a 3 frases cortas, cálido y directo. Sin firma, sin 'a la brevedad', 'estimado', 'su solicitud', 'hemos recibido', sin números de ticket, sin decir que sos un asistente. 7) Urgencias: decí que ya lo marcaste urgente y que lo llamás enseguida, sin prometer hora. 8) Pedidos administrativos (carné de salud, facturas, documentos): decí que se lo pasás en un rato; nunca mandes documentos vos.\" }, { role: 'user', content: (($('Armar la charla de prueba').item.json.soy) ? 'QUIÉN ESCRIBE: ' + $('Armar la charla de prueba').item.json.soy + '\\n\\n' : '') + 'LO NUEVO QUE DIJO:\\n' + $('Armar la charla de prueba').item.json.nuevos.map(t => '- ' + t).join('\\n') + '\\n\\nCHARLA REAL (de la más vieja a la más nueva):\\n' + ($('Armar la charla de prueba').item.json.charla || '(sin mensajes anteriores)') + '\\n\\nOLUMI: ' + JSON.stringify($('Olumi (cliente de la prueba)').item.json.ok ? { ...$('Olumi (cliente de la prueba)').item.json, historial: undefined } : {}) } ] }) }}"
+   },
+   "name": "Pensar la respuesta (Groq)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3080,
+    940
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Pensar la respuesta",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3300,
+    780
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Frenos en código, iguales a los de la versión para clientes. En la prueba siempre te muestro qué haría y por qué.\nconst ch = $('Armar la charla de prueba').item.json, ctx = $('Olumi (cliente de la prueba)').item.json || {};\nlet j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}\nconst f = j.ficha || {}, r = String(j.respuesta || '').trim();\nconst norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst todo = norm((ch.charla || '') + ' ' + JSON.stringify(ctx.mails || []) + ' ' + JSON.stringify(ctx.notasInternas || []) + ' ' + (ctx.cliente?.direccion || ''));\nconst sabe = d => (f.yaSabemos || []).some(x => norm(x.dato).includes(d) && String(x.valor || '').trim());\nconst asis = (ch.lineas || []).filter(l => l.quien === 'Asistente').map(l => norm(l.texto));\nconst rn = norm(r), preg = /\\?/.test(r), mot = [];\nif (!j.responder || !r) mot.push(j.porque || 'no hace falta responder');\nif (f.pidioQueNoEscriba) mot.push('el cliente pidió que no le escriban');\nif (/(no (me )?(escriban|manden|mandes|escribas) mas|ya (esta|lo hable)|lo hablo con|deja(lo)? as[ií])/.test(norm(ch.nuevos.join(' ')))) mot.push('el cliente pidió parar');\nconst hayDir = sabe('direc') || !!ctx.cliente?.direccion || /\\b(calle|avenida|av\\.|bvar|bulevar|ruta|camino|esquina|esq\\.)\\b|\\b[a-z]{4,} \\d{3,4}\\b/.test(todo);\nconst hayFecha = sabe('fecha') || sabe('hora') || /(nos vemos|quedamos|vengan|venite|pasen|paso|pasamos|vamos|voy)[^.\\n]{0,40}\\b(hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|\\d{1,2}(:\\d{2})? ?(hs|h|horas)?)\\b/.test(todo);\nif (preg && /(direccion|donde (queda|es|estan)|ubicacion|zona|barrio)/.test(rn) && (hayDir || asis.some(t => /direccion/.test(t)))) mot.push('iba a pedir la dirección y ya está');\nif (preg && /(que dia|cuando|que hora|horario|a que hora|fecha)/.test(rn) && (hayFecha || asis.some(t => /(que dia|que hora|horario)/.test(t)))) mot.push('iba a preguntar día u hora y ya está hablado');\nif (/a la brevedad|estimad|su solicitud|hemos recibido|ticket|\\bt-\\d+|numero de pedido|asistente virtual|inteligencia artificial|\\bia\\b/.test(rn)) mot.push('frase de robot');\nconst pal = t => new Set(norm(t).split(/[^a-z0-9]+/).filter(w => w.length > 3));\nconst par = (x, y) => { const A = pal(x), B = pal(y); if (!A.size || !B.size) return 0; let n = 0; A.forEach(w => { if (B.has(w)) n++ }); return n / Math.min(A.size, B.size) };\nif (r && asis.some(t => par(t, r) > 0.45)) mot.push('se parece a algo que ya dijo');\nconst sabeTxt = (f.yaSabemos || []).map(x => x.dato + ': ' + x.valor).join(' · ');\nconst manda = mot.length === 0;\nconst texto = manda ? '🤖 ' + r : '🤖 (No le respondería: ' + mot.join('; ') + '.' + (r ? ' Había pensado: “' + r + '”' : '') + ')';\nreturn [{ json: { ownerNum: $('Comandos y prueba').item.json.ownerNum, texto, nota: '🧠 ' + (f.quePide ? 'Pide: ' + f.quePide + '. ' : '') + (f.carril ? 'Carril: ' + f.carril + '. ' : '') + (sabeTxt ? 'Ya sé: ' + sabeTxt + '. ' : '') + ((f.falta || []).length ? 'Falta: ' + f.falta.join(', ') + '.' : '') } }];\n"
+   },
+   "name": "Control antes de mandar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3520,
+    780
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.ownerNum, text: $json.texto }) }}"
+   },
+   "name": "Contestarme en mi chat",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3740,
+    780
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); return [{ json: { ownerNum: $('Control antes de mandar').item.json.ownerNum, nota: $('Control antes de mandar').item.json.nota } }];"
+   },
+   "name": "Anotar respuesta del asistente",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3960,
+    780
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.ownerNum, text: $json.nota }) }}"
+   },
+   "name": "Mostrarme cómo pensó",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    4180,
+    780
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); return [];"
+   },
+   "name": "Anotar nota del asistente",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    4400,
+    780
+   ]
+  },
+  {
+   "parameters": {},
+   "name": "Conectar WhatsApp a este flujo",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    1100
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/webhook/set/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ webhook: { enabled: true, url: 'https://n8n.unitytech.uy/webhook/wa-christian', byEvents: false, base64: true, events: ['MESSAGES_UPSERT'] } }) }}"
+   },
+   "name": "Evolution → mandar a este flujo",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    240,
+    1100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "http://evolution:8080/webhook/find/christian",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {}
+   },
+   "name": "Ver a dónde manda Evolution",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    1100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  }
+ ],
+ "connections": {
+  "WhatsApp entrante": {
+   "main": [
+    [
+     {
+      "node": "Leer mensaje",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer mensaje": {
+   "main": [
+    [
+     {
+      "node": "¿Es audio?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es audio?": {
+   "main": [
+    [
+     {
+      "node": "Audio a archivo",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Texto escrito",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Audio a archivo": {
+   "main": [
+    [
+     {
+      "node": "Transcribir audio",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Transcribir audio": {
+   "main": [
+    [
+     {
+      "node": "Texto del audio",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Texto del audio": {
+   "main": [
+    [
+     {
+      "node": "¿Quién escribe?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Texto escrito": {
+   "main": [
+    [
+     {
+      "node": "¿Quién escribe?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Quién escribe?": {
+   "main": [
+    [
+     {
+      "node": "Contexto en Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Guardar lo que escribí",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Comandos y prueba",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar (Gemini)": {
+   "main": [
+    [
+     {
+      "node": "Clasificar · ¿respondió Gemini?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar · ¿respondió Gemini?": {
+   "main": [
+    [
+     {
+      "node": "Clasificar",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Clasificar (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Clasificar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contexto en Olumi": {
+   "main": [
+    [
+     {
+      "node": "Clasificar (Gemini)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar": {
+   "main": [
+    [
+     {
+      "node": "Armar entrada de bandeja",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar entrada de bandeja": {
+   "main": [
+    [
+     {
+      "node": "A la bandeja de Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "A la bandeja de Olumi": {
+   "main": [
+    [
+     {
+      "node": "¿Urgente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Urgente?": {
+   "main": [
+    [
+     {
+      "node": "Avisarme (urgente)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Comandos y prueba": {
+   "main": [
+    [
+     {
+      "node": "¿Es un comando?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es un comando?": {
+   "main": [
+    [
+     {
+      "node": "Contestar el comando",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Esperar a que termine de escribir",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contestar el comando": {
+   "main": [
+    [
+     {
+      "node": "Anotar mensaje del asistente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Esperar a que termine de escribir": {
+   "main": [
+    [
+     {
+      "node": "Leer mi chat (Evolution)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer mi chat (Evolution)": {
+   "main": [
+    [
+     {
+      "node": "Armar la charla de prueba",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar la charla de prueba": {
+   "main": [
+    [
+     {
+      "node": "Olumi (cliente de la prueba)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta (Gemini)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta · ¿respondió Gemini?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta · ¿respondió Gemini?": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pensar la respuesta (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Olumi (cliente de la prueba)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta (Gemini)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta": {
+   "main": [
+    [
+     {
+      "node": "Control antes de mandar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Control antes de mandar": {
+   "main": [
+    [
+     {
+      "node": "Contestarme en mi chat",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contestarme en mi chat": {
+   "main": [
+    [
+     {
+      "node": "Anotar respuesta del asistente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anotar respuesta del asistente": {
+   "main": [
+    [
+     {
+      "node": "Mostrarme cómo pensó",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mostrarme cómo pensó": {
+   "main": [
+    [
+     {
+      "node": "Anotar nota del asistente",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Conectar WhatsApp a este flujo": {
+   "main": [
+    [
+     {
+      "node": "Evolution → mandar a este flujo",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Evolution → mandar a este flujo": {
+   "main": [
+    [
+     {
+      "node": "Ver a dónde manda Evolution",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "timezone": "America/Montevideo"
+ }
+}
