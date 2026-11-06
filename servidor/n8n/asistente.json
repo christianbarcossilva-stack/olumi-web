@@ -19,7 +19,7 @@
   },
   {
    "parameters": {
-    "jsCode": "\n// Convierte el aviso de Evolution API en algo simple. Devuelve vacío si no hay que hacer nada.\nconst b = $json.body || $json;\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}; const key = d.key || {}; const jid = String(key.remoteJid || '');\nconst grupo = /@g\\.us$/.test(jid);\nif (!grupo && !/@s\\.whatsapp\\.net$/.test(jid)) return [];              // estados y newsletters: no\nconst m = d.message || {};\nconst owner = String(b.sender || '').replace(/:\\d+@/, '@');\nconst text = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst fotoB64 = grupo && m.imageMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst ctx = m.extendedTextMessage?.contextInfo || m.audioMessage?.contextInfo || m.imageMessage?.contextInfo || {};\nconst fromMe = !!key.fromMe;\nconst self = !grupo && fromMe && jid === owner;\nconst mine = !grupo && fromMe && !self;\nif (grupo) { if (/^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return []; if (!text && !audioB64 && !fotoB64) return [];\n  const part = String(key.participant || d.participant || '').replace(/:\\d+@/, '@');\n  return [{ json: { grupo: true, jid, from: part.replace(/@.*/, ''), fromMe, self: false, mine: false, text, audioB64, fotoB64, fotoMime: m.imageMessage?.mimetype || 'image/jpeg', mime: m.audioMessage?.mimetype || 'audio/ogg', msgId: key.id || '', quotedId: '', nombre: fromMe ? 'Christian' : (d.pushName || ''), owner, ownerNum: owner.replace(/@.*/, '') } }]; }                                         // lo que le escribo a un cliente (a mano o desde mi chat)\nif (self && /^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return [];        // mensajes del propio asistente\n// contactos personales (familia, pareja): el asistente no los atiende ni los registra\n{ const sdp = $getWorkflowStaticData('global'); sdp.personal = sdp.personal || {}; const num = jid.replace(/@.*/, ''); const pn = String(d.pushName || '').trim();\n  const PERSONAL = /^(sof[ií]a( m[eé]ndez)?|sofi|mam[aá]|mami|pap[aá]|papi|vieja|viejo|hermana?o?|abuel[ao]|t[ií][ao]|prim[ao]|cu[ñn]ad[ao]|suegr[ao]|amor|bebe|mi amor)\\b/i;\n  const PERSONAL_NUMS = ['59899119340', '59896700019'];   // mamá, Sofía (se suman más con “personal 099…”)\n  if (!self && (PERSONAL_NUMS.includes(num) || sdp.personal[num] != null || PERSONAL.test(pn) || Object.values(sdp.personal).some(n => n && pn && n.toLowerCase() === pn.toLowerCase()))) return []; }\nif (!text && !audioB64) return [];\nif (mine) { const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};  // respuestas automáticas: no son mías\n  if (sd.auto[key.id] || (text && sd.auto['t:' + jid] === text)) return [];\n  for (const k of Object.keys(sd.auto)) if (Date.now() - (sd.auto[k].ts || sd.auto[k] || 0) > 3 * 864e5 && typeof sd.auto[k] !== 'string') delete sd.auto[k]; }\n// chats internos (Giancarlo, oficina): lo que se habla ahí sobre un cliente se anota en la conversación de ese cliente\nconst sdi = $getWorkflowStaticData('global'); sdi.internos = sdi.internos || {}; const numI = jid.replace(/@.*/, ''); const pnI = String(d.pushName || '');\nif (!sdi.internos['59899240460']) sdi.internos['59899240460'] = 'Giancarlo';\nif (!sdi.internos['59892179190']) sdi.internos['59892179190'] = 'Victor (técnico)';   // equipo de Phitel: nunca se le responde\nsdi.lastIn = sdi.lastIn || {}; const inTs = Date.now(); if (!fromMe && !self) sdi.lastIn[numI] = inTs;   // Giancarlo Federico (CEO de Phitel)\nif (!self && !fromMe && /giancarlo/i.test(pnI) && !sdi.internos[numI]) sdi.internos[numI] = pnI;\nconst interno = !self && (!!sdi.internos[numI] || (!fromMe && /giancarlo/i.test(pnI)));\nreturn [{ json: { inTs, from: jid.replace(/@.*/, ''), jid, fromMe, self, mine: mine && !interno, interno, quien: interno ? (fromMe ? 'Christian' : (sdi.internos[numI] || pnI || 'Giancarlo')) : '', text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg',\n  msgId: key.id || '', quotedId: ctx.stanzaId || '', nombre: d.pushName || '', owner, ownerNum: owner.replace(/@.*/, '') } }];\n"
+    "jsCode": "\n// Convierte el aviso de Evolution API en algo simple. Devuelve vacío si no hay que hacer nada.\nconst b = $json.body || $json;\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nif (!ev.includes('messages.upsert')) return [];\nconst d = b.data || {}; const key = d.key || {}; const jid = String(key.remoteJid || '');\nconst grupo = /@g\\.us$/.test(jid);\nif (!grupo && !/@s\\.whatsapp\\.net$/.test(jid)) return [];              // estados y newsletters: no\nconst m = d.message || {};\nconst owner = String(b.sender || '').replace(/:\\d+@/, '@');\nconst text = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';\nconst audioB64 = m.audioMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst fotoB64 = grupo && m.imageMessage ? (m.base64 || d.base64 || d.message?.base64 || '') : '';\nconst ctx = m.extendedTextMessage?.contextInfo || m.audioMessage?.contextInfo || m.imageMessage?.contextInfo || {};\nconst fromMe = !!key.fromMe;\nconst self = !grupo && fromMe && jid === owner;\nconst mine = !grupo && fromMe && !self;\nif (grupo) { if (/^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return []; if (!text && !audioB64 && !fotoB64) return [];\n  const part = String(key.participant || d.participant || '').replace(/:\\d+@/, '@');\n  return [{ json: { grupo: true, jid, from: part.replace(/@.*/, ''), fromMe, self: false, mine: false, text, audioB64, fotoB64, fotoMime: m.imageMessage?.mimetype || 'image/jpeg', mime: m.audioMessage?.mimetype || 'audio/ogg', msgId: key.id || '', quotedId: '', nombre: fromMe ? 'Christian' : (d.pushName || ''), owner, ownerNum: owner.replace(/@.*/, '') } }]; }                                         // lo que le escribo a un cliente (a mano o desde mi chat)\nif (self && /^(🤖|✅|📧|⚠️|📥|🚨|📋|⏰|💬)/.test(text.trim())) return [];        // mensajes del propio asistente\n// contactos personales (familia, pareja): el asistente no los atiende ni los registra\n{ const sdp = $getWorkflowStaticData('global'); sdp.personal = sdp.personal || {}; const num = jid.replace(/@.*/, ''); const pn = String(d.pushName || '').trim();\n  const PERSONAL = /^(sof[ií]a( m[eé]ndez)?|sofi|mam[aá]|mami|pap[aá]|papi|vieja|viejo|hermana?o?|abuel[ao]|t[ií][ao]|prim[ao]|cu[ñn]ad[ao]|suegr[ao]|amor|bebe|mi amor)\\b/i;\n  const PERSONAL_NUMS = ['59899119340', '59896700019'];   // mamá, Sofía (se suman más con “personal 099…”)\n  if (!self && (PERSONAL_NUMS.includes(num) || sdp.personal[num] != null || PERSONAL.test(pn) || Object.values(sdp.personal).some(n => n && pn && n.toLowerCase() === pn.toLowerCase()))) return []; }\nif (!text && !audioB64) return [];\nif (mine) { const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};  // respuestas automáticas: no son mías\n  if (sd.auto[key.id] || (text && sd.auto['t:' + jid] === text)) return [];\n  for (const k of Object.keys(sd.auto)) if (Date.now() - (sd.auto[k].ts || sd.auto[k] || 0) > 3 * 864e5 && typeof sd.auto[k] !== 'string') delete sd.auto[k]; }\n// chats internos (Giancarlo, oficina): lo que se habla ahí sobre un cliente se anota en la conversación de ese cliente\nconst sdi = $getWorkflowStaticData('global'); sdi.internos = sdi.internos || {}; const numI = jid.replace(/@.*/, ''); const pnI = String(d.pushName || '');\nif (!sdi.internos['59899240460']) sdi.internos['59899240460'] = 'Giancarlo';\nif (!sdi.internos['59892179190']) sdi.internos['59892179190'] = 'Victor (técnico)';   // equipo de Phitel: nunca se le responde\nif (!sdi.v8) { sdi.v8 = 1; sdi.noResp = true; sdi.prueba = true; }   // v8 arranca en prueba: no le escribe a ningún cliente hasta “contestador prendido”\nsdi.lastIn = sdi.lastIn || {}; const inTs = Date.now(); if (!fromMe && !self) sdi.lastIn[numI] = inTs;   // Giancarlo Federico (CEO de Phitel)\nif (!self && !fromMe && /giancarlo/i.test(pnI) && !sdi.internos[numI]) sdi.internos[numI] = pnI;\nconst interno = !self && (!!sdi.internos[numI] || (!fromMe && /giancarlo|v[ií]ctor m[aá]rquez/i.test(pnI)));\nreturn [{ json: { inTs, from: jid.replace(/@.*/, ''), jid, fromMe, self, mine: mine && !interno, interno, quien: interno ? (fromMe ? 'Christian' : (sdi.internos[numI] || pnI || 'Giancarlo')) : '', text, audioB64, mime: m.audioMessage?.mimetype || 'audio/ogg',\n  msgId: key.id || '', quotedId: ctx.stanzaId || '', nombre: d.pushName || '', owner, ownerNum: owner.replace(/@.*/, '') } }];\n"
    },
    "name": "Leer mensaje",
    "type": "n8n-nodes-base.code",
@@ -614,7 +614,7 @@
    "parameters": {
     "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
    },
-   "name": "Decidir y responder · cerebro",
+   "name": "Clasificar mensaje · cerebro",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
@@ -647,7 +647,7 @@
     },
     "options": {}
    },
-   "name": "Decidir y responder · ¿Google?",
+   "name": "Clasificar mensaje · ¿Google?",
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
@@ -666,9 +666,9 @@
     "genericAuthType": "httpHeaderAuth",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: tema (uno de: trabajo = pide o pregunta algo de instalaciones, cámaras, redes, fibra, cableado, alarmas, accesos; obra = habla de un trabajo que estamos haciendo o hicimos (avance, horarios, materiales, técnicos, llaves, acceso al lugar); soporte = algo que tiene no anda o quiere ayuda técnica; comercial = precios, presupuestos, facturas, pagos; coordinar = fechas, horarios, visitas, llamadas; charla = saludo, charla social o personal, mensaje sin relación con el trabajo; proveedor = alguien que nos vende o nos ofrece algo; spam = publicidad masiva o cadena), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo (tema trabajo, obra, soporte, comercial o coordinar); false si es charla, proveedor o spam), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) tema charla / proveedor / spam: avisarme=false. Si es charla de un cliente registrado o de alguien del HISTORIAL (un saludo, un 'cómo andás', un chiste), respondé corto y humano como lo haría Christian ('Todo bien, ¿y vos?', 'Jaja dale'); si es de un desconocido, proveedor o spam, responder=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 1 hora (minutosDesdeMiUltimaRespuesta < 60), él está atendiendo la conversación: responder=false SIEMPRE. Entre 1 y 4 horas, respondé solo si el cliente hace una pregunta directa o necesita coordinar algo para hoy o mañana y Christian no contestó; si no, responder=false. En los dos casos avisarme=true si pide algo nuevo o urgente. 29) NOTAS INTERNAS: notasInternas trae lo que Christian y Giancarlo se dijeron entre ellos sobre este cliente (ej.: 'a Aguada Park vamos mañana a las 10', 'el documento se lo manda Giancarlo'). Es la información más confiable: usala para responder (sin decir que la leíste en un chat interno) y no la contradigas. Si una nota responde justo lo que pregunta el cliente, respondé eso. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. ESTILO (muy importante): escribí como un uruguayo de Montevideo que atiende su propia empresa, amable y cercano, nunca como un sistema. Voseo siempre ('¿me pasás?', 'te escribo', 'cualquier cosa me avisás'). Saludos y cierres naturales: '¡Buenas!', 'Hola, ¿cómo andás?', 'Dale', 'Perfecto', 'Joya', 'Quedo atento', 'Un abrazo' (solo si hay confianza). Frases cortas, una idea por mensaje, máximo 2 o 3 líneas. Nada de 'estimado', 'a la brevedad', 'su solicitud', 'hemos recibido', 'ticket' ni números de ticket al cliente, ni mayúsculas para enfatizar. Si algo es urgente, mostrálo con calidez ('Uh, qué macana. Ya lo vemos') y no con palabras de sistema. Un emoji como mucho y solo si el cliente usa. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. 24) A un saludo ('hola', 'todo bien?', 'buenas') se responde con saludo y una pregunta de vuelta: 'Hola! Todo bien, ¿vos? Contame.' Nunca un 'Buenas tardes' suelto. 25) Si te llaman por otro nombre o parece que se equivocaron de número, aclaralo con buena onda y sin hacer sentir mal: 'Ojo que acá es Christian, de Phitel… ¿me buscabas a mí?'. 26) Cierres, disculpas y 'ya lo resolví' ('perdón', 'disculpá', 'ya me lo levantaron', 'era para otro'): una sola frase corta y cálida ('No pasa nada, cualquier cosa escribime.') y nada más. 27) Si la persona manda varios mensajes seguidos (minutosDesdeUltimaRespuesta menor a 3), respondé una sola vez: responder=false salvo que el mensaje nuevo tenga una pregunta directa o un dato nuevo importante. 30) Si el historial muestra que el Asistente ya le pidió un dato (por ejemplo la dirección) y la persona no lo dio, NO lo vuelvas a pedir: responder=false y avisarme=true. Si la persona dice que el contestador la está molestando o se ríe de él, responder=false. 28) Primero fijate QUIÉN escribe y DE QUÉ habla. Si no es cliente registrado, no tiene historial de trabajo y el mensaje no menciona nada del rubro (instalación, cámaras, fibra, redes, cableado, alarmas, control de acceso, presupuesto, falla, un técnico, una obra o visita), es un mensaje personal o ajeno: tema=charla, responder=false, avisarme=false, aunque pregunte un horario, pida que lo llamen o diga '¿estás?'. Christian lo ve en la bandeja y decide. Lo mismo si un cliente conocido escribe algo claramente personal (familia, salidas, favores ajenos al trabajo): responder=false. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Decidir y responder · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Decidir y responder · cerebro').item.json, historial: undefined }) } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mensaje de WhatsApp que le llegó a Christian, de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). NO escribís la respuesta: eso se decide después. Solo entendé quién escribe y qué pide, usando el MENSAJE, el HISTORIAL y el CONTEXTO de Olumi. Devolvé SOLO un JSON con: tema (trabajo | obra | soporte | comercial | coordinar | charla | proveedor | spam), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo; false si es charla, personal, proveedor o spam), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (de la persona, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo, y lo que ya se acordó), avisarme (true si Christian tiene que hacer algo: cotizar, coordinar, mandar un documento, una urgencia o algo que no está en el contexto). Si no es cliente registrado, no tiene historial de trabajo y el mensaje no habla del rubro, es personal o ajeno: tema=charla, esPedido=false, avisarme=false. Un 'gracias' al final de un reclamo no lo vuelve agradecimiento.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Clasificar mensaje · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Clasificar mensaje · cerebro').item.json, historial: undefined }) } ] }) }}"
    },
-   "name": "Decidir y responder (Google)",
+   "name": "Clasificar mensaje (Google)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
@@ -711,7 +711,7 @@
     },
     "options": {}
    },
-   "name": "Decidir y responder · ¿respondió Google?",
+   "name": "Clasificar mensaje · ¿respondió Google?",
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
@@ -730,9 +730,9 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: tema (uno de: trabajo = pide o pregunta algo de instalaciones, cámaras, redes, fibra, cableado, alarmas, accesos; obra = habla de un trabajo que estamos haciendo o hicimos (avance, horarios, materiales, técnicos, llaves, acceso al lugar); soporte = algo que tiene no anda o quiere ayuda técnica; comercial = precios, presupuestos, facturas, pagos; coordinar = fechas, horarios, visitas, llamadas; charla = saludo, charla social o personal, mensaje sin relación con el trabajo; proveedor = alguien que nos vende o nos ofrece algo; spam = publicidad masiva o cadena), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo (tema trabajo, obra, soporte, comercial o coordinar); false si es charla, proveedor o spam), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) tema charla / proveedor / spam: avisarme=false. Si es charla de un cliente registrado o de alguien del HISTORIAL (un saludo, un 'cómo andás', un chiste), respondé corto y humano como lo haría Christian ('Todo bien, ¿y vos?', 'Jaja dale'); si es de un desconocido, proveedor o spam, responder=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 1 hora (minutosDesdeMiUltimaRespuesta < 60), él está atendiendo la conversación: responder=false SIEMPRE. Entre 1 y 4 horas, respondé solo si el cliente hace una pregunta directa o necesita coordinar algo para hoy o mañana y Christian no contestó; si no, responder=false. En los dos casos avisarme=true si pide algo nuevo o urgente. 29) NOTAS INTERNAS: notasInternas trae lo que Christian y Giancarlo se dijeron entre ellos sobre este cliente (ej.: 'a Aguada Park vamos mañana a las 10', 'el documento se lo manda Giancarlo'). Es la información más confiable: usala para responder (sin decir que la leíste en un chat interno) y no la contradigas. Si una nota responde justo lo que pregunta el cliente, respondé eso. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. ESTILO (muy importante): escribí como un uruguayo de Montevideo que atiende su propia empresa, amable y cercano, nunca como un sistema. Voseo siempre ('¿me pasás?', 'te escribo', 'cualquier cosa me avisás'). Saludos y cierres naturales: '¡Buenas!', 'Hola, ¿cómo andás?', 'Dale', 'Perfecto', 'Joya', 'Quedo atento', 'Un abrazo' (solo si hay confianza). Frases cortas, una idea por mensaje, máximo 2 o 3 líneas. Nada de 'estimado', 'a la brevedad', 'su solicitud', 'hemos recibido', 'ticket' ni números de ticket al cliente, ni mayúsculas para enfatizar. Si algo es urgente, mostrálo con calidez ('Uh, qué macana. Ya lo vemos') y no con palabras de sistema. Un emoji como mucho y solo si el cliente usa. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. 24) A un saludo ('hola', 'todo bien?', 'buenas') se responde con saludo y una pregunta de vuelta: 'Hola! Todo bien, ¿vos? Contame.' Nunca un 'Buenas tardes' suelto. 25) Si te llaman por otro nombre o parece que se equivocaron de número, aclaralo con buena onda y sin hacer sentir mal: 'Ojo que acá es Christian, de Phitel… ¿me buscabas a mí?'. 26) Cierres, disculpas y 'ya lo resolví' ('perdón', 'disculpá', 'ya me lo levantaron', 'era para otro'): una sola frase corta y cálida ('No pasa nada, cualquier cosa escribime.') y nada más. 27) Si la persona manda varios mensajes seguidos (minutosDesdeUltimaRespuesta menor a 3), respondé una sola vez: responder=false salvo que el mensaje nuevo tenga una pregunta directa o un dato nuevo importante. 30) Si el historial muestra que el Asistente ya le pidió un dato (por ejemplo la dirección) y la persona no lo dio, NO lo vuelvas a pedir: responder=false y avisarme=true. Si la persona dice que el contestador la está molestando o se ríe de él, responder=false. 28) Primero fijate QUIÉN escribe y DE QUÉ habla. Si no es cliente registrado, no tiene historial de trabajo y el mensaje no menciona nada del rubro (instalación, cámaras, fibra, redes, cableado, alarmas, control de acceso, presupuesto, falla, un técnico, una obra o visita), es un mensaje personal o ajeno: tema=charla, responder=false, avisarme=false, aunque pregunte un horario, pida que lo llamen o diga '¿estás?'. Christian lo ve en la bandeja y decide. Lo mismo si un cliente conocido escribe algo claramente personal (familia, salidas, favores ajenos al trabajo): responder=false. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Decidir y responder · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Decidir y responder · cerebro').item.json, historial: undefined }) } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mensaje de WhatsApp que le llegó a Christian, de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). NO escribís la respuesta: eso se decide después. Solo entendé quién escribe y qué pide, usando el MENSAJE, el HISTORIAL y el CONTEXTO de Olumi. Devolvé SOLO un JSON con: tema (trabajo | obra | soporte | comercial | coordinar | charla | proveedor | spam), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo; false si es charla, personal, proveedor o spam), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (de la persona, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo, y lo que ya se acordó), avisarme (true si Christian tiene que hacer algo: cotizar, coordinar, mandar un documento, una urgencia o algo que no está en el contexto). Si no es cliente registrado, no tiene historial de trabajo y el mensaje no habla del rubro, es personal o ajeno: tema=charla, esPedido=false, avisarme=false. Un 'gracias' al final de un reclamo no lo vuelve agradecimiento.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Clasificar mensaje · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Clasificar mensaje · cerebro').item.json, historial: undefined }) } ] }) }}"
    },
-   "name": "Decidir y responder (Groq)",
+   "name": "Clasificar mensaje (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
@@ -750,7 +750,7 @@
    "parameters": {
     "jsCode": "return $input.all();"
    },
-   "name": "Decidir y responder",
+   "name": "Clasificar mensaje",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
@@ -760,7 +760,7 @@
   },
   {
    "parameters": {
-    "jsCode": "\nconst m = $('¿Es mi propio chat?').item.json; const ctx = $('Agregar modo y memoria').item.json || {};\nlet j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nconst tema = ['trabajo', 'obra', 'soporte', 'comercial', 'coordinar', 'charla', 'proveedor', 'spam'].includes(j.tema) ? j.tema : (j.esPedido === false ? 'charla' : 'trabajo');\nconst dest = j.intencion === 'falla' || j.tipo === 'emergencia' ? 'ticket' : 'bandeja';\nconst pedido = j.esPedido !== false && !['agradecimiento', 'otro'].includes(j.intencion || '') && !['charla', 'proveedor', 'spam'].includes(tema);\nconst ocupado = !!ctx.christianOcupado;                 // en relevamiento / reunión: el asistente atiende aunque yo haya escrito hace poco\nconst minMio = ctx.minutosDesdeMiUltimaRespuesta; const preguntaDirecta = /\\?/.test(m.texto) || /\\b(hoy|ma[ñn]ana|cu[aá]ndo|pueden|van a|necesito|me confirm)/i.test(m.texto);\nconst apagado = !!($getWorkflowStaticData('global').noResp);\nconst mioReciente = apagado || !ocupado && minMio != null && (minMio < 60 || (minMio < 240 && !preguntaDirecta));   // Christian está atendiendo este chat\n// frenos en el código (no dependen de la IA): máximo 1 respuesta cada 20 min por chat y nunca una respuesta parecida a la anterior\nconst sdg = $getWorkflowStaticData('global'); sdg.lastAuto = sdg.lastAuto || {}; const la = sdg.lastAuto[m.from];\nconst palabras = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3));\nconst parecido = (a, b) => { const A = palabras(a), B = palabras(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(w => { if (B.has(w)) n++ }); return n / Math.min(A.size, B.size) };\nconst frenoTiempo = !!la && Date.now() - la.ts < 20 * 60000;\nconst frenoRepite = !!la && parecido(la.text, j.respuesta) > 0.45;\nconst registrar = true;                                 // TODO va a la bandeja (charla incluida): Christian lo mueve o lo borra\nconst urgente = j.tipo === 'emergencia' || /urgen|hoy mismo|cuanto antes|no funciona|se rompi|se cort/i.test(m.texto);\nif (ocupado && pedido) { const sd = $getWorkflowStaticData('global'); sd.modo.pend = [...(sd.modo.pend || []), { hora: new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' }), quien: (j.nombre || m.nombre || '') + (j.empresa ? ' (' + j.empresa + ')' : ''), num: m.from, titulo: j.titulo || j.resumen || m.texto.slice(0, 80), respondi: (j.respuesta || '').trim(), urgente }].slice(-40); }\nreturn [{ json: { registrar, soloGuardar: false, autor: 'cliente', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '', texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '',\n  intencion: j.intencion || 'consulta', tema, tipoEntrada: pedido ? (j.tipoEntrada || 'consulta') : (tema === 'proveedor' ? 'proveedor' : tema === 'spam' ? 'spam' : 'charla'), tipo: j.tipo || 'consulta', destino: dest, titulo: j.titulo || '', canal: 'whatsapp', origen: 'WhatsApp', msgId: m.msgId, esAudio: m.esAudio,\n  urgente,\n  responder: !!j.responder && !!(j.respuesta || '').trim() && !mioReciente && !frenoTiempo && !frenoRepite, respuestaAuto: (j.respuesta || '').trim(), decidido: Date.now(), inTs: $('Leer mensaje').item.json.inTs || Date.now(), enviarPlanos: !!j.enviarPlanos && (ctx.planos || []).length > 0 && !mioReciente, planos: (ctx.planos || []).slice(0, 4),\n  avisarme: ocupado ? urgente : (pedido && !mioReciente ? j.avisarme !== false : j.avisarme === true), ownerNum: m.ownerNum, from: m.from } }];\n"
+    "jsCode": "\nconst m = $('¿Es mi propio chat?').item.json; const ctx = $('Agregar modo y memoria').item.json || {};\nlet j = {}; try { j = JSON.parse($json.choices[0].message.content); } catch (e) {}\nconst tema = ['trabajo', 'obra', 'soporte', 'comercial', 'coordinar', 'charla', 'proveedor', 'spam'].includes(j.tema) ? j.tema : (j.esPedido === false ? 'charla' : 'trabajo');\nconst dest = j.intencion === 'falla' || j.tipo === 'emergencia' ? 'ticket' : 'bandeja';\nconst pedido = j.esPedido !== false && !['agradecimiento', 'otro'].includes(j.intencion || '') && !['charla', 'proveedor', 'spam'].includes(tema);\nconst ocupado = !!ctx.christianOcupado;                 // en relevamiento / reunión: el asistente atiende aunque yo haya escrito hace poco\nconst minMio = ctx.minutosDesdeMiUltimaRespuesta; const preguntaDirecta = /\\?/.test(m.texto) || /\\b(hoy|ma[ñn]ana|cu[aá]ndo|pueden|van a|necesito|me confirm)/i.test(m.texto);\nconst apagado = !!($getWorkflowStaticData('global').noResp);\nconst mioReciente = !ocupado && minMio != null && (minMio < 60 || (minMio < 240 && !preguntaDirecta));   // Christian está atendiendo este chat\n// frenos en el código (no dependen de la IA): máximo 1 respuesta cada 20 min por chat y nunca una respuesta parecida a la anterior\nconst sdg = $getWorkflowStaticData('global'); sdg.lastAuto = sdg.lastAuto || {}; const la = sdg.lastAuto[m.from];\nconst palabras = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3));\nconst parecido = (a, b) => { const A = palabras(a), B = palabras(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(w => { if (B.has(w)) n++ }); return n / Math.min(A.size, B.size) };\nconst registrar = true;                                 // TODO va a la bandeja (charla incluida): Christian lo mueve o lo borra\nconst urgente = j.tipo === 'emergencia' || /urgen|hoy mismo|cuanto antes|no funciona|se rompi|se cort/i.test(m.texto);\nif (ocupado && pedido) { const sd = $getWorkflowStaticData('global'); sd.modo.pend = [...(sd.modo.pend || []), { hora: new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' }), quien: (j.nombre || m.nombre || '') + (j.empresa ? ' (' + j.empresa + ')' : ''), num: m.from, titulo: j.titulo || j.resumen || m.texto.slice(0, 80), respondi: '', urgente }].slice(-40); }\nreturn [{ json: { registrar, soloGuardar: false, autor: 'cliente', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '', texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '',\n  intencion: j.intencion || 'consulta', tema, tipoEntrada: pedido ? (j.tipoEntrada || 'consulta') : (tema === 'proveedor' ? 'proveedor' : tema === 'spam' ? 'spam' : 'charla'), tipo: j.tipo || 'consulta', destino: dest, titulo: j.titulo || '', canal: 'whatsapp', origen: 'WhatsApp', msgId: m.msgId, esAudio: m.esAudio,\n  urgente,\n  candidato: pedido && !mioReciente, apagado, prueba: !!sdg.prueba, espera: urgente ? 60 : 240, respuestaAuto: '', decidido: Date.now(), inTs: $('Leer mensaje').item.json.inTs || Date.now(), jid: m.jid || (m.from + '@s.whatsapp.net'),\n  avisarme: ocupado ? urgente : (pedido && !mioReciente ? j.avisarme !== false : j.avisarme === true), ownerNum: m.ownerNum, from: m.from } }];\n"
    },
    "name": "Armar registro",
    "type": "n8n-nodes-base.code",
@@ -782,7 +782,7 @@
      "conditions": [
       {
        "id": "c1",
-       "leftValue": "={{ $json.responder }}",
+       "leftValue": "={{ $json.candidato }}",
        "rightValue": "",
        "operator": {
         "type": "boolean",
@@ -795,44 +795,32 @@
     },
     "options": {}
    },
-   "name": "¿Responder?",
+   "name": "¿Puede necesitar respuesta?",
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
     2420,
-    360
+    1260
    ]
   },
   {
    "parameters": {
-    "amount": "={{ 35 + Math.floor(Math.random() * 15) }}",
+    "amount": "={{ $json.espera }}",
     "unit": "seconds"
    },
-   "name": "Pausa breve",
+   "name": "Esperar a Christian (4 min / 1 urgente)",
    "type": "n8n-nodes-base.wait",
    "typeVersion": 1.1,
    "position": [
-    2660,
-    300
+    2560,
+    1200
    ],
-   "webhookId": "olumi-pausa"
-  },
-  {
-   "parameters": {
-    "jsCode": "\n// Durante la pausa pudo pasar algo: Christian contestó, otra ejecución ya respondió, o el cliente mandó otro mensaje (lo responde esa).\nconst a = $('Armar registro').item.json; const sd = $getWorkflowStaticData('global'); sd.lastAuto = sd.lastAuto || {}; sd.mio = sd.mio || {}; sd.lastIn = sd.lastIn || {};\nconst jid = a.from + '@s.whatsapp.net';\nif ((sd.mio[jid] || 0) > a.inTs) return [];                       // Christian escribió después de este mensaje\nconst la = sd.lastAuto[a.from]; if (la && la.ts > a.inTs - 1000) return [];   // ya salió una respuesta automática después\nif ((sd.lastIn[a.from] || 0) > a.inTs + 500) return [];           // llegó un mensaje más nuevo: responde esa ejecución\nsd.lastAuto[a.from] = { ts: Date.now(), text: a.respuestaAuto };   // reservo antes de mandar (evita carreras)\nfor (const k of Object.keys(sd.lastAuto)) if (Date.now() - sd.lastAuto[k].ts > 864e5) delete sd.lastAuto[k];\nreturn [{ json: $json }];\n"
-   },
-   "name": "¿Sigue valiendo la respuesta?",
-   "type": "n8n-nodes-base.code",
-   "typeVersion": 2,
-   "position": [
-    2780,
-    300
-   ]
+   "webhookId": "olumi-espera"
   },
   {
    "parameters": {
     "method": "POST",
-    "url": "http://evolution:8080/message/sendText/christian",
+    "url": "http://evolution:8080/chat/findMessages/christian",
     "options": {
      "timeout": 60000
     },
@@ -840,32 +828,75 @@
     "genericAuthType": "httpHeaderAuth",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ number: $('Armar registro').item.json.from, text: $('Armar registro').item.json.respuestaAuto }) }}"
+    "jsonBody": "={{ JSON.stringify({ where: { key: { remoteJid: $('Armar registro').item.json.jid } }, page: 1, offset: 40, limit: 40 }) }}"
    },
-   "name": "Responder al cliente",
+   "name": "Charla real de WhatsApp",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    2900,
-    300
+    2700,
+    1200
    ],
    "credentials": {
     "httpHeaderAuth": {
      "id": "evo",
      "name": "evo"
     }
-   }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
   },
   {
    "parameters": {
-    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const a = $('Armar registro').item.json;\nconst id = $json.key?.id; if (id) sd.auto[id] = { ts: Date.now() }; sd.auto['t:' + a.from + '@s.whatsapp.net'] = a.respuestaAuto;\nreturn [{ json: $json }];\n"
+    "jsCode": "\n// La charla de WhatsApp manda (no la memoria de n8n): si después del mensaje escribió Christian o el asistente,\n// o el cliente mandó algo más nuevo (lo atiende esa otra ejecución), no se hace nada.\nconst a = $('Armar registro').item.json; const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {};\nconst raw = $input.all().map(i => i.json); let recs = [];\nfor (const r of raw) { const x = r.messages?.records || r.records || r.messages || (Array.isArray(r) ? r : null) || (r.key ? [r] : []); if (Array.isArray(x)) recs.push(...x); }\nconst txt = (mm) => { const m = mm.message || {}; return m.conversation || m.extendedTextMessage?.text || (m.imageMessage ? '📷 foto' + (m.imageMessage.caption ? ': ' + m.imageMessage.caption : '') : '') || (m.audioMessage ? '🎤 audio' : '') || (m.documentMessage ? '📄 ' + (m.documentMessage.fileName || 'documento') : '') || (m.locationMessage ? '📍 ubicación' + (m.locationMessage.address ? ': ' + m.locationMessage.address : '') : '') || (m.videoMessage ? '🎥 video' : '') || (m.stickerMessage ? '(sticker)' : ''); };\nconst tsOf = (mm) => { const t = Number(mm.messageTimestamp?.low ?? mm.messageTimestamp ?? 0); return t > 1e12 ? t : t * 1000; };\nconst seen = new Set(); recs = recs.filter(r => r && r.key && !seen.has(r.key.id) && seen.add(r.key.id)).sort((x, y) => tsOf(x) - tsOf(y));\nconst ok = recs.length > 0;\nconst hora = (t) => { const d = new Date(t); const hoy = new Date().toLocaleDateString('es-UY', { timeZone: 'America/Montevideo' }); const dia = d.toLocaleDateString('es-UY', { timeZone: 'America/Montevideo' }); return (dia === hoy ? 'hoy ' : dia + ' ') + d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Montevideo' }); };\nconst lineas = recs.map(r => ({ id: r.key.id, ts: tsOf(r), quien: r.key.fromMe ? (sd.auto[r.key.id] ? 'Asistente' : 'Christian') : 'Cliente', texto: String(txt(r) || '').slice(0, 500) })).filter(l => l.texto);\n// el audio del cliente ya viene transcripto: lo pongo en la línea de este mensaje\nconst yo = lineas.find(l => l.id === a.msgId); if (yo && a.texto) yo.texto = a.texto.slice(0, 800);\nconst ref = yo ? yo.ts : a.inTs - 120000;\nif (ok && lineas.some(l => l.ts > ref + 500 && l.quien !== 'Cliente')) return [];          // ya contestó alguien (Christian o el asistente)\nif (ok && lineas.some(l => l.ts > ref + 500 && l.quien === 'Cliente' && l.id !== a.msgId)) return [];   // hay un mensaje más nuevo: decide esa ejecución\n// respaldo si Evolution no devolvió nada: memoria de n8n\nsd.mio = sd.mio || {}; sd.lastIn = sd.lastIn || {};\nif (!ok && ((sd.mio[a.jid] || 0) > a.inTs || (sd.lastIn[a.from] || 0) > a.inTs + 500)) return [];\nconst ultimas = lineas.slice(-40);\n// lo que el cliente dijo desde la última vez que le escribimos (puede ser más de un mensaje)\nlet k = ultimas.length - 1; while (k >= 0 && ultimas[k].quien === 'Cliente') k--;\nconst nuevos = ultimas.slice(k + 1).map(l => l.texto);\nconst minDesdeChristian = (() => { const c = [...ultimas].reverse().find(l => l.quien === 'Christian'); return c ? Math.round((Date.now() - c.ts) / 60000) : null; })();\nreturn [{ json: { evolutionOk: ok, charla: ultimas.map(l => '[' + hora(l.ts) + '] ' + l.quien + ': ' + l.texto).join('\\n'), lineas: ultimas, nuevos: nuevos.length ? nuevos : [a.texto], minDesdeChristian } }];\n"
    },
-   "name": "Anotar respuesta automática",
+   "name": "Leer la charla",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    3020,
-    300
+    2840,
+    1200
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: $('Armar registro').item.json.de, nombre: $('Armar registro').item.json.nombre, empresa: $('Armar registro').item.json.empresa }) }}"
+   },
+   "name": "Olumi al día (con mails)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2980,
+    1200
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Pensar la respuesta · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2980,
+    1200
    ]
   },
   {
@@ -880,7 +911,288 @@
      "conditions": [
       {
        "id": "c1",
-       "leftValue": "={{ $('Armar registro').item.json.enviarPlanos }}",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Pensar la respuesta · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3120,
+    1200
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos Christian Barcos, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Alguien te escribió por WhatsApp y pasaron unos minutos sin que contestes. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. Te paso la CHARLA REAL de WhatsApp (en orden, con hora y quién escribió: Cliente, Christian o Asistente), LO NUEVO que dijo el cliente, y lo que sabe OLUMI: cliente, pedidos y tickets, visitas agendadas, presupuestos, notas internas del equipo, mails de esa persona y cómo escribe Christian. Devolvé SOLO un JSON: { \\\"ficha\\\": { \\\"quePide\\\": \\\"...\\\", \\\"yaSabemos\\\": [ { \\\"dato\\\": \\\"direccion|fecha|hora|equipo|contacto|otro\\\", \\\"valor\\\": \\\"...\\\", \\\"fuente\\\": \\\"whatsapp 10:32 | mail | olumi | nota interna\\\" } ], \\\"yaAcordado\\\": \\\"lo que ya quedó hablado, o ''\\\", \\\"falta\\\": [\\\"solo lo imprescindible para avanzar\\\"], \\\"christianLoAtiende\\\": true|false, \\\"hayAlgoNuevo\\\": true|false }, \\\"responder\\\": true|false, \\\"porque\\\": \\\"una frase\\\", \\\"respuesta\\\": \\\"el texto exacto, o ''\\\", \\\"pideDato\\\": \\\"\\\" | \\\"direccion\\\" | \\\"fecha\\\" | \\\"hora\\\" | \\\"equipo\\\" | \\\"otro\\\", \\\"enviarPlanos\\\": true|false, \\\"avisarme\\\": true|false }. CÓMO PENSAR: 1) Leé toda la charla, los mails y Olumi antes de escribir. Todo dato que ya apareció en cualquier lado (dirección, día, hora, equipo, qué pasó, con quién hablar) va en yaSabemos y NO se pregunta de nuevo. Si ya quedó algo acordado ('nos vemos hoy a las 11'), respetalo y confirmalo; jamás lo vuelvas a preguntar. 2) Respondé solo si le sirve ahora: una pregunta directa sin contestar, un pedido nuevo o algo urgente. Si lo último es un 'ok', 'dale', 'gracias', un saludo de cierre, una foto suelta o un dato que ya confirmamos, o si no tenés nada nuevo y útil: responder=false. 3) Si Christian viene llevando la charla (escribió hace poco o ya dio una respuesta que sigue valiendo) y lo nuevo no es urgente: christianLoAtiende=true y responder=false. Si en el contexto viene christianOcupado, contá con naturalidad que está en un relevamiento o una reunión y que le escribe después de esa hora. 4) Si el Asistente ya le pidió algo y no lo dio, no lo pidas de nuevo. Como mucho un dato por mensaje, y solo si sin eso no se puede avanzar. 5) Nunca inventes precios, fechas, horarios ni disponibilidad: solo lo que está en la charla, los mails o Olumi. Si no lo sabés: 'lo veo y te confirmo'. 6) Escribí como Christian (copiá comoEscribeChristian): rioplatense con voseo, 1 a 3 frases cortas, cálido y directo. Sin firma, sin 'a la brevedad', 'estimado', 'su solicitud' ni 'hemos recibido', sin números de ticket ni de pedido, sin decir que sos un asistente. 7) Técnicos o gente de Phitel, temas personales, proveedores o publicidad: responder=false. 8) Urgencias (algo dejó de andar): decí que ya lo marcaste urgente y que lo llamás o le confirmás enseguida, sin prometer una hora. Si pide un plano y hay planos en Olumi: enviarPlanos=true. avisarme=true si Christian tiene que hacer algo (cotizar, coordinar, mandar un documento, una urgencia o algo que no sabés).\" }, { role: 'user', content: 'QUIÉN ESCRIBE: ' + ($('Armar registro').item.json.nombre || $('Armar registro').item.json.de) + ($('Armar registro').item.json.empresa ? ' (' + $('Armar registro').item.json.empresa + ')' : '') + ' · tema: ' + $('Armar registro').item.json.tema + ($('Armar registro').item.json.urgente ? ' · URGENTE' : '') + '\\n\\nLO NUEVO QUE DIJO:\\n' + $('Leer la charla').item.json.nuevos.map(t => '- ' + t).join('\\n') + '\\n\\nCHARLA REAL DE WHATSAPP (de la más vieja a la más nueva):\\n' + ($('Leer la charla').item.json.charla || ($('Agregar modo y memoria').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nOLUMI: ' + JSON.stringify({ ...($('Pensar la respuesta · cerebro').item.json.ok ? $('Pensar la respuesta · cerebro').item.json : $('Agregar modo y memoria').item.json), historial: undefined, christianOcupado: $('Agregar modo y memoria').item.json.christianOcupado || null }) } ] }) }}"
+   },
+   "name": "Pensar la respuesta (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3260,
+    1140
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Pensar la respuesta · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3400,
+    1140
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos Christian Barcos, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Alguien te escribió por WhatsApp y pasaron unos minutos sin que contestes. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. Te paso la CHARLA REAL de WhatsApp (en orden, con hora y quién escribió: Cliente, Christian o Asistente), LO NUEVO que dijo el cliente, y lo que sabe OLUMI: cliente, pedidos y tickets, visitas agendadas, presupuestos, notas internas del equipo, mails de esa persona y cómo escribe Christian. Devolvé SOLO un JSON: { \\\"ficha\\\": { \\\"quePide\\\": \\\"...\\\", \\\"yaSabemos\\\": [ { \\\"dato\\\": \\\"direccion|fecha|hora|equipo|contacto|otro\\\", \\\"valor\\\": \\\"...\\\", \\\"fuente\\\": \\\"whatsapp 10:32 | mail | olumi | nota interna\\\" } ], \\\"yaAcordado\\\": \\\"lo que ya quedó hablado, o ''\\\", \\\"falta\\\": [\\\"solo lo imprescindible para avanzar\\\"], \\\"christianLoAtiende\\\": true|false, \\\"hayAlgoNuevo\\\": true|false }, \\\"responder\\\": true|false, \\\"porque\\\": \\\"una frase\\\", \\\"respuesta\\\": \\\"el texto exacto, o ''\\\", \\\"pideDato\\\": \\\"\\\" | \\\"direccion\\\" | \\\"fecha\\\" | \\\"hora\\\" | \\\"equipo\\\" | \\\"otro\\\", \\\"enviarPlanos\\\": true|false, \\\"avisarme\\\": true|false }. CÓMO PENSAR: 1) Leé toda la charla, los mails y Olumi antes de escribir. Todo dato que ya apareció en cualquier lado (dirección, día, hora, equipo, qué pasó, con quién hablar) va en yaSabemos y NO se pregunta de nuevo. Si ya quedó algo acordado ('nos vemos hoy a las 11'), respetalo y confirmalo; jamás lo vuelvas a preguntar. 2) Respondé solo si le sirve ahora: una pregunta directa sin contestar, un pedido nuevo o algo urgente. Si lo último es un 'ok', 'dale', 'gracias', un saludo de cierre, una foto suelta o un dato que ya confirmamos, o si no tenés nada nuevo y útil: responder=false. 3) Si Christian viene llevando la charla (escribió hace poco o ya dio una respuesta que sigue valiendo) y lo nuevo no es urgente: christianLoAtiende=true y responder=false. Si en el contexto viene christianOcupado, contá con naturalidad que está en un relevamiento o una reunión y que le escribe después de esa hora. 4) Si el Asistente ya le pidió algo y no lo dio, no lo pidas de nuevo. Como mucho un dato por mensaje, y solo si sin eso no se puede avanzar. 5) Nunca inventes precios, fechas, horarios ni disponibilidad: solo lo que está en la charla, los mails o Olumi. Si no lo sabés: 'lo veo y te confirmo'. 6) Escribí como Christian (copiá comoEscribeChristian): rioplatense con voseo, 1 a 3 frases cortas, cálido y directo. Sin firma, sin 'a la brevedad', 'estimado', 'su solicitud' ni 'hemos recibido', sin números de ticket ni de pedido, sin decir que sos un asistente. 7) Técnicos o gente de Phitel, temas personales, proveedores o publicidad: responder=false. 8) Urgencias (algo dejó de andar): decí que ya lo marcaste urgente y que lo llamás o le confirmás enseguida, sin prometer una hora. Si pide un plano y hay planos en Olumi: enviarPlanos=true. avisarme=true si Christian tiene que hacer algo (cotizar, coordinar, mandar un documento, una urgencia o algo que no sabés).\" }, { role: 'user', content: 'QUIÉN ESCRIBE: ' + ($('Armar registro').item.json.nombre || $('Armar registro').item.json.de) + ($('Armar registro').item.json.empresa ? ' (' + $('Armar registro').item.json.empresa + ')' : '') + ' · tema: ' + $('Armar registro').item.json.tema + ($('Armar registro').item.json.urgente ? ' · URGENTE' : '') + '\\n\\nLO NUEVO QUE DIJO:\\n' + $('Leer la charla').item.json.nuevos.map(t => '- ' + t).join('\\n') + '\\n\\nCHARLA REAL DE WHATSAPP (de la más vieja a la más nueva):\\n' + ($('Leer la charla').item.json.charla || ($('Agregar modo y memoria').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nOLUMI: ' + JSON.stringify({ ...($('Pensar la respuesta · cerebro').item.json.ok ? $('Pensar la respuesta · cerebro').item.json : $('Agregar modo y memoria').item.json), historial: undefined, christianOcupado: $('Agregar modo y memoria').item.json.christianOcupado || null }) } ] }) }}"
+   },
+   "name": "Pensar la respuesta (Groq)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3400,
+    1280
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Pensar la respuesta",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3560,
+    1200
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Frenos en código (no dependen de la IA). Si algo no cierra, no se manda y queda como borrador para Christian.\nconst a = $('Armar registro').item.json; const ch = $('Leer la charla').item.json; const ctx = $('Olumi al día (con mails)').item.json || {};\nconst sd = $getWorkflowStaticData('global'); sd.lastAuto = sd.lastAuto || {}; sd.autoDia = sd.autoDia || {};\nlet j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}\nconst f = j.ficha || {}; const r = String(j.respuesta || '').trim();\nconst norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst todo = norm((ch.charla || '') + ' ' + JSON.stringify(ctx.mails || []) + ' ' + JSON.stringify(ctx.notasInternas || []) + ' ' + (ctx.cliente?.direccion || ''));\nconst sabe = (d) => (f.yaSabemos || []).some(x => norm(x.dato).includes(d) && String(x.valor || '').trim());\nconst lineasAsis = (ch.lineas || []).filter(l => l.quien === 'Asistente').map(l => norm(l.texto));\nconst preguntaR = /\\?/.test(r); const rn = norm(r);\nconst motivos = [];\nif (!j.responder || !r) motivos.push(j.porque || 'no hace falta responder');\nif (f.christianLoAtiende) motivos.push('Christian viene atendiendo');\n// no volver a pedir lo que ya está\nconst pideDir = preguntaR && /(direccion|donde (queda|es|estan)|ubicacion|zona|barrio)/.test(rn);\nconst pideFecha = preguntaR && /(que dia|cuando|que hora|horario|a que hora|fecha)/.test(rn);\nconst hayDir = sabe('direc') || !!ctx.cliente?.direccion || /\\b(calle|avenida|av\\.|bvar|bulevar|ruta|camino|esquina|esq\\.)\\b|\\b[a-z]{4,} \\d{3,4}\\b/.test(todo);\nconst hayFecha = sabe('fecha') || sabe('hora') || !!(ctx.ticketsAbiertos || []).some(t => t.visita) || /(nos vemos|quedamos|paso|pasamos|vamos|voy)[^.\\n]{0,40}\\b(hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|\\d{1,2}(:\\d{2})? ?(hs|h|horas)?)\\b/.test(todo);\nif (pideDir && (hayDir || lineasAsis.some(t => /direccion/.test(t)))) motivos.push('iba a pedir la dirección y ya la tenemos o ya se pidió');\nif (pideFecha && (hayFecha || lineasAsis.some(t => /(que dia|que hora|horario)/.test(t)))) motivos.push('iba a preguntar día u hora y ya está hablado o ya se preguntó');\nif (/a la brevedad|estimad|su solicitud|hemos recibido|ticket|\\bt-\\d+|nro\\.? de pedido|numero de pedido|asistente|inteligencia artificial|\\bia\\b|phitel ·/.test(rn)) motivos.push('frase de robot');\n// ritmo: 1 cada 20 min por chat, 3 por día, nunca algo parecido a lo ya dicho\nconst palabras = t => new Set(norm(t).split(/[^a-z0-9]+/).filter(w => w.length > 3));\nconst parecido = (x, y) => { const A = palabras(x), B = palabras(y); if (!A.size || !B.size) return 0; let n = 0; A.forEach(w => { if (B.has(w)) n++ }); return n / Math.min(A.size, B.size) };\nconst la = sd.lastAuto[a.from]; if (la && Date.now() - la.ts < 20 * 60000) motivos.push('ya le respondí hace menos de 20 min');\nconst hoy = new Date().toLocaleDateString('es-UY', { timeZone: 'America/Montevideo' }); const dia = sd.autoDia[a.from]; const nDia = dia && dia.d === hoy ? dia.n : 0;\nif (nDia >= 3) motivos.push('ya van 3 respuestas automáticas hoy');\nif (lineasAsis.some(t => parecido(t, r) > 0.45)) motivos.push('se parece a algo que ya le dijo el asistente');\nif (ch.minDesdeChristian != null && ch.minDesdeChristian < 60 && !a.urgente) motivos.push('Christian escribió en este chat hace menos de 1 hora');\nconst manda = motivos.length === 0;\nif (manda && !a.apagado) { sd.lastAuto[a.from] = { ts: Date.now(), text: r }; sd.autoDia[a.from] = { d: hoy, n: nDia + 1 };\n  for (const x of Object.keys(sd.lastAuto)) if (Date.now() - sd.lastAuto[x].ts > 864e5) delete sd.lastAuto[x];\n  for (const x of Object.keys(sd.autoDia)) if (sd.autoDia[x].d !== hoy) delete sd.autoDia[x]; }\nconst quien = a.nombre || a.empresa || a.de;\nreturn [{ json: { manda: manda && !a.apagado, borrador: a.apagado && a.prueba && !!r, respuesta: r, motivos, ficha: f, quien, from: a.from, ownerNum: a.ownerNum,\n  enviarPlanos: manda && !a.apagado && !!j.enviarPlanos && (ctx.planos || []).length > 0, planos: (ctx.planos || []).slice(0, 4), ctxV: ctx.ctxV || 0 } }];\n"
+   },
+   "name": "Control antes de mandar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3420,
+    1200
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.manda }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Se manda?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3640,
+    1160
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.from, text: $json.respuesta }) }}"
+   },
+   "name": "Responder al cliente",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3860,
+    1100
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const c = $('Control antes de mandar').item.json;\nconst id = $json.key?.id; if (id) sd.auto[id] = { ts: Date.now() }; sd.auto['t:' + c.from + '@s.whatsapp.net'] = c.respuesta;\nreturn [{ json: { ...c, msgOut: id || '' } }];\n"
+   },
+   "name": "Anotar respuesta automática",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    4080,
+    1100
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.ctxV >= 2 }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Olumi la anota?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    4300,
+    1040
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'registrar', soloGuardar: true, autor: 'asistente', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '+' + $json.from, texto: $json.respuesta, msgId: $json.msgOut }) }}"
+   },
+   "name": "Anotar en Olumi lo que respondí",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    4520,
+    1040
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $('Control antes de mandar').item.json.enviarPlanos }}",
        "rightValue": "",
        "operator": {
         "type": "boolean",
@@ -897,20 +1209,20 @@
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
-    3140,
-    300
+    4300,
+    1160
    ]
   },
   {
    "parameters": {
-    "jsCode": "const a = $('Armar registro').item.json; return (a.planos || []).map(p => ({ json: { number: a.from, url: p.url, caption: (p.proyecto ? p.proyecto + ' · ' : '') + p.nombre } }));"
+    "jsCode": "const c = $('Control antes de mandar').item.json; return (c.planos || []).map(p => ({ json: { number: c.from, url: p.url, caption: (p.proyecto ? p.proyecto + ' · ' : '') + p.nombre } }));"
    },
    "name": "Un plano por vez",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    3380,
-    240
+    4520,
+    1160
    ]
   },
   {
@@ -930,8 +1242,68 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    3620,
-    240
+    4740,
+    1160
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.borrador }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Borrador para mí?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    3860,
+    1280
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ number: $json.ownerNum, text: '🧪 Prueba · a ' + $json.quien + ' le hubiera respondido:\\n“' + $json.respuesta + '”' + ($json.motivos.length ? '\\n\\n(Igual no lo mandaría: ' + $json.motivos.join('; ') + '.)' : '') + (($json.ficha.yaSabemos || []).length ? '\\n\\nYa sé: ' + $json.ficha.yaSabemos.map(x => x.dato + ' = ' + x.valor + ' (' + x.fuente + ')').join(' · ') : '') }) }}"
+   },
+   "name": "Mandarme el borrador",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    4080,
+    1280
    ],
    "credentials": {
     "httpHeaderAuth": {
@@ -1044,7 +1416,7 @@
     "genericAuthType": "httpHeaderAuth",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ (() => { const r = $('Crear ticket en Olumi').item.json; const a = $('Armar registro').item.json; const quien = (r.cliente || a.nombre || a.empresa || a.from) + (r.posible ? ' (no registrado)' : ''); const d = (a.urgente ? '🚨 URGENTE · ' : '') + (r.guardado ? '💬 Mensaje en un chat que estás atendiendo' : r.ticket ? ('🤖 Ticket ' + r.ticket + (r.nuevo ? '' : ' (se sumó)')) : ('📥 Pedido en la bandeja' + (r.nuevo ? '' : ' (se sumó)'))); return JSON.stringify({ number: a.ownerNum, text: d + ' · ' + quien + '\\n' + (a.titulo || '') + (a.resumen ? '\\n' + a.resumen : '') + (a.responder ? '\\n\\nLe respondí: “' + a.respuestaAuto + '”' : '\\n\\n(No le respondí nada.)') + '\\n\\n↩️ Respondé a este mensaje con un audio o texto y se lo mando como vos.' }); })() }}"
+    "jsonBody": "={{ (() => { const r = $('Crear ticket en Olumi').item.json; const a = $('Armar registro').item.json; const quien = (r.cliente || a.nombre || a.empresa || a.from) + (r.posible ? ' (no registrado)' : ''); const d = (a.urgente ? '🚨 URGENTE · ' : '') + (r.guardado ? '💬 Mensaje en un chat que estás atendiendo' : r.ticket ? ('🤖 Ticket ' + r.ticket + (r.nuevo ? '' : ' (se sumó)')) : ('📥 Pedido en la bandeja' + (r.nuevo ? '' : ' (se sumó)'))); return JSON.stringify({ number: a.ownerNum, text: d + ' · ' + quien + '\\n' + (a.titulo || '') + (a.resumen ? '\\n' + a.resumen : '') + (a.apagado ? (a.prueba ? '\\n\\n🧪 Contestador en prueba: te mando lo que le diría.' : '\\n\\n(Contestador apagado.)') : a.candidato ? '\\n\\n⏳ Si no le contestás en ' + (a.urgente ? '1 minuto' : '4 minutos') + ', le respondo yo.' : '\\n\\n(No le respondo nada.)') + '\\n\\n↩️ Respondé a este mensaje con un audio o texto y se lo mando como vos.' }); })() }}"
    },
    "name": "Avisarme por WhatsApp",
    "type": "n8n-nodes-base.httpRequest",
@@ -1074,7 +1446,7 @@
   },
   {
    "parameters": {
-    "jsCode": "\n// Mensajes a mí mismo que cambian el modo del asistente. Devuelve cmd:'' si no es un comando.\nconst sd = $getWorkflowStaticData('global'); const t = ($json.texto || '').trim(); const low = t.toLowerCase();\nconst fmt = d => d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' });\nconst resumen = (clear) => { const mo = sd.modo; const pend = (mo && mo.pend) || [];\n  let out = pend.length ? `📋 Mientras estabas ${mo.tipo} (desde ${fmt(new Date(mo.desde))}):\\n` + pend.map((p, i) => `${i + 1}) ${p.urgente ? '🚨 ' : ''}${p.quien || p.num} · ${p.titulo}${p.respondi ? `\\n   Le dije: “${p.respondi}”` : '\\n   (no le respondí)'}\\n   📱 +${p.num}`).join('\\n') + '\\n\\nTodo está en la bandeja de Olumi. Tocá el número para abrir el chat.' : '📋 No entró nada nuevo mientras estabas ' + (mo ? mo.tipo : 'ocupado') + '.';\n  if (clear) sd.modo = null; return out; };\nlet m;\nif ((m = low.match(/^(?:estoy |ando |me voy |voy )?(?:en |a |de )?(relevamiento|relevando|obra|reuni[oó]n|manejando|viaje|ocupado|almorzando|visita)\\b(.*)$/))) {\n  const tipo = { relevando: 'en relevamiento', relevamiento: 'en relevamiento', obra: 'en obra', reunión: 'en reunión', reunion: 'en reunión', manejando: 'manejando', viaje: 'de viaje', ocupado: 'ocupado', almorzando: 'almorzando', visita: 'en una visita' }[m[1]] || 'ocupado';\n  const resto = m[2] || ''; let hasta = Date.now() + 2 * 3600e3; let h;\n  if ((h = resto.match(/hasta (?:las? )?(\\d{1,2})(?:[:.h](\\d{2}))?/))) { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })); d.setHours(+h[1], +(h[2] || 0), 0, 0); hasta = Date.now() + (d.getTime() - new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })).getTime()); if (hasta < Date.now()) hasta += 864e5; }\n  else if ((h = resto.match(/(\\d+(?:[.,]\\d+)?) ?(h|hora|horas)\\b/))) hasta = Date.now() + parseFloat(h[1].replace(',', '.')) * 3600e3;\n  else if ((h = resto.match(/(\\d+) ?min/))) hasta = Date.now() + (+h[1]) * 60000;\n  sd.modo = { tipo, desde: Date.now(), hasta, hastaTxt: fmt(new Date(hasta)), pend: (sd.modo && sd.modo.hasta > Date.now() ? sd.modo.pend : []) || [] };\n  return [{ json: { ...$json, cmd: 'modo', respuesta: `🤖 Dale. Quedo atendiendo yo: estás ${tipo} hasta las ${sd.modo.hastaTxt}. A los clientes les digo eso y que los llamás después. Cuando termines escribí “volví” y te paso los pendientes.` } }];\n}\nif (/^(volv[ií]|ya volv[ií]|termin[ée]|libre|ya estoy|listo)\\b/.test(low)) return [{ json: { ...$json, cmd: 'volvi', respuesta: '✅ Listo, vuelvo al modo normal.\\n\\n' + resumen(true) } }];\nif (/^cerebro (google|gemini|groq)\\b/.test(low)) { sd.cerebro = /groq/.test(low) ? 'groq' : 'google'; return [{ json: { ...$json, cmd: 'cerebro', respuesta: sd.cerebro === 'groq' ? '🤖 Listo: uso Groq (gpt-oss) para pensar las respuestas.' : '🤖 Listo: uso Google Gemini para pensar las respuestas (si falla, Groq de respaldo).' } }]; }\nif (/^contestador (apagado|off|no)\\b/.test(low)) { sd.noResp = true; return [{ json: { ...$json, cmd: 'contestador', respuesta: '🤖 Contestador apagado: no le respondo a nadie, pero sigo anotando todo en la bandeja y te aviso lo urgente. Para volver: “contestador prendido”.' } }]; }\nif (/^contestador (prendido|on|si|sí)\\b/.test(low)) { sd.noResp = false; return [{ json: { ...$json, cmd: 'contestador', respuesta: '🤖 Contestador prendido otra vez.' } }]; }\nif (/^(pendientes|resumen|qu[eé] hay)\\b/.test(low)) return [{ json: { ...$json, cmd: 'pend', respuesta: resumen(false) } }];\nif ((m = t.match(/^(personal|ignorar|no atender)\\s+(.+)$/i))) { sd.personal = sd.personal || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); const key = num.length >= 8 ? (num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num) : v;\n  sd.personal[key] = num.length >= 8 ? '' : v; return [{ json: { ...$json, cmd: 'personal', respuesta: `🤖 Listo: a ${v} no lo atiendo ni lo anoto en la bandeja. Para sacarlo: “atender ${v}”.` } }]; }\nif ((m = t.match(/^(interno|oficina)\\s+(.+)$/i))) { sd.internos = sd.internos || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); if (num.length < 8) return [{ json: { ...$json, cmd: 'interno', respuesta: '🤖 Pasame el número: “interno 099123456 Giancarlo”.' } }];\n  const key = num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num; const nombre = v.replace(/[\\d\\s.+-]+/g, ' ').trim() || 'Giancarlo'; sd.internos[key] = nombre;\n  return [{ json: { ...$json, cmd: 'interno', respuesta: `🤖 Listo: el chat con ${nombre} (${v}) es interno. Lo que hablen de un cliente lo anoto en la conversación de ese cliente y no lo contesto.` } }]; }\nif ((m = t.match(/^(atender|s[ií] atender)\\s+(.+)$/i))) { sd.personal = sd.personal || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); const key = num.length >= 8 ? (num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num) : v;\n  delete sd.personal[key]; for (const k of Object.keys(sd.personal)) if (sd.personal[k] && sd.personal[k].toLowerCase() === v.toLowerCase()) delete sd.personal[k]; return [{ json: { ...$json, cmd: 'personal', respuesta: `🤖 Dale, a ${v} lo vuelvo a atender normal.` } }]; }\nif (/^(ayuda|comandos)$/.test(low)) return [{ json: { ...$json, cmd: 'ayuda', respuesta: '🤖 Comandos (escribilos acá, en tu chat):\\n• “relevamiento hasta las 14” / “reunión 1h” / “manejando 30 min” → atiendo yo y te guardo los pendientes.\\n• “volví” → vuelvo al modo normal y te paso el resumen.\\n• “pendientes” → resumen sin salir del modo.\\n• “cerebro google” / “cerebro groq” → elige qué IA piensa las respuestas (para comparar).\\n• “contestador apagado” / “contestador prendido” → deja de responder (sigue anotando y avisando).\\n• “personal 099123456” o “personal Sofía” → ese contacto no se atiende ni se anota (familia, amigos). “atender …” lo saca de la lista.\\n• “interno 099123456 Giancarlo” → chat interno: lo que hablen de un cliente queda anotado en ese cliente.\\n• Respondé a un aviso con audio o texto → se lo mando al cliente como vos.\\n• Un audio o nota suelta → ticket en Olumi.' } }];\nreturn [{ json: { ...$json, cmd: '' } }];\n"
+    "jsCode": "\n// Mensajes a mí mismo que cambian el modo del asistente. Devuelve cmd:'' si no es un comando.\nconst sd = $getWorkflowStaticData('global'); const t = ($json.texto || '').trim(); const low = t.toLowerCase();\nconst fmt = d => d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Montevideo' });\nconst resumen = (clear) => { const mo = sd.modo; const pend = (mo && mo.pend) || [];\n  let out = pend.length ? `📋 Mientras estabas ${mo.tipo} (desde ${fmt(new Date(mo.desde))}):\\n` + pend.map((p, i) => `${i + 1}) ${p.urgente ? '🚨 ' : ''}${p.quien || p.num} · ${p.titulo}${p.respondi ? `\\n   Le dije: “${p.respondi}”` : '\\n   (no le respondí)'}\\n   📱 +${p.num}`).join('\\n') + '\\n\\nTodo está en la bandeja de Olumi. Tocá el número para abrir el chat.' : '📋 No entró nada nuevo mientras estabas ' + (mo ? mo.tipo : 'ocupado') + '.';\n  if (clear) sd.modo = null; return out; };\nlet m;\nif ((m = low.match(/^(?:estoy |ando |me voy |voy )?(?:en |a |de )?(relevamiento|relevando|obra|reuni[oó]n|manejando|viaje|ocupado|almorzando|visita)\\b(.*)$/))) {\n  const tipo = { relevando: 'en relevamiento', relevamiento: 'en relevamiento', obra: 'en obra', reunión: 'en reunión', reunion: 'en reunión', manejando: 'manejando', viaje: 'de viaje', ocupado: 'ocupado', almorzando: 'almorzando', visita: 'en una visita' }[m[1]] || 'ocupado';\n  const resto = m[2] || ''; let hasta = Date.now() + 2 * 3600e3; let h;\n  if ((h = resto.match(/hasta (?:las? )?(\\d{1,2})(?:[:.h](\\d{2}))?/))) { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })); d.setHours(+h[1], +(h[2] || 0), 0, 0); hasta = Date.now() + (d.getTime() - new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Montevideo' })).getTime()); if (hasta < Date.now()) hasta += 864e5; }\n  else if ((h = resto.match(/(\\d+(?:[.,]\\d+)?) ?(h|hora|horas)\\b/))) hasta = Date.now() + parseFloat(h[1].replace(',', '.')) * 3600e3;\n  else if ((h = resto.match(/(\\d+) ?min/))) hasta = Date.now() + (+h[1]) * 60000;\n  sd.modo = { tipo, desde: Date.now(), hasta, hastaTxt: fmt(new Date(hasta)), pend: (sd.modo && sd.modo.hasta > Date.now() ? sd.modo.pend : []) || [] };\n  return [{ json: { ...$json, cmd: 'modo', respuesta: `🤖 Dale. Quedo atendiendo yo: estás ${tipo} hasta las ${sd.modo.hastaTxt}. A los clientes les digo eso y que los llamás después. Cuando termines escribí “volví” y te paso los pendientes.` } }];\n}\nif (/^(volv[ií]|ya volv[ií]|termin[ée]|libre|ya estoy|listo)\\b/.test(low)) return [{ json: { ...$json, cmd: 'volvi', respuesta: '✅ Listo, vuelvo al modo normal.\\n\\n' + resumen(true) } }];\nif (/^cerebro (google|gemini|groq)\\b/.test(low)) { sd.cerebro = /groq/.test(low) ? 'groq' : 'google'; return [{ json: { ...$json, cmd: 'cerebro', respuesta: sd.cerebro === 'groq' ? '🤖 Listo: uso Groq (gpt-oss) para pensar las respuestas.' : '🤖 Listo: uso Google Gemini para pensar las respuestas (si falla, Groq de respaldo).' } }]; }\nif (/^contestador (apagado|off|no)\\b/.test(low)) { sd.noResp = true; sd.prueba = false; return [{ json: { ...$json, cmd: 'contestador', respuesta: '🤖 Contestador apagado: no le respondo a nadie, pero sigo anotando todo en la bandeja y te aviso lo urgente. Para volver: “contestador prendido”.' } }]; }\nif (/^contestador (prueba|probar|test)\\b/.test(low)) { sd.noResp = true; sd.prueba = true; return [{ json: { ...$json, cmd: 'contestador', respuesta: '🤖 Contestador en prueba: no le escribo a nadie, pero a vos te mando lo que le respondería a cada uno. “contestador prendido” para que responda de verdad, “contestador apagado” para que no haga nada.' } }]; }\nif (/^contestador (prendido|on|si|sí)\\b/.test(low)) { sd.noResp = false; sd.prueba = false; return [{ json: { ...$json, cmd: 'contestador', respuesta: '🤖 Contestador prendido otra vez.' } }]; }\nif (/^(pendientes|resumen|qu[eé] hay)\\b/.test(low)) return [{ json: { ...$json, cmd: 'pend', respuesta: resumen(false) } }];\nif ((m = t.match(/^(personal|ignorar|no atender)\\s+(.+)$/i))) { sd.personal = sd.personal || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); const key = num.length >= 8 ? (num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num) : v;\n  sd.personal[key] = num.length >= 8 ? '' : v; return [{ json: { ...$json, cmd: 'personal', respuesta: `🤖 Listo: a ${v} no lo atiendo ni lo anoto en la bandeja. Para sacarlo: “atender ${v}”.` } }]; }\nif ((m = t.match(/^(interno|oficina)\\s+(.+)$/i))) { sd.internos = sd.internos || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); if (num.length < 8) return [{ json: { ...$json, cmd: 'interno', respuesta: '🤖 Pasame el número: “interno 099123456 Giancarlo”.' } }];\n  const key = num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num; const nombre = v.replace(/[\\d\\s.+-]+/g, ' ').trim() || 'Giancarlo'; sd.internos[key] = nombre;\n  return [{ json: { ...$json, cmd: 'interno', respuesta: `🤖 Listo: el chat con ${nombre} (${v}) es interno. Lo que hablen de un cliente lo anoto en la conversación de ese cliente y no lo contesto.` } }]; }\nif ((m = t.match(/^(atender|s[ií] atender)\\s+(.+)$/i))) { sd.personal = sd.personal || {}; const v = m[2].trim(); const num = v.replace(/\\D/g, ''); const key = num.length >= 8 ? (num.startsWith('0') ? '598' + num.slice(1) : num.length === 8 ? '598' + num : num) : v;\n  delete sd.personal[key]; for (const k of Object.keys(sd.personal)) if (sd.personal[k] && sd.personal[k].toLowerCase() === v.toLowerCase()) delete sd.personal[k]; return [{ json: { ...$json, cmd: 'personal', respuesta: `🤖 Dale, a ${v} lo vuelvo a atender normal.` } }]; }\nif (/^(ayuda|comandos)$/.test(low)) return [{ json: { ...$json, cmd: 'ayuda', respuesta: '🤖 Comandos (escribilos acá, en tu chat):\\n• “relevamiento hasta las 14” / “reunión 1h” / “manejando 30 min” → atiendo yo y te guardo los pendientes.\\n• “volví” → vuelvo al modo normal y te paso el resumen.\\n• “pendientes” → resumen sin salir del modo.\\n• “cerebro google” / “cerebro groq” → elige qué IA piensa las respuestas (para comparar).\\n• “contestador apagado” / “contestador prueba” / “contestador prendido” → apagado no responde; prueba te manda a vos lo que diría; prendido responde (espera 4 min, 1 si es urgente).\\n• “personal 099123456” o “personal Sofía” → ese contacto no se atiende ni se anota (familia, amigos). “atender …” lo saca de la lista.\\n• “interno 099123456 Giancarlo” → chat interno: lo que hablen de un cliente queda anotado en ese cliente.\\n• Respondé a un aviso con audio o texto → se lo mando al cliente como vos.\\n• Un audio o nota suelta → ticket en Olumi.' } }];\nreturn [{ json: { ...$json, cmd: '' } }];\n"
    },
    "name": "¿Es un comando mío?",
    "type": "n8n-nodes-base.code",
@@ -2558,69 +2930,69 @@
     ]
    ]
   },
-  "Decidir y responder · cerebro": {
+  "Clasificar mensaje · cerebro": {
    "main": [
     [
      {
-      "node": "Decidir y responder · ¿Google?",
+      "node": "Clasificar mensaje · ¿Google?",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Decidir y responder · ¿Google?": {
+  "Clasificar mensaje · ¿Google?": {
    "main": [
     [
      {
-      "node": "Decidir y responder (Google)",
+      "node": "Clasificar mensaje (Google)",
       "type": "main",
       "index": 0
      }
     ],
     [
      {
-      "node": "Decidir y responder (Groq)",
+      "node": "Clasificar mensaje (Groq)",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Decidir y responder (Google)": {
+  "Clasificar mensaje (Google)": {
    "main": [
     [
      {
-      "node": "Decidir y responder · ¿respondió Google?",
+      "node": "Clasificar mensaje · ¿respondió Google?",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Decidir y responder · ¿respondió Google?": {
+  "Clasificar mensaje · ¿respondió Google?": {
    "main": [
     [
      {
-      "node": "Decidir y responder",
+      "node": "Clasificar mensaje",
       "type": "main",
       "index": 0
      }
     ],
     [
      {
-      "node": "Decidir y responder (Groq)",
+      "node": "Clasificar mensaje (Groq)",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Decidir y responder (Groq)": {
+  "Clasificar mensaje (Groq)": {
    "main": [
     [
      {
-      "node": "Decidir y responder",
+      "node": "Clasificar mensaje",
       "type": "main",
       "index": 0
      }
@@ -2631,14 +3003,14 @@
    "main": [
     [
      {
-      "node": "Decidir y responder · cerebro",
+      "node": "Clasificar mensaje · cerebro",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Decidir y responder": {
+  "Clasificar mensaje": {
    "main": [
     [
      {
@@ -2653,7 +3025,7 @@
    "main": [
     [
      {
-      "node": "¿Responder?",
+      "node": "¿Puede necesitar respuesta?",
       "type": "main",
       "index": 0
      },
@@ -2665,33 +3037,164 @@
     ]
    ]
   },
-  "¿Responder?": {
+  "¿Puede necesitar respuesta?": {
    "main": [
     [
      {
-      "node": "Pausa breve",
+      "node": "Esperar a Christian (4 min / 1 urgente)",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "Pausa breve": {
+  "Esperar a Christian (4 min / 1 urgente)": {
    "main": [
     [
      {
-      "node": "¿Sigue valiendo la respuesta?",
+      "node": "Charla real de WhatsApp",
       "type": "main",
       "index": 0
      }
     ]
    ]
   },
-  "¿Sigue valiendo la respuesta?": {
+  "Charla real de WhatsApp": {
+   "main": [
+    [
+     {
+      "node": "Leer la charla",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer la charla": {
+   "main": [
+    [
+     {
+      "node": "Olumi al día (con mails)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pensar la respuesta (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta (Google)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta · ¿respondió Google?": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pensar la respuesta (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Olumi al día (con mails)": {
+   "main": [
+    [
+     {
+      "node": "Pensar la respuesta · cerebro",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar la respuesta": {
+   "main": [
+    [
+     {
+      "node": "Control antes de mandar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Control antes de mandar": {
+   "main": [
+    [
+     {
+      "node": "¿Se manda?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Se manda?": {
    "main": [
     [
      {
       "node": "Responder al cliente",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Borrador para mí?",
       "type": "main",
       "index": 0
      }
@@ -2713,7 +3216,23 @@
    "main": [
     [
      {
+      "node": "¿Olumi la anota?",
+      "type": "main",
+      "index": 0
+     },
+     {
       "node": "¿Mandar planos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Olumi la anota?": {
+   "main": [
+    [
+     {
+      "node": "Anotar en Olumi lo que respondí",
       "type": "main",
       "index": 0
      }
@@ -2736,6 +3255,17 @@
     [
      {
       "node": "Mandar plano",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Borrador para mí?": {
+   "main": [
+    [
+     {
+      "node": "Mandarme el borrador",
       "type": "main",
       "index": 0
      }
