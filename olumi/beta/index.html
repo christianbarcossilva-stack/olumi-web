@@ -1941,7 +1941,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.39',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.40',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -5113,11 +5113,17 @@ function agDatosAda(){
 function agDatosLumi(){const p=CFG.lumi||{};
   return{hoy:today(),empresa:CFG.nombre||ORGINFO?.name||'',parametros:{precioDiaTecnico:n0(p.diaTec),precioDiaElevador:n0(p.diaElev),moneda:p.moneda||'USD',rendimiento:p.rendimiento||'',preguntas:p.preguntas||'',notas:p.notas||''},
     catalogo:arr('productos').filter(x=>x.nombre).slice(0,250).map(x=>({nombre:x.nombre,precio:n0(x.precio),moneda:x.moneda||'',unidad:x.unidad||'',servicio:x.servicio||''})),
-    clientes:arr('clientes').slice(0,250).map(c=>c.nombre).filter(Boolean)}}
+    clientes:agClientesLumi()}}
+/* 1.40: lumi clientes — lo instalado y los proyectos de cada cliente (para no preguntar lo que ya sabemos) */
+function agClientesLumi(){const eqs=arr('equipos'),prs=arr('proyectos');let tot=0;
+  return arr('clientes').filter(c=>c.nombre).slice(0,250).map(c=>{const e=eqs.filter(q=>q.clienteId===c.id&&(q.estado||'activo')!=='baja');const p=prs.filter(q=>q.clienteId===c.id);
+    const o={nombre:c.nombre};if(c.direccion)o.direccion=String(c.direccion).slice(0,120);
+    if(e.length&&tot<600){const ee=e.slice(0,60);tot+=ee.length;o.instalado=ee.map(q=>[q.descripcion,q.ubicacion].filter(Boolean).join(' · ').slice(0,120));if(e.length>60)o.instaladoMas=e.length-60}
+    if(p.length)o.proyectos=p.slice(0,6).map(q=>q.nombre).filter(Boolean);return o})}
 async function agToken(){try{const {data}=await SB.auth.getSession();return data&&data.session&&data.session.access_token||''}catch(e){return''}}
 async function agEnviar(a,texto){if(AGBUSY||!texto.trim())return;AGBUSY=true;const id=uid();const hist=agMsgs(a).slice(-16).map(m=>({rol:m.rol,texto:m.texto}));
   await put('agentes_chat',id,{agente:a,por:ME||'',rol:'yo',texto:texto.trim(),creado:Date.now()});sr();
-  let r={},err='';try{const tk=await agToken();const res=await fetch(AGURL+a,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk,org:ORG,agente:a,quien:personName(ME).replace(' (vos)',''),mensaje:texto.trim(),historial:hist,datos:a==='ada'?agDatosAda():agDatosLumi()})});
+  let r={},err='';try{const tk=await agToken();const res=await fetch(AGURL+a,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk,org:ORG,agente:a,quien:a==='lumi'?'una persona del equipo que practica haciendo de cliente (NO es el cliente: el cliente es el que nombre en la charla)':personName(ME).replace(' (vos)',''),mensaje:texto.trim(),historial:hist,datos:a==='ada'?agDatosAda():agDatosLumi()})});
     if(!res.ok)err=res.status===404?'El flujo de '+AG[a].n+' todavía no está prendido en n8n.':'No pude pensar ahora ('+res.status+').';else r=await res.json()}catch(e){err='No me pude conectar. Revisá internet y probá de nuevo.'}
   const rid=uid();const docs=Array.isArray(r.docs)?r.docs.slice(0,6):[];
   await put('agentes_chat',rid,{agente:a,por:ME||'',rol:'agente',texto:err||String(r.respuesta||'…'),docs,error:!!err,creado:Date.now()});
