@@ -1810,6 +1810,7 @@ async function act(a,el){
   const ci=a.indexOf(':'),k=ci<0?a:a.slice(0,ci),arg=ci<0?undefined:a.slice(ci+1);
   try{
   if(await gastoAct(k,arg,el))return;
+  if(await vanAct(k,arg))return;
   if(await teamAct(k,el))return;
   if(await planAct(k,el,arg))return;
   if(await obrasAct(k,el,arg))return;
@@ -1917,7 +1918,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.36',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.37',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2661,13 +2662,16 @@ function sheetTec(id){
     body+=`<section class="rel"><h3>Especialidades</h3><div class="techs">${[...new Set(SERV.filter(x=>x!=='Otro').concat(['Alarmas','Altura','Electricidad']))].map(x=>`<label><input type="checkbox" name="tesp" value="${esc(x)}"${esp.has(x)?' checked':''}>${esc(x)}</label>`).join('')}</div></section>
       <div class="grid">${TECF().map(x=>fld(x,f[x.k])).join('')}</div><p class="err" id="shErr" hidden></p>`;
   }else body+=`<p class="muted">Los datos de tu ficha los carga el administrador.</p>`;
+  body+=tecVanHtml(id);
   body+=`<section class="rel"><h3>Visitas del período</h3>${s.jobs.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(j=>{const h=jobHours(j);return`<div class="item link" role="button" tabindex="0" data-open="trab:${j.id}"><span>${fdate(j.fecha)}</span><span class="grow">${esc(j.titulo||'Visita')} · <span class="muted">${esc(cliName(j.clienteId)||'')}</span></span><span class="num">${h!=null?fmtH(h):'—'}</span>${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':''}</div>`}).join('')||'<p class="muted" style="margin:0">Sin visitas en el período.</p>'}</section>`;
   return sheetFrame('Técnico',personName(id),body,boss?{}:{saveLabel:'Cerrar'});
 }
 async function saveTec(){
   if(!isBoss()){closeSheet();return}
   const v=readForm(TECF());v.especialidades=[...document.querySelectorAll('input[name=tesp]:checked')].map(i=>i.value);
-  const id=SH.id;await put('tecnicos',id,{...tecFicha(id),...v,actualizado:Date.now()});toast('Ficha guardada');closeSheet();
+  const id=SH.id;await put('tecnicos',id,{...tecFicha(id),...v,actualizado:Date.now()});
+  let nv=null;if((v.matricula||v.vehiculo)&&!tecVan(id))nv=await crearVanTec(id,v);
+  toast(nv?'Ficha guardada. Su camioneta ya está en Inventario y en la Oficina.':'Ficha guardada');closeSheet();
 }
 function liqRows(){const rg=tpRange();return tecList().map(id=>({id,s:tecStats(id,rg)}))}
 function liqDoc(){
@@ -4854,6 +4858,7 @@ function ofiData0(){
     .map(p=>{const u=uq(p)==='m'?'m':'u';return{id:p.id,n:p.nombre||'Producto',u,q:dep?r2(stockOf(m,p.id,dep.id)):0,min:n0(p.stockMin),step:u==='m'?10:1}});
   const vs=vans.map(v=>{const st={};Object.keys(m).forEach(pid=>{const q=stockOf(m,pid,v.id);if(q>0&&D.productos[pid])st[pid]=r2(q)});
     return{id:v.id,n:v.nombre||'Camioneta',plate:(D.tecnicos&&D.tecnicos[v.tecnicoId]&&D.tecnicos[v.tecnicoId].matricula)||v.nombre||'',driver:v.tecnicoId||'',stock:st}});
+  Object.entries(D.tecnicos||{}).forEach(([tid,t])=>{if(t&&(t.matricula||t.vehiculo)&&MEMBERS[tid]&&!vans.some(v=>v.tecnicoId===tid))vs.push({id:'tec:'+tid,n:t.vehiculo||'Vehículo',plate:t.matricula||'',driver:tid,stock:{}})});
   const feed=vivoFeed().map(i=>{const [ty,id]=String(i.open).split(':');let kind='',ic='📣',col='#8e8e93';
     if(ty==='ent'){const e=D.entradas[id]||{};kind=e.canal==='mail'?'mail':'wa';ic=kind==='mail'?'✉':'💬';col=kind==='mail'?'#0a84ff':'#34c759'}
     else if(ty==='tk'){ic='🎫';col=i.cls==='bad'?'#ff453a':'#ff9f0a';kind='wa'}
@@ -4886,14 +4891,15 @@ async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindo
   if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
   if(d.olumiAbrir){const v=String(d.olumiAbrir);if(v.includes(':')){const[ty,id]=v.split(':');if(D[{ent:'entradas',tk:'tickets',trab:'trabajos',pres:'presupuestos',mov:'movimientos'}[ty]]?.[id])openSheet(ty,id);return}
     if(VIEWS[v]&&viewOk(v)){VIEW=v;lsSet('crm.view',VIEW);render();window.scrollTo(0,0)}else toast('Tu rol no tiene acceso a esa sección');return}
-  if(d.olumiNuevo){openSheet(String(d.olumiNuevo),null,{});return}
+  if(d.olumiNuevo){const t=String(d.olumiNuevo);if(t==='van'){if(!isBoss()&&ROLE!=='encargado'){toast('Los vehículos los suma el dueño o el encargado');return}openSheet('dep',null,{tipo:'vehiculo'});return}openSheet(t,null,{});return}
   const dep=deps().find(x=>x.tipo!=='vehiculo');
   if(d.olumiIngreso){if(readonly||isTec()){toast('La mercadería la carga la empresa');OFI.last='';ofiPost();return}if(!dep){toast('Primero creá un depósito en Inventario');return}
     const x=d.olumiIngreso,p=D.productos[x.prodId],c=n0(x.cant);if(!p||!(c>0))return;
     await put('movimientos',uid(),{tipo:'entrada',fecha:today(),prodId:x.prodId,cant:c,desde:'',hacia:dep.id,proveedor:String(x.proveedor||''),doc:'',costo:n0(p.costo),nota:'Desde la Oficina',by:ME||'',creado:Date.now()});
     if(!p.stock)await put('productos',x.prodId,{...p,stock:true});toast('Entrada guardada en Inventario');return}
   if(d.olumiPedido){if(readonly||isTec()){toast('El pedido lo prepara la empresa');OFI.last='';ofiPost();return}if(!dep)return;
-    const x=d.olumiPedido,v=D.depositos[x.van];if(!v||v.tipo!=='vehiculo'){toast('Esa camioneta no existe');return}
+    const x=d.olumiPedido;if(String(x.van||'').startsWith('tec:')){const nid=await crearVanTec(String(x.van).slice(4));if(!nid){toast('No se pudo crear la camioneta');return}x.van=nid}
+    const v=D.depositos[x.van];if(!v||v.tipo!=='vehiculo'){toast('Esa camioneta no existe');return}
     for(const [pid,q] of Object.entries(x.items||{})){if(!D.productos[pid]||!(n0(q)>0))continue;
       await put('movimientos',uid(),{tipo:'transf',fecha:today(),prodId:pid,cant:n0(q),desde:dep.id,hacia:x.van,nota:'Pedido para '+personName(x.tec)+' · desde la Oficina',by:ME||'',creado:Date.now()})}
     toast('Pedido cargado en '+(v.nombre||'la camioneta'));return}
@@ -4976,6 +4982,23 @@ function vGastos(){
 async function gastoAct(k,arg,el){
   if(k==='gfil'){lsSet('olumi.gfil',arg);sr();return true}
   if(k==='gfotodel'){GFOT.splice(+arg,1);if(SH)SH.dirty=true;const box=$('#gFotos');if(box)box.innerHTML=gFotosHtml(true);return true}
+  return false}
+
+
+/* ---------- 1.37: vehiculos (camioneta de cada técnico) ---------- */
+const tecVan=id=>deps().find(d=>d.tipo==='vehiculo'&&d.tecnicoId===id);
+const depCentral=()=>deps().find(d=>d.tipo!=='vehiculo');
+async function crearVanTec(id,f){f=f||tecFicha(id)||{};const v=tecVan(id);if(v)return v.id;if(!has('inventario'))return null;
+  const nid=uid(),doc={nombre:[f.vehiculo,f.matricula].filter(Boolean).join(' · ')||('Camioneta de '+personName(id).replace(' (vos)','')),tipo:'vehiculo',tecnicoId:id,notas:'',creado:Date.now()};await put('depositos',nid,doc);if(D.depositos&&!D.depositos[nid]){D.depositos[nid]=doc;arrDirty()}return nid}
+function tecVanHtml(id){if(!has('inventario'))return'';const v=tecVan(id),boss=isBoss()||ROLE==='encargado';
+  if(!v)return`<section class="rel"><h3>Camioneta y stock</h3><p class="hint" style="margin-top:0">Todavía no tiene camioneta. ${boss?'Poné vehículo o matrícula en la ficha y se crea sola, o creala ahora.':''}</p>${boss?`<div class="actions"><button class="btn" data-act="tecvan:${esc(id)}">Crear su camioneta</button></div>`:''}</section>`;
+  const m=stockMap(),its=Object.keys(m).filter(pid=>D.productos[pid]&&stockOf(m,pid,v.id)>0).sort((a,b)=>(D.productos[a].nombre||'').localeCompare(D.productos[b].nombre||'','es'));
+  return`<section class="rel"><h3>Camioneta y stock <span class="muted">· ${esc(v.nombre||'Camioneta')}</span></h3>${its.length?`<div class="list">${its.map(pid=>`<div class="item"><span class="grow">${esc(D.productos[pid].nombre||'')}</span><b class="num">${fq(stockOf(m,pid,v.id),D.productos[pid])}</b></div>`).join('')}</div>`:'<p class="hint" style="margin-top:0">Va vacía. Se carga con un pedido desde el depósito.</p>'}
+    <div class="actions"><button class="btn" data-open="dep:${esc(v.id)}">Ver la camioneta</button>${boss&&depCentral()?`<button class="btn pri" data-act="tecped:${esc(id)}">Preparar su pedido</button>`:''}</div></section>`}
+async function vanAct(k,arg){
+  if(k==='tecvan'){const id=arg;const nid=await crearVanTec(id);if(nid){toast('Camioneta creada en Inventario');if(SH&&SH.type==='tec')openSheet('tec',id)}else toast('El inventario no está en tu plan');return true}
+  if(k==='tecped'){const id=arg,c=depCentral();let v=tecVan(id);if(!c){toast('Primero creá el depósito en Inventario');return true}const vid=v?v.id:await crearVanTec(id);if(!vid)return true;
+    openSheet('mov',null,{mv:{tipo:'transf',desde:c.id,hacia:vid}});return true}
   return false}
 
 /* ---------- servidor: Supabase ---------- */
