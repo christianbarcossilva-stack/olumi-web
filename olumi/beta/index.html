@@ -3329,7 +3329,8 @@ function setupSteps(){
     ...(invOn()?[{k:'stock',n:'Depósitos y camionetas',d:'Para descontar materiales desde cada trabajo',ok:arr('depositos').length>0,go:'inventario'}]:[])];
 }
 const setupPending=()=>isBoss()&&!CFG.setupDone&&setupSteps().some(s=>!s.ok);
-function setupBanner(){if(!setupPending()||VIEW==='inicio')return'';const s=setupSteps();return`<p class="note">Configurá Olumi: ${s.filter(x=>x.ok).length} de ${s.length} pasos listos. <button class="btn ghost" data-view="inicio">Seguir</button></p>`}
+const setupOff=()=>{try{return localStorage.getItem('olumi.setupoff.'+ORG)==='1'}catch(e){return false}};
+function setupBanner(){if(!setupPending()||setupOff()||VIEW==='inicio')return'';const s=setupSteps();return`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Configurá Olumi: ${s.filter(x=>x.ok).length} de ${s.length} pasos listos.</span> <button class="btn ghost" data-view="inicio">Seguir</button><button class="btn ghost" data-act="setupoff" title="Lo encontrás después en Menú → Primeros pasos" aria-label="Cerrar" style="margin-left:auto;min-width:34px;padding:0 10px">✕</button></p>`}
 function vInicio(){
   const s=setupSteps(),r=new Set(CFG.rubros||[]);
   const step=(x,i,body='')=>`<div class="panel setup${x.ok?' ok':''}"><div class="st-h"><span class="st-n">${x.ok?'✓':i+1}</span><div class="grow"><b>${esc(x.n)}</b><p class="muted" style="margin:2px 0 0">${esc(x.d)}</p></div>${x.go?`<button class="btn${x.ok?' ghost':''}" data-view="${x.go}">${x.ok?'Revisar':'Ir'}</button>`:''}</div>${body}</div>`;
@@ -5318,6 +5319,7 @@ async function teamAct(k,el){
   if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
+  if(k==='setupoff'){try{localStorage.setItem('olumi.setupoff.'+ORG,'1')}catch(e){}toast('Listo. Lo seguís cuando quieras desde Menú → Primeros pasos.');sr();return true}
   if(k==='myorgdel'){const nm=($('#myorg_del').value||'').trim(),real=String((ORGINFO&&ORGINFO.name)||'').trim();
     if(!nm||nm.toLowerCase()!==real.toLowerCase()){toast('Escribí el nombre exacto de la empresa.');return true}
     if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='Se borra todo para siempre. Tocá de nuevo';return true}armed=null;
