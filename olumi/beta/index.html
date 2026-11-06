@@ -639,6 +639,8 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .mev span{color:var(--muted);font-family:var(--f-mono);font-size:10.5px}.mev.done{opacity:.55;text-decoration:line-through}.mev.fu{border-left-color:var(--info,#4da3ff)}
 .mmore{font-size:11px;color:var(--muted);padding-left:6px}
 @media (max-width:700px){.mg{grid-template-columns:repeat(7,minmax(0,1fr))}.mday{min-height:64px;padding:4px}.mev{font-size:10px;padding:1px 4px}.mev span{display:none}.mh span{padding:6px 4px;font-size:10px}}
+/* 1.33: oficina */
+.ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}
 /* 1.25: en vivo */
 .live{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ddc84;margin-right:8px;vertical-align:middle;animation:livepulse 1.6s infinite}
 @keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}70%{box-shadow:0 0 0 9px rgba(61,220,132,0)}}
@@ -730,6 +732,7 @@ body.tv #main{padding:10px 14px}body.tv .vivo-grid{grid-template-columns:minmax(
       <div><strong id="coName">Mi empresa</strong><span class="muted" id="coSub">con Olumi</span></div>
     </div>
     <span class="navsec dsk">Operación</span>
+    <button data-view="oficina" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 21h18M4 21V9l8-5 8 5v12"/><path d="M9 21v-5h6v5M8 12h2M14 12h2"/></svg>Oficina</button>
     <button data-view="vivo" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6M4 20l5-5M2 12a10 10 0 0 0 10 10"/></svg>En vivo</button>
     <button data-view="hoy" class="dsk" id="navHoy"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Hoy</button>
     <button data-view="bandeja" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 13l2.5-8h13L21 13v6H3z"/><path d="M3 13h5l1.5 3h5L16 13h5"/></svg>Bandeja<span class="pill" id="navEnt" hidden></span></button>
@@ -812,7 +815,7 @@ let repMon=lsGet('crm.mon')||'UYU';
 let pView=lsGet('crm.pview')||'board';
 let themePref=lsGet('crm.theme')||'auto';
 function applyTheme(){const h=new Date().getHours();const m=themePref==='auto'?(h>=7&&h<19?'light':'dark'):themePref;if(document.documentElement.dataset.mode!==m){document.documentElement.dataset.mode=m;const tc=document.querySelector('meta[name=theme-color]');if(tc)tc.content=m==='dark'?'#1E1F23':'#FFFFFF'}}
-applyTheme();setInterval(applyTheme,60000);
+applyTheme();setInterval(()=>{applyTheme();if(typeof ofiPost==='function')ofiPost()},60000);
 const PRODUCT='Olumi';
 let logoData=null,logoLoading=false;
 async function loadLogoData(){if(!has('marca')||!CFG.logo?.id||logoData||logoLoading)return;logoLoading=true;try{const lu=blobUrl(CFG.logo.id);if(lu===PIXEL){logoLoading=false;return}const r=await fetch(lu);if(r.ok){const b=await r.blob();logoData=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res(null);fr.readAsDataURL(b)})}}catch(e){}logoLoading=false}
@@ -828,7 +831,7 @@ function applyBrand(){
   const sh=document.querySelector('.shell');const fid=has('marca')&&CFG.fondo?.id;if(sh){if(fid){const u='url("'+blobUrl(fid)+'")';if(sh.style.getPropertyValue('--fondo')!==u)sh.style.setProperty('--fondo',u);sh.classList.add('fondo')}else{sh.classList.remove('fondo');sh.style.removeProperty('--fondo')}}
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],oficina:['tk','Ticket'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -942,9 +945,10 @@ function render(){
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   if(ROLE&&!canMoney()&&MONEYV.includes(VIEW)){VIEW='tickets';lsSet('crm.view',VIEW)}
-  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
+  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(v==='oficina')b.hidden=!enPrueba();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
-  const view=Q&&['hoy','vivo','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
+  const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
+  if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){ofiPost();return}
   $('#main').innerHTML=ready?view():loadingHtml();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
@@ -1531,14 +1535,14 @@ async function genAbonos(){
 
 /* ---------- menú (celular) ---------- */
 function vMenu(){
-  const it=[...(isLead()?[['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
+  const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   const itv=it.filter(([v])=>viewOk(v));
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
 }
 
-const VIEWS={vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
+const VIEWS={oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1905,7 +1909,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.32',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.33',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3425,11 +3429,11 @@ const SUBV=['campo','proyectos','trabajos','ajustes','menu'];
 const TECV=['campo','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','ajustes','menu'];
 const ROLV={
   owner:null,admin:null,
-  encargado:['vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
-  ventas:['vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
-  administracion:['vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu'],
+  encargado:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
+  ventas:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
+  administracion:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu'],
   tecnico:TECV,subcontratista:SUBV,
-  viewer:['vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
+  viewer:['oficina','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
 const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
 const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 /* 1.26: en vivo como extra */
@@ -3437,8 +3441,8 @@ const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 const BETA=/\/beta\//.test(location.pathname)||(()=>{try{return localStorage.getItem('olumi.beta')==='1'}catch(e){return false}})();
 const enPrueba=()=>BETA;            // funciones nuevas: solo en el canal de pruebas hasta que se aprueben
 const hasVivo=()=>has('vivo')||enPrueba();
-const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
-function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
+const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;if(v==='oficina'&&!enPrueba())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
+function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';if(VIEW==='oficina'&&!enPrueba())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
   if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
 
@@ -4825,6 +4829,62 @@ async function p3act(k,el,arg){if(k!=='p3')return false;
   if(arg==='out'){P3.zoom=Math.max(.4,P3.zoom/1.25);return true}
   return true}
 function p3anim(to){const f={ph:P3.ph,th:P3.th},t0=performance.now();P3.auto=false;const step=n=>{const k=Math.min(1,(n-t0)/600),e=1-Math.pow(1-k,3);P3.ph=f.ph+(to.ph-f.ph)*e;P3.th=f.th+(to.th-f.th)*e;if(k<1&&P3.on)requestAnimationFrame(step)};requestAnimationFrame(step)}
+
+
+/* ---------- 1.33: oficina (maqueta viva con los datos reales; en pruebas) ---------- */
+const OFI={ready:false,frame:null,last:''};
+const OFI_ROL={owner:'gerencia',admin:'gerencia',administracion:'admin',viewer:'admin',ventas:'ventas',encargado:'recepcion',tecnico:'tecnico',subcontratista:'tecnico'};
+const ofiHM=ts=>{const d=new Date(Number(ts));return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+function ofiData(){
+  const m=stockMap(),hoy=today(),dep=deps().find(d=>d.tipo!=='vehiculo'),vans=deps().filter(d=>d.tipo==='vehiculo');
+  const enCurso=new Set();arr('trabajos').forEach(j=>{if(j.estado==='en_curso'&&(!j.fecha||j.fecha===hoy))(j.tecnicos||[]).forEach(t=>enCurso.add(t))});
+  const people=Object.entries(MEMBERS||{}).filter(([id,mb])=>mb&&OFI_ROL[mb.role]).map(([id,mb])=>({id,n:String((NAMES[id]&&NAMES[id].name)||(mb.email||'Compañero').split('@')[0]).split(' ')[0],role:OFI_ROL[mb.role],out:enCurso.has(id)}));
+  const inVan=new Set();vans.forEach(v=>Object.keys(m).forEach(pid=>{if(stockOf(m,pid,v.id)>0)inVan.add(pid)}));
+  const prods=invProds().filter(p=>(dep&&stockOf(m,p.id,dep.id)>0)||n0(p.stockMin)>0||inVan.has(p.id)).slice(0,60)
+    .map(p=>{const u=uq(p)==='m'?'m':'u';return{id:p.id,n:p.nombre||'Producto',u,q:dep?r2(stockOf(m,p.id,dep.id)):0,min:n0(p.stockMin),step:u==='m'?10:1}});
+  const vs=vans.map(v=>{const st={};Object.keys(m).forEach(pid=>{const q=stockOf(m,pid,v.id);if(q>0&&D.productos[pid])st[pid]=r2(q)});
+    return{id:v.id,n:v.nombre||'Camioneta',plate:(D.tecnicos&&D.tecnicos[v.tecnicoId]&&D.tecnicos[v.tecnicoId].matricula)||v.nombre||'',driver:v.tecnicoId||'',stock:st}});
+  const feed=vivoFeed().map(i=>{const [ty,id]=String(i.open).split(':');let kind='',ic='📣',col='#8e8e93';
+    if(ty==='ent'){const e=D.entradas[id]||{};kind=e.canal==='mail'?'mail':'wa';ic=kind==='mail'?'✉':'💬';col=kind==='mail'?'#0a84ff':'#34c759'}
+    else if(ty==='tk'){ic='🎫';col=i.cls==='bad'?'#ff453a':'#ff9f0a';kind='wa'}
+    else if(ty==='trab'){ic=i.cls==='ok'?'✓':'🚐';col=i.cls==='ok'?'#34c759':'#ff9f0a'}
+    else if(ty==='pres'){ic='$';col='#f5b800';kind=i.cls==='ok'?'pres':''}
+    else if(ty==='mov'){ic='⬇';col='#a2845e';kind='mov'}
+    return{id:i.open+':'+i.ts,open:i.open,ic,col,b:i.b,s:i.s||'',t:minAgo(i.ts)<1?'ahora':ofiHM(i.ts),kind}});
+  const ents=arr('entradas').filter(e=>String(e.creado?new Date(Number(e.creado)).toISOString().slice(0,10):'')===hoy&&!entCharla(e));
+  const mes=hoy.slice(0,7);
+  const counts={wa:ents.filter(e=>e.canal!=='mail').length,mail:ents.filter(e=>e.canal==='mail').length,tk:arr('tickets').filter(tkOpen).length,
+    pres:arr('presupuestos').filter(p=>p.estado==='aceptado'&&String(p.fecha||'').slice(0,7)===mes).length};
+  const hoyL=arr('trabajos').filter(j=>j.fecha===hoy&&j.estado!=='cancelado').sort((a,b)=>(a.hora||'99').localeCompare(b.hora||'99')).slice(0,8)
+    .map(j=>({t:j.hora||'',b:j.titulo||cliName(j.clienteId)||j.obra||'Visita',s:[cliName(j.clienteId)||j.obra,(j.tecnicos||[]).map(personName).join(', ')].filter(Boolean).join(' · ')}));
+  const peds=arr('movimientos').filter(x=>x.tipo==='transf'&&x.fecha===hoy&&vans.some(v=>v.id===x.hacia)).sort((a,b)=>n0(b.creado)-n0(a.creado)).slice(0,5)
+    .map(x=>({id:'PM',tec:(D.depositos[x.hacia]||{}).tecnicoId||'',van:x.hacia,items:{[x.prodId]:n0(x.cant)},st:'cargado'}));
+  return{nombre:CFG.nombre||(ORGINFO&&ORGINFO.name)||'Mi empresa',people,prods,vans:vs,feed,counts,hoy:hoyL,peds,depId:dep?dep.id:''};
+}
+function ofiPost(){const f=$('#ofiFrame');if(!f||!OFI.ready)return;const tema=document.documentElement.dataset.mode==='dark'?'dark':'light';
+  let d;try{d=ofiData()}catch(e){console.warn('oficina',e);return}const key=JSON.stringify(d)+tema;if(key===OFI.last)return;OFI.last=key;
+  try{f.contentWindow.postMessage({tema,olumiDatos:d},'*')}catch(e){}}
+function vOficina(){OFI.ready=false;OFI.last='';
+  return`<div class="vhead"><div><h1>Oficina</h1><p class="sub">Tu empresa en vivo. Tocá un área para abrirla, o el depósito para cargar mercadería y preparar el pedido de un técnico.</p></div></div>
+  <div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div>`}
+async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};
+  if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
+  if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
+  if(d.olumiAbrir){const v=String(d.olumiAbrir);if(v.includes(':')){const[ty,id]=v.split(':');if(D[{ent:'entradas',tk:'tickets',trab:'trabajos',pres:'presupuestos',mov:'movimientos'}[ty]]?.[id])openSheet(ty,id);return}
+    if(VIEWS[v]&&viewOk(v)){VIEW=v;lsSet('crm.view',VIEW);render();window.scrollTo(0,0)}else toast('Tu rol no tiene acceso a esa sección');return}
+  if(d.olumiNuevo){openSheet(String(d.olumiNuevo),null,{});return}
+  const dep=deps().find(x=>x.tipo!=='vehiculo');
+  if(d.olumiIngreso){if(readonly||isTec()){toast('La mercadería la carga la empresa');OFI.last='';ofiPost();return}if(!dep){toast('Primero creá un depósito en Inventario');return}
+    const x=d.olumiIngreso,p=D.productos[x.prodId],c=n0(x.cant);if(!p||!(c>0))return;
+    await put('movimientos',uid(),{tipo:'entrada',fecha:today(),prodId:x.prodId,cant:c,desde:'',hacia:dep.id,proveedor:String(x.proveedor||''),doc:'',costo:n0(p.costo),nota:'Desde la Oficina',by:ME||'',creado:Date.now()});
+    if(!p.stock)await put('productos',x.prodId,{...p,stock:true});toast('Entrada guardada en Inventario');return}
+  if(d.olumiPedido){if(readonly||isTec()){toast('El pedido lo prepara la empresa');OFI.last='';ofiPost();return}if(!dep)return;
+    const x=d.olumiPedido,v=D.depositos[x.van];if(!v||v.tipo!=='vehiculo'){toast('Esa camioneta no existe');return}
+    for(const [pid,q] of Object.entries(x.items||{})){if(!D.productos[pid]||!(n0(q)>0))continue;
+      await put('movimientos',uid(),{tipo:'transf',fecha:today(),prodId:pid,cant:n0(q),desde:dep.id,hacia:x.van,nota:'Pedido para '+personName(x.tec)+' · desde la Oficina',by:ME||'',creado:Date.now()})}
+    toast('Pedido cargado en '+(v.nombre||'la camioneta'));return}
+}
+window.addEventListener('message',ofiMsg);
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};

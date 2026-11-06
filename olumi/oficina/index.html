@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<script>(function(){var h=document.documentElement;if(/[?&]embed=1/.test(location.search))h.classList.add('embed');else{try{var t=localStorage.getItem('ut.theme');if(t)h.dataset.theme=t}catch(e){}}})()</script>
+<script>(function(){var h=document.documentElement;if(/[?&]app=1/.test(location.search))h.classList.add('en-app');if(/[?&]embed=1/.test(location.search))h.classList.add('embed');else{try{var t=localStorage.getItem('ut.theme');if(t)h.dataset.theme=t}catch(e){}}})()</script>
 <title>Oficina viva · Olumi</title>
 <meta name="description" content="Demo interactiva de Olumi: la maqueta de tu oficina con el equipo, los mensajes que llegan, el depósito y las camionetas. Datos de ejemplo.">
 <link rel="icon" href="../app/icono-192.png">
@@ -129,6 +129,8 @@ button:focus-visible,.btn:focus-visible{outline:2px solid var(--ink);outline-off
 html.embed,html.embed body{min-height:0;background:transparent}
 html.embed body{padding:0 2px 6px}
 html.embed .hero,html.embed .note,html.embed .theme,html.embed .back-olumi{display:none}
+html.en-app .tabs,html.en-app .co{display:none}html.en-app .body{padding-top:10px}
+html.en-app .ev[data-feed]{cursor:pointer}html.en-app .ev[data-feed]:hover{background:var(--well-h,#efeff2)}
 .back-olumi{position:fixed;top:14px;left:max(16px,env(safe-area-inset-left,0px));z-index:10;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);color:var(--ink);text-decoration:none;font:500 14px var(--f-body)}
 </style>
 </head>
@@ -162,6 +164,8 @@ html.embed .hero,html.embed .note,html.embed .theme,html.embed .back-olumi{displ
 
 <script>
 (()=>{
+const APP=document.documentElement.classList.contains('en-app');
+const post=m=>{try{parent.postMessage(m,'*')}catch(e){}};
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage');
 const CL={floor:'#ffffff',wall:'#f7f7f9',wallTop:'#e2e2e7',glass:'rgba(205,218,232,.22)',glassTop:'rgba(150,165,185,.55)',desk:'#ebe3d6',deskSide:'#e0d6c6',deskTop:'#f6f0e6',dark:'#1d1d1f',street:'#ececf0',park:'#f4f4f7',lines:'#e0e0e6'};
 const mq=matchMedia('(prefers-color-scheme: dark)');let DARK=false;
@@ -281,7 +285,7 @@ function furniture(e){const items=[];if(e<.7)return items;
   // plantas
   [[6.4,10.8],[19.4,10.8],[25.2,17],[.6,17.2]].forEach(([x,y])=>items.push({d:x+y,f:()=>{box(x-.25,y-.25,.5,.5,.4,Z('#ffffff'),Z('#e4e4ea'),Z('#efeff3'));const c=P(x,y,1);ctx.fillStyle=Z('#8cc69b');ctx.beginPath();ctx.arc(c[0],c[1],sc*.42,0,7);ctx.fill();ctx.fillStyle=Z('#a8d8b3');ctx.beginPath();ctx.arc(c[0]-sc*.15,c[1]-sc*.18,sc*.25,0,7);ctx.fill()}}));
   return items}
-function drawVan(v){const x=v.x,y=v.y,D=1.36,z0=.3,L=2.6;
+function drawVan(v){if(v.out&&!v.anim)return;const x=v.x,y=v.y,D=1.36,z0=.3,L=2.6;
   ctx.save();ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=sc*.7;ctx.shadowOffsetY=sc*.18;quad(x+.05,y+.05,3.5,D-.1,0,'rgba(0,0,0,.10)');ctx.restore();
   box(x,y,L,D,1.46,'#ffffff','#ededf1','#f6f6f9',z0);                       // caja de carga
   box(x+L,y+.04,.55,D-.08,1.14,'#ffffff','#e8e8ed','#f2f2f5',z0);           // cabina
@@ -387,7 +391,7 @@ function dispatch(){const t=byRole('tecnico').find(p=>!p.busy&&p.tx==null);const
       setTimeout(()=>{v.anim={t0:T,dur:3.5,x0:-8,y0:26.2,x1:2+v.slot*4.2,y1:26.2,done:()=>{v.anim={t0:T,dur:2.2,x0:v.x,y0:26.2,x1:2+v.slot*4.2,y1:21.4,done:()=>{v.out=false;t.inVan=false;t.x=v.x+1.4;t.y=v.y+1.9;v.driver=null;
         for(const k in it){v.stock[k]=Math.max(0,(v.stock[k]||0)-it[k]);if(!v.stock[k])delete v.stock[k]}
         log('✓','#34c759',t.n+' volvió','Informe firmado · se usó: '+fmtItems(it));refreshArea();goTo(t,SPOTS.puerta.x,SPOTS.puerta.y,()=>{const d=deskOf(t);goTo(t,d.x+.2,d.y+1.1,()=>{t.busy=0;refreshArea()})})}}}}},16000)}}}}})),900)});return true}
-function prepPedido(t,items){if(!t)return 'Elegí un técnico.';if(t.busy||t.inVan)return t.n+' está ocupado ahora.';const v=S.vans.find(v=>!v.out&&!v.anim&&!v.res);if(!v)return 'No hay camioneta libre en el estacionamiento.';
+function prepPedido(t,items){if(!t)return 'Elegí un técnico.';if(t.busy||t.inVan)return t.n+' está ocupado ahora.';const v=S.vans.find(v=>v.driver===t.id&&!v.out&&!v.anim&&!v.res)||(APP?null:S.vans.find(v=>!v.out&&!v.anim&&!v.res));if(!v&&APP)return t.n+' no tiene una camioneta asignada en el estacionamiento. Se asigna en Inventario → Depósitos.';if(!v)return 'No hay camioneta libre en el estacionamiento.';
   const it=Object.fromEntries(Object.entries(items).filter(([,q])=>q>0));if(!Object.keys(it).length)return 'Sumá al menos un material.';
   for(const k in it)if(S.stock[k].q<it[k])return 'No alcanza el stock de '+PROD[k].n+'.';
   for(const k in it)S.stock[k].q-=it[k];const id='PM‑0'+(pm++);const ped={id,tec:t.id,van:v.id,items:it,st:'preparando'};S.peds.unshift(ped);v.res=1;t.busy=1;
@@ -403,7 +407,7 @@ function evPlan(){const p=byRole('tecnico')[0]||S.people[0];if(!p)return;const d
 const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
 function frame(now){T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
-  if(TAB!=='armar'&&S.built){if(T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
+  if(TAB!=='armar'&&S.built){if(!APP&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
   DARK=themeNow();
   if(BUILD<1)BUILD=Math.min(1,BUILD+dt*.55);
   ctx.clearRect(0,0,VW,VH);hits=[];
@@ -450,7 +454,7 @@ const stState=k=>{const q=S.stock[k].q,m=PROD[k].min;return q<=0?'<span class="p
 const lowCount=()=>Object.keys(PROD).filter(k=>S.stock[k].q<PROD[k].min).length;
 const tecState=t=>t.inVan?'<span class="pill mid">En la calle</span>':t.carry?'<span class="pill gr">Cargando pedido</span>':t.busy?'<span class="pill gr">Preparando salida</span>':'<span class="pill ok">En la oficina</span>';
 const btn=(act,label,cls='')=>`<button class="btn ${cls}" data-act="${act}">${label}</button>`;
-const nobody=k=>`<p class="hint" style="padding:12px 14px;margin:0">Todavía no hay nadie en ${esc(areaName(k))}. Se suma desde Equipo, y aparece caminando acá.</p>`;
+const nobody=k=>`<p class="hint" style="padding:12px 14px;margin:0">Todavía no hay nadie en ${esc(areaName(k))}. ${APP?'Invitá a tu equipo desde Ajustes → Equipo y aparece caminando acá.':'Se suma desde Equipo, y aparece caminando acá.'}</p>`;
 function areaLive(k){const ppl=S.people.filter(p=>roomOfP(p)===k);
   const pplList=ppl.length?ppl.map(p=>`<div class="li"><span class="dot" style="background:${ROLES[p.role][1]}">${esc(p.n[0])}</span><span class="grow">${esc(p.n)}<small>${ROLES[p.role][0]}</small></span>${p.inVan?'<span class="pill mid">En la calle</span>':p.tx!=null?'<span class="pill gr">Caminando</span>':'<span class="pill ok">Acá</span>'}</div>`).join(''):nobody(k);
   if(k==='rec')return `<div class="kpis"><div class="kpi"><b>${S.counts.wa}</b><span>WhatsApp hoy</span></div><div class="kpi"><b>${S.counts.tk}</b><span>Tickets abiertos</span></div></div><p class="sect">En recepción</p><div class="list">${pplList}</div>`;
@@ -460,6 +464,7 @@ function areaLive(k){const ppl=S.people.filter(p=>roomOfP(p)===k);
   if(k==='dep')return `<div class="list">${Object.keys(PROD).map(q=>`<div class="li"><span class="grow">${PROD[q].n}<small>mínimo ${PROD[q].min} ${PROD[q].u==='m'?'m':'u'}</small></span><span class="num">${S.stock[q].q.toLocaleString('es-UY')} ${PROD[q].u==='m'?'m':'u'}</span>${stState(q)}</div>`).join('')}</div>
     <p class="sect">Pedidos de hoy</p><div class="list">${S.peds.slice(0,5).map(pd=>{const t=S.people.find(p=>p.id===pd.tec),v=S.vans.find(x=>x.id===pd.van);return `<div class="li"><span class="grow">${pd.id} · ${esc(t?t.n:'')}<small>${fmtItems(pd.items)}</small></span><span class="pill ${pd.st==='cargado'?'ok':'gr'}">${pd.st==='cargado'?'En la '+esc(v?v.n:''):pd.st==='retirado'?'Llevándolo':'Preparando'}</span></div>`}).join('')||'<p class="hint">Todavía no se preparó ningún pedido hoy.</p>'}</div>`;
   if(k==='coc'){const io=inOffice();return `<div class="kpis"><div class="kpi"><b>${io.length}</b><span>En la oficina</span></div><div class="kpi"><b>${S.people.length-io.length}</b><span>En la calle</span></div></div>`}
+  if(k==='sal'&&APP)return `<p class="sect">Hoy</p><div class="list">${(S.hoy||[]).map(x=>`<div class="li"><span class="grow">${esc(x.b)}<small>${esc(x.s)}</small></span><span class="num">${esc(x.t)}</span></div>`).join('')||'<p class="hint">No hay visitas cargadas para hoy.</p>'}</div>`;
   if(k==='sal')return `<p class="sect">Hoy</p><div class="list"><div class="li"><span class="grow">Reunión de coordinación<small>Todo el equipo · Sala de reuniones</small></span><span class="num">09:00</span></div><div class="li"><span class="grow">Visita de obra<small>Colegio del Parque · Martín</small></span><span class="num">11:30</span></div><div class="li"><span class="grow">Presentar presupuesto<small>Hotel Rambla · Marcela</small></span><span class="num">16:00</span></div></div>`;
   if(k==='est')return `<div class="list">${S.vans.map(v=>{const dr=S.people.find(p=>p.id===v.driver);const n=Object.keys(v.stock).length;return `<div class="li" style="flex-wrap:wrap"><span class="dot" style="background:#3a3a3c">${svg('van')}</span><span class="grow">${esc(v.n)}<small>${esc(v.plate)} · ${v.out?'en la calle con '+esc(dr?dr.n:''):'en el estacionamiento'}</small></span><button class="btn" data-act="van:${v.id}" style="padding:5px 12px;font-size:13px">${OPENVAN===v.id?'Ocultar':'Carga'+(n?' ('+n+')':'')}</button>${OPENVAN===v.id?`<div style="flex-basis:100%;font-size:13px;color:var(--muted);padding:6px 0 2px 36px">${n?fmtItems(v.stock):'Vacía. Se carga con un pedido del depósito.'}</div>`:''}</div>`}).join('')||'<p class="hint">Sin vehículos.</p>'}</div>`;
   return ''}
@@ -471,13 +476,13 @@ function areaHtml(k){const a=AREAS[k];let h=`<button class="back" data-act="back
     return h+`<label class="fld"><span>Para</span><select id="f_pt">${ts.map(t=>`<option value="${t.id}" ${t.busy||t.inVan?'disabled':''}>${esc(t.n)}${t.inVan?' · en la calle':t.busy?' · ocupado':''}</option>`).join('')||'<option value="">No hay técnicos</option>'}</select></label>
       <div class="list">${Object.entries(PROD).map(([q,pp])=>`<div class="li"><span class="grow">${pp.n}<small>hay ${S.stock[q].q} ${pp.u==='m'?'m':'u'}</small></span><div class="stp"><button data-act="q-:${q}" aria-label="Menos">−</button><span id="q_${q}">${PEDQ[q]||0}${pp.u==='m'?' m':''}</span><button data-act="q+:${q}" aria-label="Más">+</button></div></div>`).join('')}</div>
       <div class="acts">${btn('ped','Preparar pedido','pri')}</div><p class="msg" id="m_ped" hidden></p><p class="hint" style="margin-top:12px">El técnico pasa por el depósito, lo lleva a la camioneta y el stock se mueve solo: sale del depósito y queda en la camioneta.</p>`}
-  const acts={rec:[['wa','Simular un WhatsApp','pri'],['mail','Simular un correo',''],['nav:Bandeja','Abrir la Bandeja','']],
+  const acts=APP?{rec:[['go:bandeja','Abrir la Bandeja','pri'],['new:tk','Nuevo ticket','']],adm:[['go:clientes','Abrir Clientes','pri'],['new:pres','Nuevo presupuesto',''],['go:facturacion','Facturación','']],ger:[['go:reportes','Ver reportes','pri'],['go:hoy','Lo urgente de hoy','']],tec:[['go:tickets','Ver tickets','pri'],['go:calendario','Calendario de técnicos',''],['goped','Preparar pedido de materiales',''],['new:rel','Nuevo relevamiento','']],coc:[['go:ajustes','Equipo y roles','pri']],sal:[['go:calendario','Ver el calendario','pri'],['go:agenda','Seguimientos','']],est:[['go:inventario','Camionetas y stock','pri']]}[k]||[]:{rec:[['wa','Simular un WhatsApp','pri'],['mail','Simular un correo',''],['nav:Bandeja','Abrir la Bandeja','']],
     adm:[['pres','Nuevo presupuesto','pri'],['mail','Simular un correo',''],['nav:Cobros','Ver cobros pendientes','']],
     ger:[['nav:Reportes','Reporte del día','pri'],['nav:Ajustes › Equipo','Roles y permisos','']],
     tec:[['disp','Mandar un técnico a un ticket','pri'],['goped','Preparar pedido de materiales',''],['plan','Nuevo relevamiento','']],
     coc:[['cafe','Todos al café','']],sal:[['reunion','Convocar reunión ahora','pri'],['nav:Agenda','Ver el calendario','']],est:[['nav:Vehículos','Sumar un vehículo','']]}[k]||[];
   h+=`<div id="areaLive">${areaLive(k)}</div>`;
-  if(k==='coc')h+=`<p class="sect">Aviso interno</p><div class="row"><input id="f_av" placeholder="Ej.: hoy cerramos a las 17" autocomplete="off"></div><div class="acts" style="margin-top:8px">${btn('aviso','Mandar a todos','pri')}</div>`;
+  if(k==='coc'&&!APP)h+=`<p class="sect">Aviso interno</p><div class="row"><input id="f_av" placeholder="Ej.: hoy cerramos a las 17" autocomplete="off"></div><div class="acts" style="margin-top:8px">${btn('aviso','Mandar a todos','pri')}</div>`;
   return h+`<div class="acts" style="margin-top:14px">${acts.map(([a,l,c])=>btn(a,l,c)).join('')}</div>`}
 function refreshArea(){if(!AREA||TAB!=='vivo')return;const el=document.getElementById('areaLive');if(el)el.innerHTML=areaLive(AREA)}
 function openArea(k){AREA=k;if(k==='dep')DEPV='stock';OPENVAN=null;TAB='vivo';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab==='vivo'));hidePop();renderBody();if(innerWidth<980)document.querySelector('.panel').scrollIntoView({behavior:'smooth',block:'start'})}
@@ -485,7 +490,7 @@ let toastT;function toast(m){const el=document.getElementById('toast');el.textCo
 function gather(ppl,spot,label,ms){ppl.forEach((p,i)=>{if(p.busy||p.inVan)return;p.busy=1;goTo(p,spot.x+(i%3)*.7,spot.y+Math.floor(i/3)*.7,()=>{say(p,label,2.5);setTimeout(()=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1,()=>{p.busy=0})},ms)})})}
 function renderBody(){
   if(TAB==='vivo'&&AREA){body.innerHTML=areaHtml(AREA);return}
-  if(TAB==='vivo'){body.innerHTML=`<h2>Tu empresa.</h2><p class="sub">Cada área es una parte del menú. Tocala acá o en la maqueta.</p><div class="apps">${Object.entries(AREAS).map(([k,a])=>`<button class="app" data-area="${k}"><span class="sq" style="background-color:${a.col}">${svg(a.ic)}</span><span>${a.menu}</span></button>`).join('')}</div><h2 style="font-size:19px">Ahora mismo.</h2><p class="sub" style="margin-bottom:12px">Mensajes que llegan, técnicos que salen y vuelven.</p><div class="feed">${feed.map(e=>`<div class="ev"><span class="ic" style="background-color:${e.col}">${fic(e.ic)}</span><div><div class="hd"><b>${esc(e.b)}</b><time>${e.t}</time></div><span class="t">${esc(e.s)}</span></div></div>`).join('')||'<p class="hint">En unos segundos empieza a moverse…</p>'}</div>`;return}
+  if(TAB==='vivo'){body.innerHTML=`<h2>Tu empresa.</h2><p class="sub">Cada área es una parte del menú. Tocala acá o en la maqueta.</p><div class="apps">${Object.entries(AREAS).map(([k,a])=>`<button class="app" data-area="${k}"><span class="sq" style="background-color:${a.col}">${svg(a.ic)}</span><span>${a.menu}</span></button>`).join('')}</div><h2 style="font-size:19px">Ahora mismo.</h2><p class="sub" style="margin-bottom:12px">Mensajes que llegan, técnicos que salen y vuelven.</p><div class="feed">${feed.map(e=>`<div class="ev"${e.open?` data-feed="${esc(e.open)}" role="button" tabindex="0"`:''}><span class="ic" style="background-color:${e.col}">${fic(e.ic)}</span><div><div class="hd"><b>${esc(e.b)}</b><time>${esc(e.t)}</time></div><span class="t">${esc(e.s)}</span></div></div>`).join('')||'<p class="hint">En unos segundos empieza a moverse…</p>'}</div>`;return}
   if(TAB==='armar'){const st=['Tu empresa','El plano','Escritorios','Tu equipo','Vehículos'];
     let h=`<div class="steps">${st.map((_,i)=>`<i class="${i<=STEP?'on':''}"></i>`).join('')}</div><p class="kicker">Paso ${STEP+1} de 5</p><h2>${st[STEP]}.</h2>`;
     if(STEP===0)h+=`<p class="sub">Así arranca un cliente nuevo: cada dato que carga levanta una parte de su oficina.</p><label class="fld"><span>Nombre de la empresa</span><input id="f_name" value="${esc(S.name)}" autocomplete="organization"></label><div class="row"><button class="btn pri" data-go="1">Siguiente</button></div>`;
@@ -507,7 +512,10 @@ document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.cl
   else if(!S.built||(!S.people.length&&TAB==='vivo')){S=demoState();placeVans();BUILD=0}
   hidePop();renderBody();renderHud()});
 body.addEventListener('click',e=>{const t=e.target;const ar=t.closest('[data-area]');if(ar){openArea(ar.dataset.area);return}
+  const fd=t.closest('[data-feed]');if(fd&&APP){post({olumiAbrir:fd.dataset.feed});return}
   const ac=t.closest('[data-act]');if(ac){const a=ac.dataset.act;
+    if(a.startsWith('go:')){post({olumiAbrir:a.slice(3)});return}
+    if(a.startsWith('new:')){post({olumiNuevo:a.slice(4)});return}
     if(a==='back'){AREA=null;renderBody();return}
     if(a==='wa'){evWa();toast('Entra un WhatsApp a Recepción');return}
     if(a==='mail'){evMail();toast('Entra un correo a Administración');return}
@@ -519,8 +527,8 @@ body.addEventListener('click',e=>{const t=e.target;const ar=t.closest('[data-are
     if(a.startsWith('depv:')){DEPV=a.slice(5);renderBody();return}
     if(a.startsWith('van:')){const id=a.slice(4);OPENVAN=OPENVAN===id?null:id;refreshArea();return}
     if(a.startsWith('q+:')||a.startsWith('q-:')){const k=a.slice(3),pp=PROD[k];let q=(PEDQ[k]||0)+(a[1]==='+'?pp.step:-pp.step);q=Math.max(0,Math.min(S.stock[k].q,q));PEDQ[k]=q;document.getElementById('q_'+k).textContent=q+(pp.u==='m'?' m':'');return}
-    if(a==='ped'){const sel=document.getElementById('f_pt');const tt=S.people.find(p=>p.id===(sel&&sel.value));const err=prepPedido(tt,PEDQ);const m=document.getElementById('m_ped');m.hidden=false;m.className='msg '+(err?'err':'ok');m.textContent=err||'Listo: '+tt.n+' va al depósito a retirarlo.';if(!err){PEDQ={};setTimeout(()=>{if(AREA==='dep'&&DEPV==='ped'){DEPV='stock';renderBody()}},1600)}return}
-    if(a==='ing'){const k=document.getElementById('f_ip').value,q=Math.round(+document.getElementById('f_iq').value),pv=document.getElementById('f_iv').value.trim();const m=document.getElementById('m_ing');m.hidden=false;if(!(q>0)){m.className='msg err';m.textContent='Poné una cantidad mayor a cero.';return}ingresar(k,q,pv);m.className='msg ok';m.textContent='Entró '+fmtQ(k,q)+'. Mirá la caja llegando al depósito.';return}
+    if(a==='ped'){const sel=document.getElementById('f_pt');const tt=S.people.find(p=>p.id===(sel&&sel.value));const want={...PEDQ};const err=prepPedido(tt,PEDQ);if(!err&&APP){const pd=S.peds[0];post({olumiPedido:{tec:tt.id,van:pd.van,items:pd.items}})}const m=document.getElementById('m_ped');m.hidden=false;m.className='msg '+(err?'err':'ok');m.textContent=err||'Listo: '+tt.n+' va al depósito a retirarlo.'+(APP?' Quedó como transferencia en Inventario.':'');if(!err){PEDQ={};setTimeout(()=>{if(AREA==='dep'&&DEPV==='ped'){DEPV='stock';renderBody()}},1600)}return}
+    if(a==='ing'){const k=document.getElementById('f_ip').value,q=Math.round(+document.getElementById('f_iq').value),pv=document.getElementById('f_iv').value.trim();const m=document.getElementById('m_ing');m.hidden=false;if(!(q>0)){m.className='msg err';m.textContent='Poné una cantidad mayor a cero.';return}ingresar(k,q,pv);if(APP)post({olumiIngreso:{prodId:k,cant:q,proveedor:pv}});m.className='msg ok';m.textContent='Entró '+fmtQ(k,q)+(APP?'. Quedó guardado en Inventario.':'. Mirá la caja llegando al depósito.');return}
     if(a==='cafe'){gather(inOffice(),SPOTS.cafe,'☕',5000);log('☕','#ff6961','Pausa para el café','Se juntan en la cocina');return}
     if(a==='aviso'){const v=(document.getElementById('f_av').value||'').trim();if(!v)return;inOffice().forEach(p=>say(p,'👍',2.5));log('📣','#ff6961','Aviso interno',v);document.getElementById('f_av').value='';toast('Aviso enviado a todo el equipo');return}
     if(a==='reunion'){gather(S.people.filter(p=>['gerencia','admin','ventas'].includes(p.role)),SPOTS.reunion,'Reunión',7000);log('📅','#5e5ce6','Reunión ahora','Sala de reuniones');return}
@@ -548,13 +556,50 @@ cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r
   pop.querySelector('.x').onclick=hidePop;const ba=pop.querySelector('#b_ar');if(ba)ba.onclick=()=>openArea(ba.dataset.room);const bp=pop.querySelector('#b_pr');if(bp)bp.onclick=()=>{AREA=null;TAB='pres';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab==='pres'));hidePop();renderBody()}});
 document.getElementById('b_theme').addEventListener('click',()=>{const nd=!themeNow();document.documentElement.dataset.theme=nd?'dark':'light';if(!document.documentElement.classList.contains('embed')){try{localStorage.setItem('ut.theme',nd?'dark':'light')}catch(e){}}});
 if(document.documentElement.classList.contains('embed')&&parent!==window){
-  addEventListener('message',e=>{const d=e.data||{};if(d.tema==='dark'||d.tema==='light')document.documentElement.dataset.theme=d.tema});
+  addEventListener('message',e=>{const d=e.data||{};if(d.tema==='dark'||d.tema==='light')document.documentElement.dataset.theme=d.tema;if(APP&&d.olumiDatos)applyData(d.olumiDatos)});
   const rep=()=>{try{parent.postMessage({ovAlto:document.body.offsetHeight+8},'*')}catch(e){}};
   try{new ResizeObserver(rep).observe(document.body)}catch(e){setInterval(rep,1000)}
   rep();try{parent.postMessage({ovListo:1},'*')}catch(e){}
 }
+
+// ---------- modo app: la maqueta con los datos reales de Olumi ----------
+const SLOTS={rec:[[1.6,12.6],[4.2,15.2]],adm:[[8.4,12.2],[11.8,12.2],[8.4,15.2],[11.8,15.2]],ger:[[16.4,12.6],[16.4,15.4]],tec:[[1.2,2.6],[4.4,2.6],[1.2,4.8],[4.4,4.8]]};
+const ROOMOF={recepcion:'rec',admin:'adm',ventas:'adm',gerencia:'ger',tecnico:'tec'};
+let SEEN=null;
+function layoutDesks(ppl){const used={},desks=[];ppl.forEach(p=>{const room=ROOMOF[p.role]||'adm',sl=SLOTS[room],i=(used[room]=(used[room]||0)+1)-1;
+  if(i<sl.length){const id='d_'+room+i;desks.push({id,room,x:sl[i][0],y:sl[i][1],n:p.n});p.desk=id}else{p.desk='d_'+room+(i%sl.length)}});return desks}
+function applyData(d){
+  if(d.nombre&&S.name!==d.nombre){S.name=d.nombre;const c=document.getElementById('coName');if(c)c.textContent=S.name}
+  // productos: los del depósito principal (y los que llevan las camionetas)
+  for(const k of Object.keys(PROD))delete PROD[k];S.stock={};
+  (d.prods||[]).forEach(q=>{PROD[q.id]={n:q.n,u:q.u,min:q.min,step:q.step};S.stock[q.id]={q:q.q}});
+  // personas: se mantienen las que ya caminan, entran las nuevas por la puerta
+  const old=Object.fromEntries(S.people.map(p=>[p.id,p]));const np=[];
+  (d.people||[]).forEach(x=>{let p=old[x.id];if(!p){p={id:x.id,n:x.n,role:x.role,desk:'',x:SPOTS.puerta.x,y:SPOTS.puerta.y,tx:null,ty:null,path:[],busy:0,say:null,sayT:0,state:'',inVan:false,look:lookOf(x.n,x.role),carry:false,dir:1,ph:0,nuevo:SEEN!==null}}
+    else{p.n=x.n;if(p.role!==x.role){p.role=x.role;p.look=lookOf(x.n,x.role)}}p.out=!!x.out;np.push(p)});
+  S.people=np;S.desks=layoutDesks(np);
+  if(!S.desks.length)S.desks=DESKS0.map(q=>({...q}));
+  // camionetas reales
+  const ov=Object.fromEntries(S.vans.map(v=>[v.id,v]));
+  S.vans=(d.vans||[]).slice(0,6).map((x,i)=>{const v=ov[x.id]||{id:x.id,x:2+i*4.2,y:21.4,slot:i,out:false,t:0,res:0};Object.assign(v,{n:x.n,plate:x.plate||x.n,driver:x.driver||null,stock:x.stock||{},slot:i});if(!v.anim&&!v.out){v.x=2+i*4.2;v.y=21.4}return v});
+  // quién está en la calle (con una visita en curso): su camioneta no está en el estacionamiento
+  S.people.forEach(p=>{const v=S.vans.find(q=>q.driver===p.id);
+    if(p.out&&!p.inVan){if(SEEN===null||!v){p.inVan=true;if(v){v.out=true;v.y=40}}else if(!p.busy){p.busy=1;const d0=deskOf(p);goTo(p,SPOTS.puerta.x,SPOTS.puerta.y,()=>goTo(p,v.x+1.4,v.y+1.9,()=>{p.inVan=true;v.out=true;p.busy=0;v.anim={t0:T,dur:2.6,x0:v.x,y0:v.y,x1:v.x,y1:26.2,done:()=>{v.anim={t0:T,dur:3.5,x0:v.x,y0:26.2,x1:W+10,y1:26.2,done:()=>{v.y=40}}}}}))}}
+    else if(!p.out&&p.inVan){p.inVan=false;if(v&&v.out){v.out=false;v.anim={t0:T,dur:3,x0:-8,y0:26.2,x1:2+v.slot*4.2,y1:26.2,done:()=>{v.anim={t0:T,dur:2,x0:v.x,y0:26.2,x1:v.x,y1:21.4}}};p.x=SPOTS.estac.x;p.y=SPOTS.estac.y}else{p.x=SPOTS.puerta.x;p.y=SPOTS.puerta.y}const dk=deskOf(p);goTo(p,dk.x+.2,dk.y+1.1)}});
+  S.people.forEach(p=>{if(p.nuevo){p.nuevo=false;const dk=deskOf(p);goTo(p,dk.x+.2,dk.y+1.1,()=>say(p,'¡Hola!',2))}else if(SEEN===null&&!p.inVan){const dk=deskOf(p);p.x=dk.x+.2;p.y=dk.y+1.1}});
+  S.counts=Object.assign({mail:0,wa:0,tk:0,pres:0},d.counts||{});S.hoy=d.hoy||[];S.peds=d.peds||[];
+  // lo que pasa: lo nuevo llega volando a su área
+  const items=(d.feed||[]).slice(0,12);
+  if(SEEN){items.filter(x=>!SEEN.has(x.id)).slice(0,4).reverse().forEach((x,i)=>setTimeout(()=>{
+    const to=x.kind==='mail'?deskIn('adm'):x.kind==='pres'?deskIn('ger'):x.kind==='mov'?{x:13.4,y:8}:deskIn('rec');
+    const k=x.kind==='mail'?'mail':x.kind==='pres'?'coin':x.kind==='mov'?'box':x.kind==='wa'?'wa':null;if(k)FX.push({kind:k,from:k==='mail'?[VW*.08,VH*.06]:k==='wa'?[VW*.94,VH*.08]:[VW*.5,VH*.02],to,t0:T,dur:1.6})},i*700))}
+  SEEN=new Set(items.map(x=>x.id));
+  feed.length=0;items.forEach(x=>feed.push(x));
+  S.built=1;if(TAB==='vivo'){if(AREA)refreshArea();else renderBody()}renderHud()}
+function deskIn(room){const d=S.desks.find(q=>q.room===room)||S.desks[0]||{x:3,y:13};return{x:d.x+.9,y:d.y+.4}}
+if(APP){S.people=[];S.vans=[];S.desks=[];S.built=1;BUILD=0;FIC['🎫']='ticket';ICO.ticket='<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M10 7v10" stroke-dasharray="2 2"/>'}
 addEventListener('resize',fit);fit();renderBody();renderHud();BUILD=0;requestAnimationFrame(frame);
-setTimeout(evWa,1200);setTimeout(evMail,3200);
+if(!APP){setTimeout(evWa,1200);setTimeout(evMail,3200)}
 })();
 </script>
 </body>
