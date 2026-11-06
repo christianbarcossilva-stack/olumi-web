@@ -1,0 +1,618 @@
+{
+ "name": "Lumi · ventas",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "lumi",
+    "responseMode": "responseNode",
+    "options": {
+     "allowedOrigins": "*"
+    }
+   },
+   "name": "Pedido desde la app",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    300
+   ],
+   "webhookId": "olumi-ag-lumi"
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst b = $json.body || {};\nconst tok = String(b.token || ''), org = String(b.org || '');\nconst ok = !!(tok.length > 20 && /^[0-9a-f-]{36}$/i.test(org) && typeof b.mensaje === 'string' && b.mensaje.trim());\nreturn [{ json: { ok, token: tok, org, mensaje: String(b.mensaje || '').slice(0, 2000), quien: String(b.quien || '').slice(0, 60),\n  historial: (Array.isArray(b.historial) ? b.historial : []).slice(-16).map(m => ({ rol: m.rol === 'yo' ? 'yo' : 'agente', texto: String(m.texto || '').slice(0, 1200) })),\n  datos: b.datos && typeof b.datos === 'object' ? b.datos : {} } }];\n"
+   },
+   "name": "Leer el pedido",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.ok }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Viene bien?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    440,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "return [{ json: { status: 400, body: { respuesta: 'El pedido llegó incompleto. Cerrá y volvé a abrir Olumi.' } } }];"
+   },
+   "name": "Pedido incompleto",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    660,
+    520
+   ]
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ JSON.stringify($json.body) }}",
+    "options": {
+     "responseCode": "={{ $json.status || 200 }}",
+     "responseHeaders": {
+      "entries": [
+       {
+        "name": "Access-Control-Allow-Origin",
+        "value": "*"
+       }
+      ]
+     }
+    }
+   },
+   "name": "Responder (incompleto)",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    880,
+    520
+   ]
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/auth/v1/user",
+    "options": {
+     "timeout": 60000
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "apikey",
+       "value": "sb_publishable_7BaLiTTgbcPaVBA735CMLA_CQDDlPaB"
+      },
+      {
+       "name": "Authorization",
+       "value": "={{ 'Bearer ' + $json.token }}"
+      }
+     ]
+    }
+   },
+   "name": "¿Quién es? (Supabase)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    660,
+    300
+   ],
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ 'https://pgriavmcmscchxdnfglv.supabase.co/rest/v1/members?select=role&org_id=eq.' + $('Leer el pedido').item.json.org + '&user_id=eq.' + ($('¿Quién es? (Supabase)').item.json.id || 'x') }}",
+    "options": {
+     "timeout": 60000
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "apikey",
+       "value": "sb_publishable_7BaLiTTgbcPaVBA735CMLA_CQDDlPaB"
+      },
+      {
+       "name": "Authorization",
+       "value": "={{ 'Bearer ' + $('Leer el pedido').item.json.token }}"
+      }
+     ]
+    }
+   },
+   "name": "¿Es de la empresa?",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    880,
+    300
+   ],
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst R = [\"owner\", \"admin\", \"encargado\", \"ventas\"];\nconst uid = $('¿Quién es? (Supabase)').item.json.id;\nconst rows = $input.all().map(i => i.json).filter(r => r && r.role);\nconst rol = rows.length ? rows[0].role : '';\nreturn [{ json: { puede: !!uid && R.includes(rol), rol, uid: uid || '' } }];\n"
+   },
+   "name": "¿Puede usar a Lumi?",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1100,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.puede }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Tiene permiso?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1320,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "return [{ json: { status: $('¿Quién es? (Supabase)').item.json.id ? 403 : 401, body: { respuesta: $('¿Quién es? (Supabase)').item.json.id ? 'Tu rol no puede usar a esta asistente. Pedíselo al dueño de la empresa.' : 'Tu sesión venció. Cerrá y volvé a entrar a Olumi.' } } }];"
+   },
+   "name": "Sin permiso",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1540,
+    520
+   ]
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ JSON.stringify($json.body) }}",
+    "options": {
+     "responseCode": "={{ $json.status || 200 }}",
+     "responseHeaders": {
+      "entries": [
+       {
+        "name": "Access-Control-Allow-Origin",
+        "value": "*"
+       }
+      ]
+     }
+    }
+   },
+   "name": "Responder (sin permiso)",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    1760,
+    520
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst p = $('Leer el pedido').item.json;\nconst SYS = \"Sos Lumi, la vendedora virtual de una empresa uruguaya de instalaciones (cámaras, alarmas, redes, Wi-Fi, fibra, control de acceso).\\nHablás en español rioplatense, cálida y profesional, con mensajes cortos como de WhatsApp (máximo 4 renglones). Tuteás o voseás (\\\"vos\\\").\\nAHORA ESTÁS EN PRÁCTICA: quien te escribe es alguien del equipo haciendo de cliente. Atendelo como a un cliente real.\\n\\nREGLAS (en este orden):\\n1. RELEVAR SIN REPETIR. Leé TODO el historial. Nunca preguntes algo que ya contestó o que se deduce. Como mucho 2 preguntas por mensaje.\\n   Lo que hay que saber para cotizar (usá también \\\"preguntas\\\" de los parámetros): qué equipos y cuántos; dónde (interior/exterior, dirección o barrio);\\n   altura de montaje (más de 4 m necesita medio de elevación); si el cableado va por arriba, por cañería o subterráneo; distancias aproximadas al rack o al grabador;\\n   si ya tiene grabador/red; horario en que se puede trabajar.\\n2. TRABAJO CHICO Y CONCRETO (cantidades claras, hasta ~3 días de trabajo según \\\"rendimiento\\\"): armá \\\"borrador\\\".\\n   - Materiales: SOLO del catálogo, con el nombre y el precio EXACTOS del catálogo. Si falta algo en el catálogo, poné precio 0 y en \\\"nota\\\" decí qué falta.\\n   - Mano de obra: líneas \\\"Mano de obra (día técnico)\\\" con cant = días × técnicos y precio = precioDiaTecnico; si hace falta elevación, \\\"Medio de elevación (día)\\\" con precioDiaElevador.\\n   - Calculá los días con \\\"rendimiento\\\"; si no está, estimá prudente y aclaralo en \\\"nota\\\".\\n   - Al cliente decile que en breve le llega el presupuesto (NO le digas el total: primero lo aprueba el equipo).\\n3. TRABAJO GRANDE O ABIERTO (obra, varios lugares, más de ~3 días, mucha incertidumbre, o no podés cotizar con lo que sabés): NO cotices.\\n   Devolvé \\\"escalar\\\" con pregunta \\\"¿Relevamos o cotizo?\\\" y un resumen de lo que sabés. Al cliente decile que lo consultás con el equipo técnico y que le proponés fechas para ir a ver el lugar.\\n   NUNCA propongas fechas vos: eso recién después de que el equipo diga que sí.\\n4. Nunca inventes precios, plazos, garantías ni stock. No prometas nada que no esté en los datos.\\n5. Si te preguntan si sos una persona o un bot, decí la verdad: sos la asistente virtual de la empresa y una persona del equipo revisa todo.\\n6. Si el mensaje no es de ventas (un reclamo, una falla), decí que lo pasás a soporte y no cotices.\\n\\nRespondé SOLO un JSON:\\n{\\\"respuesta\\\":\\\"lo que le contestás al cliente\\\",\\n \\\"ficha\\\":{\\\"quePide\\\":\\\"\\\",\\\"donde\\\":\\\"\\\",\\\"equipos\\\":\\\"\\\",\\\"altura\\\":\\\"\\\",\\\"cableado\\\":\\\"\\\",\\\"distancias\\\":\\\"\\\",\\\"falta\\\":[\\\"lo que todavía no sabés\\\"]},\\n \\\"borrador\\\":null o {\\\"titulo\\\":\\\"corto\\\",\\\"cliente\\\":\\\"nombre si lo dijo\\\",\\\"moneda\\\":\\\"USD o UYU\\\",\\\"lineas\\\":[{\\\"desc\\\":\\\"\\\",\\\"cant\\\":1,\\\"unidad\\\":\\\"unidad|día|m\\\",\\\"precio\\\":0}],\\\"nota\\\":\\\"supuestos y lo que falta\\\"},\\n \\\"escalar\\\":null o {\\\"pregunta\\\":\\\"¿Relevamos o cotizo?\\\",\\\"resumen\\\":\\\"lo que pide y lo que sabés, en 2-3 renglones\\\"}}\";\nconst hist = p.historial.map(m => (m.rol === 'yo' ? 'CLIENTE/EQUIPO: ' : 'VOS: ') + m.texto).join('\\n');\nconst user = 'DATOS DE LA EMPRESA (JSON):\\n' + JSON.stringify(p.datos).slice(0, 60000) + '\\n\\nQUIÉN ESCRIBE: ' + (p.quien || 'alguien del equipo') +\n  '\\n\\nCHARLA HASTA AHORA:\\n' + (hist || '(empieza ahora)') + '\\n\\nMENSAJE NUEVO:\\n' + p.mensaje;\nreturn [{ json: { system: SYS, user } }];\n"
+   },
+   "name": "Armar el pedido",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1540,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3,  response_format: { type: 'json_object' }, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}"
+   },
+   "name": "Pensar (Gemini)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1760,
+    300
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true,
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 2000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Pensar · ¿respondió Gemini?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1980,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "return [{ json: $('Armar el pedido').item.json }];"
+   },
+   "name": "Pensar · pasar a Groq",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2200,
+    480
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'medium', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}"
+   },
+   "name": "Pensar (Groq)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2420,
+    480
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Pensar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2640,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst raw = $json.choices?.[0]?.message?.content || '';\nlet r = {}; try { r = JSON.parse(String(raw).replace(/^```(json)?|```$/g, '').trim()) } catch (e) { r = {} }\nif (!r.respuesta) return [{ json: { status: 200, body: { respuesta: 'Ahora no pude pensar la respuesta (los cerebros gratis están ocupados). Probá de nuevo en un minuto.' } } }];\nconst num = v => { const n = Number(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0 };\nlet b = r.borrador && Array.isArray(r.borrador.lineas) && r.borrador.lineas.length ? r.borrador : null;\nif (b) b = { titulo: String(b.titulo || 'Presupuesto').slice(0, 80), cliente: String(b.cliente || '').slice(0, 80), moneda: b.moneda === 'UYU' ? 'UYU' : 'USD', nota: String(b.nota || '').slice(0, 500),\n  lineas: b.lineas.slice(0, 40).map(l => ({ desc: String(l.desc || '').slice(0, 140), cant: num(l.cant) || 1, unidad: String(l.unidad || 'unidad').slice(0, 12), precio: num(l.precio) })) };\nconst e = r.escalar && r.escalar.resumen ? { pregunta: String(r.escalar.pregunta || '¿Relevamos o cotizo?').slice(0, 80), resumen: String(r.escalar.resumen).slice(0, 600) } : null;\n// freno: si escala, no cotiza\nreturn [{ json: { status: 200, body: { respuesta: String(r.respuesta).slice(0, 1200), ficha: r.ficha || {}, borrador: e ? null : b, escalar: e } } }];\n"
+   },
+   "name": "Armar la respuesta",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2860,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ JSON.stringify($json.body) }}",
+    "options": {
+     "responseCode": "={{ $json.status || 200 }}",
+     "responseHeaders": {
+      "entries": [
+       {
+        "name": "Access-Control-Allow-Origin",
+        "value": "*"
+       }
+      ]
+     }
+    }
+   },
+   "name": "Responder a la app",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.1,
+   "position": [
+    3080,
+    300
+   ]
+  }
+ ],
+ "connections": {
+  "Pedido desde la app": {
+   "main": [
+    [
+     {
+      "node": "Leer el pedido",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer el pedido": {
+   "main": [
+    [
+     {
+      "node": "¿Viene bien?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Viene bien?": {
+   "main": [
+    [
+     {
+      "node": "¿Quién es? (Supabase)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pedido incompleto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pedido incompleto": {
+   "main": [
+    [
+     {
+      "node": "Responder (incompleto)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Quién es? (Supabase)": {
+   "main": [
+    [
+     {
+      "node": "¿Es de la empresa?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es de la empresa?": {
+   "main": [
+    [
+     {
+      "node": "¿Puede usar a Lumi?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Puede usar a Lumi?": {
+   "main": [
+    [
+     {
+      "node": "¿Tiene permiso?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Tiene permiso?": {
+   "main": [
+    [
+     {
+      "node": "Armar el pedido",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Sin permiso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Sin permiso": {
+   "main": [
+    [
+     {
+      "node": "Responder (sin permiso)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar (Gemini)": {
+   "main": [
+    [
+     {
+      "node": "Pensar · ¿respondió Gemini?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar · ¿respondió Gemini?": {
+   "main": [
+    [
+     {
+      "node": "Pensar",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Pensar · pasar a Groq",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar · pasar a Groq": {
+   "main": [
+    [
+     {
+      "node": "Pensar (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Pensar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar el pedido": {
+   "main": [
+    [
+     {
+      "node": "Pensar (Gemini)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Pensar": {
+   "main": [
+    [
+     {
+      "node": "Armar la respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar la respuesta": {
+   "main": [
+    [
+     {
+      "node": "Responder a la app",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "timezone": "America/Montevideo"
+ }
+}

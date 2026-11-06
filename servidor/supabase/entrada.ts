@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
   }
   const entId = uid();
   const entrada = { canal, de: from ? '+' + from : email, nombre: s(b.nombre, 80), contacto, clienteId: cli ? cli.id : '', titulo, resumen, texto, tipo: tipoE, intencion,
-    estado: aTicket ? 'ticket' : 'nuevo', ticketId, origen, msgId, mensajes: lines, esAudio: !!b.esAudio, tema: s(b.tema, 20), creado: ts, actualizado: ts,
+    estado: aTicket ? 'ticket' : 'nuevo', ticketId, origen, msgId, mensajes: lines, esAudio: !!b.esAudio, tema: s(b.tema, 20), carril: s(b.carril, 20), urgente: !!b.urgente || tipo === 'emergencia', creado: ts, actualizado: ts,
     ...(informe ? { tecnico: s(b.tecnico, 60), tecnicoTel: s(b.tecnicoTel, 30), clienteNombre: s(b.clienteNombre, 80), materiales: Array.isArray(b.materiales) ? b.materiales.slice(0, 40) : [], pendientes: s(b.pendientes, 400), estadoObra: s(b.estadoObra, 20), fotos } : (fotos.length ? { fotos } : {})) };
   await db.from('docs').insert({ org_id: org, col: 'entradas', id: entId, data: entrada });
   const respuesta = aTicket

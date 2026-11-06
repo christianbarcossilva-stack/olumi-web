@@ -649,6 +649,16 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .gfotos figcaption{font-size:11px;color:var(--muted);text-align:center;margin-top:3px}.pdfdoc{display:grid;place-items:center;width:120px;height:150px;border-radius:10px;border:1px solid var(--line);font-weight:700;color:var(--muted)}
 .nav .navsec[hidden]{display:none}
 @media (max-width:760px){.seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch}.seg::-webkit-scrollbar{display:none}.seg button{flex:0 0 auto}}
+/* 1.39: agentes */
+.agav{display:inline-grid;place-items:center;border-radius:50%;background:linear-gradient(140deg,var(--agc),color-mix(in srgb,var(--agc) 55%,#fff));color:#fff;font-weight:700;position:relative;flex:0 0 auto;box-shadow:0 0 0 3px color-mix(in srgb,var(--agc) 22%,transparent)}
+.agav i{position:absolute;right:-3px;top:-4px;font-style:normal;font-size:11px;color:var(--agc);background:var(--surface);border-radius:50%;width:16px;height:16px;display:grid;place-items:center}
+.agchat{background:var(--surface);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;max-width:860px;min-height:420px}
+.aghead{display:flex;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.aglog{flex:1;overflow:auto;max-height:56vh;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.agm{max-width:82%;padding:10px 13px;border-radius:16px 16px 16px 4px;background:var(--soft,rgba(120,120,128,.12));line-height:1.45;font-size:15px}
+.agm.yo{align-self:flex-end;border-radius:16px 16px 4px 16px;background:var(--acc,#f5b800);color:var(--acc-ink,#1d1d1f)}
+.agm.err{background:rgba(255,69,58,.12)}.agm.pensando{opacity:.6;font-style:italic}
+.agin{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}.agin textarea{flex:1;resize:none;font:inherit;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:inherit}
 /* 1.33: oficina */
 .ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}
 /* 1.25: en vivo */
@@ -743,6 +753,7 @@ body.tv #main{padding:10px 14px}body.tv .vivo-grid{grid-template-columns:minmax(
     </div>
     <button data-view="oficina" ><svg viewBox="0 0 24 24"><path d="M3 21h18M4 21V9l8-5 8 5v12"/><path d="M9 21v-5h6v5M8 12h2M14 12h2"/></svg>Oficina</button>
     <button data-view="campo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>Mi día</button>
+    <button data-view="agentes" class="dsk"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M18.5 14.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>Lumi y Ada<span class="pill" id="navAg" hidden></span></button>
     <span class="navsec dsk">Operación</span>
     <button data-view="vivo" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6M4 20l5-5M2 12a10 10 0 0 0 10 10"/></svg>En vivo</button>
     <button data-view="hoy" class="dsk" id="navHoy"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Hoy</button>
@@ -803,7 +814,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -844,7 +855,7 @@ function applyBrand(){
   const sh=document.querySelector('.shell');const fid=has('marca')&&CFG.fondo?.id;if(sh){if(fid){const u='url("'+blobUrl(fid)+'")';if(sh.style.getPropertyValue('--fondo')!==u)sh.style.setProperty('--fondo',u);sh.classList.add('fondo')}else{sh.classList.remove('fondo');sh.style.removeProperty('--fondo')}}
 }
 function themeSeg(){return`<div class="seg" role="group" aria-label="Apariencia">${[['light','Claro'],['dark','Oscuro'],['auto','Automático']].map(([k,n])=>`<button class="${themePref===k?'on':''}" data-act="theme:${k}" aria-pressed="${themePref===k}">${n}</button>`).join('')}</div>`}
-const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],oficina:['tk','Ticket'],gastos:['gasto','Factura'],personal:['gasto','Factura'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
+const NEWBY={bandeja:['ent','Pedido'],hoy:['tk','Ticket'],inicio:['cli','Cliente'],inventario:['mov','Movimiento'],proyectos:['pry','Proyecto'],tecnicos:['trab','Trabajo'],tickets:['tk','Ticket'],calendario:['trab','Trabajo'],campo:['trab','Trabajo'],facturacion:['fact','Factura'],menu:['tk','Ticket'],pipeline:['op','Oportunidad'],clientes:['cli','Cliente'],agenda:['act','Actividad'],presupuestos:['pres','Presupuesto'],reportes:['op','Oportunidad'],mas:['prod','Producto'],ajustes:['cli','Cliente'],vivo:['tk','Ticket'],oficina:['tk','Ticket'],gastos:['gasto','Factura'],personal:['gasto','Factura'],agentes:['tk','Ticket'],plan:['tk','Ticket'],admin:['tk','Ticket'],trabajos:['trab','Trabajo']};
 let SH=null, QE=null, armed=null;
 
 /* ---------- utilidades ---------- */
@@ -949,6 +960,7 @@ function render(){
   const ov=overdueCount(),pill=$('#navOver');pill.hidden=!ov;pill.textContent=ov;
   const em=arr('tickets').filter(t=>tkOpen(t)&&t.tipo==='emergencia').length,p2=$('#navTk');p2.hidden=!em;p2.textContent=em;
   {const ne=entNuevas().length,p3=$('#navEnt');if(p3){p3.hidden=!ne;p3.textContent=ne}}
+  {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
   $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
@@ -1553,12 +1565,12 @@ async function genAbonos(){
 function vMenu(){
   const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
-    ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),...(isRRHH()?[['personal','Personal','Fichas, vencimientos y pago de cada persona']]:[]),['gastos','Gastos',(n=>n&&gastoAdmin()?`${n} factura${n===1?'':'s'} para revisar`:'Facturas de compra de los técnicos')(arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').length)],['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
+    ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),...(agOk()?[['agentes','Lumi y Ada',(n=>n?`${n} para aprobar`:'Empleadas virtuales: ventas y administración')(aprobPend().length)]]:[]),...(isRRHH()?[['personal','Personal','Fichas, vencimientos y pago de cada persona']]:[]),['gastos','Gastos',(n=>n&&gastoAdmin()?`${n} factura${n===1?'':'s'} para revisar`:'Facturas de compra de los técnicos')(arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').length)],['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   const itv=it.filter(([v])=>viewOk(v));
   return`<div class="vhead"><div><h1>Más secciones</h1></div></div>${orgSwitchHtml()}<div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
 }
 
-const VIEWS={personal:vPersonal,gastos:vGastos,oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
+const VIEWS={agentes:vAgentes,personal:vPersonal,gastos:vGastos,oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
 
 /* ---------- formularios ---------- */
 function fld(f,v,pre='f_'){
@@ -1626,7 +1638,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1818,6 +1830,7 @@ function csv(rows){return'﻿'+rows.map(r=>r.map(v=>{v=typeof v==='number'?Strin
 async function act(a,el){
   const ci=a.indexOf(':'),k=ci<0?a:a.slice(0,ci),arg=ci<0?undefined:a.slice(ci+1);
   try{
+  if(await agAct(k,arg,el))return;
   if(await perAct(k,arg,el))return;
   if(await gastoAct(k,arg,el))return;
   if(await vanAct(k,arg))return;
@@ -1886,7 +1899,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -1928,7 +1941,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.38',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.39',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -1948,6 +1961,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!$('#lightbox').hidden){act('lbclose');return}
+  if(e.key==='Enter'&&!e.shiftKey&&e.target.id==='agTxt'){e.preventDefault();act('agsend:'+e.target.dataset.ag);return}
   if(e.key==='Escape'&&PV){closePlan();return}
   if(e.key==='Escape'&&SH){act('close');return}
   if(e.key==='Enter'&&e.target.matches('[data-open][tabindex]')){e.preventDefault();e.target.click()}
@@ -3447,9 +3461,9 @@ const SUBV=['campo','proyectos','trabajos','ajustes','menu'];
 const TECV=['oficina','campo','gastos','calendario','tickets','trabajos','proyectos','tecnicos','inventario','clientes','ajustes','menu'];
 const ROLV={
   owner:null,admin:null,
-  encargado:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
-  ventas:['oficina','campo','calendario','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
-  administracion:['oficina','campo','bandeja','calendario','trabajos','inventario','clientes','presupuestos','facturacion','gastos','personal','agenda','reportes','mas','ajustes','menu'],
+  encargado:['oficina','agentes','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
+  ventas:['oficina','agentes','campo','calendario','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
+  administracion:['oficina','agentes','campo','bandeja','calendario','trabajos','inventario','clientes','presupuestos','facturacion','gastos','personal','agenda','reportes','mas','ajustes','menu'],
   tecnico:TECV,subcontratista:SUBV,
   viewer:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
 const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
@@ -3459,7 +3473,7 @@ const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 const BETA=/\/beta\//.test(location.pathname)||(()=>{try{return localStorage.getItem('olumi.beta')==='1'}catch(e){return false}})();
 const enPrueba=()=>BETA;            // funciones nuevas: solo en el canal de pruebas hasta que se aprueben
 const hasVivo=()=>has('vivo')||enPrueba();
-const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;if(v==='personal'&&!isRRHH())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
+const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;if(v==='agentes'&&!agOk())return false;if(v==='personal'&&!isRRHH())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
 function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
   if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
@@ -4370,8 +4384,8 @@ const entNuevas=()=>arr('entradas').filter(e=>(e.estado||'nuevo')==='nuevo'&&!en
 let ENTF='abiertas';
 function entRow(e){
   const tp=ENT_TIPO[e.tipo]||ENT_TIPO.otro,c=e.contacto;
-  return`<div class="tkrow" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ENT_CANAL[e.canal]||ENT_CANAL.otro}</span><div class="tk-main"><strong>${esc(e.titulo||e.resumen||(e.texto||'').slice(0,80)||'Mensaje')}</strong><div class="tk-meta"><span>${esc(entNombre(e))}</span>${!e.clienteId&&c?'<span class="tag t-warn">Sin registrar</span>':''}${isAbo(e.clienteId)?aboTag(e.clienteId):''}<span>·</span><span>${ago(e.creado)}</span></div></div>
-    <div class="tk-side"><span class="tag ${tp[1]}">${e.tema&&ENT_TEMA[e.tema]&&!entCharla(e)?esc(ENT_TEMA[e.tema]):tp[0]}</span>${entCharla(e)&&!readonly?`<button class="btn ico ghost" data-act="entborrar:${e.id}" aria-label="Borrar mensaje" title="Borrar">✕</button>`:`<span class="tk-est">${ENT_EST[e.estado||'nuevo']}${e.ticketId&&D.tickets[e.ticketId]?' '+esc(D.tickets[e.ticketId].numero||''):''}</span>`}</div></div>`;
+  return`<div class="tkrow" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ENT_CANAL[e.canal]||ENT_CANAL.otro}</span><div class="tk-main"><strong>${esc(e.titulo||e.resumen||(e.texto||'').slice(0,80)||'Mensaje')}</strong><div class="tk-meta"><span>${esc(entNombre(e))}</span>${e.urgente?'<span class="tag t-bad">🚨 Urgente</span>':''}${!e.clienteId&&c?'<span class="tag t-warn">Sin registrar</span>':''}${e.origen?`<span class="muted">${esc(e.origen)}</span>`:''}${isAbo(e.clienteId)?aboTag(e.clienteId):''}<span>·</span><span>${ago(e.creado)}</span></div></div>
+    <div class="tk-side"><span class="tag ${tp[1]}">${e.tema&&ENT_TEMA[e.tema]&&!entCharla(e)?esc(ENT_TEMA[e.tema]):tp[0]}</span>${entCharla(e)&&!readonly?`<button class="btn ico ghost" data-act="entborrar:${e.id}" aria-label="Borrar mensaje" title="Borrar">✕</button>`:`<span class="tk-est">${ENT_EST[e.estado||'nuevo']}${e.ticketId&&D.tickets[e.ticketId]?' '+esc(D.tickets[e.ticketId].numero||''):''}</span>${!e.ticketId&&!readonly&&(e.estado||'nuevo')!=='descartado'?`<button class="btn" data-act="ent2tkq:${e.id}" style="min-height:32px;padding:4px 12px">Pasar a ticket</button>`:''}`}</div></div>`;
 }
 function vBandeja(){
   const all=arr('entradas');
@@ -4400,7 +4414,7 @@ function sheetEnt(id,p){
     body+=entInformeHtml(e);
     if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Qué hacer con este pedido</h3><p class="hint">${e.clienteId?'Es de un cliente registrado.':c.telefono||c.nombre?'No está registrado como cliente: queda como <b>posible cliente</b> y se registra solo cuando le hagas un presupuesto o una factura.':''}</p>
-      <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Crear ticket</button>`}<button class="btn${e.tipo==='informe'?' pri':''}" data-act="ent2trab">${e.tipo==='informe'?'Crear informe de visita':'Agendar visita'}</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
+      <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Pasar a ticket</button>`}<button class="btn${e.tipo==='informe'?' pri':''}" data-act="ent2trab">${e.tipo==='informe'?'Crear informe de visita':'Agendar visita'}</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
       <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por mail</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
   }
   return sheetFrame('Bandeja',id?(e.titulo||'Pedido'):'Anotar pedido',body,{del:!!id});
@@ -4848,7 +4862,7 @@ function p3anim(to){const f={ph:P3.ph,th:P3.th},t0=performance.now();P3.auto=fal
 const OFI={ready:false,frame:null,last:''};
 const OFI_ROL={owner:'gerencia',admin:'gerencia',administracion:'admin',viewer:'admin',ventas:'ventas',encargado:'recepcion',tecnico:'tecnico',subcontratista:'tecnico'};
 const ofiHM=ts=>{const d=new Date(Number(ts));return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
-function ofiData(){return{...ofiData0(),me:ME||null}}
+function ofiData(){const d=ofiData0();if(agOk())d.people=[...d.people,...Object.entries(AG).map(([k,g])=>({id:'ag-'+k,n:g.n,role:g.ofi,out:false,virtual:true,ag:k}))];return{...d,me:ME||null}}
 function ofiData0(){
   const m=stockMap(),hoy=today(),dep=deps().find(d=>d.tipo!=='vehiculo'),vans=deps().filter(d=>d.tipo==='vehiculo');
   const enCurso=new Set();arr('trabajos').forEach(j=>{if(j.estado==='en_curso'&&(!j.fecha||j.fecha===hoy))(j.tecnicos||[]).forEach(t=>enCurso.add(t))});
@@ -4889,6 +4903,7 @@ function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].n
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
   if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
+  if(d.olumiAbrir&&/^agentes:/.test(String(d.olumiAbrir))){AGT=String(d.olumiAbrir).split(':')[1];lsSet('olumi.ag',AGT);if(viewOk('agentes')){VIEW='agentes';lsSet('crm.view',VIEW);sr()}return}
   if(d.olumiAbrir){const v=String(d.olumiAbrir);if(v.includes(':')){const[ty,id]=v.split(':');if(D[{ent:'entradas',tk:'tickets',trab:'trabajos',pres:'presupuestos',mov:'movimientos'}[ty]]?.[id])openSheet(ty,id);return}
     if(VIEWS[v]&&viewOk(v)){VIEW=v;lsSet('crm.view',VIEW);render();window.scrollTo(0,0)}else toast('Tu rol no tiene acceso a esa sección');return}
   if(d.olumiNuevo){const t=String(d.olumiNuevo);if(t==='van'){if(!isBoss()&&ROLE!=='encargado'){toast('Los vehículos los suma el dueño o el encargado');return}openSheet('dep',null,{tipo:'vehiculo'});return}openSheet(t,null,{});return}
@@ -5075,6 +5090,74 @@ function onbCheck(){if(SH||!onbNeeded())return;openSheet('onb',ME)}
 async function perAct(k,arg,el){
   if(k==='perdocdel'){PERDOC.splice(+arg,1);if(SH)SH.dirty=true;const box=$('#perDocs');if(box)box.innerHTML=perDocsHtml(true);return true}
   if(k==='onblater'){ONB_SKIP=true;try{sessionStorage.setItem('olumi.onb','1')}catch(e){}closeSheet();toast('Te lo vuelvo a pedir la próxima vez que entres.');return true}
+  return false}
+
+
+/* ---------- 1.39: agentes (Lumi · ventas, Ada · administración) ---------- */
+const AGURL='https://n8n.unitytech.uy/webhook/';
+const AG={lumi:{n:'Lumi',rol:'Ventas',ofi:'ventas',color:'#7c5cff',hola:'Hola, soy Lumi, la vendedora virtual. Por ahora practico: escribime como si fueras un cliente ("necesito 4 cámaras en el depósito") y te muestro cómo lo atendería. Lo que cotice queda en "Para aprobar".',
+    ok:()=>isBoss()||['ventas','encargado'].includes(ROLE)},
+  ada:{n:'Ada',rol:'Administración',ofi:'admin',color:'#0a84ff',hola:'Hola, soy Ada, la administrativa virtual. Pedime cosas como "pasame el carné de salud de Victor", "¿qué vence este mes?" o "¿qué facturas están vencidas?".',
+    ok:()=>isRRHH()||ROLE==='encargado'}};
+const agOk=()=>Object.values(AG).some(a=>a.ok());
+let AGT=null,AGBUSY=false;
+const agCur=()=>{let t=AGT||lsGet('olumi.ag')||'lumi';if(t!=='aprobar'&&!(AG[t]&&AG[t].ok()))t=Object.keys(AG).find(k=>AG[k].ok())||'aprobar';return t};
+const agMsgs=a=>arr('agentes_chat').filter(m=>m.agente===a&&(!ME||m.por===ME)).sort((x,y)=>n0(x.creado)-n0(y.creado));
+const aprobPend=()=>arr('aprobaciones').filter(x=>(x.estado||'pendiente')==='pendiente');
+function agDatosAda(){
+  return{hoy:today(),personal:perList().map(id=>{const f=tecFicha(id),mb=MEMBERS[id]||{};return{id,nombre:f.nombreCompleto||personName(id).replace(' (vos)',''),rol:ROLEN[mb.role]||mb.role,cargo:f.cargo||'',celular:f.telefono||'',ingreso:f.ingreso||'',
+      carneSalud:f.carneSalud||'',carneAltura:f.carneAltura||'',libreta:f.libreta||'',bps:f.bps||'',irpf:f.irpf||'',fonasa:f.fonasa||'',vehiculo:[f.vehiculo,f.matricula].filter(Boolean).join(' · '),
+      documentos:(f.docs||[]).map(d=>d.tipo),fichaCompleta:!!f.completada}}),
+    facturas:has('facturas')&&(isBoss()||ROLE==='administracion')?arr('facturas').filter(f=>!['cobrada','anulada'].includes(factState(f))).slice(0,40).map(f=>{const c=factCalc(f);return{numero:f.numero,cliente:cliName(f.clienteId),fecha:f.fecha,vence:f.vence||'',saldo:r2(c.saldo),moneda:f.moneda,estado:factState(f)}}):[],
+    gastos:arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').slice(0,30).map(g=>({fecha:g.fecha,quien:personName(g.por),monto:g.monto,moneda:g.moneda,proveedor:g.proveedor||'',que:g.categoria||''}))}}
+function agDatosLumi(){const p=CFG.lumi||{};
+  return{hoy:today(),empresa:CFG.nombre||ORGINFO?.name||'',parametros:{precioDiaTecnico:n0(p.diaTec),precioDiaElevador:n0(p.diaElev),moneda:p.moneda||'USD',rendimiento:p.rendimiento||'',preguntas:p.preguntas||'',notas:p.notas||''},
+    catalogo:arr('productos').filter(x=>x.nombre).slice(0,250).map(x=>({nombre:x.nombre,precio:n0(x.precio),moneda:x.moneda||'',unidad:x.unidad||'',servicio:x.servicio||''})),
+    clientes:arr('clientes').slice(0,250).map(c=>c.nombre).filter(Boolean)}}
+async function agToken(){try{const {data}=await SB.auth.getSession();return data&&data.session&&data.session.access_token||''}catch(e){return''}}
+async function agEnviar(a,texto){if(AGBUSY||!texto.trim())return;AGBUSY=true;const id=uid();const hist=agMsgs(a).slice(-16).map(m=>({rol:m.rol,texto:m.texto}));
+  await put('agentes_chat',id,{agente:a,por:ME||'',rol:'yo',texto:texto.trim(),creado:Date.now()});sr();
+  let r={},err='';try{const tk=await agToken();const res=await fetch(AGURL+a,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tk,org:ORG,agente:a,quien:personName(ME).replace(' (vos)',''),mensaje:texto.trim(),historial:hist,datos:a==='ada'?agDatosAda():agDatosLumi()})});
+    if(!res.ok)err=res.status===404?'El flujo de '+AG[a].n+' todavía no está prendido en n8n.':'No pude pensar ahora ('+res.status+').';else r=await res.json()}catch(e){err='No me pude conectar. Revisá internet y probá de nuevo.'}
+  const rid=uid();const docs=Array.isArray(r.docs)?r.docs.slice(0,6):[];
+  await put('agentes_chat',rid,{agente:a,por:ME||'',rol:'agente',texto:err||String(r.respuesta||'…'),docs,error:!!err,creado:Date.now()});
+  if(!err&&r.borrador&&Array.isArray(r.borrador.lineas)&&r.borrador.lineas.length)await put('aprobaciones',uid(),{agente:a,tipo:'presupuesto',titulo:r.borrador.titulo||'Presupuesto',cliente:r.borrador.cliente||'',lineas:r.borrador.lineas.slice(0,40),moneda:r.borrador.moneda||'USD',nota:r.borrador.nota||'',por:ME||'',estado:'pendiente',creado:Date.now()});
+  if(!err&&r.escalar&&r.escalar.resumen)await put('aprobaciones',uid(),{agente:a,tipo:'consulta',titulo:r.escalar.pregunta||'¿Relevamos o cotizo?',texto:r.escalar.resumen,por:ME||'',estado:'pendiente',creado:Date.now()});
+  AGBUSY=false;sr();setTimeout(()=>{const l=$('#agLog');if(l)l.scrollTop=l.scrollHeight},50)}
+function agDocLinks(docs){const out=[];(docs||[]).forEach(d=>{const id=perList().find(i=>{const f=tecFicha(i);return norm2(f.nombreCompleto||personName(i)).includes(norm2(d.persona||''))});if(!id)return;
+  (tecFicha(id).docs||[]).filter(x=>!d.tipo||x.tipo===d.tipo).forEach(x=>out.push(`<a class="btn" href="${esc(blobUrl(x.id))}" target="_blank" rel="noopener">📄 ${esc((PER_DOCT.find(t=>t[0]===x.tipo)||[,'Documento'])[1])} de ${esc(personName(id).replace(' (vos)',''))}</a>`))});return out.join('')}
+const norm2=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function agAvatar(a,sz=40){const g=AG[a];return`<span class="agav" style="--agc:${g.color};width:${sz}px;height:${sz}px">${g.n[0]}<i>✦</i></span>`}
+function vAgentes(){const t=agCur(),np=aprobPend().length;
+  const tabs=`<div class="seg" role="tablist" style="margin-bottom:14px">${Object.entries(AG).filter(([k,g])=>g.ok()).map(([k,g])=>`<button class="${t===k?'on':''}" data-act="agt:${k}">${g.n} · ${g.rol}</button>`).join('')}<button class="${t==='aprobar'?'on':''}" data-act="agt:aprobar">Para aprobar${np?' · '+np:''}</button></div>`;
+  const head=`<div class="vhead"><div><h1>Lumi y Ada</h1><p class="sub">Empleadas virtuales. Les pedís cosas acá; nada sale para afuera sin que ustedes lo aprueben.</p></div>${t==='lumi'&&isLead()?'<div class="tools"><button class="btn" data-act="agcfg">Ajustes de Lumi</button></div>':''}</div>`;
+  if(t==='aprobar'){const ls=arr('aprobaciones').sort((a,b)=>n0(b.creado)-n0(a.creado)).slice(0,60);
+    return head+tabs+(ls.length?`<div class="list">${ls.map(x=>{const est=x.estado||'pendiente',tot=(x.lineas||[]).reduce((s,l)=>s+n0(l.cant)*n0(l.precio),0);
+      return`<div class="panel" style="margin-bottom:10px"><div style="display:flex;gap:10px;align-items:center">${agAvatar(x.agente||'lumi',32)}<div style="flex:1;min-width:0"><b>${esc(x.titulo||'')}</b><div class="muted">${esc([x.cliente,AG[x.agente]?.n,ago(x.creado)].filter(Boolean).join(' · '))}</div></div><span class="tag ${est==='pendiente'?'t-warn':est==='aprobado'?'t-ok':'t-none'}">${est==='pendiente'?'Para aprobar':est==='aprobado'?'Aprobado':'Descartado'}</span></div>
+        ${x.tipo==='presupuesto'?`<table class="tbl" style="margin-top:8px"><tbody>${(x.lineas||[]).map(l=>`<tr><td>${esc(l.desc||'')}</td><td class="n">${esc(String(l.cant||''))} ${esc(l.unidad||'')}</td><td class="n">${n0(l.precio)?money(n0(l.precio),x.moneda):'<span class="muted">a definir</span>'}</td></tr>`).join('')}<tr><td><b>Total sin IVA</b></td><td></td><td class="n"><b>${money(tot,x.moneda)}</b></td></tr></tbody></table>${x.nota?`<p class="hint">${esc(x.nota)}</p>`:''}`:`<p style="margin:8px 0 0">${esc(x.texto||'')}</p>`}
+        ${est==='pendiente'&&isLead()?`<div class="actions" style="margin-top:10px">${x.tipo==='presupuesto'?`<button class="btn pri" data-act="aprob:${x.id}">Revisar y pasar a presupuesto</button>`:`<button class="btn pri" data-act="aprobok:${x.id}">Listo, lo vi</button>`}<button class="btn ghost" data-act="aprobno:${x.id}">Descartar</button></div>`:''}</div>`}).join('')}</div>`:'<div class="empty"><p>No hay nada para aprobar. Lo que coticen o consulten Lumi y Ada aparece acá.</p></div>')}
+  const g=AG[t],ms=agMsgs(t);
+  return head+tabs+`<div class="agchat"><div class="aghead">${agAvatar(t,44)}<div><b>${g.n}</b><div class="muted">${g.rol} · virtual · ${t==='lumi'?'en práctica: vos hacés de cliente':'con los datos que vos podés ver'}</div></div>${ms.length?`<button class="btn ghost" data-act="agclear:${t}" style="margin-left:auto">Charla nueva</button>`:''}</div>
+    <div class="aglog" id="agLog">${[{rol:'agente',texto:g.hola}].concat(ms).map(m=>`<div class="agm ${m.rol==='yo'?'yo':''}${m.error?' err':''}">${esc(m.texto||'').replace(/\n/g,'<br>')}${m.docs&&m.docs.length?`<div class="actions" style="margin-top:6px">${agDocLinks(m.docs)}</div>`:''}</div>`).join('')}${AGBUSY?`<div class="agm pensando">${g.n} está pensando…</div>`:''}</div>
+    <div class="agin"><textarea id="agTxt" rows="2" data-ag="${t}" placeholder="Escribile a ${g.n}… (podés dictar con el micrófono del teclado)"></textarea><button class="btn pri" data-act="agsend:${t}" ${AGBUSY?'disabled':''}>Enviar</button></div></div>`}
+function sheetAgcfg(){const p=CFG.lumi||{};const F=[{k:'diaTec',l:'Precio por día de un técnico',t:'number',step:'any'},{k:'diaElev',l:'Precio por día del medio de elevación',t:'number',step:'any'},{k:'moneda',l:'Moneda',t:'select',o:[['USD','US$ Dólares'],['UYU','$ Pesos']]},
+  {k:'rendimiento',l:'Cuánto rinde un día',t:'textarea',w:'full',ph:'Ej.: 4 cámaras por día con 1 técnico; 1 PTZ en columna alta por día con 2 técnicos y elevador; 100 m de cableado por día'},
+  {k:'preguntas',l:'Qué preguntar antes de cotizar',t:'textarea',w:'full',ph:'Ej.: cuántos equipos y dónde; altura; si va por arriba o subterráneo; distancia al rack; horario para trabajar'},
+  {k:'notas',l:'Otras reglas',t:'textarea',w:'full',ph:'Ej.: trabajos de más de 3 días o con obra civil, siempre consultar'}];
+  return sheetFrame('Ajustes de Lumi','Precios y forma de cotizar',`<p class="hint" style="margin-top:0">Los materiales salen del Catálogo (con su precio). Acá van la mano de obra y cómo calcula los días.</p><div class="grid">${F.map(f=>fld(f,p[f.k])).join('')}</div><p class="err" id="shErr" hidden></p>`)}
+async function saveAgcfg(){const F=['diaTec','diaElev','moneda','rendimiento','preguntas','notas'];const v={};F.forEach(k=>{const el=$('#f_'+k);if(el)v[k]=el.type==='number'?n0(el.value):el.value.trim()});
+  try{await saveCfg({...CFG,lumi:v});toast('Ajustes de Lumi guardados');closeSheet()}catch(e){const er=$('#shErr');er.textContent='No se pudo guardar.';er.hidden=false}}
+async function agAct(k,arg,el){
+  if(k==='agt'){AGT=arg;lsSet('olumi.ag',arg);sr();return true}
+  if(k==='agsend'){const t=$('#agTxt');const tx=t?t.value:'';if(t)t.value='';await agEnviar(arg,tx);return true}
+  if(k==='agclear'){for(const m of agMsgs(arg))await remove('agentes_chat',m.id);sr();return true}
+  if(k==='agcfg'){openSheet('agcfg');return true}
+  if(k==='aprob'){const x=D.aprobaciones[arg];if(!x)return true;const cli=arr('clientes').find(c=>norm2(c.nombre)===norm2(x.cliente));
+    await put('aprobaciones',arg,{...x,estado:'aprobado',aprobadoPor:ME||'',aprobadoEn:Date.now()});
+    openSheet('pres',null,{copy:{numero:'',oportunidadId:'',proyectoId:'',clienteId:cli?cli.id:'',fecha:today(),validez:15,moneda:x.moneda||defMon(),estado:'borrador',iva:true,descuento:0,lineas:(x.lineas||[]).map(l=>({desc:l.desc||'',cant:n0(l.cant)||1,unidad:l.unidad||'unidad',precio:n0(l.precio)})),condiciones:CFG.condiciones||'',notas:(x.nota||'')+(cli?'':(x.cliente?'\nCliente: '+x.cliente:''))}});return true}
+  if(k==='aprobok'||k==='aprobno'){const x=D.aprobaciones[arg];if(x)await put('aprobaciones',arg,{...x,estado:k==='aprobok'?'aprobado':'descartado',aprobadoPor:ME||'',aprobadoEn:Date.now()});sr();return true}
+  if(k==='ent2tkq'){const e=D.entradas[arg];if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
+    openSheet('tk',null,{cli:e.clienteId||'',draft:{titulo:e.titulo||'',descripcion:[e.resumen,e.texto].filter(Boolean).join('\n\n'),mensaje:e.texto||'',tipo:e.urgente?'emergencia':tipo,origen:e.canal==='mail'?'Email':'WhatsApp',contacto:e.clienteId?null:c,entradaId:arg,waFrom:(c.telefono||e.de||'').replace(/\D/g,''),waNombre:c.nombre||e.nombre||''}});if(SH)SH.dirty=true;return true}
   return false}
 
 /* ---------- servidor: Supabase ---------- */

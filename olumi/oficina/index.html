@@ -364,6 +364,7 @@ function drawFurgon(v,K){const x=v.x,y=v.y,D=1.36,z0=.3,L=2.6;
   const c=P(x+1.7,y+.7,.8);hits.push({k:'van',id:v.id,x:c[0],y:c[1],r:sc*1.5})}
 function drawPerson(p){if(p.inVan)return;const L=p.look,col=ROLES[p.role][1],tec=p.role==='tecnico';const walk=p.tx!=null;const sw=walk?Math.sin(p.ph):0;const b=P(p.x,p.y,0),u=sc;
   ctx.save();ctx.filter='blur('+Math.max(1,sc*.08)+'px)';ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(b[0],b[1],sc*.3,sc*.15,0,0,7);ctx.fill();ctx.restore();
+  if(p.virtual){const g=ctx.createRadialGradient(b[0],b[1]-sc*.9,sc*.1,b[0],b[1]-sc*.9,sc*1.1),c=p.ag==='ada'?'10,132,255':'124,92,255',a=.22+.08*Math.sin(T*2.2);g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(1,`rgba(${c},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(b[0],b[1]-sc*.9,sc*1.1,0,7);ctx.fill()}
   if(sel&&sel.k==='person'&&sel.id===p.id){ctx.strokeStyle='#1d1d1f';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(b[0],b[1],sc*.55,sc*.3,0,0,7);ctx.stroke()}
   ctx.save();ctx.translate(b[0],b[1]-Math.abs(sw)*u*.03);ctx.scale(p.dir||1,1);
   const R=(x,y,w,h,r,f)=>{ctx.fillStyle=f;ctx.beginPath();ctx.roundRect(x*u,y*u,w*u,h*u,r*u);ctx.fill()};
@@ -386,6 +387,7 @@ function drawPerson(p){if(p.inVan)return;const L=p.look,col=ROLES[p.role][1],tec
   ctx.fillStyle='#1d1d1f';ctx.beginPath();ctx.arc(.09*u,-1.42*u,Math.max(.8,.025*u),0,7);ctx.fill();                          // ojo
   ctx.restore();
   if(p.say&&T<p.sayT){const s=P(p.x,p.y,2.35);ctx.font=`600 ${Math.max(10,sc*.42)}px -apple-system,BlinkMacSystemFont,Inter,sans-serif`;const w=ctx.measureText(p.say).width+18;ctx.save();ctx.shadowColor='rgba(0,0,0,.14)';ctx.shadowBlur=10;ctx.shadowOffsetY=3;ctx.fillStyle=PILL();ctx.beginPath();ctx.roundRect(s[0]-w/2,s[1]-12,w,24,12);ctx.fill();ctx.restore();ctx.fillStyle=INK();ctx.textAlign='center';ctx.fillText(p.say,s[0],s[1]+4)}
+  if(p.virtual){const q=P(p.x,p.y,2.05+.06*Math.sin(T*3)),r=sc*.16;ctx.save();ctx.translate(q[0],q[1]);ctx.rotate(T*.8);ctx.fillStyle=p.ag==='ada'?'#0a84ff':'#7c5cff';ctx.beginPath();for(let i=0;i<8;i++){const rr=i%2?r*.38:r;ctx.lineTo(Math.cos(i*Math.PI/4)*rr,Math.sin(i*Math.PI/4)*rr)}ctx.closePath();ctx.fill();ctx.restore()}
   hits.push({k:'person',id:p.id,x:b[0],y:b[1]-sc*.9,r:sc*.75})}
 const PI={cam:'M5 7h8a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM15 9.5l5-2.5v7l-5-2.5M7 14v3H4',
   ap:'M4.5 9.5a11 11 0 0 1 15 0M7.5 12.8a6.5 6.5 0 0 1 9 0M10.5 16a2.2 2.2 0 0 1 3 0M12 19h.01',
@@ -411,7 +413,7 @@ function next(p){const q=p.path[0];if(!q){p.tx=null;return}p.tx=q.x;p.ty=q.y}
 function step(dt){S.people.forEach(p=>{if(p.tx==null||p.inVan)return;const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy),v=1.6*dt;p.ph+=dt*11;if(Math.abs(dx-dy)>.01)p.dir=dx-dy>0?1:-1;if(d<=v){p.x=p.tx;p.y=p.ty;const q=p.path.shift();p.tx=null;if(q&&q.then)q.then();next(p)}else{p.x+=dx/d*v;p.y+=dy/d*v}});
   S.vans.forEach(v=>{if(v.anim){const a=v.anim;const k=Math.min(1,(T-a.t0)/a.dur);v.x=a.x0+(a.x1-a.x0)*k;v.y=a.y0+(a.y1-a.y0)*k;if(k>=1){v.anim=null;a.done&&a.done()}}})}
 function say(p,t,s=3){p.say=t;p.sayT=T+s}
-function wander(){const free=S.people.filter(p=>p.tx==null&&!p.busy&&!p.inVan);if(!free.length)return;const p=free[Math.floor(Math.random()*free.length)];const d=deskOf(p);
+function wander(){const free=S.people.filter(p=>p.tx==null&&!p.busy&&!p.inVan&&!p.virtual);if(!free.length)return;const p=free[Math.floor(Math.random()*free.length)];const d=deskOf(p);
   const r=Math.random();const back=()=>setTimeout(()=>goTo(p,d.x+.2,d.y+1.1),2500+Math.random()*2500);
   if(r<.4){goTo(p,SPOTS.cafe.x+Math.random(),SPOTS.cafe.y+Math.random(),()=>{say(p,'☕',2);back()})}
   else if(r<.7&&p.role!=='recepcion'){goTo(p,SPOTS.reunion.x+Math.random()*1.5,SPOTS.reunion.y+Math.random(),()=>{say(p,'Reunión',2);back()})}
@@ -462,7 +464,7 @@ function frame(now){T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/100
   drawFX();requestAnimationFrame(frame)}
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
-function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.length}</b>personas</span><span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
+function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
 let TAB='vivo',STEP=0,AREA=null,DEPV='stock',PEDQ={},OPENVAN=null;
 const body=document.getElementById('body');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -498,7 +500,13 @@ const ROLEFN={recepcion:['Atiende la bandeja: WhatsApp, correos y pedidos','Crea
   tecnico:['Ve su día y sus visitas','Sube fotos, informes y facturas de compra','Lleva el stock de su camioneta'],
   ventas:['CRM y oportunidades','Presupuestos y seguimientos','Relevamientos con el cliente']};
 const VIEWOF={recepcion:['bandeja','Abrir la bandeja'],admin:['clientes','Abrir clientes'],gerencia:['reportes','Ver reportes'],tecnico:['campo','Ver su día'],ventas:['pipeline','Abrir el CRM']};
-function personPop(p,where){const me=S.me&&p.id===S.me,r=ROLES[p.role]||['Equipo','#8e8e93'],d=deskOf(p),v=VIEWOF[p.role];
+const AGFN={lumi:['Atiende consultas de venta y releva por chat','Cotiza trabajos chicos con el catálogo y los precios por día','Lo grande te lo consulta: ¿relevamos o cotizo?','Todo lo que cotiza queda para aprobar'],
+  ada:['Personal: carnés, documentos y vencimientos','Facturas vencidas y gastos para revisar','Te deja el documento listo para mandar','Nada sale para afuera sin que ustedes lo aprueben']};
+function personPop(p,where){if(p.virtual){const r=ROLES[p.role]||['Equipo','#8e8e93'],d=deskOf(p);
+  return `<h3>${esc(p.n)} <span class="pill gr">✦ Virtual</span></h3><p><span style="color:${r[1]}">●</span> ${r[0]}${d?' · '+esc(d.n):''}</p><p>Ahora: <b>en su escritorio, lista para ayudar</b></p>
+    <ul class="fns">${(AGFN[p.ag]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="row">${APP?`<button class="btn pri" id="b_go" data-go="agentes:${esc(p.ag)}">Hablar con ${esc(p.n)}</button>`:''}</div>`}
+  const me=S.me&&p.id===S.me,r=ROLES[p.role]||['Equipo','#8e8e93'],d=deskOf(p),v=VIEWOF[p.role];
   return `<h3>${me?'Vos · ':''}${esc(p.n)}</h3><p><span style="color:${r[1]}">●</span> ${r[0]}${d?' · '+esc(d.n):''}</p><p>Ahora: <b>${p.out?'en la calle':where}</b></p>
     <ul class="fns">${(ROLEFN[p.role]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
     <div class="row">${roomOfP(p)?`<button class="btn" id="b_ar" data-room="${roomOfP(p)}">${me?'Ver mi área':'Ver su área'}</button>`:''}${p.role==='tecnico'?`<button class="btn acc" id="b_ped">Preparar su pedido</button>`:''}${APP&&v?`<button class="btn pri" id="b_go" data-go="${v[0]}">${me?v[1].replace('su día','mi día'):v[1]}</button>`:''}</div>`}
@@ -509,7 +517,7 @@ const tecState=t=>t.inVan?'<span class="pill mid">En la calle</span>':t.carry?'<
 const btn=(act,label,cls='')=>`<button class="btn ${cls}" data-act="${act}">${label}</button>`;
 const nobody=k=>`<p class="hint" style="padding:12px 14px;margin:0">Todavía no hay nadie en ${esc(areaName(k))}. ${APP?'Invitá a tu equipo desde Ajustes → Equipo y aparece caminando acá.':'Se suma desde Equipo, y aparece caminando acá.'}</p>`;
 function areaLive(k){const ppl=S.people.filter(p=>roomOfP(p)===k);
-  const pplList=ppl.length?ppl.map(p=>`<div class="li"><span class="dot" style="background:${ROLES[p.role][1]}">${esc(p.n[0])}</span><span class="grow">${esc(p.n)}<small>${ROLES[p.role][0]}</small></span>${p.inVan?'<span class="pill mid">En la calle</span>':p.tx!=null?'<span class="pill gr">Caminando</span>':'<span class="pill ok">Acá</span>'}</div>`).join(''):nobody(k);
+  const pplList=ppl.length?ppl.map(p=>`<div class="li"><span class="dot" style="background:${ROLES[p.role][1]}">${esc(p.n[0])}</span><span class="grow">${esc(p.n)}<small>${ROLES[p.role][0]}${p.virtual?' · virtual':''}</small></span>${p.inVan?'<span class="pill mid">En la calle</span>':p.tx!=null?'<span class="pill gr">Caminando</span>':'<span class="pill ok">Acá</span>'}</div>`).join(''):nobody(k);
   if(k==='rec')return `<div class="kpis"><div class="kpi"><b>${S.counts.wa}</b><span>WhatsApp hoy</span></div><div class="kpi"><b>${S.counts.tk}</b><span>Tickets abiertos</span></div></div><p class="sect">En recepción</p><div class="list">${pplList}</div>`;
   if(k==='adm')return `<div class="kpis"><div class="kpi"><b>${S.counts.mail}</b><span>Correos hoy</span></div><div class="kpi"><b>${S.counts.pres}</b><span>Presupuestos aceptados</span></div></div><p class="sect">En administración</p><div class="list">${pplList}</div>`;
   if(k==='ger')return `<div class="kpis"><div class="kpi"><b>${S.counts.tk}</b><span>Tickets hoy</span></div><div class="kpi"><b>${S.counts.pres}</b><span>Presupuestos aceptados</span></div><div class="kpi"><b>${S.vans.filter(v=>v.out).length}<small style="font-size:15px;color:var(--muted)">/${S.vans.length}</small></b><span>Camionetas en la calle</span></div><div class="kpi"><b>${lowCount()}</b><span>Materiales por reponer</span></div></div>`;
@@ -621,7 +629,7 @@ function applyData(d){
   // personas: se mantienen las que ya caminan, entran las nuevas por la puerta
   const old=Object.fromEntries(S.people.map(p=>[p.id,p]));const np=[];
   (d.people||[]).forEach(x=>{let p=old[x.id];if(!p){p={id:x.id,n:x.n,role:x.role,desk:'',x:SPOTS.puerta.x,y:SPOTS.puerta.y,tx:null,ty:null,path:[],busy:0,say:null,sayT:0,state:'',inVan:false,look:lookOf(x.n,x.role),carry:false,dir:1,ph:0,nuevo:SEEN!==null}}
-    else{p.n=x.n;if(p.role!==x.role){p.role=x.role;p.look=lookOf(x.n,x.role)}}p.out=!!x.out;np.push(p)});
+    else{p.n=x.n;if(p.role!==x.role){p.role=x.role;p.look=lookOf(x.n,x.role)}}p.out=!!x.out;p.virtual=!!x.virtual;p.ag=x.ag||'';if(p.virtual){p.out=false;p.look={...p.look,skin:x.ag==='ada'?'#d6c7ff':'#e5d9ff',hair:x.ag==='ada'?'#3a4fd8':'#7c5cff',pants:'#3b3b46'}}np.push(p)});
   S.people=np;S.desks=layoutDesks(np);
   if(!S.desks.length)S.desks=DESKS0.map(q=>({...q}));
   // camionetas reales
