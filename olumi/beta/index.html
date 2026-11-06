@@ -945,7 +945,7 @@ function render(){
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   if(ROLE&&!canMoney()&&MONEYV.includes(VIEW)){VIEW='tickets';lsSet('crm.view',VIEW)}
-  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(v==='oficina')b.hidden=!enPrueba();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
+  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){ofiPost();return}
@@ -1539,7 +1539,7 @@ function vMenu(){
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   const itv=it.filter(([v])=>viewOk(v));
-  return`<div class="vhead"><div><h1>Más secciones</h1></div></div><div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
+  return`<div class="vhead"><div><h1>Más secciones</h1></div></div>${orgSwitchHtml()}<div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
 }
 
 const VIEWS={oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
@@ -1909,7 +1909,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.33',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.34',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3441,8 +3441,8 @@ const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 const BETA=/\/beta\//.test(location.pathname)||(()=>{try{return localStorage.getItem('olumi.beta')==='1'}catch(e){return false}})();
 const enPrueba=()=>BETA;            // funciones nuevas: solo en el canal de pruebas hasta que se aprueben
 const hasVivo=()=>has('vivo')||enPrueba();
-const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;if(v==='oficina'&&!enPrueba())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
-function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';if(VIEW==='oficina'&&!enPrueba())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
+const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
+function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
   if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
 
@@ -4886,6 +4886,17 @@ async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindo
 }
 window.addEventListener('message',ofiMsg);
 
+
+/* ---------- 1.34: empresas (borrar, salir, cambiar) ---------- */
+const empErr=e=>{const m=String((e&&e.message)||'');return /nombre_no_coincide/.test(m)?'El nombre no coincide.':/sin_permiso/.test(m)?'No tenés permiso para eso.':/es_dueno/.test(m)?'Sos el dueño: no podés salir, podés borrar la empresa.':/no_existe/.test(m)?'Esa empresa ya no existe.':/function|schema cache|does not exist/.test(m)?'Falta correr supabase/empresas-1.34.sql en Supabase.':'No se pudo. Probá de nuevo.'};
+const realMems=()=>(MEMS||[]).filter(m=>!m.soporte);
+function orgSwitchHtml(){const ms=realMems();if(ms.length<2)return'';
+  return`<div class="panel" style="margin-bottom:12px"><label class="fld" for="orgsel2" style="max-width:420px"><span>Estás en</span><select id="orgsel2" data-orgsel>${opts(ms.map(m=>[m.org_id,(m.orgs&&m.orgs.name)||m.org_id]),ORG)}</select></label><p class="hint" style="margin:6px 0 0">Tenés acceso a ${ms.length} empresas. Elegí con cuál trabajar.</p></div>`}
+function empresaZonaHtml(){if(!ORG||SOPORTE)return'';const nm=(ORGINFO&&ORGINFO.name)||'';
+  if(ROLE==='owner')return`<details class="more" style="margin-top:14px"><summary>Borrar esta empresa</summary><p class="hint">Se borran todos los datos de <b>${esc(nm)}</b> (clientes, tickets, stock, equipo e invitaciones). No se puede deshacer. Escribí el nombre exacto para confirmar.</p>
+    <div class="grid"><label class="fld full" for="myorg_del"><span>Nombre de la empresa</span><input id="myorg_del" type="text" autocomplete="off" placeholder="${esc(nm)}"></label></div><div class="actions" style="margin-top:10px"><button class="btn ghost danger" data-act="myorgdel">Borrar empresa</button></div></details>`;
+  return`<div class="actions" style="margin-top:10px"><button class="btn ghost danger" data-act="leaveorg">Salir de ${esc(nm||'esta empresa')}</button></div>`}
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
@@ -5006,6 +5017,9 @@ function sheetOrg(id){
     <div id="orgExtrasBox"></div>
     <section class="rel"><h3>Soporte</h3><div id="orgSop"><p class="muted" style="margin:0">Cargando…</p></div></section>
     <section class="rel"><h3>Cobros</h3><div id="orgBill"><p class="muted" style="margin:0">Cargando…</p></div></section>
+    <details class="more" style="margin-top:14px"><summary>Borrar esta empresa</summary><p class="hint">Se borran todos sus datos, el equipo y las invitaciones. No se puede deshacer. Los archivos subidos quedan en Storage (archivos/${esc(o.id)}/). Escribí el nombre exacto para confirmar.</p>
+      <div class="grid"><label class="fld full" for="g_delname"><span>Nombre de la empresa</span><input id="g_delname" type="text" autocomplete="off" placeholder="${esc(o.name)}"></label></div>
+      <div class="actions" style="margin-top:10px"><button class="btn ghost danger" data-act="orgdel">Borrar empresa</button></div></details>
     <p class="err" id="shErr" hidden></p>`;
   setTimeout(async()=>{const bx=$('#orgExtrasBox');if(bx){try{const {data:x,error}=await SB.rpc('admin_get_extras',{o:id});if(error)throw error;bx.innerHTML=extrasHtml(x?.extras||[],x?.nota||'')}catch(e){bx.innerHTML='<section class="rel"><h3>Extras de esta empresa</h3><p class="muted" style="margin:0">Falta correr <span class="code">supabase/extras-1.21.sql</span>.</p></section>'}}},0);
   setTimeout(async()=>{const box=$('#orgSop');if(!box)return;try{const {data:e,error}=await SB.rpc('soporte_estado',{o:id});if(error)throw error;
@@ -5049,6 +5063,12 @@ async function planAct(k,el,arg){
       else toast(d.error||'No se pudo enviar.')}
     finally{el.disabled=false}return true}
   if(k==='admreload'){ADM=null;sr();return true}
+  if(k==='orgdel'){const id=SH&&SH.id;if(!id)return true;const o=(ADM||[]).find(x=>x.id===id);const nm=($('#g_delname').value||'').trim();
+    if(!o||!nm||nm.toLowerCase()!==String(o.name||'').trim().toLowerCase()){const e=$('#shErr');e.textContent='Escribí el nombre exacto de la empresa para confirmar.';e.hidden=false;return true}
+    if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='Se borra para siempre. Tocá de nuevo';return true}armed=null;
+    const {error}=await SB.rpc('admin_delete_org',{o:id,nombre:nm});if(error){const e=$('#shErr');e.textContent=empErr(error);e.hidden=false;return true}
+    toast('Empresa "'+o.name+'" borrada');if(SH)SH.dirty=false;closeSheet();ADM=null;loadAdmin();
+    if(id===ORG||realMems().some(m=>m.org_id===id)){localStorage.removeItem('olumi.org');setTimeout(()=>location.reload(),600)}return true}
   if(k==='orgx'){const pu=$('#g_paid_until'),tr=$('#g_trial_ends'),pl=$('#g_plan'),t=today();
     if(arg==='t15'){tr.value=addDays(tr.value&&tr.value>t?tr.value:t,15)}
     else{const base=pu.value&&pu.value>t?pu.value:t;pu.value=addMonths(base,arg==='1y'?12:1);if(pl.value==='gratis')pl.value='pro'}
@@ -5285,6 +5305,7 @@ function equipoHtml(){
   ${admin?inviteHtml():''}
   ${admin?soporteHtml():''}
   ${admin?`<details class="more" style="margin-top:14px"><summary>Roles y permisos: qué ve cada uno</summary><div class="tablewrap"><table><thead><tr><th>Rol</th><th>Qué ve</th></tr></thead><tbody>${[['owner'],...ROLES].map(([r])=>`<tr><td><b>${esc(ROLEN[r]||r)}</b></td><td>${esc(ROLV_TXT[r]||'')}</td></tr>`).join('')}</tbody></table></div><p class="hint">Para sumar a alguien con un rol fijo (por ejemplo un técnico): invitalo por mail acá abajo con ese rol. Cuando se registre con ese mail entra directo como técnico y no puede elegir otra cosa. Con el código de empresa entra "pendiente" hasta que lo apruebes. Contraseña perdida: botón "Contraseña" al lado de su nombre.</p></details>`:''}
+  ${empresaZonaHtml()}
   <div class="actions" style="margin-top:16px"><button class="btn" data-act="logout">Cerrar sesión</button><button class="btn ghost danger" data-act="delacct">Eliminar mi cuenta</button></div></div>`;
 }
 async function teamAct(k,el){
@@ -5297,6 +5318,15 @@ async function teamAct(k,el){
   if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
+  if(k==='myorgdel'){const nm=($('#myorg_del').value||'').trim(),real=String((ORGINFO&&ORGINFO.name)||'').trim();
+    if(!nm||nm.toLowerCase()!==real.toLowerCase()){toast('Escribí el nombre exacto de la empresa.');return true}
+    if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='Se borra todo para siempre. Tocá de nuevo';return true}armed=null;
+    const {error}=await SB.rpc('delete_my_org',{o:ORG,nombre:nm});if(error){toast(empErr(error));return true}
+    localStorage.removeItem('olumi.org');toast('Empresa borrada');setTimeout(()=>location.reload(),600);return true}
+  if(k==='leaveorg'){
+    if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Salir? Tocá de nuevo';return true}armed=null;
+    const {error}=await SB.rpc('leave_org',{o:ORG});if(error){toast(empErr(error));return true}
+    localStorage.removeItem('olumi.org');setTimeout(()=>location.reload(),300);return true}
   if(k==='delacct'){
     if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='Se borra tu cuenta para siempre. Tocá de nuevo';return true}
     const {error}=await SB.rpc('delete_my_account');if(error){toast('No se pudo eliminar la cuenta.');return true}
@@ -5318,7 +5348,7 @@ async function boot(){
   if(!session){clearTimeout(slowT);showAuth('login');return}
   ME=session.user.id;
   if(/type=(invite|recovery)/.test(AUTHHASH)&&!PASSDONE){clearTimeout(slowT);showAuth('setpass');return}
-  try{await SB.rpc('claim_invites')}catch(e){}
+  try{const {data:nc}=await SB.rpc('claim_invites');if(nc>0){const r=await SB.from('members').select('org_id,created_at').eq('user_id',ME).order('created_at',{ascending:false}).limit(1);const nw=(r.data||[])[0];if(nw)lsSet('olumi.org',nw.org_id)}}catch(e){}
   let {data:mems,error}=await SB.from('members').select('org_id,role,orgs(name,join_code)').eq('user_id',ME);
   if(error&&netErr(error)){const c=lsJ('olumi.mems.'+ME);if(c&&c.length){mems=c;error=null;OFF.stale=true}}
   if(error){showAuth('login',authErrText(error));return}
