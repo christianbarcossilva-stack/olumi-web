@@ -1,0 +1,435 @@
+{
+ "name": "Christian · Correo (nuevo)",
+ "nodes": [
+  {
+   "parameters": {
+    "mailbox": "INBOX",
+    "postProcessAction": "read",
+    "options": {
+     "forceReconnect": 60
+    }
+   },
+   "name": "Mail nuevo",
+   "type": "n8n-nodes-base.emailReadImap",
+   "typeVersion": 2,
+   "position": [
+    0,
+    400
+   ],
+   "credentials": {
+    "imap": {
+     "id": "imap",
+     "name": "imap"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "\n// Deja pasar solo mails de personas (no avisos automáticos ni publicidad)\nconst j = $json; const from = String(j.from || '').toLowerCase(); const subj = String(j.subject || '');\nconst h = j.headers || {};\nif (/no-?reply|noreply|notificacion|notification|newsletter|mailer|daemon|bounce|facebook|instagram|mercadolibre|mercadopago/.test(from)) return [];\nif (h['list-unsubscribe'] || h['precedence'] === 'bulk' || /^(auto|out of office|fuera de la oficina)/i.test(subj)) return [];\nconst crudo = (j.textPlain || j.text || String(j.textHtml || j.html || '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' '));\n// separa lo nuevo (arriba) del historial citado (abajo): \"El ... escribió:\", \"De:\", \"From:\", \"-------- Mensaje Original\", líneas con \">\"\nconst corte = crudo.search(/(^|\\n)\\s*(El .{3,80} escribi[oó]:|On .{3,80} wrote:|-{3,} ?(Mensaje original|Original Message|Forwarded message|Mensaje reenviado).*|De: .+\\n|From: .+\\n|>\\s)/i);\nconst ultimo = (corte > 40 ? crudo.slice(0, corte) : crudo).replace(/\\s+/g, ' ').trim();\nconst historial = (corte > 40 ? crudo.slice(corte) : '').replace(/^>+\\s?/gm, '').replace(/\\s+/g, ' ').trim();\nconst texto = (ultimo + (historial ? '\\n\\n[Historial del hilo] ' + historial : '')).trim();\nconst fromMail = (String(j.from || '').match(/<([^>]+)>/) || [])[1] || String(j.from || '');\nconst interno = /@phi\\.com\\.uy$/i.test(fromMail) || /@unitytech\\.uy$/i.test(fromMail);   // mails propios o de compañeros: se registran, nunca se contestan solos\nconst reenvio = /^(fwd?|rv|tr):/i.test(subj);\nconst to = String(j.to || h['to'] || ''), cc = String(j.cc || h['cc'] || '');\nconst paraMi = /cbarcos@phi\\.com\\.uy/i.test(to) || (!to && !cc);           // en \"Para:\"; si no hay cabeceras, se asume que sí\nconst enCopia = !paraMi && /cbarcos@phi\\.com\\.uy/i.test(cc);\nconst meNombran = /\\b(christian|cristian|cbarcos)\\b/i.test(ultimo);\nconst giancarloRespondio = /giancarlo|@phi\\.com\\.uy/i.test(historial);\nconst otroDePhitel = /@phi\\.com\\.uy/i.test(to + ' ' + cc) && !/cbarcos@phi\\.com\\.uy/i.test(to);\nreturn [{ json: { paraMi, enCopia, meNombran, giancarloRespondio, otroDePhitel, from: fromMail, fromName: String(j.from || '').replace(/<.*/, '').replace(/\"/g, '').trim(), replyTo: (String(j.replyTo || '').match(/<([^>]+)>/) || [])[1] || '', subject: subj, texto: texto.slice(0, 6000), ultimo: ultimo.slice(0, 3000), historial: historial.slice(0, 5000), messageId: h['message-id'] || j.messageId || '', interno, reenvio } }];\n"
+   },
+   "name": "Filtrar mails",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    800
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ modo: 'contexto', org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', email: $json.from, nombre: $json.fromName }) }}"
+   },
+   "name": "Contexto en Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3,  response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mail que le llegó a cbarcos@phi.com.uy (Christian, jefe de operaciones de Phitel: instalaciones en Uruguay, fibra óptica, CCTV, cableado, control de acceso, porteros, redes, alarmas). No escribís respuesta. Usá el ÚLTIMO MENSAJE (el historial es solo contexto) y el CONTEXTO de Olumi. Devolvé SOLO JSON: { \\\"esPedido\\\": true|false (false si es publicidad, aviso automático, factura de un proveedor o no pide nada), \\\"carril\\\": \\\"soporte\\\" | \\\"comercial\\\" | \\\"administrativo\\\" | \\\"coordinar\\\" | \\\"proveedor\\\" | \\\"spam\\\", \\\"urgencia\\\": \\\"alta\\\" | \\\"media\\\" | \\\"baja\\\" (alta solo si algo dejó de funcionar y afecta la operación), \\\"nombre\\\": \\\"quien firma o ''\\\", \\\"empresa\\\": \\\"empresa o lugar o ''\\\", \\\"titulo\\\": \\\"máximo 60 letras\\\", \\\"resumen\\\": \\\"máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen, y lo ya acordado en el hilo\\\", \\\"avisarme\\\": true|false (true si Christian tiene que hacer algo) }.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE: ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL (contexto): ' + $('Filtrar mails').item.json.historial.slice(0, 3000) : '') + '\\n\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [] }) + '\\nDESTINATARIOS: ' + JSON.stringify({ paraMi: $('Filtrar mails').item.json.paraMi, enCopia: $('Filtrar mails').item.json.enCopia, interno: $('Filtrar mails').item.json.interno }) } ] }) }}"
+   },
+   "name": "Clasificar el mail (Gemini)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    720,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true,
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Clasificar el mail · ¿respondió Gemini?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    920,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.groq.com/openai/v1/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "groqApi",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Clasificás un mail que le llegó a cbarcos@phi.com.uy (Christian, jefe de operaciones de Phitel: instalaciones en Uruguay, fibra óptica, CCTV, cableado, control de acceso, porteros, redes, alarmas). No escribís respuesta. Usá el ÚLTIMO MENSAJE (el historial es solo contexto) y el CONTEXTO de Olumi. Devolvé SOLO JSON: { \\\"esPedido\\\": true|false (false si es publicidad, aviso automático, factura de un proveedor o no pide nada), \\\"carril\\\": \\\"soporte\\\" | \\\"comercial\\\" | \\\"administrativo\\\" | \\\"coordinar\\\" | \\\"proveedor\\\" | \\\"spam\\\", \\\"urgencia\\\": \\\"alta\\\" | \\\"media\\\" | \\\"baja\\\" (alta solo si algo dejó de funcionar y afecta la operación), \\\"nombre\\\": \\\"quien firma o ''\\\", \\\"empresa\\\": \\\"empresa o lugar o ''\\\", \\\"titulo\\\": \\\"máximo 60 letras\\\", \\\"resumen\\\": \\\"máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen, y lo ya acordado en el hilo\\\", \\\"avisarme\\\": true|false (true si Christian tiene que hacer algo) }.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE: ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL (contexto): ' + $('Filtrar mails').item.json.historial.slice(0, 3000) : '') + '\\n\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [] }) + '\\nDESTINATARIOS: ' + JSON.stringify({ paraMi: $('Filtrar mails').item.json.paraMi, enCopia: $('Filtrar mails').item.json.enCopia, interno: $('Filtrar mails').item.json.interno }) } ] }) }}"
+   },
+   "name": "Clasificar el mail (Groq)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    920,
+    560
+   ],
+   "credentials": {
+    "groqApi": {
+     "id": "s3BYFL0hBKCTw5DI",
+     "name": "Groq"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Clasificar el mail",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1140,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst f = $('Filtrar mails').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}\nif (j.esPedido === false || ['spam'].includes(j.carril)) return [];\nconst carril = ['soporte','comercial','administrativo','coordinar','proveedor'].includes(j.carril) ? j.carril : 'soporte';\nconst urg = ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : 'media';\nconst tipoEntrada = { soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo', proveedor: 'proveedor' }[carril];\nreturn [{ json: { modo: 'registrar', registrar: true, org: '2c84e6c2-5507-4aa6-9f6d-3b66060739c3', de: '', email: f.from, nombre: j.nombre || f.fromName, empresa: j.empresa || '', texto: 'Asunto: ' + f.subject + '\\n\\n' + f.texto.slice(0, 3500),\n  resumen: j.resumen || '', titulo: j.titulo || f.subject, intencion: carril, tema: carril, tipoEntrada, tipo: urg === 'alta' ? 'emergencia' : 'consulta', destino: 'bandeja', urgente: urg === 'alta',\n  canal: 'mail', origen: 'Correo de Christian', carril, urgencia: urg, msgId: f.messageId, respuestaAuto: '', avisarme: (j.avisarme !== false || urg === 'alta') && !(f.enCopia && !f.meNombran) } }];\n"
+   },
+   "name": "Armar entrada de bandeja",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1360,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/entrada",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}"
+   },
+   "name": "A la bandeja de Olumi",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1580,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "olumi",
+     "name": "olumi"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $('Armar entrada de bandeja').item.json.avisarme && !$json.repetido }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Avisarme?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1800,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "http://evolution:8080/instance/fetchInstances?instanceName=christian",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "options": {}
+   },
+   "name": "Mi número",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2020,
+    340
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ (() => { const inst = Array.isArray($json) ? $json[0] : ($json.instance || $json); const n = String(inst.ownerJid || inst.owner || '').replace(/@.*/, ''); const a = $('Armar entrada de bandeja').item.json; return JSON.stringify({ number: n, text: (a.urgente ? '🚨 ' : '📥 ') + 'Mail · ' + (a.empresa || a.nombre || a.email) + ' · ' + (a.titulo || '') + '\\n' + (a.resumen || '') + '\\nQuedó en la bandeja de Olumi.' }); })() }}"
+   },
+   "name": "Avisarme por WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2240,
+    340
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "evo",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  }
+ ],
+ "connections": {
+  "Mail nuevo": {
+   "main": [
+    [
+     {
+      "node": "Filtrar mails",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Filtrar mails": {
+   "main": [
+    [
+     {
+      "node": "Contexto en Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar el mail (Gemini)": {
+   "main": [
+    [
+     {
+      "node": "Clasificar el mail · ¿respondió Gemini?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar el mail · ¿respondió Gemini?": {
+   "main": [
+    [
+     {
+      "node": "Clasificar el mail",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Clasificar el mail (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar el mail (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Clasificar el mail",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contexto en Olumi": {
+   "main": [
+    [
+     {
+      "node": "Clasificar el mail (Gemini)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar el mail": {
+   "main": [
+    [
+     {
+      "node": "Armar entrada de bandeja",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar entrada de bandeja": {
+   "main": [
+    [
+     {
+      "node": "A la bandeja de Olumi",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "A la bandeja de Olumi": {
+   "main": [
+    [
+     {
+      "node": "¿Avisarme?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Avisarme?": {
+   "main": [
+    [
+     {
+      "node": "Mi número",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mi número": {
+   "main": [
+    [
+     {
+      "node": "Avisarme por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "timezone": "America/Montevideo"
+ }
+}
