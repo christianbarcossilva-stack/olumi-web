@@ -314,6 +314,115 @@
   },
   {
    "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Entender reporte · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1980,
+    1000
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Entender reporte · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2120,
+    1000
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Phitel (instalaciones en Uruguay). En el grupo de WhatsApp de los técnicos, cada técnico manda reportes de lo que hizo en cada cliente: texto, audio transcripto o fotos. Te paso el MENSAJE (quién lo manda y qué dice). Devolvé SOLO un JSON con: esReporte (true si cuenta un trabajo hecho o en curso, materiales usados, un problema en obra o algo que hay que anotar del cliente; false si es charla del grupo, un chiste, coordinación interna breve como 'voy saliendo' o 'ok'), cliente (nombre del cliente, empresa o lugar que menciona, o ''), titulo (máximo 60 letras: qué se hizo y dónde), resumen (lo que se hizo, en 1 a 3 frases, en tercera persona), materiales (lista de {desc, cant} con lo que usó, o []), pendientes (lo que quedó para después, o ''), estado (terminado | en_curso | con_problema). No inventes nada que no esté en el mensaje.\" }, { role: 'user', content: 'MENSAJE de ' + ($('Entender reporte · cerebro').item.json.nombre || $('Entender reporte · cerebro').item.json.from) + ' en el grupo ' + $('Entender reporte · cerebro').item.json.grupoNombre + ': ' + ($('Entender reporte · cerebro').item.json.texto || ($('Entender reporte · cerebro').item.json.fotoB64 ? '(foto sin texto)' : '')) } ] }) }}"
+   },
+   "name": "Entender reporte (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2260,
+    940
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Entender reporte · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2400,
+    940
+   ]
+  },
+  {
+   "parameters": {
     "method": "POST",
     "url": "https://api.groq.com/openai/v1/chat/completions",
     "options": {
@@ -323,14 +432,14 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Phitel (instalaciones en Uruguay). En el grupo de WhatsApp de los técnicos, cada técnico manda reportes de lo que hizo en cada cliente: texto, audio transcripto o fotos. Te paso el MENSAJE (quién lo manda y qué dice). Devolvé SOLO un JSON con: esReporte (true si cuenta un trabajo hecho o en curso, materiales usados, un problema en obra o algo que hay que anotar del cliente; false si es charla del grupo, un chiste, coordinación interna breve como 'voy saliendo' o 'ok'), cliente (nombre del cliente, empresa o lugar que menciona, o ''), titulo (máximo 60 letras: qué se hizo y dónde), resumen (lo que se hizo, en 1 a 3 frases, en tercera persona), materiales (lista de {desc, cant} con lo que usó, o []), pendientes (lo que quedó para después, o ''), estado (terminado | en_curso | con_problema). No inventes nada que no esté en el mensaje.\" }, { role: 'user', content: 'MENSAJE de ' + ($json.nombre || $json.from) + ' en el grupo ' + $json.grupoNombre + ': ' + ($json.texto || ($json.fotoB64 ? '(foto sin texto)' : '')) } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Phitel (instalaciones en Uruguay). En el grupo de WhatsApp de los técnicos, cada técnico manda reportes de lo que hizo en cada cliente: texto, audio transcripto o fotos. Te paso el MENSAJE (quién lo manda y qué dice). Devolvé SOLO un JSON con: esReporte (true si cuenta un trabajo hecho o en curso, materiales usados, un problema en obra o algo que hay que anotar del cliente; false si es charla del grupo, un chiste, coordinación interna breve como 'voy saliendo' o 'ok'), cliente (nombre del cliente, empresa o lugar que menciona, o ''), titulo (máximo 60 letras: qué se hizo y dónde), resumen (lo que se hizo, en 1 a 3 frases, en tercera persona), materiales (lista de {desc, cant} con lo que usó, o []), pendientes (lo que quedó para después, o ''), estado (terminado | en_curso | con_problema). No inventes nada que no esté en el mensaje.\" }, { role: 'user', content: 'MENSAJE de ' + ($('Entender reporte · cerebro').item.json.nombre || $('Entender reporte · cerebro').item.json.from) + ' en el grupo ' + $('Entender reporte · cerebro').item.json.grupoNombre + ': ' + ($('Entender reporte · cerebro').item.json.texto || ($('Entender reporte · cerebro').item.json.fotoB64 ? '(foto sin texto)' : '')) } ] }) }}"
    },
-   "name": "Entender reporte",
+   "name": "Entender reporte (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    2180,
-    1000
+    2400,
+    1080
    ],
    "credentials": {
     "groqApi": {
@@ -338,6 +447,18 @@
      "name": "Groq"
     }
    }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Entender reporte",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2560,
+    1000
+   ]
   },
   {
    "parameters": {
@@ -491,6 +612,115 @@
   },
   {
    "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Decidir y responder · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1740,
+    460
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Decidir y responder · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1880,
+    460
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: tema (uno de: trabajo = pide o pregunta algo de instalaciones, cámaras, redes, fibra, cableado, alarmas, accesos; obra = habla de un trabajo que estamos haciendo o hicimos (avance, horarios, materiales, técnicos, llaves, acceso al lugar); soporte = algo que tiene no anda o quiere ayuda técnica; comercial = precios, presupuestos, facturas, pagos; coordinar = fechas, horarios, visitas, llamadas; charla = saludo, charla social o personal, mensaje sin relación con el trabajo; proveedor = alguien que nos vende o nos ofrece algo; spam = publicidad masiva o cadena), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo (tema trabajo, obra, soporte, comercial o coordinar); false si es charla, proveedor o spam), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) tema charla / proveedor / spam: avisarme=false. Si es charla de un cliente registrado o de alguien del HISTORIAL (un saludo, un 'cómo andás', un chiste), respondé corto y humano como lo haría Christian ('Todo bien, ¿y vos?', 'Jaja dale'); si es de un desconocido, proveedor o spam, responder=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 1 hora (minutosDesdeMiUltimaRespuesta < 60), él está atendiendo la conversación: responder=false SIEMPRE. Entre 1 y 4 horas, respondé solo si el cliente hace una pregunta directa o necesita coordinar algo para hoy o mañana y Christian no contestó; si no, responder=false. En los dos casos avisarme=true si pide algo nuevo o urgente. 29) NOTAS INTERNAS: notasInternas trae lo que Christian y Giancarlo se dijeron entre ellos sobre este cliente (ej.: 'a Aguada Park vamos mañana a las 10', 'el documento se lo manda Giancarlo'). Es la información más confiable: usala para responder (sin decir que la leíste en un chat interno) y no la contradigas. Si una nota responde justo lo que pregunta el cliente, respondé eso. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. ESTILO (muy importante): escribí como un uruguayo de Montevideo que atiende su propia empresa, amable y cercano, nunca como un sistema. Voseo siempre ('¿me pasás?', 'te escribo', 'cualquier cosa me avisás'). Saludos y cierres naturales: '¡Buenas!', 'Hola, ¿cómo andás?', 'Dale', 'Perfecto', 'Joya', 'Quedo atento', 'Un abrazo' (solo si hay confianza). Frases cortas, una idea por mensaje, máximo 2 o 3 líneas. Nada de 'estimado', 'a la brevedad', 'su solicitud', 'hemos recibido', 'ticket' ni números de ticket al cliente, ni mayúsculas para enfatizar. Si algo es urgente, mostrálo con calidez ('Uh, qué macana. Ya lo vemos') y no con palabras de sistema. Un emoji como mucho y solo si el cliente usa. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. 24) A un saludo ('hola', 'todo bien?', 'buenas') se responde con saludo y una pregunta de vuelta: 'Hola! Todo bien, ¿vos? Contame.' Nunca un 'Buenas tardes' suelto. 25) Si te llaman por otro nombre o parece que se equivocaron de número, aclaralo con buena onda y sin hacer sentir mal: 'Ojo que acá es Christian, de Phitel… ¿me buscabas a mí?'. 26) Cierres, disculpas y 'ya lo resolví' ('perdón', 'disculpá', 'ya me lo levantaron', 'era para otro'): una sola frase corta y cálida ('No pasa nada, cualquier cosa escribime.') y nada más. 27) Si la persona manda varios mensajes seguidos (minutosDesdeUltimaRespuesta menor a 3), respondé una sola vez: responder=false salvo que el mensaje nuevo tenga una pregunta directa o un dato nuevo importante. 30) Si el historial muestra que el Asistente ya le pidió un dato (por ejemplo la dirección) y la persona no lo dio, NO lo vuelvas a pedir: responder=false y avisarme=true. Si la persona dice que el contestador la está molestando o se ríe de él, responder=false. 28) Primero fijate QUIÉN escribe y DE QUÉ habla. Si no es cliente registrado, no tiene historial de trabajo y el mensaje no menciona nada del rubro (instalación, cámaras, fibra, redes, cableado, alarmas, control de acceso, presupuesto, falla, un técnico, una obra o visita), es un mensaje personal o ajeno: tema=charla, responder=false, avisarme=false, aunque pregunte un horario, pida que lo llamen o diga '¿estás?'. Christian lo ve en la bandeja y decide. Lo mismo si un cliente conocido escribe algo claramente personal (familia, salidas, favores ajenos al trabajo): responder=false. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Decidir y responder · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Decidir y responder · cerebro').item.json, historial: undefined }) } ] }) }}"
+   },
+   "name": "Decidir y responder (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2020,
+    400
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Decidir y responder · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2160,
+    400
+   ]
+  },
+  {
+   "parameters": {
     "method": "POST",
     "url": "https://api.groq.com/openai/v1/chat/completions",
     "options": {
@@ -500,14 +730,14 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: tema (uno de: trabajo = pide o pregunta algo de instalaciones, cámaras, redes, fibra, cableado, alarmas, accesos; obra = habla de un trabajo que estamos haciendo o hicimos (avance, horarios, materiales, técnicos, llaves, acceso al lugar); soporte = algo que tiene no anda o quiere ayuda técnica; comercial = precios, presupuestos, facturas, pagos; coordinar = fechas, horarios, visitas, llamadas; charla = saludo, charla social o personal, mensaje sin relación con el trabajo; proveedor = alguien que nos vende o nos ofrece algo; spam = publicidad masiva o cadena), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo (tema trabajo, obra, soporte, comercial o coordinar); false si es charla, proveedor o spam), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) tema charla / proveedor / spam: avisarme=false. Si es charla de un cliente registrado o de alguien del HISTORIAL (un saludo, un 'cómo andás', un chiste), respondé corto y humano como lo haría Christian ('Todo bien, ¿y vos?', 'Jaja dale'); si es de un desconocido, proveedor o spam, responder=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 1 hora (minutosDesdeMiUltimaRespuesta < 60), él está atendiendo la conversación: responder=false SIEMPRE. Entre 1 y 4 horas, respondé solo si el cliente hace una pregunta directa o necesita coordinar algo para hoy o mañana y Christian no contestó; si no, responder=false. En los dos casos avisarme=true si pide algo nuevo o urgente. 29) NOTAS INTERNAS: notasInternas trae lo que Christian y Giancarlo se dijeron entre ellos sobre este cliente (ej.: 'a Aguada Park vamos mañana a las 10', 'el documento se lo manda Giancarlo'). Es la información más confiable: usala para responder (sin decir que la leíste en un chat interno) y no la contradigas. Si una nota responde justo lo que pregunta el cliente, respondé eso. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. ESTILO (muy importante): escribí como un uruguayo de Montevideo que atiende su propia empresa, amable y cercano, nunca como un sistema. Voseo siempre ('¿me pasás?', 'te escribo', 'cualquier cosa me avisás'). Saludos y cierres naturales: '¡Buenas!', 'Hola, ¿cómo andás?', 'Dale', 'Perfecto', 'Joya', 'Quedo atento', 'Un abrazo' (solo si hay confianza). Frases cortas, una idea por mensaje, máximo 2 o 3 líneas. Nada de 'estimado', 'a la brevedad', 'su solicitud', 'hemos recibido', 'ticket' ni números de ticket al cliente, ni mayúsculas para enfatizar. Si algo es urgente, mostrálo con calidez ('Uh, qué macana. Ya lo vemos') y no con palabras de sistema. Un emoji como mucho y solo si el cliente usa. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. 24) A un saludo ('hola', 'todo bien?', 'buenas') se responde con saludo y una pregunta de vuelta: 'Hola! Todo bien, ¿vos? Contame.' Nunca un 'Buenas tardes' suelto. 25) Si te llaman por otro nombre o parece que se equivocaron de número, aclaralo con buena onda y sin hacer sentir mal: 'Ojo que acá es Christian, de Phitel… ¿me buscabas a mí?'. 26) Cierres, disculpas y 'ya lo resolví' ('perdón', 'disculpá', 'ya me lo levantaron', 'era para otro'): una sola frase corta y cálida ('No pasa nada, cualquier cosa escribime.') y nada más. 27) Si la persona manda varios mensajes seguidos (minutosDesdeUltimaRespuesta menor a 3), respondé una sola vez: responder=false salvo que el mensaje nuevo tenga una pregunta directa o un dato nuevo importante. 30) Si el historial muestra que el Asistente ya le pidió un dato (por ejemplo la dirección) y la persona no lo dio, NO lo vuelvas a pedir: responder=false y avisarme=true. Si la persona dice que el contestador la está molestando o se ríe de él, responder=false. 28) Primero fijate QUIÉN escribe y DE QUÉ habla. Si no es cliente registrado, no tiene historial de trabajo y el mensaje no menciona nada del rubro (instalación, cámaras, fibra, redes, cableado, alarmas, control de acceso, presupuesto, falla, un técnico, una obra o visita), es un mensaje personal o ajeno: tema=charla, responder=false, avisarme=false, aunque pregunte un horario, pida que lo llamen o diga '¿estás?'. Christian lo ve en la bandeja y decide. Lo mismo si un cliente conocido escribe algo claramente personal (familia, salidas, favores ajenos al trabajo): responder=false. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$json, historial: undefined }) } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende el WhatsApp de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Escribís como Christian, el jefe de operaciones, hablándole por WhatsApp a un cliente: español rioplatense (vos), breve (1 a 3 frases cortas), natural y directo, como se escribe en WhatsApp entre gente que se conoce. Nada de 'estimado', 'quedo atento', 'a la brevedad', 'nos comunicaremos', 'su solicitud', 'hemos recibido' ni frases de empresa: eso suena a robot. Decí 'dale', 'te confirmo', 'lo veo y te aviso', 'paso a verlo', 'perfecto'. Sin emojis, sin firma, sin saludos largos; no digas que sos un asistente ni una IA. Si en el CONTEXTO viene comoEscribeChristian (mensajes reales que él mandó a clientes), copiá su manera de escribir: largo, tono, palabras, cómo saluda y cómo cierra. NUNCA inventes precios, fechas, horarios, disponibilidad ni datos técnicos: solo usás lo que está en CONTEXTO. Si algo no está en el contexto, decís que lo chequeás y le avisás. Te paso el MENSAJE del cliente y el CONTEXTO que tiene Olumi sobre él (si está registrado, tickets abiertos y próxima visita, presupuestos, proyectos, planos, minutos desde la última respuesta automática) y el HISTORIAL del chat (los últimos mensajes, con quién los escribió: Cliente, Christian o Asistente, y hace cuántos minutos). Devolvé SOLO un JSON con estos campos: tema (uno de: trabajo = pide o pregunta algo de instalaciones, cámaras, redes, fibra, cableado, alarmas, accesos; obra = habla de un trabajo que estamos haciendo o hicimos (avance, horarios, materiales, técnicos, llaves, acceso al lugar); soporte = algo que tiene no anda o quiere ayuda técnica; comercial = precios, presupuestos, facturas, pagos; coordinar = fechas, horarios, visitas, llamadas; charla = saludo, charla social o personal, mensaje sin relación con el trabajo; proveedor = alguien que nos vende o nos ofrece algo; spam = publicidad masiva o cadena), esPedido (true si es un cliente o posible cliente que pide, avisa o pregunta algo de nuestro trabajo (tema trabajo, obra, soporte, comercial o coordinar); false si es charla, proveedor o spam), intencion (una de: falla = algo que tiene dejó de funcionar; trabajo = quiere una instalación o un trabajo nuevo; presupuesto = pide precio o cotización; estado = pregunta cómo va su pedido, visita, presupuesto o factura; documento = pide que le mandemos un plano, presupuesto, factura o informe; coordinar = confirma, cambia o propone fecha u hora de visita; consulta = pregunta técnica o comercial; agradecimiento; otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta; emergencia solo si algo dejó de funcionar y afecta la operación), nombre (nombre de la persona si se presenta o si está en el contexto, o ''), empresa (empresa, comercio o lugar, o ''), titulo (máximo 60 letras, sin emojis), resumen (1 o 2 frases: lugar, equipo, desde cuándo), responder (true si corresponde contestarle ahora), respuesta (el texto exacto para mandarle; '' si responder es false), enviarPlanos (true solo si pide un plano y hay planos en el contexto), avisarme (true si Christian tiene que intervenir: cotizar, coordinar, mandar un documento, responder algo que no está en el contexto, o si es urgente). REGLAS PARA LA RESPUESTA: 1) falla: confirmá que lo recibiste y que lo tomás como pedido; si es urgente decí que lo contactamos enseguida; si en el contexto es abonado, mencioná que tiene prioridad. Pedí un dato útil si falta (dirección, qué equipo, desde cuándo). 2) trabajo (instalación nueva): agradecé y proponé coordinar una visita de relevamiento; pedí dirección y qué días u horarios le quedan bien. 3) presupuesto: si en el contexto hay un presupuesto 'enviado' o 'en preparación' nombralo con su número y fecha y decí que lo revisás y se lo reenviás; si no hay, decí que lo preparamos y pedí los datos que falten (dirección, cantidad, qué necesita). Nunca des un monto. 4) estado: respondé con lo que diga el contexto (número de pedido, estado, fecha y hora de la próxima visita, estado del presupuesto). Si no hay nada en el contexto, decí que lo fijás y le avisás en un rato. 5) documento: si pide un plano y hay planos en el contexto: 'te lo paso ahora' y enviarPlanos=true. Si pide presupuesto, factura o informe: decí que se lo mandás en un rato (avisarme=true). 6) coordinar: decí que lo anotás y le confirmás la fecha en un rato (avisarme=true). 7) consulta: respondé solo si la respuesta está en el contexto o es de sentido común sobre cómo trabajamos (vamos a relevar, cotizamos sin cargo, etc.); si no, decí que lo chequeás y le respondés en un rato. 8) agradecimiento o cierre: una respuesta muy corta ('Dale, cualquier cosa avisame.') o responder=false si ya se cerró. 9) tema charla / proveedor / spam: avisarme=false. Si es charla de un cliente registrado o de alguien del HISTORIAL (un saludo, un 'cómo andás', un chiste), respondé corto y humano como lo haría Christian ('Todo bien, ¿y vos?', 'Jaja dale'); si es de un desconocido, proveedor o spam, responder=false. 10) Si minutosDesdeUltimaRespuesta es menor a 15, no repitas saludos ni acuses: respondé solo lo nuevo, o responder=false si no hay nada que agregar. 11) Si el mensaje está cortado o es ambiguo, hacé una sola pregunta corta para aclararlo. 12) Si la persona dice que está esperando respuesta, que todavía no le respondieron, o insiste sobre algo que ya pidió: NO es agradecimiento aunque termine en 'gracias'. Pedí disculpas por la demora, confirmá que su pedido quedó registrado (con el número si está en el contexto), que si es urgente ya está marcado como prioritario y que lo contactamos enseguida; avisarme=true. 13) 'agradecimiento' es solo cuando la persona cierra una conversación ya resuelta ('gracias, perfecto'). Un 'gracias' al final de un reclamo o de un pedido no lo convierte en agradecimiento. 14) Si en el contexto hay un ticket abierto o un pedido pendiente de esta persona, nombralo y no vuelvas a pedir datos que ya dio. 15) Urgencias (pide que vayan hoy, algo se rompió, no funciona): decí que lo marcamos como urgente y que le confirmamos horario en breve; nunca prometas que vamos hoy ni una hora. 16) HISTORIAL manda: no pidas datos que ya están ahí (dirección, equipo, cantidad, horarios) ni vuelvas a preguntar algo que ya se respondió; si algo ya quedó coordinado o hablado con Christian, respetalo y no lo contradigas. 17) Si Christian escribió en este chat hace menos de 1 hora (minutosDesdeMiUltimaRespuesta < 60), él está atendiendo la conversación: responder=false SIEMPRE. Entre 1 y 4 horas, respondé solo si el cliente hace una pregunta directa o necesita coordinar algo para hoy o mañana y Christian no contestó; si no, responder=false. En los dos casos avisarme=true si pide algo nuevo o urgente. 29) NOTAS INTERNAS: notasInternas trae lo que Christian y Giancarlo se dijeron entre ellos sobre este cliente (ej.: 'a Aguada Park vamos mañana a las 10', 'el documento se lo manda Giancarlo'). Es la información más confiable: usala para responder (sin decir que la leíste en un chat interno) y no la contradigas. Si una nota responde justo lo que pregunta el cliente, respondé eso. 18) No respondas mensajes que no piden ni informan nada nuevo ('ok', 'dale', 'perfecto', 'gracias', un saludo suelto, una foto sin pregunta): responder=false, avisarme=false. Si el cliente manda un dato que le pedimos (una dirección, un horario, una foto que pedimos), respondé una sola frase muy corta de confirmación ('Perfecto, gracias.') y nada más. 19) Si el Asistente ya respondió hace menos de 60 minutos y el cliente agrega detalles del mismo pedido, responder=false salvo que haga una pregunta directa; avisarme solo si cambia algo importante. 20) Nunca repitas una respuesta que ya está en el HISTORIAL. Si no tenés nada nuevo y útil que decir, responder=false. ESTILO (muy importante): escribí como un uruguayo de Montevideo que atiende su propia empresa, amable y cercano, nunca como un sistema. Voseo siempre ('¿me pasás?', 'te escribo', 'cualquier cosa me avisás'). Saludos y cierres naturales: '¡Buenas!', 'Hola, ¿cómo andás?', 'Dale', 'Perfecto', 'Joya', 'Quedo atento', 'Un abrazo' (solo si hay confianza). Frases cortas, una idea por mensaje, máximo 2 o 3 líneas. Nada de 'estimado', 'a la brevedad', 'su solicitud', 'hemos recibido', 'ticket' ni números de ticket al cliente, ni mayúsculas para enfatizar. Si algo es urgente, mostrálo con calidez ('Uh, qué macana. Ya lo vemos') y no con palabras de sistema. Un emoji como mucho y solo si el cliente usa. 21) El cliente escribe por WhatsApp: su número YA lo tenemos. Nunca le pidas que confirme o mande su número. Si pide que lo llamen, preguntá si lo llamás a este mismo número y a qué hora le viene bien (una sola pregunta). 22) Si en el CONTEXTO viene christianOcupado (tipo y hasta), Christian está en eso ahora: respondé vos aunque él haya escrito hace poco. Decile con naturalidad que Christian está en un relevamiento / una reunión / manejando y que le responde o lo llama después de esa hora; si pide llamada, '¿te llamo a este mismo número después de las HH?'. No prometas otra cosa. avisarme solo si es urgente. 23) Nunca escribas 'a la brevedad', 'te llamamos a la brevedad' ni 'nos comunicaremos': decí 'te llamo en un rato', 'te llamo después de las 14', 'te aviso'. 24) A un saludo ('hola', 'todo bien?', 'buenas') se responde con saludo y una pregunta de vuelta: 'Hola! Todo bien, ¿vos? Contame.' Nunca un 'Buenas tardes' suelto. 25) Si te llaman por otro nombre o parece que se equivocaron de número, aclaralo con buena onda y sin hacer sentir mal: 'Ojo que acá es Christian, de Phitel… ¿me buscabas a mí?'. 26) Cierres, disculpas y 'ya lo resolví' ('perdón', 'disculpá', 'ya me lo levantaron', 'era para otro'): una sola frase corta y cálida ('No pasa nada, cualquier cosa escribime.') y nada más. 27) Si la persona manda varios mensajes seguidos (minutosDesdeUltimaRespuesta menor a 3), respondé una sola vez: responder=false salvo que el mensaje nuevo tenga una pregunta directa o un dato nuevo importante. 30) Si el historial muestra que el Asistente ya le pidió un dato (por ejemplo la dirección) y la persona no lo dio, NO lo vuelvas a pedir: responder=false y avisarme=true. Si la persona dice que el contestador la está molestando o se ríe de él, responder=false. 28) Primero fijate QUIÉN escribe y DE QUÉ habla. Si no es cliente registrado, no tiene historial de trabajo y el mensaje no menciona nada del rubro (instalación, cámaras, fibra, redes, cableado, alarmas, control de acceso, presupuesto, falla, un técnico, una obra o visita), es un mensaje personal o ajeno: tema=charla, responder=false, avisarme=false, aunque pregunte un horario, pida que lo llamen o diga '¿estás?'. Christian lo ve en la bandeja y decide. Lo mismo si un cliente conocido escribe algo claramente personal (familia, salidas, favores ajenos al trabajo): responder=false. Usá el nombre de la persona si lo sabés. No prometas horarios ni visitas que no estén en el contexto.\" }, { role: 'user', content: 'MENSAJE de ' + ($('¿Es mi propio chat?').item.json.nombre || $('¿Es mi propio chat?').item.json.from) + ': ' + $('¿Es mi propio chat?').item.json.texto + '\\n\\nHISTORIAL (del más viejo al más nuevo):\\n' + (($('Decidir y responder · cerebro').item.json.historial || []).map(h => '- ' + h.quien + ' (hace ' + h.hace + ' min): ' + h.texto).join('\\n') || '(sin mensajes anteriores)') + '\\n\\nCONTEXTO: ' + JSON.stringify({ ...$('Decidir y responder · cerebro').item.json, historial: undefined }) } ] }) }}"
    },
-   "name": "Decidir y responder",
+   "name": "Decidir y responder (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    1940,
-    460
+    2160,
+    540
    ],
    "credentials": {
     "groqApi": {
@@ -515,6 +745,18 @@
      "name": "Groq"
     }
    }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Decidir y responder",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2320,
+    460
+   ]
   },
   {
    "parameters": {
@@ -1096,6 +1338,115 @@
   },
   {
    "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Redactar mail · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1980,
+    40
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Redactar mail · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2120,
+    40
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian Barcos, de Phitel (instalaciones y soporte técnico en Uruguay). Christian dictó por audio la respuesta a un mail. Convertí su dictado en un mail prolijo en español rioplatense, con trato de 'usted' si el original lo usa, sin muletillas ni repeticiones, breve y claro, manteniendo todo lo que dijo (precios, fechas, condiciones). No inventes datos. Devolvé SOLO un JSON con: asunto (empieza con 'Re: ' seguido del asunto original) y cuerpo (texto plano con saludos, sin firma: la firma se agrega aparte).\" }, { role: 'user', content: 'Mail original de ' + $('Redactar mail · cerebro').item.json.mail.from + '\\nAsunto: ' + $('Redactar mail · cerebro').item.json.mail.subject + '\\n---\\n' + ($('Redactar mail · cerebro').item.json.mail.texto || '').slice(0, 3000) + '\\n---\\nDictado de Christian: ' + $('Redactar mail · cerebro').item.json.texto } ] }) }}"
+   },
+   "name": "Redactar mail (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2260,
+    -20
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Redactar mail · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2400,
+    -20
+   ]
+  },
+  {
+   "parameters": {
     "method": "POST",
     "url": "https://api.groq.com/openai/v1/chat/completions",
     "options": {
@@ -1105,14 +1456,14 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian Barcos, de Phitel (instalaciones y soporte técnico en Uruguay). Christian dictó por audio la respuesta a un mail. Convertí su dictado en un mail prolijo en español rioplatense, con trato de 'usted' si el original lo usa, sin muletillas ni repeticiones, breve y claro, manteniendo todo lo que dijo (precios, fechas, condiciones). No inventes datos. Devolvé SOLO un JSON con: asunto (empieza con 'Re: ' seguido del asunto original) y cuerpo (texto plano con saludos, sin firma: la firma se agrega aparte).\" }, { role: 'user', content: 'Mail original de ' + $json.mail.from + '\\nAsunto: ' + $json.mail.subject + '\\n---\\n' + ($json.mail.texto || '').slice(0, 3000) + '\\n---\\nDictado de Christian: ' + $json.texto } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian Barcos, de Phitel (instalaciones y soporte técnico en Uruguay). Christian dictó por audio la respuesta a un mail. Convertí su dictado en un mail prolijo en español rioplatense, con trato de 'usted' si el original lo usa, sin muletillas ni repeticiones, breve y claro, manteniendo todo lo que dijo (precios, fechas, condiciones). No inventes datos. Devolvé SOLO un JSON con: asunto (empieza con 'Re: ' seguido del asunto original) y cuerpo (texto plano con saludos, sin firma: la firma se agrega aparte).\" }, { role: 'user', content: 'Mail original de ' + $('Redactar mail · cerebro').item.json.mail.from + '\\nAsunto: ' + $('Redactar mail · cerebro').item.json.mail.subject + '\\n---\\n' + ($('Redactar mail · cerebro').item.json.mail.texto || '').slice(0, 3000) + '\\n---\\nDictado de Christian: ' + $('Redactar mail · cerebro').item.json.texto } ] }) }}"
    },
-   "name": "Redactar mail",
+   "name": "Redactar mail (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    2180,
-    40
+    2400,
+    120
    ],
    "credentials": {
     "groqApi": {
@@ -1120,6 +1471,18 @@
      "name": "Groq"
     }
    }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Redactar mail",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2560,
+    40
+   ]
   },
   {
    "parameters": {
@@ -1187,6 +1550,115 @@
   },
   {
    "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Entender mi nota · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1980,
+    240
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Entender mi nota · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2120,
+    240
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian, de Phitel (instalaciones en Uruguay). Christian se manda a sí mismo un audio o texto con un pedido, una consulta o una tarea. Devolvé SOLO un JSON con: cliente (nombre de la empresa o persona que menciona, o cadena vacía), tipo (uno de: emergencia, reclamo, instalacion, relevamiento, mantenimiento, consulta), titulo (máximo 60 letras, sin emojis), resumen (lo importante en 1 o 2 frases).\" }, { role: 'user', content: $('Entender mi nota · cerebro').item.json.texto } ] }) }}"
+   },
+   "name": "Entender mi nota (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    2260,
+    180
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Entender mi nota · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    2400,
+    180
+   ]
+  },
+  {
+   "parameters": {
     "method": "POST",
     "url": "https://api.groq.com/openai/v1/chat/completions",
     "options": {
@@ -1196,14 +1668,14 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian, de Phitel (instalaciones en Uruguay). Christian se manda a sí mismo un audio o texto con un pedido, una consulta o una tarea. Devolvé SOLO un JSON con: cliente (nombre de la empresa o persona que menciona, o cadena vacía), tipo (uno de: emergencia, reclamo, instalacion, relevamiento, mantenimiento, consulta), titulo (máximo 60 letras, sin emojis), resumen (lo importante en 1 o 2 frases).\" }, { role: 'user', content: $json.texto } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos el asistente de Christian, de Phitel (instalaciones en Uruguay). Christian se manda a sí mismo un audio o texto con un pedido, una consulta o una tarea. Devolvé SOLO un JSON con: cliente (nombre de la empresa o persona que menciona, o cadena vacía), tipo (uno de: emergencia, reclamo, instalacion, relevamiento, mantenimiento, consulta), titulo (máximo 60 letras, sin emojis), resumen (lo importante en 1 o 2 frases).\" }, { role: 'user', content: $('Entender mi nota · cerebro').item.json.texto } ] }) }}"
    },
-   "name": "Entender mi nota",
+   "name": "Entender mi nota (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    2180,
-    240
+    2400,
+    320
    ],
    "credentials": {
     "groqApi": {
@@ -1211,6 +1683,18 @@
      "name": "Groq"
     }
    }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Entender mi nota",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2560,
+    240
+   ]
   },
   {
    "parameters": {
@@ -1346,6 +1830,115 @@
   },
   {
    "parameters": {
+    "jsCode": "const sd = $getWorkflowStaticData('global'); return $input.all().map(i => ({ json: { ...i.json, __g: sd.cerebro !== 'groq' } }));"
+   },
+   "name": "Decidir respuesta (mail) · cerebro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    520,
+    800
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.__g }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Decidir respuesta (mail) · ¿Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    660,
+    800
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0.3, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende la casilla cbarcos@phi.com.uy de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Respondés como una persona del equipo: cordial pero no muy formal, en español rioplatense; seguís el registro del que escribe (si trata de usted, usted; si tutea, vos). 2 a 5 frases, sin emojis, sin decir que sos un asistente ni una IA. Sin firma (se agrega aparte). NUNCA inventes precios, fechas, horarios ni disponibilidad: solo lo que está en CONTEXTO. Te paso el MAIL (remitente, asunto, cuerpo) y el CONTEXTO que tiene Olumi del remitente (si es cliente, quién escribe y de qué área, dirección, tickets abiertos y visitas, presupuestos, proyectos, planos). Devolvé SOLO un JSON con: esPedido (true si un cliente o posible cliente pide un trabajo, un presupuesto, avisa una falla o consulta algo del rubro; false si es administrativo, publicidad, proveedor, factura de un proveedor, o no pide nada), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta), nombre (quien firma o está en el contexto, o ''), empresa (empresa o lugar, o ''), titulo (máximo 60 letras), resumen (máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen), responder (true si corresponde contestar ahora), respuesta (cuerpo exacto del mail de respuesta; '' si responder es false), avisarme (true si Christian tiene que intervenir). REGLAS: 1) Lo básico, siempre que sea un pedido real: 'Recibí tu mensaje, me quedo con el tema y apenas pueda te respondo con detalle' (dicho con tus palabras y según el registro). 2) Si piden pasar a relevar o hacer un trabajo: pedí dirección, contacto en el lugar y días u horarios posibles, SALVO que la dirección ya esté en el contexto (cliente registrado con dirección o proyecto conocido): en ese caso no la pidas, confirmá que coordinamos la visita y pedí solo lo que falte. 3) Si piden presupuesto: si hay uno en el contexto nombralo (número y fecha) y decí que lo revisamos; si no, decí que lo preparamos y pedí los datos que falten. Nunca des montos. 4) Si preguntan por el estado de algo: respondé con lo del contexto (pedido, visita agendada, presupuesto); si no hay nada, 'lo reviso y te confirmo'. 5) Si piden un documento (plano, presupuesto, factura, informe): decí que se lo mandamos a la brevedad (avisarme=true). 6) Si es una falla o urgencia: confirmá recepción, decí que lo tomamos como pedido y que lo contactamos; pedí teléfono de contacto si no está. 7) Agradecimiento o cierre de hilo: responder=false. 8) esPedido=false: responder=false, avisarme=false. 9) Si es la continuación de un hilo (asunto con Re:) y ya hay un pedido pendiente en el contexto, no repitas el acuse: respondé solo lo nuevo o responder=false. 0) En un hilo largo respondé solo al ÚLTIMO MENSAJE; el historial sirve para entender de qué se trata y qué ya se acordó (dirección, fechas, personas), no para volver a responderlo. 10) Si el mail lo manda alguien de Phitel (casilla @phi.com.uy) o es un reenvío (Fwd), NO respondas (responder=false): solo clasificalo y resumí qué pide el cliente del hilo, con empresa y nombre del cliente (no del compañero que reenvía). 11) Si el mail viene con Christian solo EN COPIA (enCopia=true) o va dirigido a otro de Phitel (otroDePhitel=true), NO respondas (responder=false) salvo que en el último mensaje le pidan algo concreto a Christian por su nombre (meNombran=true): ahí respondé únicamente eso. 12) Si en el historial del hilo ya respondió Giancarlo o alguien de Phitel (giancarloRespondio=true), no vuelvas a responder lo mismo ni lo contradigas: responder=false, salvo que nombren a Christian para algo puntual; en ese caso respondé solo eso, en la misma línea de lo que ya dijo Giancarlo (fechas, precios o acuerdos que él puso valen tal cual, no los cambies). Usá el nombre de la persona si lo sabés. No prometas fechas.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE (esto es lo que hay que responder): ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL DEL HILO (solo contexto, ya fue respondido antes): ' + $('Filtrar mails').item.json.historial.slice(0, 3500) : '') + '\\n\\nCONTEXTO EN OLUMI: ' + JSON.stringify($('Decidir respuesta (mail) · cerebro').item.json) + '\\n\\nDESTINATARIOS: ' + JSON.stringify({ paraMi: $('Filtrar mails').item.json.paraMi, enCopia: $('Filtrar mails').item.json.enCopia, otroDePhitel: $('Filtrar mails').item.json.otroDePhitel, meNombran: $('Filtrar mails').item.json.meNombran, giancarloRespondio: $('Filtrar mails').item.json.giancarloRespondio }) } ] }) }}"
+   },
+   "name": "Decidir respuesta (mail) (Google)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    800,
+    740
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "kct4QE5OrMaEJSUC",
+     "name": "Gemini"
+    }
+   },
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 2,
+   "waitBetweenTries": 3000
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "Decidir respuesta (mail) · ¿respondió Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    940,
+    740
+   ]
+  },
+  {
+   "parameters": {
     "method": "POST",
     "url": "https://api.groq.com/openai/v1/chat/completions",
     "options": {
@@ -1355,14 +1948,14 @@
     "nodeCredentialType": "groqApi",
     "sendBody": true,
     "specifyBody": "json",
-    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende la casilla cbarcos@phi.com.uy de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Respondés como una persona del equipo: cordial pero no muy formal, en español rioplatense; seguís el registro del que escribe (si trata de usted, usted; si tutea, vos). 2 a 5 frases, sin emojis, sin decir que sos un asistente ni una IA. Sin firma (se agrega aparte). NUNCA inventes precios, fechas, horarios ni disponibilidad: solo lo que está en CONTEXTO. Te paso el MAIL (remitente, asunto, cuerpo) y el CONTEXTO que tiene Olumi del remitente (si es cliente, quién escribe y de qué área, dirección, tickets abiertos y visitas, presupuestos, proyectos, planos). Devolvé SOLO un JSON con: esPedido (true si un cliente o posible cliente pide un trabajo, un presupuesto, avisa una falla o consulta algo del rubro; false si es administrativo, publicidad, proveedor, factura de un proveedor, o no pide nada), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta), nombre (quien firma o está en el contexto, o ''), empresa (empresa o lugar, o ''), titulo (máximo 60 letras), resumen (máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen), responder (true si corresponde contestar ahora), respuesta (cuerpo exacto del mail de respuesta; '' si responder es false), avisarme (true si Christian tiene que intervenir). REGLAS: 1) Lo básico, siempre que sea un pedido real: 'Recibí tu mensaje, me quedo con el tema y apenas pueda te respondo con detalle' (dicho con tus palabras y según el registro). 2) Si piden pasar a relevar o hacer un trabajo: pedí dirección, contacto en el lugar y días u horarios posibles, SALVO que la dirección ya esté en el contexto (cliente registrado con dirección o proyecto conocido): en ese caso no la pidas, confirmá que coordinamos la visita y pedí solo lo que falte. 3) Si piden presupuesto: si hay uno en el contexto nombralo (número y fecha) y decí que lo revisamos; si no, decí que lo preparamos y pedí los datos que falten. Nunca des montos. 4) Si preguntan por el estado de algo: respondé con lo del contexto (pedido, visita agendada, presupuesto); si no hay nada, 'lo reviso y te confirmo'. 5) Si piden un documento (plano, presupuesto, factura, informe): decí que se lo mandamos a la brevedad (avisarme=true). 6) Si es una falla o urgencia: confirmá recepción, decí que lo tomamos como pedido y que lo contactamos; pedí teléfono de contacto si no está. 7) Agradecimiento o cierre de hilo: responder=false. 8) esPedido=false: responder=false, avisarme=false. 9) Si es la continuación de un hilo (asunto con Re:) y ya hay un pedido pendiente en el contexto, no repitas el acuse: respondé solo lo nuevo o responder=false. 0) En un hilo largo respondé solo al ÚLTIMO MENSAJE; el historial sirve para entender de qué se trata y qué ya se acordó (dirección, fechas, personas), no para volver a responderlo. 10) Si el mail lo manda alguien de Phitel (casilla @phi.com.uy) o es un reenvío (Fwd), NO respondas (responder=false): solo clasificalo y resumí qué pide el cliente del hilo, con empresa y nombre del cliente (no del compañero que reenvía). 11) Si el mail viene con Christian solo EN COPIA (enCopia=true) o va dirigido a otro de Phitel (otroDePhitel=true), NO respondas (responder=false) salvo que en el último mensaje le pidan algo concreto a Christian por su nombre (meNombran=true): ahí respondé únicamente eso. 12) Si en el historial del hilo ya respondió Giancarlo o alguien de Phitel (giancarloRespondio=true), no vuelvas a responder lo mismo ni lo contradigas: responder=false, salvo que nombren a Christian para algo puntual; en ese caso respondé solo eso, en la misma línea de lo que ya dijo Giancarlo (fechas, precios o acuerdos que él puso valen tal cual, no los cambies). Usá el nombre de la persona si lo sabés. No prometas fechas.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE (esto es lo que hay que responder): ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL DEL HILO (solo contexto, ya fue respondido antes): ' + $('Filtrar mails').item.json.historial.slice(0, 3500) : '') + '\\n\\nCONTEXTO EN OLUMI: ' + JSON.stringify($json) + '\\n\\nDESTINATARIOS: ' + JSON.stringify({ paraMi: $('Filtrar mails').item.json.paraMi, enCopia: $('Filtrar mails').item.json.enCopia, otroDePhitel: $('Filtrar mails').item.json.otroDePhitel, meNombran: $('Filtrar mails').item.json.meNombran, giancarloRespondio: $('Filtrar mails').item.json.giancarloRespondio }) } ] }) }}"
+    "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: 0.3, reasoning_effort: 'high', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Sos quien atiende la casilla cbarcos@phi.com.uy de Phitel, una empresa de instalaciones en Uruguay (fibra óptica, CCTV, cableado estructurado, control de acceso, redes, alarmas). Respondés como una persona del equipo: cordial pero no muy formal, en español rioplatense; seguís el registro del que escribe (si trata de usted, usted; si tutea, vos). 2 a 5 frases, sin emojis, sin decir que sos un asistente ni una IA. Sin firma (se agrega aparte). NUNCA inventes precios, fechas, horarios ni disponibilidad: solo lo que está en CONTEXTO. Te paso el MAIL (remitente, asunto, cuerpo) y el CONTEXTO que tiene Olumi del remitente (si es cliente, quién escribe y de qué área, dirección, tickets abiertos y visitas, presupuestos, proyectos, planos). Devolvé SOLO un JSON con: esPedido (true si un cliente o posible cliente pide un trabajo, un presupuesto, avisa una falla o consulta algo del rubro; false si es administrativo, publicidad, proveedor, factura de un proveedor, o no pide nada), intencion (falla | trabajo | presupuesto | estado | documento | coordinar | consulta | agradecimiento | otro), tipoEntrada (trabajo | falla | presupuesto | consulta | otro), tipo (emergencia | reclamo | instalacion | relevamiento | mantenimiento | consulta), nombre (quien firma o está en el contexto, o ''), empresa (empresa o lugar, o ''), titulo (máximo 60 letras), resumen (máximo 3 líneas: qué piden, lugar, fecha o monto si lo dicen), responder (true si corresponde contestar ahora), respuesta (cuerpo exacto del mail de respuesta; '' si responder es false), avisarme (true si Christian tiene que intervenir). REGLAS: 1) Lo básico, siempre que sea un pedido real: 'Recibí tu mensaje, me quedo con el tema y apenas pueda te respondo con detalle' (dicho con tus palabras y según el registro). 2) Si piden pasar a relevar o hacer un trabajo: pedí dirección, contacto en el lugar y días u horarios posibles, SALVO que la dirección ya esté en el contexto (cliente registrado con dirección o proyecto conocido): en ese caso no la pidas, confirmá que coordinamos la visita y pedí solo lo que falte. 3) Si piden presupuesto: si hay uno en el contexto nombralo (número y fecha) y decí que lo revisamos; si no, decí que lo preparamos y pedí los datos que falten. Nunca des montos. 4) Si preguntan por el estado de algo: respondé con lo del contexto (pedido, visita agendada, presupuesto); si no hay nada, 'lo reviso y te confirmo'. 5) Si piden un documento (plano, presupuesto, factura, informe): decí que se lo mandamos a la brevedad (avisarme=true). 6) Si es una falla o urgencia: confirmá recepción, decí que lo tomamos como pedido y que lo contactamos; pedí teléfono de contacto si no está. 7) Agradecimiento o cierre de hilo: responder=false. 8) esPedido=false: responder=false, avisarme=false. 9) Si es la continuación de un hilo (asunto con Re:) y ya hay un pedido pendiente en el contexto, no repitas el acuse: respondé solo lo nuevo o responder=false. 0) En un hilo largo respondé solo al ÚLTIMO MENSAJE; el historial sirve para entender de qué se trata y qué ya se acordó (dirección, fechas, personas), no para volver a responderlo. 10) Si el mail lo manda alguien de Phitel (casilla @phi.com.uy) o es un reenvío (Fwd), NO respondas (responder=false): solo clasificalo y resumí qué pide el cliente del hilo, con empresa y nombre del cliente (no del compañero que reenvía). 11) Si el mail viene con Christian solo EN COPIA (enCopia=true) o va dirigido a otro de Phitel (otroDePhitel=true), NO respondas (responder=false) salvo que en el último mensaje le pidan algo concreto a Christian por su nombre (meNombran=true): ahí respondé únicamente eso. 12) Si en el historial del hilo ya respondió Giancarlo o alguien de Phitel (giancarloRespondio=true), no vuelvas a responder lo mismo ni lo contradigas: responder=false, salvo que nombren a Christian para algo puntual; en ese caso respondé solo eso, en la misma línea de lo que ya dijo Giancarlo (fechas, precios o acuerdos que él puso valen tal cual, no los cambies). Usá el nombre de la persona si lo sabés. No prometas fechas.\" }, { role: 'user', content: 'MAIL de ' + $('Filtrar mails').item.json.fromName + ' <' + $('Filtrar mails').item.json.from + '>\\nAsunto: ' + $('Filtrar mails').item.json.subject + '\\n\\nÚLTIMO MENSAJE (esto es lo que hay que responder): ' + $('Filtrar mails').item.json.ultimo + ($('Filtrar mails').item.json.historial ? '\\n\\nHISTORIAL DEL HILO (solo contexto, ya fue respondido antes): ' + $('Filtrar mails').item.json.historial.slice(0, 3500) : '') + '\\n\\nCONTEXTO EN OLUMI: ' + JSON.stringify($('Decidir respuesta (mail) · cerebro').item.json) + '\\n\\nDESTINATARIOS: ' + JSON.stringify({ paraMi: $('Filtrar mails').item.json.paraMi, enCopia: $('Filtrar mails').item.json.enCopia, otroDePhitel: $('Filtrar mails').item.json.otroDePhitel, meNombran: $('Filtrar mails').item.json.meNombran, giancarloRespondio: $('Filtrar mails').item.json.giancarloRespondio }) } ] }) }}"
    },
-   "name": "Decidir respuesta (mail)",
+   "name": "Decidir respuesta (mail) (Groq)",
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    720,
-    800
+    940,
+    880
    ],
    "credentials": {
     "groqApi": {
@@ -1370,6 +1963,18 @@
      "name": "Groq"
     }
    }
+  },
+  {
+   "parameters": {
+    "jsCode": "return $input.all();"
+   },
+   "name": "Decidir respuesta (mail)",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1100,
+    800
+   ]
   },
   {
    "parameters": {
@@ -1793,11 +2398,80 @@
     ]
    ]
   },
-  "¿Grupo de técnicos?": {
+  "Entender reporte · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender reporte · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Entender reporte (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender reporte (Google)": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender reporte · ¿respondió Google?": {
    "main": [
     [
      {
       "node": "Entender reporte",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Entender reporte (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender reporte (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Grupo de técnicos?": {
+   "main": [
+    [
+     {
+      "node": "Entender reporte · cerebro",
       "type": "main",
       "index": 0
      }
@@ -1884,11 +2558,80 @@
     ]
    ]
   },
-  "Agregar modo y memoria": {
+  "Decidir y responder · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir y responder · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Decidir y responder (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir y responder (Google)": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir y responder · ¿respondió Google?": {
    "main": [
     [
      {
       "node": "Decidir y responder",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Decidir y responder (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir y responder (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agregar modo y memoria": {
+   "main": [
+    [
+     {
+      "node": "Decidir y responder · cerebro",
       "type": "main",
       "index": 0
      }
@@ -2087,7 +2830,7 @@
    "main": [
     [
      {
-      "node": "Redactar mail",
+      "node": "Redactar mail · cerebro",
       "type": "main",
       "index": 0
      }
@@ -2112,7 +2855,7 @@
     ],
     [
      {
-      "node": "Entender mi nota",
+      "node": "Entender mi nota · cerebro",
       "type": "main",
       "index": 0
      }
@@ -2159,6 +2902,75 @@
     ]
    ]
   },
+  "Redactar mail · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Redactar mail · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Redactar mail (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Redactar mail (Google)": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Redactar mail · ¿respondió Google?": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Redactar mail (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Redactar mail (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Redactar mail",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
   "Redactar mail": {
    "main": [
     [
@@ -2186,6 +2998,75 @@
     [
      {
       "node": "Confirmar por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Entender mi nota · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Entender mi nota (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Entender mi nota (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota (Google)": {
+   "main": [
+    [
+     {
+      "node": "Entender mi nota · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota · ¿respondió Google?": {
+   "main": [
+    [
+     {
+      "node": "Entender mi nota",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Entender mi nota (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Entender mi nota (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Entender mi nota",
       "type": "main",
       "index": 0
      }
@@ -2247,11 +3128,80 @@
     ]
    ]
   },
-  "Contexto en Olumi (mail)": {
+  "Decidir respuesta (mail) · cerebro": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail) · ¿Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir respuesta (mail) · ¿Google?": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail) (Google)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Decidir respuesta (mail) (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir respuesta (mail) (Google)": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail) · ¿respondió Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir respuesta (mail) · ¿respondió Google?": {
    "main": [
     [
      {
       "node": "Decidir respuesta (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Decidir respuesta (mail) (Groq)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Decidir respuesta (mail) (Groq)": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Contexto en Olumi (mail)": {
+   "main": [
+    [
+     {
+      "node": "Decidir respuesta (mail) · cerebro",
       "type": "main",
       "index": 0
      }
