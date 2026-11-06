@@ -6,3 +6,11 @@
 4. **Días de publicación**: martes y jueves, no a la noche ni el fin de semana. Arreglos urgentes de un error, cuando haga falta.
 5. **Nada a medio terminar en la app de los clientes**: si una función no está pulida, queda detrás de `enPrueba()` o de un extra (`has('...')`).
 6. Cada publicación a clientes lleva una línea en "Novedades" (LEEME) con lo que cambió para ellos.
+
+## Páginas web (unitytech.uy, /olumi/, /ondi/, /estiba/)
+- Todas usan el estilo común `familia.css` + `familia.js` (raíz del sitio): letra del sistema, nav global "Unity Tech · Olumi · Ondi", nav de cada producto, botones píldora, modo claro/oscuro (sigue al equipo, con botón ◐ que se recuerda en `ut.theme`).
+- Cada producto define solo sus colores en su página: `--acc` (botón), `--acc-2` (acento en oscuro), `--acc-ink` (texto sobre el botón), `--acc-t` (acento para texto).
+- Si se cambia `familia.css`, subir el `?v=` en todas las páginas para que llegue enseguida.
+- La Oficina viva vive en `olumi/oficina/` y se embebe con `?embed=1` (recibe el tema y avisa su alto).
+- Estiba sigue en vista previa: `noindex`, sin enlaces desde las otras páginas, hasta que Christian apruebe el nombre.
+- Regla del sitio: nada de nombres reales de clientes en lo público.
