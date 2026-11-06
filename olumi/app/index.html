@@ -575,6 +575,10 @@ th{font-size:11px;letter-spacing:.07em}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.18: técnico ve solo su parte */
 /* 1.19: tabla de roles · la barra se filtra en render() con ROLV */
+/* 1.29: plano en 3D */
+.pv3d{position:absolute;inset:0;z-index:2;cursor:grab;touch-action:none;display:block}.pv3d:active{cursor:grabbing}
+.pv3d-bar{position:absolute;right:12px;bottom:12px;z-index:3;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pv3d-bar .btn{box-shadow:0 2px 10px rgba(0,0,0,.12)}
 /* 1.28: flujo de la empresa */
 .flujo{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 12px 10px;margin:0 0 16px;overflow:hidden}
 .ftrack{position:relative;display:grid;grid-template-columns:repeat(var(--nst,6),minmax(0,1fr));gap:8px;align-items:stretch;padding-top:18px}
@@ -1762,7 +1766,9 @@ async function act(a,el){
   if(await teamAct(k,el))return;
   if(await planAct(k,el,arg))return;
   if(await obrasAct(k,el,arg))return;
-  if(await planosAct(k,el,arg))return;
+  if(k==='pv3d'&&PV){PV.v3d=!PV.v3d;if(PV.v3d){PV.mode='ver';P3.t0=performance.now()}renderPv();return}
+if(await p3act(k,el,arg))return;
+if(await planosAct(k,el,arg))return;
   if(await campoAct(k,el,arg))return;
   if(await croquisAct(k,el,arg))return;
   if(await entAct(k,el,arg))return;
@@ -1864,7 +1870,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.28',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.29',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2334,7 +2340,7 @@ function openPlan(id){
   PV={id,s:1,tx:0,ty:0,mode:'ver',tipo:'cam',rtipo:'utp',draft:null,sel:null,cal:null,ptrs:new Map(),moved:false};
   document.body.style.overflow='hidden';w.hidden=false;renderPv(true);
 }
-function closePlan(){flushPlan();const w=document.getElementById('pv');if(w)w.hidden=true;PV=null;if(!SH)document.body.style.overflow='';if(SH&&SH.type==='pry'&&!SH.dirty)openSheet('pry',SH.id);if(SH&&SH.type==='rel'&&SH.id){const el=$('#relPlanos');if(el){el.outerHTML=relPlanosHtml(SH.id,D.relevamientos[SH.id]||{});planUrlsSigned()}}}
+function closePlan(){if(P3.on)p3off();flushPlan();const w=document.getElementById('pv');if(w)w.hidden=true;PV=null;if(!SH)document.body.style.overflow='';if(SH&&SH.type==='pry'&&!SH.dirty)openSheet('pry',SH.id);if(SH&&SH.type==='rel'&&SH.id){const el=$('#relPlanos');if(el){el.outerHTML=relPlanosHtml(SH.id,D.relevamientos[SH.id]||{});planUrlsSigned()}}}
 function curPlan(){return PV&&(PV.doc||D.planos[PV.id])}
 function savePlanSoon(){clearTimeout(PVsave);PVsave=setTimeout(flushPlan,500)}
 async function flushPlan(){clearTimeout(PVsave);PVsave=null;if(!PV||!PV.dirty)return;const p=PV.doc||D.planos[PV.id];PV.dirty=false;
@@ -2345,7 +2351,7 @@ function renderPv(fit){
   const p=curPlan();if(!p)return closePlan();const w=$('#pv');const ed=canEdit();
   const modes=[['ver','Mirar'],['dibujo','Dibujar'],['punto','+ Punto'],['ruta','Recorrido'],['escala','Escala']];
   w.innerHTML=`<header class="pv-h"><button class="btn ghost" data-act="pvclose" aria-label="Cerrar plano">✕</button><div class="pv-t"><b>${esc(p.nombre||'Plano')}</b><span class="muted">${esc(pryName(p.proyectoId)||cliName(p.clienteId)||'')}</span></div>
-    <span class="sp"></span>${ed&&has('presupuestos')?'<button class="btn pri" data-act="pv2pres"><span class="only-dsk">Pasar a presupuesto</span><span class="only-mob">Presupuesto</span></button>':''}</header>
+    <span class="sp"></span><button class="btn${PV.v3d?' pri':''}" data-act="pv3d" aria-pressed="${!!PV.v3d}" title="Ver el plano en 3D">${PV.v3d?'Volver al plano':'Ver en 3D'}</button>${ed&&has('presupuestos')?'<button class="btn pri" data-act="pv2pres"><span class="only-dsk">Pasar a presupuesto</span><span class="only-mob">Presupuesto</span></button>':''}</header>
     ${ed?`<div class="pv-tools"><div class="seg" role="group" aria-label="Modo">${modes.map(([k,n])=>`<button class="${PV.mode===k?'on':''}" data-act="pvmode:${k}" aria-pressed="${PV.mode===k}">${n}</button>`).join('')}</div>
       ${PV.mode==='punto'?`<div class="pv-chips">${PTIPOS.map(t=>`<button class="pv-chip${PV.tipo===t.k?' on':''}" data-act="pvtipo:${t.k}" style="--pc:${t.c}"><i>${t.l}</i>${t.n}</button>`).join('')}</div>`:''}
       ${PV.mode==='dibujo'?dibujoChips():''}
@@ -2355,6 +2361,7 @@ function renderPv(fit){
       <div class="pv-zoom"><button class="btn" data-act="pvz:in" aria-label="Acercar">+</button><button class="btn" data-act="pvz:out" aria-label="Alejar">−</button><button class="btn" data-act="pvz:fit">Ajustar</button></div></div>
       <aside class="pv-side" id="pvSide"></aside></div><p class="busy" id="pvBusy" hidden></p>`;
   bindStage();if(fit)setTimeout(fitPv,0);else applyT();drawPv();renderSide();
+  if(PV.v3d)setTimeout(p3on,0);else if(P3.on)p3off();
 }
 function fitPv(){const st=$('#pvStage'),p=curPlan();if(!st||!p)return;const s=Math.min(st.clientWidth/p.img.w,st.clientHeight/p.img.h)*0.96;PV.s=s;PV.tx=(st.clientWidth-p.img.w*s)/2;PV.ty=(st.clientHeight-p.img.h*s)/2;applyT();drawPv()}
 function applyT(){const w=$('#pvWorld');if(w)w.style.transform=`translate(${PV.tx}px,${PV.ty}px) scale(${PV.s})`}
@@ -4664,6 +4671,100 @@ function flujoHtml(){const d=flujoData();
   const dots=[];for(let i=0;i<st.length-1;i++){const n=Math.min(4,Math.max(st[i][2]?1:0,Math.ceil(st[i][2]/2)));for(let k=0;k<n;k++)dots.push(`<i class="fdot" style="--i:${i};--k:${k};--n:${n}"></i>`)}
   return`<section class="flujo" aria-label="Flujo de la empresa"><div class="ftrack" style="--nst:${st.length}">${dots.join('')}${st.map(([v,n,c,sub,path],i)=>`<button type="button" class="fst${c?' on':''}" data-view="${v}" style="--i:${i}"><svg viewBox="0 0 24 24"><path d="${path}"/></svg><b>${c}</b><span>${esc(n)}</span><small>${esc(sub)}</small></button>`).join('')}</div>
     <div class="fleg">${d.tecs?`<span class="live"></span>${d.tecs} técnico${d.tecs>1?'s':''} en el mapa · <a href="#" data-view="vivo">ver En vivo</a>`:'Así se mueve la empresa hoy: cada etapa abre su pantalla.'}</div></section>`}
+/* 1.29: plano en 3D · motor propio en Canvas 2D (proyección ortográfica), sin librerías y sin internet.
+   El plano es el piso; las paredes y rectángulos del dibujo se levantan; los puntos son equipos con su animación
+   (cámara: abanico de visión · AP: ondas · alarma: pulso); los recorridos van por el techo con datos que viajan. */
+const P3={on:false,cv:null,ctx:null,raf:0,th:-0.62,ph:0.82,zoom:1,panX:0,panY:0,auto:false,t0:0,drag:null,hit:[],img:null};
+const P3H=2.7,P3CAB=2.45;   // altura de pared y de canalización (m)
+function p3dims(p){const W=p.img.w,H=p.img.h;if(p.escala&&p.escala.mpp)return{Wm:W*p.escala.mpp,Hm:H*p.escala.mpp,real:true};const big=Math.max(W,H);return{Wm:30*W/big,Hm:30*H/big,real:false}}
+function p3on(){const st=$('#pvStage'),p=curPlan();if(!st||!p)return;P3.on=true;P3.t0=performance.now();P3.img=$('#pvImg');
+  let cv=$('#pv3d');if(!cv){cv=document.createElement('canvas');cv.id='pv3d';cv.className='pv3d';st.appendChild(cv)}P3.cv=cv;P3.ctx=cv.getContext('2d');
+  const w=$('#pvWorld');if(w)w.style.visibility='hidden';const z=st.querySelector('.pv-zoom');if(z)z.hidden=true;
+  let bar=$('#pv3dBar');if(!bar){bar=document.createElement('div');bar.id='pv3dBar';bar.className='pv3d-bar';st.appendChild(bar)}
+  bar.innerHTML=`<button class="btn" data-act="p3:auto">${P3.auto?'Detener giro':'Girar solo'}</button><button class="btn" data-act="p3:top">Desde arriba</button><button class="btn" data-act="p3:iso">En perspectiva</button><button class="btn" data-act="p3:in" aria-label="Acercar">+</button><button class="btn" data-act="p3:out" aria-label="Alejar">−</button>`;
+  p3bind();p3size();cancelAnimationFrame(P3.raf);P3.raf=requestAnimationFrame(p3frame)}
+function p3off(){P3.on=false;cancelAnimationFrame(P3.raf);const cv=$('#pv3d');if(cv)cv.remove();const b=$('#pv3dBar');if(b)b.remove();const w=$('#pvWorld');if(w)w.style.visibility='';const z=document.querySelector('#pvStage .pv-zoom');if(z)z.hidden=false;P3.cv=null}
+function p3size(){const cv=P3.cv;if(!cv)return;const r=cv.parentNode.getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.max(1,r.width*dpr);cv.height=Math.max(1,r.height*dpr);cv.style.width=r.width+'px';cv.style.height=r.height+'px';P3.ctx.setTransform(dpr,0,0,dpr,0,0);P3.w=r.width;P3.h=r.height}
+function p3bind(){const cv=P3.cv;if(cv.dataset.b)return;cv.dataset.b='1';const pts=new Map();
+  cv.addEventListener('pointerdown',e=>{e.stopPropagation();cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);P3.drag={x:e.clientX,y:e.clientY,th:P3.th,ph:P3.ph,moved:false,d0:null,z0:P3.zoom}});
+  cv.addEventListener('pointermove',e=>{e.stopPropagation();if(!P3.drag||!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(!P3.drag.d0)P3.drag.d0=d;P3.zoom=Math.max(.4,Math.min(4,P3.drag.z0*d/P3.drag.d0));P3.drag.moved=true;return}
+    const dx=e.clientX-P3.drag.x,dy=e.clientY-P3.drag.y;if(Math.abs(dx)+Math.abs(dy)>4)P3.drag.moved=true;P3.th=P3.drag.th+dx*0.008;P3.ph=Math.max(0.28,Math.min(1.5,P3.drag.ph+dy*0.006));P3.auto=false});
+  const up=e=>{e.stopPropagation();pts.delete(e.pointerId);if(P3.drag&&!P3.drag.moved&&pts.size===0)p3click(e);if(pts.size===0)P3.drag=null};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',e=>{e.preventDefault();P3.zoom=Math.max(.4,Math.min(4,P3.zoom*(e.deltaY<0?1.12:1/1.12)))},{passive:false});
+  window.addEventListener('resize',()=>{if(P3.on)p3size()})}
+function p3click(e){const r=P3.cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;const h=P3.hit.slice().reverse().find(o=>Math.hypot(o.x-x,o.y-y)<o.r+6);
+  if(h){PV.sel={t:'pt',id:h.id};renderSide()}else{PV.sel=null;renderSide()}}
+function p3css(n,f){const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f}
+function p3frame(now){if(!P3.on||!P3.cv||!document.body.contains(P3.cv)){P3.on=false;return}P3.raf=requestAnimationFrame(p3frame);
+  const p=curPlan();if(!p||!p.img)return;const ctx=P3.ctx,Wv=P3.w,Hv=P3.h;if(!Wv)return;
+  if(P3.auto)P3.th+=0.0025;
+  const el=Math.min(1,(now-P3.t0)/1300),ease=1-Math.pow(1-el,3);   // las paredes "se levantan" al entrar
+  const {Wm,Hm}=p3dims(p);const W=p.img.w,H=p.img.h;
+  const cs=Math.cos(P3.th),sn=Math.sin(P3.th),sp=Math.sin(P3.ph),cp=Math.cos(P3.ph);
+  const diag=Math.hypot(Wm,Hm);const s=Math.min(Wv,Hv)/(diag*0.95)*P3.zoom;const cx=Wv/2+P3.panX,cy=Hv/2+P3.panY+(1-sp)*Hv*0.06;
+  const pr=(x,y,z)=>{const X=x-Wm/2,Y=y-Hm/2;const xr=X*cs-Y*sn,yr=X*sn+Y*cs;return[cx+xr*s,cy+(yr*sp-z*cp)*s,yr*cp+z*sp]};
+  const N=v=>[v[0]*Wm,v[1]*Hm];
+  const bg=p3css('--bg','#f4f4f5'),surf=p3css('--surface','#ffffff'),line=p3css('--line','#e4e4e7'),txt=p3css('--text','#1e1f23'),dark=document.documentElement.dataset.mode==='dark';
+  ctx.clearRect(0,0,Wv,Hv);ctx.fillStyle=bg;ctx.fillRect(0,0,Wv,Hv);
+  // sombra del piso
+  const c0=pr(0,0,0),c1=pr(Wm,0,0),c2=pr(Wm,Hm,0),c3=pr(0,Hm,0);
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.25)';ctx.shadowBlur=30;ctx.shadowOffsetY=12;ctx.fillStyle=surf;ctx.beginPath();[c0,c1,c2,c3].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.restore();
+  // piso: la imagen del plano con una transformación afín (ortográfica)
+  const img=P3.img;if(img&&img.complete&&img.naturalWidth){ctx.save();const a=s*cs*Wm/W,b=s*sp*sn*Wm/W,c=-s*sn*Hm/H,d=s*sp*cs*Hm/H;ctx.transform(a,b,c,d,c0[0],c0[1]);ctx.globalAlpha=dark?.78:.95;ctx.drawImage(img,0,0,W,H);ctx.restore()}
+  ctx.strokeStyle=line;ctx.lineWidth=1;ctx.beginPath();[c0,c1,c2,c3].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
+  // objetos a dibujar, ordenados de atrás hacia adelante
+  const items=[];const hW=P3H*ease;
+  const wall=(a,b,col)=>{const A=N(a),B=N(b);const p0=pr(A[0],A[1],0),p1=pr(B[0],B[1],0),p2=pr(B[0],B[1],hW),p3=pr(A[0],A[1],hW);items.push({z:(p0[2]+p1[2])/2+hW*sp*.5,f:()=>{
+    const dx=B[0]-A[0],dy=B[1]-A[1];const nx=-dy,ny=dx;const lit=0.55+0.45*Math.abs(Math.cos(Math.atan2(ny,nx)-P3.th-0.6));
+    ctx.fillStyle=col;ctx.globalAlpha=(dark?.42:.30)*lit+.08;ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.lineTo(p3[0],p3[1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,s*0.12);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(p3[0],p3[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke()}})};
+  (p.dibujo||[]).forEach(dw=>{const col=dw.c&&dw.c!=='#1E1F23'?dw.c:(dark?'#aab3c5':'#5b606b');
+    if(dw.t==='pl'&&dw.w==='pared'&&(dw.v||[]).length>1){for(let i=1;i<dw.v.length;i++)wall(dw.v[i-1],dw.v[i],col)}
+    else if(dw.t==='rect'&&(dw.v||[]).length===2){const [a,b]=dw.v;const q=[[a[0],a[1]],[b[0],a[1]],[b[0],b[1]],[a[0],b[1]]];for(let i=0;i<4;i++)wall(q[i],q[(i+1)%4],col)}
+    else if(dw.t==='txt'&&dw.v&&dw.v[0]){const A=N(dw.v[0]);const q=pr(A[0],A[1],0.02);items.push({z:q[2],f:()=>{ctx.font=`700 ${Math.max(10,Math.min(18,s*0.5))}px Inter,Arial,sans-serif`;ctx.fillStyle=txt;ctx.globalAlpha=.8;ctx.textAlign='center';ctx.fillText(dw.txt||'',q[0],q[1]);ctx.globalAlpha=1}})}});
+  // recorridos por el techo, con datos que viajan
+  (p.recorridos||[]).forEach(r=>{const v=r.v||[];if(v.length<2)return;const t=RTK[r.tipo]||RTIPOS[0];const zc=P3CAB*ease;
+    const pts=v.map(q=>{const A=N(q);return pr(A[0],A[1],zc)});const fl=v.map(q=>{const A=N(q);return pr(A[0],A[1],0)});
+    items.push({z:Math.max(...pts.map(q=>q[2])),f:()=>{
+      ctx.strokeStyle=t.c;ctx.globalAlpha=.25;ctx.lineWidth=1;ctx.setLineDash([3,4]);[0,pts.length-1].forEach(i=>{ctx.beginPath();ctx.moveTo(fl[i][0],fl[i][1]);ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke()});ctx.setLineDash([]);ctx.globalAlpha=1;
+      ctx.lineWidth=Math.max(2.5,s*0.09);ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.stroke();
+      let L=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);L+=d}
+      if(L>0){const n=Math.max(1,Math.round(L/90));for(let k=0;k<n;k++){let u=((now/2600+k/n)%1)*L;let i=0;while(i<seg.length-1&&u>seg[i]){u-=seg[i];i++}const f=seg[i]?u/seg[i]:0;const x=pts[i][0]+(pts[i+1][0]-pts[i][0])*f,y=pts[i][1]+(pts[i+1][1]-pts[i][1])*f;
+        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,Math.max(2.5,s*0.07),0,7);ctx.fill();ctx.fillStyle=t.c;ctx.beginPath();ctx.arc(x,y,Math.max(1.6,s*0.045),0,7);ctx.fill()}}}})});
+  // equipos
+  P3.hit=[];const ph=(now%2400)/2400;
+  (p.puntos||[]).forEach((q,qi)=>{const t=PTK[q.tipo]||PTIPOS[7];const A=[q.x*Wm,q.y*Hm];const delay=Math.min(1,Math.max(0,(now-P3.t0-500-qi*60)/500));if(delay<=0)return;
+    const hz=(q.tipo==='cam'||q.tipo==='ap'||q.tipo==='alarma'?P3CAB:1.1)*delay;const base=pr(A[0],A[1],0),top=pr(A[0],A[1],hz);const sel=PV.sel&&PV.sel.t==='pt'&&PV.sel.id===q.id;
+    items.push({z:top[2],f:()=>{
+      // efecto en el piso
+      if(q.tipo==='cam'){const ang=(q.dir!=null?q.dir:(qi*1.7))+Math.sin(now/1800+qi)*0.35;const R=Math.min(Wm,Hm)*0.16;ctx.fillStyle=t.c;ctx.globalAlpha=.14;ctx.beginPath();ctx.moveTo(base[0],base[1]);for(let k=-6;k<=6;k++){const a=ang+k*0.09;const e=pr(A[0]+Math.cos(a)*R,A[1]+Math.sin(a)*R,0);ctx.lineTo(e[0],e[1])}ctx.closePath();ctx.fill();ctx.globalAlpha=1}
+      if(q.tipo==='ap'){for(let k=0;k<3;k++){const f=(ph+k/3)%1;const R=f*Math.min(Wm,Hm)*0.14;ctx.strokeStyle=t.c;ctx.globalAlpha=(1-f)*.6;ctx.lineWidth=2;ctx.beginPath();for(let a=0;a<=24;a++){const e=pr(A[0]+Math.cos(a/24*6.283)*R,A[1]+Math.sin(a/24*6.283)*R,0);a?ctx.lineTo(e[0],e[1]):ctx.moveTo(e[0],e[1])}ctx.stroke()}ctx.globalAlpha=1}
+      if(q.tipo==='alarma'||q.estado==='pendiente'){const f=ph;ctx.strokeStyle=q.estado==='pendiente'?'#9AA0A8':t.c;ctx.globalAlpha=(1-f)*.5;ctx.lineWidth=2;ctx.beginPath();ctx.arc(base[0],base[1],4+f*14,0,7);ctx.stroke();ctx.globalAlpha=1}
+      // poste y ficha
+      ctx.strokeStyle=t.c;ctx.globalAlpha=.6;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(base[0],base[1]);ctx.lineTo(top[0],top[1]);ctx.stroke();ctx.globalAlpha=1;
+      ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(base[0],base[1],6,3,0,0,7);ctx.fill();
+      const r=Math.max(9,Math.min(16,s*0.32))*(sel?1.25:1);
+      ctx.fillStyle=PESTC[q.estado]||PESTC.pendiente;ctx.beginPath();ctx.arc(top[0],top[1],r+3,0,7);ctx.fill();
+      ctx.fillStyle=t.c;ctx.beginPath();ctx.arc(top[0],top[1],r,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font=`700 ${Math.round(r*0.95)}px Inter,Arial,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(q.etiqueta||t.l,top[0],top[1]+0.5);
+      if(sel||P3.zoom>1.4){ctx.font='600 11px Inter,Arial,sans-serif';const lb=q.nombre||q.etiqueta||t.n;const w=ctx.measureText(lb).width+10;ctx.fillStyle=dark?'rgba(20,22,28,.85)':'rgba(255,255,255,.9)';ctx.fillRect(top[0]-w/2,top[1]-r-22,w,16);ctx.fillStyle=txt;ctx.fillText(lb,top[0],top[1]-r-14)}
+      P3.hit.push({id:q.id,x:top[0],y:top[1],r})}})});
+  items.sort((a,b)=>a.z-b.z).forEach(o=>o.f());
+  // escala y ayuda
+  ctx.fillStyle=p3css('--muted','#6b6e76');ctx.font='12px Inter,Arial,sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillText(p3dims(p).real?`${Math.round(Wm)} × ${Math.round(Hm)} m · paredes de ${P3H} m`:'Sin escala: calibrala en “Escala” para ver metros reales',12,Hv-14);
+}
+async function p3act(k,el,arg){if(k!=='p3')return false;
+  if(arg==='auto'){P3.auto=!P3.auto;el.textContent=P3.auto?'Detener giro':'Girar solo';return true}
+  if(arg==='top'){p3anim({ph:1.5,th:0});return true}
+  if(arg==='iso'){p3anim({ph:0.82,th:-0.62});return true}
+  if(arg==='in'){P3.zoom=Math.min(4,P3.zoom*1.25);return true}
+  if(arg==='out'){P3.zoom=Math.max(.4,P3.zoom/1.25);return true}
+  return true}
+function p3anim(to){const f={ph:P3.ph,th:P3.th},t0=performance.now();P3.auto=false;const step=n=>{const k=Math.min(1,(n-t0)/600),e=1-Math.pow(1-k,3);P3.ph=f.ph+(to.ph-f.ph)*e;P3.th=f.th+(to.th-f.th)*e;if(k<1&&P3.on)requestAnimationFrame(step)};requestAnimationFrame(step)}
+
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
 const SB=(window.supabase&&CFGX.supabaseUrl&&CFGX.supabaseAnonKey&&!/TU-PROYECTO/.test(CFGX.supabaseUrl))
