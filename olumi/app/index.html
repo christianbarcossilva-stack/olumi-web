@@ -575,6 +575,19 @@ th{font-size:11px;letter-spacing:.07em}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.18: técnico ve solo su parte */
 /* 1.19: tabla de roles · la barra se filtra en render() con ROLV */
+/* 1.27: calendario por período */
+.week.q2 .day{min-height:120px}
+.month{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mh{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}.mh span{padding:8px 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.mday{min-height:104px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.mday:nth-child(7n){border-right:0}.mday.other{background:var(--bg);opacity:.6}.mday.today .mdh b{background:var(--text);color:var(--bg);border-radius:999px}
+.mdh{display:flex;justify-content:space-between;align-items:center}.mdh b{font-size:12px;width:24px;height:24px;display:grid;place-items:center;cursor:pointer}
+.madd{background:none;border:0;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0 4px;opacity:0}.mday:hover .madd,.mday:focus-within .madd{opacity:1}
+.mev{font-size:11.5px;line-height:1.25;padding:2px 6px;border-radius:5px;background:var(--surface-2);border-left:3px solid var(--ec,var(--accent));cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mev span{color:var(--muted);font-family:var(--f-mono);font-size:10.5px}.mev.done{opacity:.55;text-decoration:line-through}.mev.fu{border-left-color:var(--info,#4da3ff)}
+.mmore{font-size:11px;color:var(--muted);padding-left:6px}
+@media (max-width:700px){.mg{grid-template-columns:repeat(7,minmax(0,1fr))}.mday{min-height:64px;padding:4px}.mev{font-size:10px;padding:1px 4px}.mev span{display:none}.mh span{padding:6px 4px;font-size:10px}}
 /* 1.25: en vivo */
 .live{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ddc84;margin-right:8px;vertical-align:middle;animation:livepulse 1.6s infinite}
 @keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}70%{box-shadow:0 0 0 9px rgba(61,220,132,0)}}
@@ -589,9 +602,9 @@ th{font-size:11px;letter-spacing:.07em}
 .vivo-side .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .vivo-side .card h2{margin:0 0 10px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .vivo-side .feed{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto}
-.ev{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 10px;background:var(--surface-2);border-radius:10px;cursor:pointer}
-.ev i{display:block;width:4px;height:100%;min-height:34px;border-radius:2px;background:#4da3ff}.ev.bad i{background:#ff4d5e}.ev.ok i{background:#3ddc84}.ev.warn i{background:#ffb020}
-.ev b{display:block;font-size:13px}.ev span{color:var(--muted);font-size:12px}.ev time{font-family:var(--f-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.vev{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 10px;background:var(--surface-2);border-radius:10px;cursor:pointer}
+.vev i{display:block;width:4px;height:100%;min-height:34px;border-radius:2px;background:#4da3ff}.vev.bad i{background:#ff4d5e}.vev.ok i{background:#3ddc84}.vev.warn i{background:#ffb020}
+.vev b{display:block;font-size:13px}.vev span{color:var(--muted);font-size:12px}.vev time{font-family:var(--f-mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .card.alert{border-color:rgba(255,77,94,.5);background:linear-gradient(180deg,rgba(255,77,94,.10),transparent) var(--surface)}
 .card.alert h2{color:#ff4d5e}.card.alert p{margin:0 0 10px;font-size:13px}
 .card.alert .near{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface-2);border-radius:10px;margin-bottom:8px}
@@ -1325,19 +1338,32 @@ function evHtml(j){
   const t=j.ticketId&&D.tickets[j.ticketId],p=t?tkPrio(t):4;
   return`<div class="ev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" style="--ec:${PRC[p]}"><span class="h">${esc(j.hora||'')}${j.duracion?` · ${qty(j.duracion)} h`:''}${j.estado==='terminado'?' · ✓':''}</span><b>${esc(cliName(j.clienteId)||j.titulo||'Trabajo')}</b><span class="muted">${esc(j.titulo||'')}</span> ${(j.tecnicos||[]).map(av).join('')}</div>`;
 }
+/* 1.27: calendario por período */
+let CALV=(()=>{try{return lsGet('crm.calv')||'semana'}catch(e){return'semana'}})();
+const calN=()=>CALV==='mes'?42:CALV==='quincena'?14:7;
+function calRange(){if(CALV==='mes'){const d=new Date(calStart);d.setDate(1);return monday(d)}return calStart}
 function vCal(){
   if(!calStart)calStart=monday(new Date());
-  const days=[...Array(7)].map((_,i)=>{const d=new Date(calStart);d.setDate(d.getDate()+i);return localISO(d).slice(0,10)});
+  const n=calN(),start=calRange();const mesRef=CALV==='mes'?new Date(new Date(calStart).setDate(1)):null;
+  const days=[...Array(n)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return localISO(d).slice(0,10)});
   const jobs=arr('trabajos').filter(j=>days.includes(j.fecha)&&(!calTec||(j.tecnicos||[]).includes(calTec)));
   const acts=arr('actividades').filter(a=>!a.hecha&&a.fecha&&days.includes(a.fecha.slice(0,10))&&(!calTec||a.responsable===calTec));
   const t=today();
-  const head=`<div class="vhead"><div><h1>Calendario</h1><p class="sub">${fdate(days[0])} al ${fdateL(days[6])} · ${jobs.length} trabajo${jobs.length===1?'':'s'}</p></div>
-    <div class="tools calnav"><button class="btn" data-act="cal:-7" aria-label="Semana anterior">‹</button><button class="btn" data-act="cal:0">Hoy</button><button class="btn" data-act="cal:7" aria-label="Semana siguiente">›</button>
+  const step=CALV==='mes'?'mes':String(n);const titulo=CALV==='mes'?mesRef.toLocaleDateString('es-UY',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase()):`${fdate(days[0])} al ${fdateL(days[n-1])}`;
+  const head=`<div class="vhead"><div><h1>Calendario</h1><p class="sub">${titulo} · ${jobs.length} trabajo${jobs.length===1?'':'s'}</p></div>
+    <div class="tools calnav"><button class="btn" data-act="cal:-${step}" aria-label="Período anterior">‹</button><button class="btn" data-act="cal:0">Hoy</button><button class="btn" data-act="cal:${step}" aria-label="Período siguiente">›</button>
+    <select id="calV" data-ch="calV" aria-label="Vista"><option value="semana"${CALV==='semana'?' selected':''}>Semana</option><option value="quincena"${CALV==='quincena'?' selected':''}>Quincena</option><option value="mes"${CALV==='mes'?' selected':''}>Mes</option></select>
     <select id="calTec" data-ch="calTec" aria-label="Filtrar por técnico"><option value="">Todos los técnicos</option>${opts(peopleOpts().slice(1),calTec)}</select></div></div>`;
-  return head+`<div class="week">${days.map((d,i)=>{
+  if(CALV==='mes'){const m=mesRef.getMonth();return head+`<div class="month"><div class="mh">${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<span>${x}</span>`).join('')}</div><div class="mg">${days.map(d=>{const dd=new Date(d+'T12:00');const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));const da=acts.filter(a=>a.fecha.slice(0,10)===d);
+      return`<section class="mday${d===t?' today':''}${dd.getMonth()!==m?' other':''}" data-date="${d}"><div class="mdh"><b data-act="mday:${d}" role="button" tabindex="0">${dd.getDate()}</b>${!readonly?`<button class="madd" data-new="trab" data-date="${d}" aria-label="Nuevo trabajo el ${fdate(d)}">+</button>`:''}</div>
+        ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" style="--ec:${PRC[p]}" title="${esc((j.hora||'')+' '+(cliName(j.clienteId)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(cliName(j.clienteId)||j.titulo||'Trabajo')}</div>`}).join('')}
+        ${da.slice(0,2).map(a=>`<div class="mev fu" role="button" tabindex="0" data-open="act:${a.id}">${esc(a.fecha.slice(11,16))} ${esc(a.titulo||'')}</div>`).join('')}
+        ${dj.length>4?`<div class="mmore">+${dj.length-4} más</div>`:''}</section>`}).join('')}</div></div>
+    <p class="hint" style="margin-top:12px">Clic en un día para ver la semana. El color marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4.</p>`}
+  return head+`<div class="week${CALV==='quincena'?' q2':''}">${days.map((d,i)=>{
     const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')),da=acts.filter(a=>a.fecha.slice(0,10)===d);
     const dn=new Date(d+'T12:00').toLocaleDateString('es-UY',{weekday:'long'});
-    return`<section class="day${d===t?' today':''}${i>4?' off':''}${!dj.length&&!da.length?' noev':''}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
+    return`<section class="day${d===t?' today':''}${i%7>4?' off':''}${!dj.length&&!da.length?' noev':''}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
       <div class="dayb">${dj.map(evHtml).join('')}${da.map(a=>`<div class="ev fu" role="button" tabindex="0" data-open="act:${a.id}"><span class="h">${esc(a.fecha.slice(11,16))} · seguimiento</span><b>${esc(a.titulo||'')}</b></div>`).join('')}</div>
       <button class="dayadd" data-new="trab" data-date="${d}">+ Trabajo</button></section>`}).join('')}</div>
     <p class="hint" style="margin-top:12px">El color del borde marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4. Cada trabajo tiene un botón para copiarlo a Google Calendar.</p>`;
@@ -1752,7 +1778,7 @@ async function act(a,el){
     case'fat':faTab=arg;sr();break;
     case'campo':campoDay=+arg;sr();break;
     case'campoall':campoAll=!campoAll;sr();break;
-    case'cal':{if(+arg===0)calStart=monday(new Date());else{const d=new Date(calStart);d.setDate(d.getDate()+(+arg));calStart=d}sr();break}
+    case'cal':{if(arg==='0'||+arg===0)calStart=monday(new Date());else if(/mes$/.test(String(arg))){const d=new Date(calStart);d.setDate(1);d.setMonth(d.getMonth()+(String(arg).startsWith('-')?-1:1));calStart=d}else{const d=new Date(calStart);d.setDate(d.getDate()+(+arg));calStart=d}sr();break}
     case'wa':openSheet('wa');break;
     case'lb':{const lb=$('#lightbox');lb.querySelector('img').src=blobUrl(a.slice(3));lb.hidden=false;break}
     case'lbclose':$('#lightbox').hidden=true;$('#lightbox img').removeAttribute('src');break;
@@ -1825,7 +1851,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.26',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.27',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -1872,6 +1898,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.ch==='fServ'){fServ=t.value;sr();return}
   if(t.dataset.ch==='calTec'){calTec=t.value;sr();return}
+  if(t.dataset.ch==='calV'){CALV=t.value;try{lsSet('crm.calv',CALV)}catch(e){}if(CALV!=='mes')calStart=monday(calStart||new Date());sr();return}
   if(t.dataset.up){onUpload(t);return}
   if(t.id&&t.id.startsWith('s_')){CFGDRAFT=CFGDRAFT||{};CFGDRAFT[t.id.slice(2)]=t.type==='checkbox'?t.checked:t.value}
   if(QE&&(t.dataset.q||t.dataset.lf))t.dispatchEvent(new Event('input',{bubbles:true}));
@@ -2969,6 +2996,7 @@ async function invAct(k,el,arg){
     case'invmin':INVMIN=!INVMIN;sr();return true;
     case'eqf':EQF=arg;sr();return true;
     case'invdep':openSheet('dep',null,{tipo:arg});return true;
+    case'mday':{calStart=monday(new Date(arg+'T12:00'));CALV='semana';try{lsSet('crm.calv',CALV)}catch(e){}sr();break}
     case'invnew':{if(isTec()){toast('El stock lo carga la empresa.');return true}const [tipo,prod,dep]=String(arg||'').split(':');if(tipo==='ing'){openSheet('ing',null,{dep:dep||''});return true}openSheet('mov',null,{tipo:tipo||'entrada',prod:prod||'',dep:dep||''});return true}
     case'invcsv':saveFile(`${arg==='compra'?'Lista de compra':'Stock'} ${today()}.csv`,invCsv(arg));return true;
     case'eqcsv':saveFile(`Equipos instalados ${today()}.csv`,eqCsv());return true;
@@ -4569,7 +4597,7 @@ function vVivo(){if(!hasVivo())return`<div class="vhead vhead-top"><div><h1>En v
   const alertas=d.urg.map(t=>{const c=D.clientes[t.clienteId];const n=nearestTech(t.clienteId,d.techs);return`<div class="card alert"><h2>${t.tipo==='emergencia'?'Emergencia':'Ticket nuevo'} · ${esc(t.numero||'')}</h2><p><b>${esc(cliName(t.clienteId)||(t.contacto&&t.contacto.nombre)||'Sin cliente')}</b> · ${esc(t.titulo||'')}</p>
     ${n?`<div class="near"><span class="av" style="background:${techColor(n.t.id)}">${esc(n.t.n[0])}</span><div><b>${esc(n.t.n)}</b><br><span class="muted">la más cercana · ${n.km.toFixed(1)} km · ${etaMin(n.km)} min</span></div></div><button class="btn pri" data-act="vivoasig:${t.id}:${n.t.id}">Mandar a ${esc(n.t.n)}</button>`
     :`<p class="hint" style="margin:0">${c&&c.geo?'Ningún técnico está compartiendo la ubicación ahora.':'El cliente no tiene dirección ubicable: cargala en su ficha.'} <button class="btn" data-open="tk:${t.id}">Abrir ticket</button></p>`}</div>`}).join('');
-  const feed=vivoFeed().map(i=>`<div class="ev ${i.cls}" role="button" tabindex="0" data-open="${i.open}"><i></i><div><b>${esc(i.b)}</b><span>${esc(i.s)}</span></div><time>${minAgo(i.ts)<1?'ahora':minAgo(i.ts)<60?minAgo(i.ts)+' min':minAgo(i.ts)<1440?Math.round(minAgo(i.ts)/60)+' h':fdate(new Date(i.ts).toISOString().slice(0,10))}</time></div>`).join('')||'<p class="muted">Todavía no pasó nada hoy.</p>';
+  const feed=vivoFeed().map(i=>`<div class="vev ${i.cls}" role="button" tabindex="0" data-open="${i.open}"><i></i><div><b>${esc(i.b)}</b><span>${esc(i.s)}</span></div><time>${minAgo(i.ts)<1?'ahora':minAgo(i.ts)<60?minAgo(i.ts)+' min':minAgo(i.ts)<1440?Math.round(minAgo(i.ts)/60)+' h':fdate(new Date(i.ts).toISOString().slice(0,10))}</time></div>`).join('')||'<p class="muted">Todavía no pasó nada hoy.</p>';
   const fleet=d.techs.map(t=>`<button class="tech" type="button" data-act="vivofoco:${t.id}"><span class="av" style="background:${techColor(t.id)}">${esc(t.n[0])}</span><span><b>${esc(t.n)}</b><span>${t.cur?esc((cliName(t.cur.clienteId)||t.cur.obra||'')+' · '+(t.cur.titulo||'')):t.total?`${t.done} de ${t.total} visitas hechas`:'Sin visitas hoy'}</span><span class="st ${t.fresh?(t.st==='obra'?'obra':'camino'):'fin'}">${t.fresh?(t.st==='obra'?'En obra':'En movimiento')+' · hace '+minAgo(t.p.ts)+' min':t.p?'Última posición hace '+(minAgo(t.p.ts)<1440?Math.round(minAgo(t.p.ts)/60)+' h':'más de un día'):'No comparte ubicación'}</span></span></button>`).join('')||'<p class="muted">Cuando un técnico active “Compartir ubicación” en Mi día, aparece acá.</p>';
   setTimeout(vivoMount,0);
   return head+`<div class="vivo-grid"><section class="vivo-map" id="vivoMapBox"><div id="vivoMapHost"></div><div class="legend"><span><i style="background:var(--info,#4da3ff)"></i>Técnico en movimiento</span><span><i style="background:#3ddc84"></i>En obra</span><span><i style="background:#ff4d5e"></i>Emergencia</span><span><i style="background:var(--accent)"></i>Visita de hoy</span></div></section>
