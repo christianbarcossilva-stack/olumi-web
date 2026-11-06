@@ -717,7 +717,7 @@ const pxs = pts => pts.map(([x, y]) => px(x, y));
 const FACE = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
 const RB = [242, 688], RR = 14; // rotonda
 const ring = (a0, a1) => { const out = []; const st = a1 > a0 ? 30 : -30; for (let a = a0; st > 0 ? a <= a1 + 0.1 : a >= a1 - 0.1; a += st) out.push([RB[0] + RR * Math.cos(a * Math.PI / 180), RB[1] - RR * Math.sin(a * Math.PI / 180)]); return out; };
-const G_IN = [[95, 728.5], [160, 727], [196, 719], [216, 704]], G_OUT = [[216, 702], [203, 712], [186, 717.5]];
+const G_IN = [[95, 729.6], [168, 729.4], [198, 720], [216, 704]], G_OUT = [[216, 702], [203, 712], [186, 717.5]];
 const NORTH = [[242, 660], [240, 620], [249, 545]], EASTR = [[270, 688], [420, 688], [560, 684]];
 // recorridos por nave: entrada desde la portería (eje de calle, en píxeles) y salida hasta la portería
 const ROUTES = {
@@ -846,8 +846,8 @@ const FIBS = [], CABS = {};
 const mkCab = (cap, items) => ({ cap, items: items || [], links: [], ports: {} });
 // balanza de camiones: casilla con rack de pared, cámara de matrículas y domo sobre la carga
 addDev({ id: 'C-BAL1', type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'pole', ph: 6.5, p: [136, 715.6], yaw: 0.05, loc: 'Balanza · matrícula de salida', bal: true });
-addDev({ id: 'C-BAL2', type: 'cam', kind: 'Domo 4 MP', mount: 'pole', ph: 8, p: [167, 716.2], yaw: Math.PI * 0.95, loc: 'Balanza · carga sobre la plataforma', bal: true });
-addDev({ id: 'RK-BAL', type: 'wr', kind: 'Rack de pared 6U', u: 6, p: [176, 711.6], y: 1.3, yaw: 0, loc: 'Balanza · casilla de control', bal: true });
+addDev({ id: 'C-BAL2', type: 'cam', kind: 'Domo 4 MP', mount: 'pole', ph: 8, p: [145, 723.2], yaw: 0.35, loc: 'Balanza · carga sobre la plataforma', bal: true });
+addDev({ id: 'RK-BAL', type: 'wr', kind: 'Rack de pared 6U', u: 6, p: [165.6, 724.2], y: 1.3, yaw: Math.PI / 2, loc: 'Balanza · casilla de control', bal: true });
 { const GAB_DEF = [['G-E8', 'e8'], ['G-E1', 'e1'], ['G-E7', 'e7'], ['G-E5', 'e5'], ['G-E4', 'e4'], ['G-E2', 'e2'], ['G-POR', null, 'Portería'], ['G-SR', null, 'Playa 0 km'], ['G-E9', 'e9'], ['G-E10', 'e10']];
   FIBER.routes.forEach((r, i) => { const [gid, nv, lbl] = GAB_DEF[i], a = r.at(-2), b = r.at(-1), L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dir = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
     addDev({ id: gid, type: 'gab', kind: 'Gabinete metálico', size: 'M', x: b[0], y: 0, z: b[1], yaw: Math.atan2(-dir[0], -dir[1]), nave: nv || undefined, zona: gid === 'G-SR' ? 'sr' : undefined, loc: (nv ? naveById(nv).full : lbl) + ' · gabinete exterior' });
@@ -857,7 +857,7 @@ addDev({ id: 'RK-BAL', type: 'wr', kind: 'Rack de pared 6U', u: 6, p: [176, 711.
     const devs = DEV.filter(d => ['cam', 'ap', 'rd'].includes(d.type) && (nv ? d.nave === nv : gid === 'G-POR' ? (d.gate || ['C-01', 'C-02', 'R-01', 'R-02'].includes(d.id)) : d.zona === 'sr'));
     c.ports.sw = {}; devs.slice(0, 24).forEach((d, k) => { c.ports.sw['p' + (k + 1)] = { dev: d.id }; });
     CABS[gid] = c; });
-  { const pts = pxs([C0, TW, [256, 664], [224, 697], [207, 707], [176, 707], [176, 710.4]]); FIBS.push({ id: 'FO-11', hilos: 12, pts, from: 'RK-01', to: 'RK-BAL' });
+  { const pts = pxs([C0, TW, [256, 664], [224, 697], [207, 707], [172, 709], [169, 724.2], [166.3, 724.2]]); FIBS.push({ id: 'FO-11', hilos: 12, pts, from: 'RK-01', to: 'RK-BAL' });
     const c = mkCab(6, [{ iid: 'pp', type: 'pp12', u: 1 }, { iid: 'sw', type: 'sw8', u: 2 }, { iid: 'org', type: 'org', u: 3 }, { iid: 'ups', type: 'ups', u: 5 }]);
     c.ports.pp = { f1: { fib: ['FO-11', 1] }, f2: { fib: ['FO-11', 2] } }; c.links.push([['pp', 'f1'], ['sw', 's1']]); c.ports.sw = { p1: { dev: 'C-BAL1' }, p2: { dev: 'C-BAL2' } }; CABS['RK-BAL'] = c; }
   const core = mkCab(12, [{ iid: 'pa', type: 'pp24', u: 1 }, { iid: 'core', type: 'swc', u: 2 }, { iid: 'org', type: 'org', u: 3 }, { iid: 'ofi', type: 'sw24', u: 4 }, { iid: 'nvr', type: 'nvr', u: 5 }, { iid: 'ups', type: 'ups', u: 7 }]);
@@ -918,7 +918,7 @@ function buildBase() {
   // balanza de camiones: plataforma en el carril de salida y casilla de control con el rack
   { const [a, b, c, d] = R(146, 166, 718.2, 721.8); g.box(a, 0, b, c, 0.18, d, P.parapet, { top: mulc(C(P.road), 1.35) }); for (let x = 146; x <= 166.1; x += 4) { const [e, f, h2, i2] = R(x - 0.08, x + 0.08, 718.2, 721.8); gg.flat(e, f, h2, i2, 0.2, P.markY); }
     const [k0, k1, k2, k3] = R(145.6, 166.4, 717.8, 718.2); g.box(k0, 0, k1, k2, 0.22, k3, P.markY); const [m0, m1, m2, m3] = R(145.6, 166.4, 721.8, 722.2); g.box(m0, 0, m1, m2, 0.22, m3, P.markY); }
-  { const [a, b, c, d] = pbox(171, 180, 706, 711.6, 3, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); g.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet); }
+  { const [a, b, c, d] = pbox(157.5, 166, 722.5, 725.9, 3, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); g.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet); }
   // camiones estacionados esperando turno, al sur de la entrada
   for (let i = 0; i < 7; i++) { const z0 = 790 + i * 3.7; if (i === 3) continue; const [a, b, c, d] = R(51, 64.5, z0, z0 + 2.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); g.box(a, 0, b + 0.3, a + 1.2, 1.1, d - 0.3, P.tire); g.box(c - 4.5, 0, b + 0.3, c - 1.5, 1.1, d - 0.3, P.tire); }
   for (let i = 0; i < 3; i++) { const x0 = 84 + i * 4.2; const [a, b, c, d] = R(x0, x0 + 2.5, 770, 783.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); }
@@ -1636,7 +1636,7 @@ function devTag(d) { rmLabel(TAGS.get(d.id)); TAGS.delete(d.id); if (!['gab', 'w
 const ED = { on: false, tool: 'sel', drag: null, fib: null, box: null, moved: {}, removed: [], meta: {} };
 let ROLE = HOST ? (HOST.role === 'inst' ? 'inst' : 'cli') : (UI.role === 'cli') ? 'cli' : 'inst';
 const canEdit = () => ROLE === 'inst';
-function edState() { return ({ v: 1, rev: 2, naves: NAVES.filter(N => N.custom).map(N => ({ id: N.id, code: N.code, name: N.name, rubro: N.rubro, x0: N.x0, x1: N.x1, z0: N.z0, z1: N.z1, h: N.h, face: N.face })),
+function edState() { return ({ v: 1, rev: 3, naves: NAVES.filter(N => N.custom).map(N => ({ id: N.id, code: N.code, name: N.name, rubro: N.rubro, x0: N.x0, x1: N.x1, z0: N.z0, z1: N.z1, h: N.h, face: N.face })),
   devs: DEV.filter(d => d.custom), moved: ED.moved, removed: ED.removed, fibs: FIBS, cabs: CABS, inner: INNER, meta: ED.meta }); }
 function edSave() { const st = edState(); if (HOST) { try { HOST.save(JSON.parse(JSON.stringify(st))); } catch (e) {} return; } try { localStorage.setItem('po3d-edit', JSON.stringify(st)); } catch (e) {} }
 function edLoad() { let s = null; try { s = HOST ? HOST.state : JSON.parse(localStorage.getItem('po3d-edit') || 'null'); } catch (e) {} if (!s || s.v !== 1) return;
@@ -1647,6 +1647,7 @@ function edLoad() { let s = null; try { s = HOST ? HOST.state : JSON.parse(local
   (s.naves || []).forEach(n => { const N = Object.assign({ rubro: 'Galpón agregado', custom: true }, n); prepNave(N); NAVES.push(N); });
   if (Array.isArray(s.fibs)) { FIBS.length = 0; s.fibs.forEach(f => FIBS.push(f)); }
   if (s.cabs) { for (const k in CABS) delete CABS[k]; Object.assign(CABS, s.cabs); }
+  if ((s.rev || 1) < 3) { const d11 = DEF_FIBS.find(f => f.id === 'FO-11'), f11 = FIBS.find(f => f.id === 'FO-11' && f.to === 'RK-BAL'); if (f11 && d11) f11.pts = d11.pts.map(q => q.slice()); }
   if ((s.rev || 1) < 2) { const d7 = DEF_FIBS.find(f => f.id === 'FO-07'), f7 = FIBS.find(f => f.id === 'FO-07' && f.to === 'G-POR'); if (f7 && d7) f7.pts = d7.pts.map(q => q.slice());
     if (!FIBS.some(f => f.id === 'FO-11')) FIBS.push(JSON.parse(JSON.stringify(DEF_FIBS.find(f => f.id === 'FO-11'))));
     if (!CABS['RK-BAL']) CABS['RK-BAL'] = JSON.parse(JSON.stringify(DEF_CABS['RK-BAL']));
