@@ -575,6 +575,8 @@ th{font-size:11px;letter-spacing:.07em}
 .pv-chip[data-act^="pvdcol"]{padding:5px}.pv-chip[data-act^="pvdcol"] i{width:22px;height:22px}
 /* 1.18: técnico ve solo su parte */
 /* 1.19: tabla de roles · la barra se filtra en render() con ROLV */
+/* 1.32: canal de pruebas */
+.beta-note{background:repeating-linear-gradient(135deg,#fff4d6 0 12px,#ffeab0 12px 24px);color:#5a4300;border:1px dashed #d9a400}
 /* 1.31: sala de control */
 .vroom{--surface:#12151c;--surface-2:#181c25;--line:#262b36;--text:#eef1f6;--muted:#8a93a6;--accent:#f5c518;color:var(--text);background:#0b0d12;border-radius:18px;padding:16px;margin:-4px 0 8px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .vroom .muted{color:var(--muted)}
@@ -933,7 +935,7 @@ function render(){
   {const ne=entNuevas().length,p3=$('#navEnt');if(p3){p3.hidden=!ne;p3.textContent=ne}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
+  $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -1903,7 +1905,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.31',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.32',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3431,9 +3433,12 @@ const ROLV={
 const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
 const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 /* 1.26: en vivo como extra */
-const hasVivo=()=>has('vivo')||!!(PLAN&&PLAN.founder);
+/* 1.32: canal de pruebas */
+const BETA=/\/beta\//.test(location.pathname)||(()=>{try{return localStorage.getItem('olumi.beta')==='1'}catch(e){return false}})();
+const enPrueba=()=>BETA;            // funciones nuevas: solo en el canal de pruebas hasta que se aprueben
+const hasVivo=()=>has('vivo')||enPrueba();
 const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
-function subGuard(){document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
+function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
   if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
 
@@ -4726,7 +4731,7 @@ function flujoHtml(){const d=flujoData();
     ...(has('facturas')?[['facturacion','Cobros',d.fac,d.fac?'por cobrar':'nada pendiente','M3 7h18v10H3zM7 12h.01M17 12h.01']]:[])];
   const dots=[];for(let i=0;i<st.length-1;i++){const n=Math.min(4,Math.max(st[i][2]?1:0,Math.ceil(st[i][2]/2)));for(let k=0;k<n;k++)dots.push(`<i class="fdot" style="--i:${i};--k:${k};--n:${n}"></i>`)}
   return`<section class="flujo" aria-label="Flujo de la empresa"><div class="ftrack" style="--nst:${st.length}">${dots.join('')}${st.map(([v,n,c,sub,path],i)=>`<button type="button" class="fst${c?' on':''}" data-view="${v}" style="--i:${i}"><svg viewBox="0 0 24 24"><path d="${path}"/></svg><b>${c}</b><span>${esc(n)}</span><small>${esc(sub)}</small></button>`).join('')}</div>
-    <div class="fleg">${d.tecs?`<span class="live"></span>${d.tecs} técnico${d.tecs>1?'s':''} en el mapa · <a href="#" data-view="vivo">ver En vivo</a>`:'Así se mueve la empresa hoy: cada etapa abre su pantalla.'}</div></section>`}
+    <div class="fleg">${d.tecs&&hasVivo()?`<span class="live"></span>${d.tecs} técnico${d.tecs>1?'s':''} en el mapa · <a href="#" data-view="vivo">ver En vivo</a>`:'Así se mueve la empresa hoy: cada etapa abre su pantalla.'}</div></section>`}
 /* 1.29: plano en 3D · motor propio en Canvas 2D (proyección ortográfica), sin librerías y sin internet.
    El plano es el piso; las paredes y rectángulos del dibujo se levantan; los puntos son equipos con su animación
    (cámara: abanico de visión · AP: ondas · alarma: pulso); los recorridos van por el techo con datos que viajan. */
