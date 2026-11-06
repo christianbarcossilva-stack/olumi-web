@@ -6,6 +6,7 @@
 4. **Días de publicación**: martes y jueves, no a la noche ni el fin de semana. Arreglos urgentes de un error, cuando haga falta.
 5. **Nada a medio terminar en la app de los clientes**: si una función no está pulida, queda detrás de `enPrueba()` o de un extra (`has('...')`).
 6. Cada publicación a clientes lleva una línea en "Novedades" (LEEME) con lo que cambió para ellos.
+7. Al pasar a clientes se actualiza `olumi/app/version.json` (versión y fecha): la página de descargas lo muestra. Después se arma la versión de iPhone y Android con el mismo número.
 
 ## Páginas web (unitytech.uy, /olumi/, /ondi/, /estiba/)
 - Todas usan el estilo común `familia.css` + `familia.js` (raíz del sitio): letra del sistema, nav global "Unity Tech · Olumi · Ondi", nav de cada producto, botones píldora, modo claro/oscuro (sigue al equipo, con botón ◐ que se recuerda en `ut.theme`).
