@@ -877,7 +877,7 @@ function render(){
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   if(ROLE&&!canMoney()&&MONEYV.includes(VIEW)){VIEW='tickets';lsSet('crm.view',VIEW)}
-  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
+  document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','vivo','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   $('#main').innerHTML=ready?view():loadingHtml();
@@ -1825,7 +1825,7 @@ async function act(a,el){
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.25',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.26',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3349,7 +3349,9 @@ const ROLV={
   viewer:['vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
 const ROLV_TXT={owner:'Todo, incluido el plan y el equipo',admin:'Todo, incluido el plan y el equipo',encargado:'Todo lo operativo y comercial; sin facturación ni plan',ventas:'Bandeja, tickets, CRM, clientes, presupuestos, proyectos y seguimientos',administracion:'Bandeja, tickets, clientes, presupuestos, facturación, inventario, técnicos y reportes',tecnico:'Mi día, calendario, tickets, historial, proyectos y relevamientos, sus horas, su camioneta (solo lectura) y clientes',subcontratista:'Solo su día, sus tareas y su historial',viewer:'Ve casi todo, no cambia nada'};
 const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
-const viewOk=v=>{const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
+/* 1.26: en vivo como extra */
+const hasVivo=()=>has('vivo')||!!(PLAN&&PLAN.founder);
+const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
 function subGuard(){document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
   if(!viewOk(VIEW))VIEW=l.includes('campo')?'campo':l[0]}
@@ -4561,7 +4563,7 @@ function vivoFeed(){const its=[];const add=(ts,cls,b,s,open)=>{if(ts)its.push({t
   arr('movimientos').forEach(m=>{if(m.tipo==='entrada')add(m.creado||m.actualizado,'info','Entró mercadería',(D.productos[m.prodId]||{}).nombre||'',`mov:${m.id}`)});
   return its.sort((a,b)=>b.ts-a.ts).slice(0,14)}
 /* --- vista --- */
-function vVivo(){const d=vivoData();const enRuta=d.techs.filter(t=>t.fresh).length,hechas=d.trabs.filter(j=>j.estado==='terminado').length,nuevas=entNuevas().length;
+function vVivo(){if(!hasVivo())return`<div class="vhead vhead-top"><div><h1>En vivo</h1></div></div><div class="empty"><h2>Este módulo no está en tu plan</h2><p>El mapa de la operación (técnicos, visitas y fallas en tiempo real) se agrega como extra. Escribinos a hola@unitytech.uy.</p></div>`;const d=vivoData();const enRuta=d.techs.filter(t=>t.fresh).length,hechas=d.trabs.filter(j=>j.estado==='terminado').length,nuevas=entNuevas().length;
   const head=`<div class="vhead vhead-top"><div><h1><span class="live"></span>En vivo</h1><p class="sub">${CFG.nombre||'La empresa'} ahora mismo · ${fdateL(d.hoy)}</p></div><div class="tools"><button class="btn" data-act="vivotv">${document.body.classList.contains('tv')?'Salir del modo TV':'Modo TV'}</button></div></div>
   <div class="kpis vivo-kpis"><div class="kpi"><span>Técnicos en el mapa</span><b>${enRuta}<i>de ${d.techs.length}</i></b></div><div class="kpi"><span>Visitas de hoy</span><b>${hechas}<i>de ${d.trabs.length} terminadas</i></b></div><div class="kpi"><span>Tickets abiertos</span><b>${d.tks.length}</b></div><div class="kpi"><span>Bandeja sin ver</span><b>${nuevas}</b></div></div>`;
   const alertas=d.urg.map(t=>{const c=D.clientes[t.clienteId];const n=nearestTech(t.clienteId,d.techs);return`<div class="card alert"><h2>${t.tipo==='emergencia'?'Emergencia':'Ticket nuevo'} · ${esc(t.numero||'')}</h2><p><b>${esc(cliName(t.clienteId)||(t.contacto&&t.contacto.nombre)||'Sin cliente')}</b> · ${esc(t.titulo||'')}</p>
@@ -4736,7 +4738,7 @@ async function loadBill(id){
 }
 const isoEnd=d=>d?new Date(d+'T23:59:59').toISOString():null;
 /* 1.21: extras por empresa */
-const EXTRAS=[...FEAT,['relojes','Relojes de control de personal / marcas de entrada y salida'],['odoo','Sincronización con Odoo'],['medida','Desarrollo a medida (ver nota)']];
+const EXTRAS=[...FEAT,['vivo','En vivo: mapa de la operación en tiempo real'],['relojes','Relojes de control de personal / marcas de entrada y salida'],['odoo','Sincronización con Odoo'],['medida','Desarrollo a medida (ver nota)']];
 function extrasHtml(ex,nota){const set=new Set(ex||[]);return`<section class="rel" id="orgExtras"><h3>Extras de esta empresa</h3><p class="hint">Módulos sueltos y desarrollos a medida que se cotizan y cobran aparte del plan. Se prenden solo para esta empresa; la app los ve como parte de su plan.</p>
   <div class="chips">${EXTRAS.map(([k,n])=>`<label class="chip"><input type="checkbox" data-extra="${k}"${set.has(k)?' checked':''}> ${esc(n)}</label>`).join('')}</div>
   <label class="fld full" for="g_extras_nota" style="margin-top:8px"><span>Nota de lo cotizado (solo Unity Tech)</span><textarea id="g_extras_nota" rows="2" placeholder="Ej.: reloj biométrico en 2 sedes, US$ 60/mes desde dic 2026">${esc(nota||'')}</textarea></label></section>`}
