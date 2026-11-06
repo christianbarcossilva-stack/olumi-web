@@ -61,4 +61,5 @@ grant execute on function public.admin_delete_org(uuid, text) to authenticated;
 grant execute on function public.delete_my_org(uuid, text) to authenticated;
 grant execute on function public.leave_org(uuid) to authenticated;
 
-select 'listo' as olumi_1_34;
+select 'listo' as olumi_1_34,
+  (select string_agg(i.email || ' → ' || coalesce(g.name, '?') || ' (' || i.role || ')', ' · ') from member_invites i left join orgs g on g.id = i.org_id) as invitaciones_pendientes;
