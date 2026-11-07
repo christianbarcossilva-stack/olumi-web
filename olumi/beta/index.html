@@ -1369,8 +1369,8 @@ function sheetTrab(id,p){
 async function saveTrab(close=true,estado){
   const v=readForm(TRF()),err=$('#shErr');
   if(!v.titulo&&!v.clienteId){err.textContent='Poné qué trabajo es o elegí el cliente.';err.hidden=false;return}
-  v.duracion=n0(v.duracion)||1;
-  v.tecnicos=[...document.querySelectorAll('#techs input[name=tec]:checked')].map(i=>i.value);
+  v.duracion=n0(v.duracion)||n0(SH.id&&D.trabajos[SH.id]?.duracion)||1;
+  if($('#techs'))v.tecnicos=[...document.querySelectorAll('#techs input[name=tec]:checked')].map(i=>i.value);
   const inf=$('#f_informe'),mat=$('#f_materiales');if(inf)v.informe=inf.value;if(mat)v.materiales=mat.value;if(TJ&&TJ._ms)v.matStock=msClean(TJ._ms);if(TJ&&TJ._ck)v.checklist=TJ._ck.map(x=>({t:x.t,ok:!!x.ok}));
   ['tipoTrabajo','llegada','salida','pendientes','cargo'].forEach(k=>{const e=$('#f_'+k);if(e)v[k]=e.value});{const e=$('#f_horasMO');if(e)v.horasMO=n0(String(e.value).replace(',','.'))}
   if(estado)v.estado=estado;
@@ -1388,10 +1388,11 @@ async function saveTrab(close=true,estado){
     else if(j.estado==='en_curso'&&['nuevo','agendado'].includes(te))ne='en_curso';
     else if(j.estado==='programado'&&(te==='nuevo'||!tkOpen(t)))ne='agendado';
     if(ne)await put('tickets',j.ticketId,{...t,estado:ne,resueltoEn:ne==='resuelto'?Date.now():ne==='agendado'?0:n0(t.resueltoEn),actualizado:Date.now()});}
-  if(close){toast(SH.id?'Trabajo guardado':'Trabajo agendado');closeSheet()}
-  else{openSheet('trab',id);toast(j.estado==='terminado'?'Trabajo terminado':'Trabajo en curso')}
+  if(close){toast(SH.type==='rep'?'Reporte guardado':SH.id?'Trabajo guardado':'Trabajo agendado');closeSheet()}
+  else if(SH.type==='rep'&&j.estado==='terminado'&&j.firma&&j.firma.id){closeSheet()}
+  else{const wr=SH.type==='rep';openSheet(wr?'rep':'trab',id);toast(j.estado==='terminado'?'Trabajo terminado':wr?'Guardado':'Trabajo en curso')}
 }
-function refreshJob(){if(!SH||SH.type!=='trab')return;const j=D.trabajos[SH.id];if(!j)return;const a=$('#jFotos'),b=$('#jPlanos');if(a)a.innerHTML=photosHtml(j.fotos);if(b)b.innerHTML=filesHtml(j)}
+function refreshJob(){if(!SH||(SH.type!=='trab'&&SH.type!=='rep'))return;const j=D.trabajos[SH.id];if(!j)return;const a=$('#jFotos'),b=$('#jPlanos');if(a)a.innerHTML=photosHtml(j.fotos);if(b)b.innerHTML=filesHtml(j)}
 async function shrink(f){
   if(f.size<1.5e6||!/^image\/(jpeg|png|webp)$/.test(f.type))return f;
   try{const bmp=await createImageBitmap(f);const s=Math.min(1,2000/Math.max(bmp.width,bmp.height));const cv=document.createElement('canvas');cv.width=Math.round(bmp.width*s);cv.height=Math.round(bmp.height*s);cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height);
@@ -1411,6 +1412,7 @@ async function onUpload(inp){
   if(await campoUpload(inp))return;
   if(await planosUpload(inp))return;
   if(!AS){toast('Necesitás permiso de edición para subir archivos.');return}
+  if(SH&&SH.type==='rep'&&!SH.id&&inp.dataset.up==='foto'&&inp.files&&inp.files.length&&!await repEnsure()){inp.value='';return}
   const files=[...inp.files];const kind=inp.dataset.up;if(!files.length||(kind!=='logo'&&kind!=='fondo'&&kind!=='prodfoto'&&!SH?.id))return;
   const busy=kind==='cliplano'?$('#cliBusy'):$('#upBusy');
   if(busy){busy.hidden=false;busy.textContent=`Subiendo ${files.length} archivo${files.length>1?'s':''}…`}
@@ -1856,6 +1858,7 @@ async function act(a,el){
   if(k==='tabscfg'){openSheet('tabs');return}
   if(k==='mdt'){lsSet('olumi.md',arg);sr();window.scrollTo(0,0);return}
   if(k==='mdrep'){openSheet('rep');return}
+  if(k==='repgeo'){repGeo(el);return}
   if(k==='tabsdef'){lsSet('olumi.tabs.'+(ME||''),'[]');applyTabs();toast('Volvió a los accesos de fábrica');closeSheet();return}
   if(await agAct(k,arg,el))return;
   if(await perAct(k,arg,el))return;
@@ -1968,7 +1971,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.44',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.45',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2143,12 +2146,12 @@ async function saveSig(el){
     const out=document.createElement('canvas');out.width=SIG.cv.width;out.height=SIG.cv.height;const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,out.width,out.height);o.drawImage(SIG.cv,0,0);
     const blob=await new Promise(r=>out.toBlob(r,'image/png'));
     const up=await AS.upload(blob,{type:'image/png'});
-    const id=SH.id,j=D.trabajos[id];
+    const id=SH.id,j=D.trabajos[id],wasRep=SH.type==='rep';
     const firma={id:up.id,nombre:n,ci,en:Date.now(),por:ME||''};
     await patch('trabajos',id,{firma,numero:j.numero||nextCode('trabajos','I')});
     closeSig();
     await saveTrab(false,'terminado');
-    toast('Firma guardada. Trabajo terminado.');avReporte(id);
+    toast(wasRep?'Reporte firmado: les llegó a operaciones y a Administración':'Firma guardada. Trabajo terminado.');avReporte(id);
   }catch(x){el.disabled=false;toast(upErr(x))}
 }
 async function dataUrlOf(id,max=1100){
@@ -2308,11 +2311,11 @@ function inviteHtml(){
 /* --- acciones --- */
 async function obrasAct(k,el,arg){
   switch(k){
-    case'firmar':{if(!SH||!SH.id)return true;openSig();return true}
+    case'firmar':{if(SH&&SH.type==='rep'&&!SH.id&&!await repEnsure())return true;if(!SH||!SH.id)return true;openSig();return true}
     case'sigclear':{if(SIG){SIG.g.clearRect(0,0,SIG.cv.width,SIG.cv.height);SIG.drawn=false}return true}
     case'sigclose':closeSig();return true;
     case'sigsave':await saveSig(el);return true;
-    case'informe':{const j=D.trabajos[SH&&SH.id];if(!j)return true;if(!PORTAL())await saveTrab(false).catch(()=>{});const jj=D.trabajos[SH.id]||j;const c=cliName(jj.clienteId)||'cliente';
+    case'informe':{if(SH&&SH.type==='rep'&&!SH.id&&!await repEnsure())return true;const j=D.trabajos[SH&&SH.id];if(!j)return true;if(!PORTAL())await saveTrab(false).catch(()=>{});const jj=D.trabajos[SH.id]||j;const c=cliName(jj.clienteId)||'cliente';
       await pdfOrHtml(`Informe ${jj.numero||jj.fecha||''} - ${c}`.replace(/[\\/:*?"<>|]/g,''),()=>pdfInforme(jj),()=>informeDoc(jj));return true}
     case'parte':{const d=new Date();d.setDate(d.getDate()+campoDay);const day=localISO(d).slice(0,10);
       await saveFile(`Parte diario ${day}${campoAll?'':' - '+((MEMBERS[ME]&&MEMBERS[ME].display_name)||'')}.html`.replace(/[\\/:*?"<>|]/g,''),await parteDoc(day,campoAll));return true}
@@ -5256,15 +5259,42 @@ function mdFac(){const ls=arr('gastos').filter(g=>g.por===ME).sort((a,b)=>(b.fec
     return`<div class="row" role="button" tabindex="0" data-open="gasto:${g.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(g.proveedor||(GCAT.find(c=>c[0]===g.categoria)||[,'Gasto'])[1])}</strong><span class="muted">${esc(fdate(g.fecha))}</span></div><span style="text-align:right"><b class="num">${money(n0(g.monto),g.moneda||'UYU')}</b><br><span class="tag ${st[1]}">${st[0]}</span></span></div>`}).join('')}</div>`:'<p class="muted">Todavía no subiste facturas.</p>'}`}
 function mdRep(){const ls=arr('trabajos').filter(j=>(j.tecnicos||[]).includes(ME)&&(j.estado!=='programado'||j.informe)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.actualizado)-n0(a.actualizado)).slice(0,20);
   return`<p class="hint" style="margin-top:0">El reporte es el parte de cada día en el cliente: qué hiciste, materiales, horas y la firma del cliente. Le llega al jefe de operaciones y a Administración, y queda en el proyecto del cliente.</p>
-    <div class="actions" style="margin-bottom:12px">${readonly?'':'<button class="btn pri" data-act="mdrep">+ Nuevo reporte</button>'}</div>${ls.length?`<div class="list">${ls.map(j=>`<div class="row" role="button" tabindex="0" data-open="trab:${j.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(cliName(j.clienteId)||j.titulo||'Trabajo')}</strong><span class="muted">${esc([fdate(j.fecha),j.titulo,pryName(j.proyectoId)].filter(Boolean).join(' · '))}</span></div><span style="text-align:right">${j.cargo?`<span class="tag t-none">${CARGOK[j.cargo]}${n0(j.horasMO)?' · '+hsTxt(j.horasMO):''}</span><br>`:''}${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':'<span class="tag t-acc">En curso</span>'}</span></div>`).join('')}</div>`:'<p class="muted">Todavía no hay reportes.</p>'}`}
+    <div class="actions" style="margin-bottom:12px">${readonly?'':'<button class="btn pri" data-act="mdrep">+ Nuevo reporte</button>'}</div>${ls.length?`<div class="list">${ls.map(j=>`<div class="row" role="button" tabindex="0" data-open="rep:${j.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(cliName(j.clienteId)||j.titulo||'Trabajo')}</strong><span class="muted">${esc([fdate(j.fecha),j.titulo,pryName(j.proyectoId)].filter(Boolean).join(' · '))}</span></div><span style="text-align:right">${j.cargo?`<span class="tag t-none">${CARGOK[j.cargo]}${n0(j.horasMO)?' · '+hsTxt(j.horasMO):''}</span><br>`:''}${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':'<span class="tag t-acc">En curso</span>'}</span></div>`).join('')}</div>`:'<p class="muted">Todavía no hay reportes.</p>'}`}
 function mdUbi(){return`<section class="rel"><h3>Ubicación</h3><p style="margin:0 0 10px">Mientras está activo, la oficina te ve en el mapa de "En vivo" y sabe quién está más cerca de una urgencia. Funciona con la app abierta.</p><div class="actions">${geoBtn()||'<span class="muted">Este dispositivo no permite compartir la ubicación.</span>'}</div></section>`}
-function sheetRep(){return sheetFrame('Nuevo reporte','Parte del trabajo en el cliente',`<p class="hint" style="margin-top:0">Se abre el trabajo de hoy a tu nombre. Ahí cargás qué hiciste, materiales, fotos, las horas y la firma del cliente.</p>
-  <div class="grid">${fld({k:'clienteId',l:'Cliente',t:'select',o:cliOpts(),w:'full'},'','r_')}${fld({k:'titulo',l:'Qué vas a hacer',w:'full',ph:'Ej.: Cambio de 3 cámaras en el depósito'},'','r_')}${fld({k:'cargo',l:'Se carga a',t:'select',o:CARGO,w:'full'},'','r_')}</div><p class="err" id="shErr" hidden></p>`,{saveLabel:'Empezar reporte'})}
-async function saveRep(){const cid=$('#r_clienteId')?.value||'',tit=($('#r_titulo')?.value||'').trim(),cargo=$('#r_cargo')?.value||'';
-  if(!cid){const e=$('#shErr');e.textContent='Elegí el cliente.';e.hidden=false;return}
-  const c=D.clientes[cid]||{};const id=uid(),now=hhmm();
-  const j={titulo:tit||'Trabajo en '+(c.nombre||'el cliente'),clienteId:cid,cargo:cargo||(n0(c.horasSoporte)?'soporte':''),estado:'en_curso',fecha:today(),hora:now,llegada:now,duracion:1,tecnicos:ME?[ME]:[],obra:c.direccion||'',fotos:[],planos:[],creado:Date.now(),actualizado:Date.now()};
-  await put('trabajos',id,j);D.trabajos[id]=j;closeSheet();openSheet('trab',id);toast('Reporte empezado: cargá lo que hiciste y pedí la firma al terminar')}
+/* 1.45: reporte en una sola pantalla */
+let REPJ=null;
+const repGeoTxt=g=>g&&g.lat?`📍 <a href="https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lng}" target="_blank" rel="noopener">Ver en el mapa</a>${g.acc?' · ±'+g.acc+' m':''}`:'';
+function sheetRep(id,p){p=p||{};const now=hhmm();
+  const j=id&&D.trabajos[id]?{...D.trabajos[id]}:{estado:'en_curso',fecha:today(),hora:now,llegada:now,duracion:1,tecnicos:ME?[ME]:[],clienteId:p.cli||'',proyectoId:p.pry||'',titulo:'',fotos:[],planos:[]};
+  TJ=j;REPJ=j;const hs=hsLine(j.clienteId,ymOf(j.fecha||today()));
+  const inf=informeHtml(j).replace(/<p class="hint full"[\s\S]*?<\/p>/,'');
+  const body=`<p class="hint" style="margin-top:0">Completalo en el cliente. Al final el cliente firma y el reporte les llega al jefe de operaciones y a Administración. Queda guardado en el cliente y en su proyecto.</p>
+    <div class="grid">${fld({k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},j.clienteId)}${fld({k:'proyectoId',l:'Proyecto',t:'select',o:pryOpts(j.clienteId)},j.proyectoId)}${fld({k:'titulo',l:'Trabajo de hoy',w:'full',ph:'Ej.: Cambio de 3 cámaras en el depósito'},j.titulo)}</div>
+    <p class="hint" id="repHs" style="margin:6px 0 0"${hs?'':' hidden'}>${esc(hs||'')}</p><p class="err" id="shErr" hidden></p>
+    <section class="rel"><h3>Fotos</h3><div id="jFotos">${photosHtml(j.fotos)}</div>${AS&&!readonly?upBtns('foto'):''}<p class="busy" id="upBusy" hidden></p>
+      <div class="actions" style="margin-top:6px">${readonly?'':`<button type="button" class="btn ghost" data-act="repgeo">${j.geo&&j.geo.lat?'📍 Actualizar ubicación':'📍 Guardar ubicación'}</button>`}<span class="muted" id="repGeo">${repGeoTxt(j.geo)}</span></div></section>
+    ${inf}`;
+  return sheetFrame('Reporte',id?(cliName(j.clienteId)||j.titulo||'Reporte'):'Nuevo reporte',body,{saveLabel:'Guardar'})}
+async function repEnsure(){if(SH&&SH.id)return SH.id;const v=readForm(TRF()),e=$('#shErr');
+  if(!v.clienteId){const m='Elegí el cliente primero.';if(e){e.textContent=m;e.hidden=false}toast(m);$('#f_clienteId')?.focus();return null}
+  const c=D.clientes[v.clienteId]||{},id=uid(),j={};
+  Object.entries(REPJ||{}).forEach(([k,x])=>{if(k[0]!=='_')j[k]=x});
+  Object.assign(j,{titulo:v.titulo||'Trabajo en '+(c.nombre||'el cliente'),clienteId:v.clienteId,proyectoId:v.proyectoId||'',obra:c.direccion||'',creado:Date.now(),actualizado:Date.now()});
+  ['cargo','llegada','salida','tipoTrabajo','informe','materiales','pendientes'].forEach(k=>{const x=$('#f_'+k);if(x)j[k]=x.value});
+  if(!j.cargo)j.cargo=j.proyectoId?'proyecto':n0(c.horasSoporte)?'soporte':'';
+  await put('trabajos',id,j);D.trabajos[id]=j;SH.id=id;SH.dirty=true;return id}
+async function saveRep(){const id=await repEnsure();if(!id)return;await saveTrab(true)}
+function repGeo(el){if(!navigator.geolocation){toast('Este dispositivo no da la ubicación.');return}
+  el.disabled=true;el.textContent='📍 Buscando…';
+  navigator.geolocation.getCurrentPosition(async pos=>{const g={lat:Math.round(pos.coords.latitude*1e6)/1e6,lng:Math.round(pos.coords.longitude*1e6)/1e6,acc:Math.round(pos.coords.accuracy||0),at:Date.now()};
+    if(REPJ)REPJ.geo=g;el.disabled=false;el.textContent='📍 Actualizar ubicación';const b=$('#repGeo');if(b)b.innerHTML=repGeoTxt(g);
+    if(SH&&SH.id)await patch('trabajos',SH.id,{geo:g});else if(SH)SH.dirty=true;toast('Ubicación guardada'+(g.acc?` (±${g.acc} m)`:''))},
+    ()=>{el.disabled=false;el.textContent='📍 Guardar ubicación';toast('No se pudo obtener la ubicación (¿le diste permiso?).')},{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}
+document.addEventListener('change',e=>{if(!SH||SH.type!=='rep'||!e.target)return;const t=e.target;
+  if(t.id==='f_clienteId'){const cid=t.value,c=D.clientes[cid]||{};const p=$('#f_proyectoId');if(p)p.innerHTML=opts(pryOpts(cid),'');
+    const h=$('#repHs');if(h){const x=hsLine(cid,ymOf(today()));h.textContent=x||'';h.hidden=!x}
+    const g=$('#f_cargo');if(g&&(!g.value||g.value==='soporte'))g.value=n0(c.horasSoporte)?'soporte':'';if(REPJ)REPJ.clienteId=cid}
+  if(t.id==='f_proyectoId'&&t.value){const g=$('#f_cargo');if(g)g.value='proyecto'}});
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
@@ -5464,7 +5494,7 @@ async function signPending(){
   const ids=[...urlPend];urlPend=new Set();if(!ids.length)return;
   let any=false;for(let i=0;i<ids.length;i+=100){const {data}=await SB.storage.from(BUCKET).createSignedUrls(ids.slice(i,i+100),URL_TTL).catch(()=>({}));
     (data||[]).forEach(r=>{if(r.signedUrl&&r.path){URLS[r.path]={url:r.signedUrl,exp:Date.now()+(URL_TTL-3600)*1000};any=true}})}
-  if(any){sr();refreshFidImgs();if(SH&&SH.type==='trab')refreshJob();if(SH&&SH.type==='cli'){const e=$('#cliFiles');if(e)e.innerHTML=cliFilesHtml(SH.id)}planUrlsSigned();applyBrand()}
+  if(any){sr();refreshFidImgs();if(SH&&(SH.type==='trab'||SH.type==='rep'))refreshJob();if(SH&&SH.type==='cli'){const e=$('#cliFiles');if(e)e.innerHTML=cliFilesHtml(SH.id)}planUrlsSigned();applyBrand()}
 }
 function prefetchUrls(){
   const ids=[];
