@@ -1,5 +1,5 @@
 // Olumi: guarda la app en el equipo para que abra aunque no haya señal. Siempre intenta la red primero.
-const CACHE = 'olumi-beta-v38';
+const CACHE = 'olumi-beta-v39';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'vendor/supabase.js', 'icono-192.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));
