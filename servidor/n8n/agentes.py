@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Dos flujos SEPARADOS, uno por empleada virtual (cada uno se cambia sin tocar el otro):
-#   · "Lumi · ventas"          → webhook /webhook/lumi
-#   · "Ada · administración"   → webhook /webhook/ada
+#   · "Carolina · atención comercial" (antes Lumi) → webhook /webhook/lumi
+#   · "Gabriela · administración" (antes Ada)    → webhook /webhook/ada
 # Los llama la app (Menú → Lumi y Ada). Cada pedido trae el token de la sesión de Olumi:
 #   1) se verifica el token con Supabase (quién es) y 2) que sea de esa empresa y con un rol que pueda usarla.
 #   Sin eso, no se piensa nada (responde 401/403).
@@ -67,7 +67,7 @@ def responder(name, pos, code_expr="={{ $json.status || 200 }}"):
         "options": {"responseCode": code_expr, "responseHeaders": {"entries": [{"name": "Access-Control-Allow-Origin", "value": "*"}]}}}, pos)
 
 # ===================== los cerebros =====================
-LUMI = r"""Sos Lumi, la vendedora virtual de una empresa uruguaya de instalaciones (cámaras, alarmas, redes, Wi-Fi, fibra, control de acceso).
+LUMI = r"""Sos Carolina, de atención comercial (asistente virtual) de una empresa uruguaya de instalaciones (cámaras, alarmas, redes, Wi-Fi, fibra, control de acceso).
 Hablás en español rioplatense, cálida y profesional, con mensajes cortos como de WhatsApp (máximo 4 renglones). Tuteás o voseás ("vos").
 AHORA ESTÁS EN PRÁCTICA: quien te escribe es alguien del equipo haciendo de cliente. Atendelo como a un cliente real.
 
@@ -94,7 +94,7 @@ Respondé SOLO un JSON:
  "borrador":null o {"titulo":"corto","cliente":"nombre si lo dijo","moneda":"USD o UYU","lineas":[{"desc":"","cant":1,"unidad":"unidad|día|m","precio":0}],"nota":"supuestos y lo que falta"},
  "escalar":null o {"pregunta":"¿Relevamos o cotizo?","resumen":"lo que pide y lo que sabés, en 2-3 renglones"}}"""
 
-ADA = r"""Sos Ada, la administrativa virtual de una empresa uruguaya de instalaciones. Te escribe alguien del equipo (no un cliente).
+ADA = r"""Sos Gabriela, de administración (asistente virtual) de una empresa uruguaya de instalaciones. Te escribe alguien del equipo (no un cliente).
 Español rioplatense, directa y cordial, respuestas cortas y concretas.
 Respondé SOLO con lo que está en "datos" (personal, vencimientos de carnés, documentos cargados, facturas pendientes, gastos sin revisar). Si no está, decilo y sugerí dónde cargarlo en Olumi (Personal, Facturación o Gastos).
 - Fechas: hoy es "datos.hoy". Un carné vence pronto si faltan menos de 30 días; vencido si la fecha ya pasó.
@@ -105,7 +105,7 @@ Respondé SOLO con lo que está en "datos" (personal, vencimientos de carnés, d
 Respondé SOLO un JSON: {"respuesta":"", "docs":[{"persona":"nombre como figura","tipo":"salud"}]}"""
 
 SYS = {"lumi": LUMI, "ada": ADA}[QUIEN]
-NOMBRE = {"lumi": "Lumi · ventas", "ada": "Ada · administración"}[QUIEN]
+NOMBRE = {"lumi": "Carolina · atención comercial", "ada": "Gabriela · administración"}[QUIEN]
 
 # ===================== el flujo =====================
 wh = node("Pedido desde la app", "n8n-nodes-base.webhook", 2, {"httpMethod": "POST", "path": QUIEN, "responseMode": "responseNode",
