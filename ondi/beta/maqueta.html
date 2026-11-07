@@ -3542,7 +3542,7 @@ walkFree = (o => function (x, z) { if (!o(x, z)) return false; const rr = 0.3, y
 /* barra de herramientas 1–0 */
 const HOT_DEF = ['sel', 'del', 'dev:ap', 'dev:cam:domo', 'dev:humo', 'prop:wpan', 'prop:wdoor', 'prop:wwin', 'prop:desk', 'plbl'];
 const HOT = { slots: (() => { try { const s = JSON.parse(localStorage.getItem('ondi.hotbar')); if (Array.isArray(s) && s.length === 10) return s; } catch (e) {} return HOT_DEF.slice(); })(), hover: null };
-const HOTX = { sel: ['Elegir y mover', 'sel'], del: ['Borrar', 'del'] };
+const HOTX = { sel: ['Mano: elegir y mover', 'hand'], del: ['Borrar', 'del'] };
 const canHot = () => ED.on && canEdit() && !GALV.id;
 function hotSave() { try { localStorage.setItem('ondi.hotbar', JSON.stringify(HOT.slots)); } catch (e) {} }
 function hotInfo(k) { if (!k) return null; if (HOTX[k]) return { n: HOTX[k][0], ic: CIC[HOTX[k][1]] }; const it = ALL3.find(x => x.k === k); return it ? { n: it.n, ic: CIC[it.ic] || CIC.box } : null; }
@@ -3556,8 +3556,8 @@ function selectSlot(i) { const k = HOT.slots[i], key = (i + 1) % 10; if (!k) { h
   if (k === 'sel' || k === 'del') { CATK = null; setTool(k); renderCat(true); } else armItem(k); const f = hotInfo(k); if (f) hotName(f.n); hotRender(); }
 function hotAssign(i, k) { const j = HOT.slots.indexOf(k); if (j >= 0 && j !== i) HOT.slots[j] = HOT.slots[i] || null; HOT.slots[i] = k; hotSave(); hotRender(); const f = hotInfo(k); hotName((f ? f.n : k) + ' en la tecla ' + ((i + 1) % 10)); }
 function catToggle(force) { const el = $('#e3cat'); if (!el || !ED.on) return; const html = document.documentElement, open = force !== undefined ? force : html.classList.contains('catmin');
-  html.classList.toggle('catmin', !open); try { localStorage.setItem('ondi.catmin', open ? '0' : '1'); } catch (e) {} catShow();
-  if (open) { if (LOCK.on) document.exitPointerLock(); const q = $('#e3q'); if (q && matchMedia('(pointer:fine)').matches) setTimeout(() => q.focus(), 30); } else if (WALK.on) { lockReq('auto'); canvas.focus(); } }
+  html.classList.toggle('catmin', !open); if (!WALK.on) try { localStorage.setItem('ondi.catmin', open ? '0' : '1'); } catch (e) {} catShow();
+  if (open && !WALK.on) { const q = $('#e3q'); if (q && matchMedia('(pointer:fine)').matches) setTimeout(() => q.focus(), 30); } if (!open) canvas.focus(); }
 
 /* el mouse tomado: mirar como en un juego de disparos, la acción va a la mira */
 const LOCK = { on: false, fail: false, req: '', carry: null, mv: 0, aimT: 0, ghT: 0 };
@@ -3581,6 +3581,7 @@ function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { docume
     if (d && d.type === 'cam') { document.exitPointerLock(); select(id, false); openCam(id); return; } select(id, false); return; }
   const t = ED.tool;
   if (t === 'sel') { const id = pickAim(x, y); if (!id) { if (SEL) closePanel(); return; } const IR = innerRef(id); LOCK.mv = 0;
+    if (IR && IR.k === 'wl') { wallDrag(IR, x, y, true); LOCK.carry = { k: 'wl', id, t0: performance.now() }; return; }
     if (IR && IR.k === 'it') { itemDrag(IR, x, y, true); LOCK.carry = { k: 'it', id, t0: performance.now() }; return; }
     const P2 = PROPS.find(q => q.id === id), d = DEV.find(q => q.id === id); if (P2 || d) { LOCK.carry = { k: P2 ? 'prop' : 'dev', id, d: P2 || d, before: snapD(P2 || d), t0: performance.now(), moved: false }; return; }
     select(id, false); return; }
@@ -3588,14 +3589,16 @@ function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { docume
   if (isDevTool(t)) { placeDevAt(t, x, y); return; }
   if (t === 'prop') { placePropAt(ED.propk, x, y); return; }
   if (t === 'plbl') { document.exitPointerLock(); setTimeout(() => e3Tool('plbl', cev()), 20); return; }
-  if (t === 'it' || t === 'draw') { e3Tool(t, cev()); return; }
+  if (t === 'it' || t === 'draw') { e3Tool(t, cev()); if (t === 'it' && SEL) closePanel(); return; }
   document.exitPointerLock(); toast('Esa herramienta se usa desde la vista de arriba'); }
 function carryStep() { const C2 = LOCK.carry; if (!C2) return; if (!C2.moved && LOCK.mv < 14 && performance.now() - C2.t0 < 260) return; C2.moved = true; const x = CX(), y = CY();
   if (C2.k === 'it') { if (ITDRAG) itemDrag(ITDRAG.R, x, y); return; }
+  if (C2.k === 'wl') { if (WLDRAG) wallDrag(WLDRAG.R, x, y); return; }
   if (C2.k === 'prop') { HITSKIP = C2.d.id; placeProp(C2.d, x, y); HITSKIP = null; propObj(C2.d); return; }
   smartPlace(C2.d, x, y); if (C2.d.custom || C2.d.mount === 'ceiling') C2.d.loc = locFor(C2.d); devObj(C2.d); devTag(C2.d); if (SEL === C2.d.id) updGizmo(); }
 function carryEnd(cancel) { const C2 = LOCK.carry; LOCK.carry = null; if (!C2) return;
   if (C2.k === 'it') { itemDragEnd(); if (!C2.moved && !cancel) select(C2.id, false); return; }
+  if (C2.k === 'wl') { wallDragEnd(); if (!C2.moved && !cancel) select(C2.id, false); return; }
   if (!C2.moved) { if (!cancel) select(C2.id, false); return; }
   if (C2.k === 'dev') markMoved(C2.d); edSave(); recChange(C2.d, C2.before, C2.d.id + ' movido'); hotName(C2.d.id + ' movido'); }
 function aimShow(t, cls) { const el = $('#e3aim'); if (!el) return; el.hidden = !t; if (t) { el.innerHTML = t; el.className = 'e3aim ' + (cls || ''); } }
@@ -3603,15 +3606,15 @@ const DEVN = { cam: 'Cámara', ap: 'Wi-Fi', gab: 'Gabinete', wr: 'Rack', rack: '
 function aimText() { if (!WALK.on || !LOCK.on) return aimShow(''); if (LOCK.carry && LOCK.carry.moved) return aimShow('Soltá para dejarlo · ' + escH(LOCK.carry.id));
   const ed = ED.on && canEdit(), t = ED.tool; if (ed && t !== 'sel' && t !== 'del') return aimShow('');
   const id = pickAim(CX(), CY()); if (!id) return aimShow(''); const e = entity(id); if (!e || e.t === 'nave' || e.t === 'truck' || e.t === 'fork' || e.t === 'fiber') return aimShow('');
-  const d = e.d, nm = d ? (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' <b>' + escH(d.id) + '</b>' : e.t === 'prop' ? escH(e.P.name || (PK[e.P.k] || {}).n || e.P.id) : e.t === 'plbl' ? escH(e.L.text) : e.t === 'item' ? escH(e.R.o.name || e.R.o.id) : escH(id);
+  const d = e.d, nm = d ? (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' <b>' + escH(d.id) + '</b>' : e.t === 'prop' ? escH(e.P.name || (PK[e.P.k] || {}).n || e.P.id) : e.t === 'plbl' ? escH(e.L.text) : e.t === 'item' ? escH(e.R.o.name || (e.R.k === 'wl' ? WK[e.R.o.k].n : e.R.k === 'tr' ? TK[e.R.o.k].n : e.R.o.id)) : escH(id);
   if (ed && t === 'del') return aimShow('Clic para borrar · ' + nm, 'del');
   const tk = d && tkOk() ? ' · <kbd>T</kbd> ticket' : '';
-  if (ed) return aimShow(nm + ' · clic para elegir, mantené para mover' + tk);
+  if (ed) return aimShow(nm + ' · clic: opciones · mantené: mover' + (e.t === 'item' && e.R.k === 'wl' ? ' (desde la punta: estirar)' : '') + tk);
   if (d && d.type === 'cam') return aimShow(nm + ' · clic para ver la cámara' + tk, 'cam'); if (d && SENS[d.type]) return aimShow(nm + ' · clic para ver los datos' + tk); aimShow(nm + tk); }
 function gameTick() { requestAnimationFrame(gameTick); if (!WALK.on) return; const now = performance.now();
   if (LOCK.on && LOCK.carry) carryStep();
   if (LOCK.on && ED.on && canEdit() && !LOCK.carry && now - LOCK.ghT > 33) { LOCK.ghT = now; GHOST.x = CX(); GHOST.y = CY(); ghostMove(cev()); }
-  if (now - LOCK.aimT > 120) { LOCK.aimT = now; aimText(); } }
+  if (now - LOCK.aimT > 120) { LOCK.aimT = now; aimText(); cursorRule(); } }
 
 /* caminar: volar solo en edición, ayuda que se achica */
 stepWalk = (o => function (dt) { if (!WALK.on) return; const fly = ED.on && canEdit(); let saved = null;
@@ -3622,10 +3625,10 @@ const HELP = { open: (() => { try { return localStorage.getItem('ondi.help') !==
 function helpSet(on) { HELP.open = on; try { localStorage.setItem('ondi.help', on ? '1' : '0'); } catch (e) {} helpRender(); walkHud(); }
 const kb = s => s.split(' ').map(k => `<kbd>${k}</kbd>`).join(' ');
 function helpRender() { const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
-  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
+  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir'], [kb('Alt'), 'Mantenelo para usar el mouse un momento'], ['Menús', 'Al abrir uno aparece el mouse; al cerrarlo vuelve la mira'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
   if (canEdit()) rows.push([kb('F'), ed ? 'Apagar la edición' : 'Prender la edición']);
   if (!ed) rows.push(['Clic', 'En una cámara, ves lo que ve · en un sensor, sus datos']);
-  else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
+  else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], [kb('1') + ' Mano', 'Clic: opciones de lo que apuntás · mantené: moverlo'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
   el.innerHTML = `<div class="e3hh"><b>${ed ? 'Controles de edición' : 'Controles'}</b><button class="e3x" data-help="0" title="Ocultar los controles · H" aria-label="Ocultar los controles">−</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>${ed ? '<p>Para cambiar la barra: abrí el catálogo, pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero.</p>' : ''}`; }
 walkHud = function () { const on = WALK.on; HUD.hidden = !on; $('#e3pad').hidden = !on; $('#e3cross').hidden = !on; const wb = $('#walkb'); if (wb) wb.setAttribute('aria-pressed', String(on)); helpRender(); if (!on) { aimShow(''); return; }
   const ed = ED.on && canEdit();
@@ -3645,8 +3648,8 @@ sensPanel = (o => function (d) { const r = o(d); if (canEdit()) return r; const 
 setTool = (o => function (t) { o(t); hotRender(); })(setTool);
 setEdit = (o => function (on) { o(on); hotRender(); if (WALK.on) walkHud(); if (!ED.on) { carryEnd(true); } })(setEdit);
 renderCat = (o => function (k) { o(k); const el = $('#e3cat'); if (!el) return; el.querySelectorAll('[data-ck3]').forEach(b => { b.draggable = true; }); hotRender(); })(renderCat);
-enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { hotRender(); helpRender(); lockReq('auto'); } })(enterWalk);
-exitWalk = (o => function () { if (LOCK.on) document.exitPointerLock(); carryEnd(true); o(); helpRender(); })(exitWalk);
+enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { const h = document.documentElement; LOCK.catWas = h.classList.contains('catmin'); h.classList.add('catmin'); catShow(); hotRender(); helpRender(); lockReq('auto'); } })(enterWalk);
+exitWalk = (o => function () { const was = WALK.on; if (LOCK.on) document.exitPointerLock(); carryEnd(true); LOCK.byUI = false; o(); helpRender(); if (was) { document.documentElement.classList.toggle('catmin', !!LOCK.catWas); catShow(); } const r = $('#e3resume'); if (r) r.hidden = true; })(exitWalk);
 
 /* vigas del galpón: también sirven para colgar equipos; columnas del galpón bajo las vigas */
 CIC.colg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10M7 21h10M12 3v18"/><path d="M3 3h18" stroke-dasharray="2 2"/></svg>';
@@ -3687,6 +3690,35 @@ async function ticketSend() { if (!TKD) return; const D = TKD, M = TKM.find(m =>
     catch (e) { if (b) { b.disabled = false; b.textContent = 'Probar de nuevo'; } toast(/permiso/.test(String(e && e.message)) ? 'No tenés permiso para pedir arreglos en este sitio' : 'No se pudo mandar el ticket, probá de nuevo'); } return; }
   const n = 2300 + Math.floor(Math.random() * 600); ticketClose(); toast('Ticket #' + n + ' creado (demo) · ' + M[1]); log('info', `Ticket #${n} · ${M[1]} · ${tkName(D.id)}`, D.id); sendVan(D.id, n); }
 ticketFor = id => ticketPop(id);
+/* paredes de adentro como en los Sims: agarrarlas y moverlas, o estirarlas desde una punta */
+CIC.hand = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5V4a1.5 1.5 0 0 1 3 0v7.5M14 11.5V5.5a1.5 1.5 0 0 1 3 0v7"/><path d="M17 12.5V9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.8-2.4L4.4 14.7a1.6 1.6 0 0 1 2.4-2.1L8 14"/></svg>';
+let WLDRAG = null, wlT = 0;
+function wallDrag(R, x, y, start) { const h = floorHit(x, y); if (!h || h.N !== R.N) return false; const N = R.N, o = R.o, [u, dd] = toLocal(N, h.p[0], h.p[2]), s5 = v => Math.round(v * 2) / 2;
+  if (start) { const da = Math.hypot(u - o.a[0], dd - o.a[1]), db = Math.hypot(u - o.b[0], dd - o.b[1]), L = Math.hypot(o.b[0] - o.a[0], o.b[1] - o.a[1]), end = Math.min(da, db) < Math.min(1.2, L * 0.25) ? (da < db ? 'a' : 'b') : null;
+    WLDRAG = { R, end, p0: [u, dd], a0: o.a.slice(), b0: o.b.slice(), before: snapInner(N), moved: false }; return true; }
+  const D = WLDRAG; if (!D) return false; const cu = v => clamp(v, 0, N.L), cd = v => clamp(v, 0, N.D);
+  if (D.end) { const other = D.end === 'a' ? D.b0 : D.a0, q = ortho(other, [cu(s5(u)), cd(s5(dd))]); if (Math.hypot(q[0] - other[0], q[1] - other[1]) < 0.5) return true; o[D.end] = q; }
+  else { const du = s5(u - D.p0[0]), dv = s5(dd - D.p0[1]); o.a = [cu(D.a0[0] + du), cd(D.a0[1] + dv)]; o.b = [cu(D.b0[0] + du), cd(D.b0[1] + dv)]; }
+  D.moved = true; const now = performance.now(); if (now - wlT > 90) { wlT = now; buildNave(N); } return true; }
+function wallDragEnd() { const D = WLDRAG; WLDRAG = null; if (!D) return false; if (D.moved) { buildNave(D.R.N); edSave(); recInner(D.R.N, D.before, (D.R.o.name || WK[D.R.o.k].n) + (D.end ? ' estirada' : ' movida')); renderPanel(true); } return true; }
+edDown = (o => function (e) { const r = o(e); if (r) return r; if (!ED.on || !canEdit() || ED.tool !== 'sel' || e.button !== 0 || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
+  const id = pick3(e.clientX, e.clientY), IR = innerRef(id); if (IR && IR.k === 'wl') { select(id, false); wallDrag(IR, e.clientX, e.clientY, true); return true; } return false; })(edDown);
+edMove = (o => function (e) { if (WLDRAG) { wallDrag(WLDRAG.R, e.clientX, e.clientY); return true; } return o(e); })(edMove);
+edUp = (o => function (e, w) { if (WLDRAG) return wallDragEnd(); return o(e, w); })(edUp);
+e3Edit = (o => function (e, fld) { if (e.t === 'item' && e.R.k === 'wl' && ED.on && canEdit()) { const w = e.R.o, L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), num = (k, v, st) => `<span class="stp"><input class="e3num" type="number" step="${st}" data-ed="${k}" value="${v}"><em>m</em></span>`;
+    return `<div class="edbox"><b>Edición</b>${fld('Largo', num('wlen', L.toFixed(1), 0.5))}${fld('Alto', num('wh', w.h.toFixed(1), 0.5))}${fld('Girar', '<span class="stp"><button data-ed="wrot">↻ 90°</button></span>')}<p class="ehelp">Con la Mano (tecla 1): mantené apretado sobre la pared para moverla, o desde una punta para estirarla.</p><button class="btn danger" data-ed="del">Borrar la pared</button></div>`; } return o(e, fld); })(e3Edit);
+e3Action = (o => function (a, val) { if (a !== 'wlen' && a !== 'wrot') return o(a, val); const IR = innerRef(SEL); if (!IR || IR.k !== 'wl') return false; const N = IR.N, w = IR.o, before = snapInner(N), s5 = v => Math.round(v * 2) / 2;
+  if (a === 'wlen') { const L = clamp(+val || 1, 0.5, Math.max(N.L, N.D)), dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1], L0 = Math.hypot(dx, dz) || 1; w.b = [clamp(s5(w.a[0] + dx / L0 * L), 0, N.L), clamp(s5(w.a[1] + dz / L0 * L), 0, N.D)]; }
+  else { const c = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], h = [(w.b[0] - w.a[0]) / 2, (w.b[1] - w.a[1]) / 2]; w.a = [s5(c[0] + h[1]), s5(c[1] - h[0])]; w.b = [s5(c[0] - h[1]), s5(c[1] + h[0])]; }
+  buildNave(N); edSave(); recInner(N, before, (w.name || WK[w.k].n) + ' cambiada'); renderPanel(true); return true; })(e3Action);
+
+/* el mouse: con un menú abierto aparece; al cerrarlo vuelve la mira sola. Alt mantenido lo suelta un momento */
+const ALT = { on: false };
+const vis = s => { const el = document.querySelector(s); return !!el && !el.hidden; };
+function uiOpen() { return !panel.hidden || vis('#camview') || !CTX.hidden || !POP.hidden || vis('#e3tk') || !!GALV.id || vis('#cabview') || (ED.on && canEdit() && vis('#e3cat')) || ALT.on; }
+function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); if (!WALK.on || LOCK.fail || !matchMedia('(pointer:fine)').matches) { $('#e3resume') && ($('#e3resume').hidden = true); return; } const U = uiOpen();
+  if (U && LOCK.on) { LOCK.byUI = true; document.exitPointerLock(); } else if (!U && !LOCK.on && LOCK.byUI && performance.now() - (LOCK.tryT || 0) > 400) { LOCK.tryT = performance.now(); LOCK.byUI = false; lockReq('auto'); }
+  const r = $('#e3resume'); if (r) r.hidden = LOCK.on || U || LOCK.byUI; }
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3707,7 +3739,7 @@ html.locked canvas{cursor:none}
 html.walking.hotbar #editbar{display:none!important}
 html.hotbar.walking .e3walk{bottom:calc(var(--gb) + 70px)} html.hotbar.walking .e3cat{bottom:calc(var(--gb) + 126px)} html.hotbar.walking .e3help{bottom:calc(var(--gb) + 124px)}
 html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
-.e3walk{padding:5px 5px 5px 12px;gap:5px} .e3walk .btn{white-space:nowrap;height:32px;padding:0 10px;font-size:12.5px} .e3walk > div b:first-child{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.e3walk{padding:5px 5px 5px 12px;gap:5px} .e3walk .btn{white-space:nowrap;height:32px;padding:0 10px;font-size:12.5px} .e3walk > div span{white-space:nowrap} .e3walk > div b:first-child{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .e3help{position:fixed;right:var(--gr);bottom:calc(var(--gb) + 70px);width:280px;max-height:calc(100vh - var(--gt) - var(--gb) - 215px);overflow:auto;z-index:14;padding:10px 12px 12px;border-radius:12px;font:13px var(--f-ui);color:var(--ink)}
 .e3hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px} .e3hh b{font-size:13px}
 .e3x{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--glass-strong);color:var(--ink);font:700 16px var(--f-ui);cursor:pointer;line-height:1}
@@ -3719,6 +3751,12 @@ html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
 .e3tka{display:flex;justify-content:flex-end;gap:8px} .e3tk .e3chips{display:flex;flex-wrap:wrap;gap:6px}
 .e3tk .e3chips button{border-radius:999px;border:1px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);font:600 12.5px var(--f-ui);padding:6px 11px;cursor:pointer} .e3tk .e3chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 .e3walk kbd,.e3aim kbd{font-size:10px;padding:0 4px;min-width:0;margin-left:2px} .e3aim kbd{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.4)}
+
+.e3resume{position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);z-index:12;display:grid;gap:3px;text-align:center;padding:9px 16px;border-radius:10px;background:rgba(15,20,24,.72);color:#fff;font:600 13.5px var(--f-ui);cursor:pointer}
+.e3resume small{font:500 11.5px var(--f-ui);opacity:.8}
+@media (hover:hover) and (pointer:fine){html.walking .topbar,html.walking .controls{display:none!important}
+html.walking .e3walk{top:var(--gt);bottom:auto!important} html.walking .e3help{top:calc(var(--gt) + 58px);bottom:auto!important} html.walking.panelopen .e3help{display:none}
+html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.walking .panel{top:calc(var(--gt) + 58px)}}
 kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
 .e3tile[draggable=true]{cursor:grab}
 .e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}
@@ -3748,6 +3786,12 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   const tk = document.createElement('div'); tk.id = 'e3tk'; tk.className = 'e3tk glass'; tk.hidden = true; tk.setAttribute('role', 'dialog'); tk.setAttribute('aria-label', 'Crear ticket'); document.body.appendChild(tk);
   tk.addEventListener('click', e => { const m = e.target.closest('[data-tkm]'); if (m && TKD) { TKD.m = m.dataset.tkm; tk.querySelectorAll('[data-tkm]').forEach(x => x.setAttribute('aria-pressed', String(x === m))); return; } const a = e.target.closest('[data-tk]'); if (!a) return; if (a.dataset.tk === 'x') ticketClose(); if (a.dataset.tk === 'send') ticketSend(); });
   tk.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ticketClose(); } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ticketSend(); });
+  const rs = document.createElement('div'); rs.id = 'e3resume'; rs.className = 'e3resume'; rs.hidden = true; rs.innerHTML = 'Hacé clic en la pantalla para volver a la mira<small>Alt mantenido: mouse libre un momento · Esc: soltar el mouse</small>'; document.body.appendChild(rs);
+  rs.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); lockReq('click'); });
+  if (cat) cat.addEventListener('click', e => { if (WALK.on && e.target.closest('[data-ck3]')) setTimeout(() => catToggle(false), 0); });
+  window.addEventListener('keydown', e => { if (e.key !== 'Alt' || !WALK.on) return; e.preventDefault(); if (!e.repeat) { ALT.on = true; cursorRule(); } }, true);
+  window.addEventListener('keyup', e => { if (e.key !== 'Alt') return; e.preventDefault(); if (ALT.on) { ALT.on = false; cursorRule(); } }, true);
+  addEventListener('blur', () => { ALT.on = false; });
   // teclado: números, Tab, H, F, T, R para girar la pieza
   window.addEventListener('keydown', e => { const t = e.target; if (t.closest && t.closest('input,select,textarea')) return; const k = e.key, kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey || e.altKey;
     if (k === 'Escape' && (LOCK.on || performance.now() - (LOCK.offT || 0) < 350)) { e.preventDefault(); e.stopImmediatePropagation(); if (LOCK.on) document.exitPointerLock(); return; }
@@ -3760,13 +3804,13 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
     if (kl === 'r' && ED.tool === 'prop' && (BK[ED.propk] || (FK[ED.propk] && !FK[ED.propk].wall))) { e.preventDefault(); e.stopImmediatePropagation(); ROT.off += (e.shiftKey ? -1 : 1) * Math.PI / 2; GHOST.key = ''; if (GHOST.d) GHOST.d.yaw = undefined; if (!LOCK.on) ghostMove({ clientX: GHOST.x, clientY: GHOST.y }); hotName('Girado'); } }, true);
   // mouse tomado: todo va a la mira
   window.addEventListener('pointerdown', e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
-    if (WALK.on && e.target === canvas && e.button === 0 && e.pointerType === 'mouse' && !LOCK.fail && matchMedia('(pointer:fine)').matches) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); ctxClose(); popClose(); lockReq('click'); } }, true);
+    if (WALK.on && !uiOpen() && e.target === canvas && e.button === 0 && e.pointerType === 'mouse' && !LOCK.fail && matchMedia('(pointer:fine)').matches) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); ctxClose(); popClose(); lockReq('click'); } }, true);
   window.addEventListener('pointerup', e => { if (!LOCK.on) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.button === 0) carryEnd(false); }, true);
   window.addEventListener('pointermove', e => { if (!LOCK.on) return; e.stopPropagation(); e.stopImmediatePropagation(); lookMove(e.movementX || 0, e.movementY || 0); }, true);
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines });
+  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel });
   hotRender(); requestAnimationFrame(gameTick); }
 
 /* ---------- arranque ---------- */
