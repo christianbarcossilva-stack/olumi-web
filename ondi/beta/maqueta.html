@@ -3750,7 +3750,13 @@ function extCat() { const used = new Set(DEV.filter(d => d.ext).map(d => d.ext.u
   for (let i = ALL3.length - 1; i >= 0; i--) if (ALL3[i].k.startsWith('ext:')) ALL3.splice(i, 1); const ci = CAT3.findIndex(c => c[0].startsWith('Equipos del cliente')); if (ci >= 0) CAT3.splice(ci, 1);
   if (free.length) { const IC = { cam: 'cam', ap: 'ap', wr: 'rack' }, items = free.map(x => ['ext:' + x.uid, (extSt(x.estado) === 'crit' ? '⚠ ' : '') + x.nombre, IC[extTool(x)], [x.modelo, x.ip, x.mac, EXTN[x.marca] || x.marca, extTxt(x.estado)].filter(Boolean).join(' ')]);
     CAT3.unshift([`Equipos del cliente sin ubicar (${free.length})${EXT.demo ? ' · demo' : ''}`, items]); items.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c: 'Equipos del cliente' })); }
-  renderCat(true); hotRender(); }
+  renderCat(true); hotRender(); extChip(free); }
+function extChip(free) { let el = $('#e3ext'); if (!el) { el = document.createElement('button'); el.id = 'e3ext'; el.className = 'e3ext glass'; el.hidden = true; document.body.appendChild(el);
+    el.addEventListener('click', () => { if (el.dataset.k !== 'ubicar') return; if (!ED.on) setEdit(true); document.documentElement.classList.remove('catmin'); catShow(); const l = $('#e3cat .e3list'); if (l) l.scrollTop = 0; el.hidden = true; }); }
+  const n = (free || []).length, err = EXT.errs[0];
+  if (err && canEdit()) { el.dataset.k = 'err'; el.innerHTML = '<i class="dot crit"></i>' + escH(err); el.hidden = false; }
+  else if (n && canEdit() && !EXT.demo) { el.dataset.k = 'ubicar'; el.innerHTML = `<i class="dot ok"></i>${n} equipo${n === 1 ? '' : 's'} de ${escH(EXTN[free[0].marca] || 'la red')} para ubicar en la maqueta · <b>Ubicar</b>`; el.hidden = false; }
+  else el.hidden = true; }
 armItem = (o => function (k) { if (!k.startsWith('ext:')) return o(k); const x = extOf(k.slice(4)); if (!x) return; if (!ED.on) setEdit(true); const t = extTool(x);
   EXT.pending = x.uid; GHOST.key = ''; GHOST.d = null; if (t === 'cam') ED.camKind = /dome|domo|turret/i.test(x.modelo) ? 'domo' : 'bullet'; setTool(t); CATK = k; renderCat(true); hotRender(); hotName('Poné ' + x.nombre + ' donde está instalado'); })(armItem);
 addDevRaw = (o => function (d) { if (d.custom && !d.ext && EXT.pending && CATK === 'ext:' + EXT.pending) { const x = extOf(EXT.pending); if (x) { d.ext = { uid: x.uid, marca: x.marca, mac: x.mac || '' }; d.name = x.nombre; d.kind = x.modelo || d.kind; d.extInfo = x; d.status = extSt(x.estado); if (d.type === 'cam' && x.marca) d.marca = EXTN[x.marca] || d.marca; }
@@ -3813,6 +3819,9 @@ html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
 @media (hover:hover) and (pointer:fine){html.walking .topbar,html.walking .controls{display:none!important}
 html.walking .e3walk{top:var(--gt);bottom:auto!important} html.walking .e3help{top:calc(var(--gt) + 58px);bottom:auto!important} html.walking.panelopen .e3help{display:none}
 html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.walking .panel{top:calc(var(--gt) + 58px)}}
+.e3ext{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 72px);z-index:13;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font:500 13px var(--f-ui);cursor:pointer;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.e3ext b{color:var(--accent)} .e3ext .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ok,#2a9d5c)} .e3ext .dot.crit{background:#d64545}
+html.walking .e3ext,html.editing .e3ext[data-k=ubicar]{display:none}
 kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
 .e3tile[draggable=true]{cursor:grab}
 .e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}

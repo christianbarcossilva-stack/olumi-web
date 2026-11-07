@@ -172,7 +172,7 @@ tr:last-child td{border-bottom:0}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .mtop{display:none}
 @media (max-width:860px){
-  .app{grid-template-columns:1fr}
+  .app{grid-template-columns:minmax(0,1fr)} .app>*,.mnav,.mtop,main{min-width:0} .maqbar .btn{padding-inline:10px}
   .side{display:none}
   .mtop{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:30px;z-index:20}
   .mtop select{max-width:46vw;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
@@ -471,7 +471,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=9" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=10" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -494,12 +494,23 @@ function eqTipo(d) { if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw
   if (/udm|uxg|usg|ucg|gateway|dream|^mx\d|router|cloud key/.test(t)) return 'gw';
   if (/\bu[67]\b|uap|\bap\b|mesh|nanohd|access point|^mr\d|wi-?fi/.test(t)) return 'ap';
   return 'otro'; }
+// enlazar este cliente con un sitio de la cuenta de la empresa, sin ir a Ajustes
+function enlazarAqui(st) { const ks = CLOUD.filter(k => claveDe('', k)); if (!S.claves) { setTimeout(() => loadClaves().then(render), 0); return ''; }
+  if (!ks.length) return `<div class="card pad" style="margin-bottom:14px"><h2 style="margin:0 0 6px">Conectar los equipos</h2><p class="muted" style="margin:0 0 10px">Para ver los equipos de este cliente, primero cargá la clave de UniFi o Meraki de la empresa.</p>${admin() ? '<button class="btn pri" data-goaj="integraciones">Cargar la clave</button>' : ''}</div>`;
+  return ks.map(k => { const L = S.sitiosOrg[k];
+    if (L === undefined) { S.sitiosOrg[k] = 'cargando'; fn({ accion: 'sitios', alcance: '', marca: k }).then(r => { S.sitiosOrg[k] = r; render(); }).catch(er => { S.sitiosOrg[k] = { error: errTxt(er) }; render(); }); }
+    const body = !L || L === 'cargando' ? '<p class="muted">Buscando los sitios de ' + BR[k].n + '…</p>' : L.error ? `<div class="err">${esc(L.error)}</div>` : !(L.sitios || []).length ? `<p class="muted">La clave de ${BR[k].n} no ve ningún sitio. Si las consolas son de otra cuenta, la clave la tiene que crear el dueño.</p>`
+      : `<div class="slist">${L.sitios.map(x => { const otro = S.sites.find(o => o.id !== st.id && o.data && o.data[k] && o.data[k].hostId === x.hostId && o.data[k].siteId === x.siteId);
+          return `<button data-pickorg="${k}|${esc(x.hostId)}|${esc(x.siteId)}" ${admin() ? '' : 'disabled'}><b>${esc(x.nombre)}</b><span class="tag">${x.equipos ?? '?'} equipos</span><small>${otro ? 'Ahora en ' + esc(otro.name) : esc(x.isp || x.zona || '')}</small>${x.caidos ? `<small style="color:var(--crit)">${x.caidos} caídos</small>` : '<small></small>'}</button>`; }).join('')}</div>`;
+    return `<div class="card pad" style="margin-bottom:14px"><h2 style="margin:0 0 4px">¿Cuál de estos sitios de ${BR[k].n.split(' ').pop()} es ${esc(st.name)}?</h2><p class="muted" style="margin:0 0 10px;font-size:13.5px">Tocalo y los equipos aparecen acá y en la maqueta.</p>${body}</div>`; }).join(''); }
 function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M = S.man[st.id];
   if (!E) { setTimeout(() => loadEq(st), 0); return '<div class="card empty">Trayendo los equipos…</div>'; }
   const loc = new Map(((S.maqExt || {})[st.id] || []).map(x => [x.uid, x]));
   const all = [...E.list.map(d => ({ ...d, uid: (d.marca || 'unifi') + ':' + (d.mac || d.id) })), ...(M || []).map(d => ({ uid: 'man:' + d.id, tipo: d.tipo, nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))]
     .map(d => ({ ...d, cat: eqTipo(d), lugar: loc.has(d.uid) ? loc.get(d.uid).lugar : '' }));
   const errs = E.errs.map(x => `<div class="err" style="margin-bottom:8px">${esc(BR[x.k].n)}: ${esc(x.m)}</div>`).join('');
+  const enlazar = !l.length && staff() ? enlazarAqui(st) : '';
+  if (enlazar && !all.length) return enlazar;
   if (!all.length && !errs) return `<div class="card empty"><b>Todavía no hay equipos</b><span>${staff() ? 'Enlazá el cliente con UniFi o Meraki, o cargá equipos a mano, en la pestaña Integraciones.' : 'La instaladora los tiene que cargar.'}</span>${staff() ? '<button class="btn pri" data-tab="integ">Ir a Integraciones</button>' : ''}</div>`;
   const lugares = [...new Set(all.map(d => d.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), sinU = all.filter(d => !d.lugar).length;
   let tab = S.eqTab || ''; if (tab && tab !== '__sin' && !lugares.includes(tab)) tab = ''; const f = S.eqF || '', q = (S.eqQ || '').trim().toLowerCase();
@@ -509,7 +520,7 @@ function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M 
   sorted(rows);
   const tabsH = `<div class="eqtabs" role="tablist" aria-label="Lugares">${[['', 'Todos', all.length], ...lugares.map(x => [x, x, all.filter(d => d.lugar === x).length]), ...(sinU && lugares.length ? [['__sin', 'Sin ubicar en la maqueta', sinU]] : [])].map(([v, n, c]) => `<button role="tab" aria-selected="${tab === v}" data-eqtab="${esc(v)}">${esc(n)} <span>${c}</span></button>`).join('')}</div>`;
   const filt = `<div class="eqfil"><span class="seg">${[['', 'Todos', inTab.length], ...cats.map(c => [c, EQT[c], cnt(c)])].map(([v, n, c]) => `<button aria-pressed="${f === v}" data-eqf="${v}">${n} <span>${c}</span></button>`).join('')}</span><input id="eqq" type="search" placeholder="Buscar por nombre, modelo o IP" value="${esc(S.eqQ || '')}" aria-label="Buscar equipo"></div>`;
-  return `${errs}<div class="kpis"><div><b>${inTab.length}</b><span>equipos${tab ? ' en ' + esc(tab === '__sin' ? 'sin ubicar' : tab) : ''}</span></div><div><b style="color:var(--ok)">${on}</b><span>en línea</span></div><div><b style="color:${off ? 'var(--crit)' : 'inherit'}">${off}</b><span>caídos ahora</span></div>
+  return `${enlazar}${errs}<div class="kpis"><div><b>${inTab.length}</b><span>equipos${tab ? ' en ' + esc(tab === '__sin' ? 'sin ubicar' : tab) : ''}</span></div><div><b style="color:var(--ok)">${on}</b><span>en línea</span></div><div><b style="color:${off ? 'var(--crit)' : 'inherit'}">${off}</b><span>caídos ahora</span></div>
       <div><b>${E.wifi ?? '—'}</b><span>dispositivos conectados${E.wifi != null ? ' (UniFi)' : ''}</span></div></div>
     ${lugares.length ? tabsH : `<p class="muted" style="font-size:13.5px;margin:0 0 10px">Para ver los equipos por lugar, ponelos en la maqueta: en el editor aparecen en "Equipos del cliente sin ubicar".</p>`}
     <div class="card"><div class="pad" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><h2 style="margin:0">Equipos</h2><span class="acts"><span class="muted" style="font-size:13px">${l.length ? 'Leído ' + ago(E.at) : ''}</span><button class="btn sm" data-do="eqref">${IC.ref}Actualizar</button></span></div>
@@ -734,7 +745,7 @@ document.addEventListener('change', async e => {
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-pickorg],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
   if (t.dataset.pf) { S.pf = t.dataset.pf; render(); return; } if (t.dataset.stab) { S.stab = t.dataset.stab; render(); return; }
   try { if (t.dataset.sin || t.dataset.sout) { const o = t.dataset.sin || t.dataset.sout, r = await SB.rpc('ondi_super_soporte', { o, entrar: !!t.dataset.sin }); if (r.error) throw r.error; if (t.dataset.sin) { ls.set('ondi.ctx', 'org:' + o); toast('Entraste en modo soporte por 2 horas'); await boot(); } else { S.sp = null; await boot(); S.view = 'super'; render(); } return; }
     if (t.dataset.sgo) { ls.set('ondi.ctx', 'org:' + t.dataset.sgo); await boot(); return; }
@@ -755,6 +766,9 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (t.dataset.unlink) { const k = t.dataset.unlink, d = { ...(st.data || {}) }; delete d[k]; delete d.resumen; const r = await SB.from('ondi_sites').update({ data: d }).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); delete S.eq[st.id]; toast('Desenlazado'); render(); return; }
     if (t.dataset.eqtab !== undefined) { S.eqTab = t.dataset.eqtab; S.eqF = ''; render(); return; }
     if (t.dataset.eqf !== undefined) { S.eqF = t.dataset.eqf; render(); return; }
+    if (t.dataset.pickorg) { const [k, hostId, siteId] = t.dataset.pickorg.split('|'), x = ((S.sitiosOrg[k] || {}).sitios || []).find(o => o.hostId === hostId && o.siteId === siteId);
+      for (const o of S.sites.filter(o => o.id !== st.id && o.data && o.data[k] && o.data[k].hostId === hostId && o.data[k].siteId === siteId)) { await saveSite(o, { data: { [k]: null } }); delete S.eq[o.id]; }
+      await saveSite(st, { data: { [k]: { hostId, siteId, nombre: x ? x.nombre : siteId, propia: false, at: new Date().toISOString() } } }); delete S.eq[st.id]; toast('Enlazado con ' + (x ? x.nombre : siteId)); render(); return; }
     if (t.dataset.sorgref) { delete S.sitiosOrg[t.dataset.sorgref]; render(); return; }
     if (t.dataset.probar) { const k = t.dataset.probar; S.test[k] = 'cargando'; render(); try { S.test[k] = await fn({ accion: 'probar', alcance: '', marca: k }); } catch (er) { S.test[k] = { error: errTxt(er) }; } render(); return; }
     if (t.dataset.delkey) { const k = t.dataset.delkey; if (!arm('del:' + k)) return; const r = await SB.rpc(k === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', k === 'unifi' ? { o: orgId(), alcance: '', clave: '' } : { o: orgId(), alcance: '', marca: k, clave: '' }); if (r.error) throw r.error; S.test[k] = null; toast('Clave borrada'); await loadClaves(); return; }
