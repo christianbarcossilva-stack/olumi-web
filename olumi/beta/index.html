@@ -361,6 +361,10 @@ details.more[open] summary{margin-bottom:12px}
   .nav{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:40;flex-direction:row;justify-content:space-around;gap:0;border-right:0;border-top:1px solid var(--line);padding:4px 0 env(safe-area-inset-bottom,0px);padding-left:max(4px, env(safe-area-inset-left,0px));padding-right:max(4px, env(safe-area-inset-right,0px))}
   .nav .brand,.nav .dsk{display:none}
   .nav .mob{display:flex}
+  .nav button[data-view]{display:none!important}
+  .nav button[data-view].tab{display:flex!important;order:var(--tabo,99)}
+  .nav button[data-view].tab[hidden]{display:none!important}
+  .mobonly{display:inline-flex!important}
   .week{grid-template-columns:minmax(0,1fr)}
   .day{min-height:0}
   .day.noev .dayb{display:none}
@@ -649,6 +653,12 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .gfotos figcaption{font-size:11px;color:var(--muted);text-align:center;margin-top:3px}.pdfdoc{display:grid;place-items:center;width:120px;height:150px;border-radius:10px;border:1px solid var(--line);font-weight:700;color:var(--muted)}
 .nav .navsec[hidden]{display:none}
 @media (max-width:760px){.seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch}.seg::-webkit-scrollbar{display:none}.seg button{flex:0 0 auto}}
+/* 1.42: distribucion */
+.btn.mobonly,.mobonly{display:none}
+.menusec{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px}
+.ofidia{margin:4px 0 16px}.ofidia h2{display:flex;align-items:center;gap:8px;font-size:20px;text-transform:none;letter-spacing:0;color:var(--text)}
+.ofidia h2 .btn{font-size:14px;font-weight:600}
+.ofih2{font-size:20px;margin:18px 0 10px}
 /* 1.39: agentes */
 .agav{display:inline-grid;place-items:center;border-radius:50%;background:linear-gradient(140deg,var(--agc),color-mix(in srgb,var(--agc) 55%,#fff));color:#fff;font-weight:700;position:relative;flex:0 0 auto;box-shadow:0 0 0 3px color-mix(in srgb,var(--agc) 22%,transparent)}
 .agav i{position:absolute;right:-3px;top:-4px;font-style:normal;font-size:11px;color:var(--agc);background:var(--surface);border-radius:50%;width:16px;height:16px;display:grid;place-items:center}
@@ -971,10 +981,11 @@ function render(){
   const sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   if(ROLE&&!canMoney()&&MONEYV.includes(VIEW)){VIEW='tickets';lsSet('crm.view',VIEW)}
   document.querySelectorAll('.nav [data-view]').forEach(b=>{const v=b.dataset.view;if(MONEYV.includes(v))b.hidden=!!ROLE&&!canMoney();if(v==='vivo')b.hidden=!hasVivo();if(ROLE&&!viewOk(v)&&v!=='menu')b.hidden=true;if(ROLE&&!MONEYV.includes(v)&&viewOk(v)&&!['admin','hoy'].includes(v))b.hidden=false});
+  applyTabs();
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,vis=false;while(n&&!n.classList.contains('navsec')){if(n.matches('[data-view]')&&!n.hidden)vis=true;n=n.nextElementSibling}h.hidden=!vis});
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
-  if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){const oh=$('#ofiHoy');if(oh){const x=ofiHoy();if(oh.dataset.k!==x){oh.dataset.k=x;oh.innerHTML=x}}ofiPost();return}
+  if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){const oh=$('#ofiHoy');if(oh){const x=ofiHoy();if(oh.dataset.k!==x){oh.dataset.k=x;oh.innerHTML=x}}const od=$('#ofiDia');if(od){const x=ofiMiDia();if(od.dataset.k!==x){od.dataset.k=x;od.innerHTML=x}}ofiPost();return}
   $('#main').innerHTML=ready?view():loadingHtml();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
@@ -1566,8 +1577,9 @@ function vMenu(){
   const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),...(agOk()?[['agentes','Carolina y Gabriela',(n=>n?`${n} para aprobar`:'Asistentes virtuales: atención comercial y administración')(aprobPend().length)]]:[]),...(isRRHH()?[['personal','Personal','Fichas, vencimientos y pago de cada persona']]:[]),['gastos','Gastos',(n=>n&&gastoAdmin()?`${n} factura${n===1?'':'s'} para revisar`:'Facturas de compra de los técnicos')(arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').length)],['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
-  const itv=it.filter(([v])=>viewOk(v));
-  return`<div class="vhead"><div><h1>Más secciones</h1></div></div>${orgSwitchHtml()}<div class="menu">${itv.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`;
+  const M={};it.filter(([v])=>viewOk(v)).forEach(x=>M[x[0]]=x);Object.entries(MENUEXTRA).forEach(([v,[n,d]])=>{if(!M[v]&&viewOk(v)&&tabOk(v))M[v]=[v,n,d]});
+  const secs=MENUSEC.map(([t,vs])=>[t,vs.filter(v=>M[v]).map(v=>M[v])]).filter(([,l])=>l.length);
+  return`<div class="vhead"><div><h1>Más secciones</h1></div><div class="tools"><button class="btn mobonly" data-act="tabscfg">Elegir los accesos de abajo</button></div></div>${orgSwitchHtml()}${secs.map(([t,l])=>`<h2 class="menusec">${t}</h2><div class="menu">${l.map(([v,n,s])=>`<button data-view="${v}"><b>${n}</b><span>${s}</span></button>`).join('')}</div>`).join('')}`;
 }
 
 const VIEWS={agentes:vAgentes,personal:vPersonal,gastos:vGastos,oficina:vOficina,vivo:vVivo,ajustes:vAjustes,bandeja:vBandeja,tickets:vTickets,calendario:vCal,campo:vCampo,facturacion:vFact,menu:vMenu,pipeline:vPipeline,clientes:vClientes,agenda:vAgenda,presupuestos:vPres,reportes:vRep,mas:vMas,plan:vPlan,admin:vAdmin,trabajos:vTrabajos,proyectos:vProyectos,tecnicos:vTecnicos,inventario:vInventario,inicio:vInicio,hoy:vHoy};
@@ -1638,7 +1650,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg};
+  const fns={op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -1830,6 +1842,8 @@ function csv(rows){return'﻿'+rows.map(r=>r.map(v=>{v=typeof v==='number'?Strin
 async function act(a,el){
   const ci=a.indexOf(':'),k=ci<0?a:a.slice(0,ci),arg=ci<0?undefined:a.slice(ci+1);
   try{
+  if(k==='tabscfg'){openSheet('tabs');return}
+  if(k==='tabsdef'){lsSet('olumi.tabs.'+(ME||''),'[]');applyTabs();toast('Volvió a los accesos de fábrica');closeSheet();return}
   if(await agAct(k,arg,el))return;
   if(await perAct(k,arg,el))return;
   if(await gastoAct(k,arg,el))return;
@@ -1899,7 +1913,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -1941,7 +1955,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.41',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.42',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -4894,11 +4908,11 @@ function ofiPost(){const f=$('#ofiFrame');if(!f||!OFI.ready)return;const tema=do
   let d;try{d=ofiData()}catch(e){console.warn('oficina',e);return}const key=JSON.stringify(d)+tema;if(key===OFI.last)return;OFI.last=key;
   try{f.contentWindow.postMessage({tema,olumiDatos:d},'*')}catch(e){}}
 /* 1.36: inicio oficina */
-const ofiHoy=()=>isLead()&&viewOk('hoy')?`<div class="ofihoy">${vHoy(true)}</div>`:'';
+const ofiHoy=()=>isLead()&&viewOk('hoy')?`<div class="ofihoy"><h2 class="ofih2">La empresa hoy</h2>${vHoy(true)}</div>`:'';
 function vOficina(){OFI.ready=false;OFI.last='';
   return`<div class="vhead"><div><h1>${esc(saludo())}</h1><p class="sub">${fdateL(today())} · ${esc(CFG.nombre||ORGINFO?.name||'')} en vivo. Tocá un área, una persona o tu avatar.</p></div>
     <div class="tools">${readonly?'':'<button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button>'}</div></div>
-  <div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
+  <div id="ofiDia">${ofiMiDia()}</div><div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
 function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].name)||'').split(' ')[0];return(h<12?'Buen día':h<20?'Buenas tardes':'Buenas noches')+(n?', '+n:'')}
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
@@ -5166,6 +5180,29 @@ async function agAct(k,arg,el){
   if(k==='ent2tkq'){const e=D.entradas[arg];if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
     openSheet('tk',null,{cli:e.clienteId||'',draft:{titulo:e.titulo||'',descripcion:[e.resumen,e.texto].filter(Boolean).join('\n\n'),mensaje:e.texto||'',tipo:e.urgente?'emergencia':tipo,origen:e.canal==='mail'?'Email':'WhatsApp',contacto:e.clienteId?null:c,entradaId:arg,waFrom:(c.telefono||e.de||'').replace(/\D/g,''),waNombre:c.nombre||e.nombre||''}});if(SH)SH.dirty=true;return true}
   return false}
+
+
+/* ---------- 1.42: distribucion (Tu día en la Oficina, barra de abajo a elección, Más por secciones) ---------- */
+const TABDEF={owner:['bandeja','tickets','calendario'],admin:['bandeja','tickets','calendario'],encargado:['tickets','calendario','campo'],ventas:['pipeline','clientes','presupuestos'],
+  administracion:['facturacion','gastos','bandeja'],tecnico:['campo','calendario','tickets'],subcontratista:['campo','calendario','tickets'],viewer:['tickets','calendario','pipeline']};
+const TABCAND=[['campo','Mi día'],['hoy','Hoy'],['vivo','En vivo'],['bandeja','Bandeja'],['tickets','Tickets'],['calendario','Calendario'],['trabajos','Historial'],['proyectos','Proyectos'],['tecnicos','Técnicos'],['inventario','Inventario'],
+  ['pipeline','CRM'],['clientes','Clientes'],['presupuestos','Presupuestos'],['agenda','Seguimientos'],['facturacion','Facturación'],['gastos','Gastos'],['personal','Personal'],['reportes','Reportes'],['agentes','Carolina y Gabriela'],['mas','Catálogo']];
+const tabOk=v=>{const b=document.querySelector(`.nav [data-view="${v}"]`);return!!b&&!b.hidden&&(!ROLE||viewOk(v))};
+function tabsOf(){let t=[];try{t=JSON.parse(lsGet('olumi.tabs.'+(ME||''))||'[]')}catch(e){t=[]}
+  const out=[];for(const v of [...(Array.isArray(t)?t:[]),...(TABDEF[ROLE]||TABDEF.owner),'campo','tickets','calendario','bandeja','pipeline','clientes'])if(out.length<3&&v!=='oficina'&&!out.includes(v)&&tabOk(v))out.push(v);return out}
+function applyTabs(){const t=['oficina',...tabsOf(),'menu'];
+  document.querySelectorAll('.nav button[data-view]').forEach(b=>{const i=t.indexOf(b.dataset.view);b.classList.toggle('tab',i>=0);b.style.setProperty('--tabo',i>=0?i:99)})}
+function sheetTabs(){const cur=tabsOf(),cand=TABCAND.filter(([v])=>tabOk(v));const sel=i=>`<label class="fld" for="tab_${i}"><span>${['Primer','Segundo','Tercer'][i]} acceso</span><select id="tab_${i}">${opts(cand,cur[i]||'')}</select></label>`;
+  return sheetFrame('Accesos de abajo','En el celular',`<p class="hint" style="margin-top:0">La Oficina queda siempre primera (es el inicio) y "Más" siempre última. Elegí los otros 3 según de qué trabajás. Se guarda en este celular.</p><div class="grid">${[0,1,2].map(sel).join('')}</div>
+    <div class="actions" style="margin-top:10px"><button class="btn ghost" data-act="tabsdef">Volver a los de fábrica</button></div><p class="err" id="shErr" hidden></p>`)}
+function saveTabs(){const v=[0,1,2].map(i=>$('#tab_'+i)?.value).filter(Boolean);if(new Set(v).size<v.length){const e=$('#shErr');e.textContent='Elegí tres accesos distintos.';e.hidden=false;return}
+  lsSet('olumi.tabs.'+(ME||''),JSON.stringify(v));applyTabs();toast('Listo: así queda la barra de abajo');closeSheet()}
+function ofiMiDia(){if(!ME)return'';const jobs=arr('trabajos').filter(j=>j.fecha===today()&&(j.tecnicos||[]).includes(ME)).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+  const tar=misTareasHtml();
+  return`<section class="group ofidia"><h2>Tu día <span class="num">${jobs.length}</span><button class="btn ghost" data-view="campo" style="margin-left:auto;min-height:32px">Ver Mi día</button></h2>${jobs.length?`<div class="jobs">${jobs.slice(0,4).map(jobCard).join('')}</div>${jobs.length>4?`<p class="hint">y ${jobs.length-4} más en Mi día</p>`:''}`:'<p class="hint" style="margin:0 0 6px">No tenés visitas asignadas para hoy.</p>'}</section>${tar}`}
+const MENUSEC=[['Inicio',['oficina','campo','agentes','inicio']],['Operación',['vivo','hoy','bandeja','tickets','calendario','trabajos','proyectos','tecnicos','inventario']],['Comercial',['pipeline','clientes','presupuestos','agenda']],
+  ['Administración',['facturacion','gastos','personal','reportes']],['Empresa',['mas','ajustes','plan','admin']]];
+const MENUEXTRA={campo:['Mi día','Tus visitas, tareas y relevamientos'],tickets:['Tickets','Pedidos y fallas de los clientes'],calendario:['Calendario','Visitas de la semana'],pipeline:['CRM','Oportunidades y embudo de ventas'],tecnicos:['Técnicos','Fichas, horas, productividad y liquidación']};
 
 /* ---------- servidor: Supabase ---------- */
 const CFGX=window.OLUMI_CONFIG||{};
