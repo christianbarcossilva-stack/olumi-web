@@ -3542,7 +3542,7 @@ walkFree = (o => function (x, z) { if (!o(x, z)) return false; const rr = 0.3, y
 /* barra de herramientas 1–0 */
 const HOT_DEF = ['sel', 'del', 'dev:ap', 'dev:cam:domo', 'dev:humo', 'prop:wpan', 'prop:wdoor', 'prop:wwin', 'prop:desk', 'plbl'];
 const HOT = { slots: (() => { try { const s = JSON.parse(localStorage.getItem('ondi.hotbar')); if (Array.isArray(s) && s.length === 10) return s; } catch (e) {} return HOT_DEF.slice(); })(), hover: null };
-const HOTX = { sel: ['Mano: elegir y mover', 'hand'], del: ['Borrar', 'del'] };
+const HOTX = { sel: ['Elegir y mover', 'sel'], del: ['Borrar', 'del'] };
 const canHot = () => ED.on && canEdit() && !GALV.id;
 function hotSave() { try { localStorage.setItem('ondi.hotbar', JSON.stringify(HOT.slots)); } catch (e) {} }
 function hotInfo(k) { if (!k) return null; if (HOTX[k]) return { n: HOTX[k][0], ic: CIC[HOTX[k][1]] }; const it = ALL3.find(x => x.k === k); return it ? { n: it.n, ic: CIC[it.ic] || CIC.box } : null; }
@@ -3564,10 +3564,11 @@ const LOCK = { on: false, fail: false, req: '', carry: null, mv: 0, aimT: 0, ghT
 // mira libre: cuando el navegador no deja tomar el mouse (por ejemplo, adentro de otra página), se mira moviendo el mouse sin apretar y se gira más acercándolo al borde
 const FREE = { on: false, in: false, x: 0, y: 0 };
 const AIM = () => LOCK.on || FREE.on;
+function unlock() { if (document.pointerLockElement || LOCK.on) { LOCK.prog = true; try { document.exitPointerLock(); } catch (e) {} } }
 function lockReq(why) { if (LOCK.fail || LOCK.on || !canvas.requestPointerLock || !matchMedia('(pointer:fine)').matches) return false; LOCK.req = why;
   try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(er => { if (why === 'click' || (er && /Security|NotSupported|WrongDocument/.test(er.name))) lockFail(); }); } catch (e) { if (why === 'click' || /Security|NotSupported/.test(e && e.name)) lockFail(); return false; } return true; }
-function lockFail() { if (LOCK.fail) return; if (LOCK.ok) { hotName('Hacé clic de nuevo para tomar el mouse'); return; } LOCK.fail = true; hotName('Mové el mouse para mirar · acercalo al borde para girar'); cursorRule(); helpRender(); }
-document.addEventListener('pointerlockchange', () => { const was = LOCK.on; LOCK.on = document.pointerLockElement === canvas; if (LOCK.on) LOCK.ok = true; if (was && !LOCK.on) LOCK.offT = performance.now(); document.documentElement.classList.toggle('locked', LOCK.on);
+function lockFail() { if (LOCK.fail || LOCK.ok) return; LOCK.fail = true; cursorRule(); helpRender(); }
+document.addEventListener('pointerlockchange', () => { const was = LOCK.on; LOCK.on = document.pointerLockElement === canvas; if (LOCK.on) LOCK.ok = true; if (was && !LOCK.on) { LOCK.offT = performance.now(); if (!LOCK.prog && WALK.on && !uiOpen()) setTimeout(() => pausa(true), 0); } LOCK.prog = false; document.documentElement.classList.toggle('locked', LOCK.on);
   if (!LOCK.on) { carryEnd(true); aimShow(''); if (ED.on && isDevTool(ED.tool)) ghostHide(); }
   if (LOCK.on && !was) hotName(ED.on && canEdit() ? 'Mouse tomado · Esc lo suelta' : 'Mové el mouse para mirar · Esc lo suelta'); walkHud(); });
 document.addEventListener('pointerlockerror', () => { if (LOCK.req === 'click') lockFail(); });
@@ -3579,9 +3580,9 @@ function placePropAt(k, x, y) { const p = mkProp(k); placeProp(p, x, y); if (BK[
 function pickAim(x, y) { const id = pick3(x, y), e = id && entity(id); if (e && (e.d || e.t === 'prop' || e.t === 'plbl' || e.t === 'item')) return id;
   const S = new Set([...DEV.map(d => d.id), ...PROPS.map(q => q.id)]), r = ray(view(W, H), x, y, W, H); let best = null, bt = Infinity;
   for (const o of OBJ) { if (!o.pick || !o.on || !S.has(o.id)) continue; const [mn, mx] = aabb(o), t = rayBox(r.o, r.d, mn, mx); if (t !== null && t < bt) { bt = t; best = o.id; } } return best; }
-function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { document.exitPointerLock(); setTimeout(() => openCtx(x, y), 20); return; } if (b !== 0) return;
+function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { unlock(); setTimeout(() => openCtx(x, y), 20); return; } if (b !== 0) return;
   if (!(ED.on && canEdit())) { const id = pickAim(x, y); if (!id) { if (SEL) closePanel(); return; } const d = DEV.find(q => q.id === id);
-    if (d && d.type === 'cam') { document.exitPointerLock(); select(id, false); openCam(id); return; } select(id, false); return; }
+    if (d && d.type === 'cam') { unlock(); select(id, false); openCam(id); return; } select(id, false); return; }
   const t = ED.tool;
   if (t === 'sel') { const id = pickAim(x, y); if (!id) { if (SEL) closePanel(); return; } const IR = innerRef(id); LOCK.mv = 0;
     if (IR && IR.k === 'wl') { wallDrag(IR, x, y, true); LOCK.carry = { k: 'wl', id, t0: performance.now() }; return; }
@@ -3591,9 +3592,9 @@ function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { docume
   if (t === 'del') { const id = pickAim(x, y); if (id) removeId(id); return; }
   if (isDevTool(t)) { placeDevAt(t, x, y); return; }
   if (t === 'prop') { placePropAt(ED.propk, x, y); return; }
-  if (t === 'plbl') { document.exitPointerLock(); setTimeout(() => e3Tool('plbl', cev()), 20); return; }
+  if (t === 'plbl') { unlock(); setTimeout(() => e3Tool('plbl', cev()), 20); return; }
   if (t === 'it' || t === 'draw') { e3Tool(t, cev()); if (t === 'it' && SEL) closePanel(); return; }
-  document.exitPointerLock(); toast('Esa herramienta se usa desde la vista de arriba'); }
+  unlock(); toast('Esa herramienta se usa desde la vista de arriba'); }
 function carryStep() { const C2 = LOCK.carry; if (!C2) return; if (!C2.moved && LOCK.mv < 14 && performance.now() - C2.t0 < 260) return; C2.moved = true; const x = CX(), y = CY();
   if (C2.k === 'it') { if (ITDRAG) itemDrag(ITDRAG.R, x, y); return; }
   if (C2.k === 'wl') { if (WLDRAG) wallDrag(WLDRAG.R, x, y); return; }
@@ -3629,10 +3630,10 @@ const HELP = { open: (() => { try { return localStorage.getItem('ondi.help') !==
 function helpSet(on) { HELP.open = on; try { localStorage.setItem('ondi.help', on ? '1' : '0'); } catch (e) {} helpRender(); walkHud(); }
 const kb = s => s.split(' ').map(k => `<kbd>${k}</kbd>`).join(' ');
 function helpRender() { const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
-  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Mirar moviéndolo (sin apretar) · al borde gira más' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), LOCK.fail ? 'Salir del paseo' : 'Soltar el mouse · otra vez para salir'], [kb('Alt'), 'Mantenelo para usar el mouse un momento'], ['Menús', 'Al abrir uno aparece el mouse; al cerrarlo vuelve la mira'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
+  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Mirar moviéndolo (sin apretar) · al borde gira más' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Menú de pausa (aparece el mouse) · Esc de nuevo vuelve a jugar'], [kb('Alt'), 'Mantenelo para usar el mouse un momento'], ['Menús', 'Al abrir uno aparece el mouse; al cerrarlo con su tecla se cierra todo y volvés a jugar'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
   if (canEdit()) rows.push([kb('F'), ed ? 'Apagar la edición' : 'Prender la edición']);
   if (!ed) rows.push(['Clic', 'En una cámara, ves lo que ve · en un sensor, sus datos']);
-  else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], [kb('1') + ' Mano', 'Clic: opciones de lo que apuntás · mantené: moverlo'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
+  else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], [kb('1') + ' Elegir', 'Clic: opciones de lo que apuntás · mantené: moverlo'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('I') + ' ' + kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
   el.innerHTML = `<div class="e3hh"><b>${ed ? 'Controles de edición' : 'Controles'}</b><button class="e3x" data-help="0" title="Ocultar los controles · H" aria-label="Ocultar los controles">−</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>${ed ? '<p>Para cambiar la barra: abrí el catálogo, pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero.</p>' : ''}`; }
 walkHud = function () { const on = WALK.on; HUD.hidden = !on; $('#e3pad').hidden = !on; $('#e3cross').hidden = !on; const wb = $('#walkb'); if (wb) wb.setAttribute('aria-pressed', String(on)); helpRender(); if (!on) { aimShow(''); return; }
   const ed = ED.on && canEdit();
@@ -3653,7 +3654,7 @@ setTool = (o => function (t) { o(t); hotRender(); })(setTool);
 setEdit = (o => function (on) { o(on); hotRender(); if (WALK.on) walkHud(); if (!ED.on) { carryEnd(true); } })(setEdit);
 renderCat = (o => function (k) { o(k); const el = $('#e3cat'); if (!el) return; el.querySelectorAll('[data-ck3]').forEach(b => { b.draggable = true; }); hotRender(); })(renderCat);
 enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { const h = document.documentElement; LOCK.catWas = h.classList.contains('catmin'); h.classList.add('catmin'); catShow(); hotRender(); helpRender(); lockReq('auto'); } })(enterWalk);
-exitWalk = (o => function () { const was = WALK.on; if (LOCK.on) document.exitPointerLock(); carryEnd(true); LOCK.byUI = false; o(); helpRender(); if (was) { document.documentElement.classList.toggle('catmin', !!LOCK.catWas); catShow(); } const r = $('#e3resume'); if (r) r.hidden = true; })(exitWalk);
+exitWalk = (o => function () { pausa(false); const was = WALK.on; if (LOCK.on) unlock(); carryEnd(true); LOCK.byUI = false; o(); helpRender(); if (was) { document.documentElement.classList.toggle('catmin', !!LOCK.catWas); catShow(); } const r = $('#e3resume'); if (r) r.hidden = true; })(exitWalk);
 
 /* vigas del galpón: también sirven para colgar equipos; columnas del galpón bajo las vigas */
 CIC.colg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10M7 21h10M12 3v18"/><path d="M3 3h18" stroke-dasharray="2 2"/></svg>';
@@ -3679,7 +3680,7 @@ const TKM = [['no', 'No funciona', 'problema'], ['mover', 'Moverlo de lugar', 'c
 let TKD = null;
 function tkName(id) { const e = entity(id); if (!e) return id; const d = e.d; if (d) return (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' ' + d.id; if (e.t === 'nave') return e.N.full; if (e.t === 'prop') return (PK[e.P.k] || {}).n || e.P.id; if (e.t === 'item') return e.R.o.name || id; return id; }
 function tkWhere(id) { const e = entity(id); if (!e) return ''; const d = e.d; if (d) { const N = d.nave && naveById(d.nave); return [N ? N.full : '', d.loc ? d.loc.split(' · ').slice(-1)[0] : ''].filter(Boolean).join(' · '); } if (e.N) return e.N.full; return ''; }
-function ticketPop(id) { if (!id) return; if (!tkOk()) { toast('Para pedir arreglos necesitás que tu instaladora te dé permiso de pedir'); return; } if (LOCK.on) document.exitPointerLock();
+function ticketPop(id) { if (!id) return; if (!tkOk()) { toast('Para pedir arreglos necesitás que tu instaladora te dé permiso de pedir'); return; } if (LOCK.on) unlock();
   TKD = { id, m: 'no' }; const el = $('#e3tk'); el.hidden = false; const w = tkWhere(id);
   el.innerHTML = `<div class="e3hh"><b>Ticket · ${escH(tkName(id))}</b><button class="e3x" data-tk="x" aria-label="Cerrar">×</button></div>${w ? `<p class="e3tkw">${escH(w)}</p>` : ''}
     <div class="e3chips">${TKM.map(([k, n]) => `<button data-tkm="${k}" aria-pressed="${k === 'no'}">${n}</button>`).join('')}</div>
@@ -3710,7 +3711,7 @@ edDown = (o => function (e) { const r = o(e); if (r) return r; if (!ED.on || !ca
 edMove = (o => function (e) { if (WLDRAG) { wallDrag(WLDRAG.R, e.clientX, e.clientY); return true; } return o(e); })(edMove);
 edUp = (o => function (e, w) { if (WLDRAG) return wallDragEnd(); return o(e, w); })(edUp);
 e3Edit = (o => function (e, fld) { if (e.t === 'item' && e.R.k === 'wl' && ED.on && canEdit()) { const w = e.R.o, L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), num = (k, v, st) => `<span class="stp"><input class="e3num" type="number" step="${st}" data-ed="${k}" value="${v}"><em>m</em></span>`;
-    return `<div class="edbox"><b>Edición</b>${fld('Largo', num('wlen', L.toFixed(1), 0.5))}${fld('Alto', num('wh', w.h.toFixed(1), 0.5))}${fld('Girar', '<span class="stp"><button data-ed="wrot">↻ 90°</button></span>')}<p class="ehelp">Con la Mano (tecla 1): mantené apretado sobre la pared para moverla, o desde una punta para estirarla.</p><button class="btn danger" data-ed="del">Borrar la pared</button></div>`; } return o(e, fld); })(e3Edit);
+    return `<div class="edbox"><b>Edición</b>${fld('Largo', num('wlen', L.toFixed(1), 0.5))}${fld('Alto', num('wh', w.h.toFixed(1), 0.5))}${fld('Girar', '<span class="stp"><button data-ed="wrot">↻ 90°</button></span>')}<p class="ehelp">Con Elegir (tecla 1): mantené apretado sobre la pared para moverla, o desde una punta para estirarla.</p><button class="btn danger" data-ed="del">Borrar la pared</button></div>`; } return o(e, fld); })(e3Edit);
 e3Action = (o => function (a, val) { if (a !== 'wlen' && a !== 'wrot') return o(a, val); const IR = innerRef(SEL); if (!IR || IR.k !== 'wl') return false; const N = IR.N, w = IR.o, before = snapInner(N), s5 = v => Math.round(v * 2) / 2;
   if (a === 'wlen') { const L = clamp(+val || 1, 0.5, Math.max(N.L, N.D)), dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1], L0 = Math.hypot(dx, dz) || 1; w.b = [clamp(s5(w.a[0] + dx / L0 * L), 0, N.L), clamp(s5(w.a[1] + dz / L0 * L), 0, N.D)]; }
   else { const c = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], h = [(w.b[0] - w.a[0]) / 2, (w.b[1] - w.a[1]) / 2]; w.a = [s5(c[0] + h[1]), s5(c[1] - h[0])]; w.b = [s5(c[0] - h[1]), s5(c[1] + h[0])]; }
@@ -3719,11 +3720,15 @@ e3Action = (o => function (a, val) { if (a !== 'wlen' && a !== 'wrot') return o(
 /* el mouse: con un menú abierto aparece; al cerrarlo vuelve la mira sola. Alt mantenido lo suelta un momento */
 const ALT = { on: false };
 const vis = s => { const el = document.querySelector(s); return !!el && !el.hidden; };
-function uiOpen() { return !panel.hidden || vis('#camview') || !CTX.hidden || !POP.hidden || vis('#e3tk') || !!GALV.id || vis('#cabview') || (ED.on && canEdit() && vis('#e3cat')) || ALT.on; }
-function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); const fine = matchMedia('(pointer:fine)').matches, F = WALK.on && LOCK.fail && fine && !uiOpen(); if (F !== FREE.on) { FREE.on = F; document.documentElement.classList.toggle('freeaim', F); if (!F) carryEnd(true); }
-  if (!WALK.on || LOCK.fail || !fine) { $('#e3resume') && ($('#e3resume').hidden = true); return; } const U = uiOpen();
-  if (U && LOCK.on) { LOCK.byUI = true; document.exitPointerLock(); } else if (!U && !LOCK.on && LOCK.byUI && performance.now() - (LOCK.tryT || 0) > 400) { LOCK.tryT = performance.now(); LOCK.byUI = false; lockReq('auto'); }
-  const r = $('#e3resume'); if (r) r.hidden = LOCK.on || U || LOCK.byUI; }
+function uiOpen() { return PAUSE.on || !panel.hidden || vis('#camview') || !CTX.hidden || !POP.hidden || vis('#e3tk') || !!GALV.id || vis('#cabview') || (ED.on && canEdit() && vis('#e3cat')) || ALT.on; }
+const PAUSE = { on: false };
+function pausa(on) { PAUSE.on = !!on; const el = $('#e3pause'); if (!el) return; el.hidden = !PAUSE.on; if (!PAUSE.on) return; const ed = ED.on && canEdit();
+  el.innerHTML = `<b>Pausa</b><button class="btn pri" data-pz="seguir">Seguir <kbd>Esc</kbd></button>${canHot() ? '<button class="btn" data-pz="cat">Catálogo <kbd>I</kbd></button>' : ''}${canEdit() ? `<button class="btn" data-pz="ed">${ed ? 'Volver al paseo' : 'Editar'} <kbd>F</kbd></button>` : ''}<button class="btn" data-pz="help">Controles <kbd>H</kbd></button><button class="btn" data-pz="salir">Salir del galpón</button>`; }
+function toPlay() { pausa(false); const h = document.documentElement; if (WALK.on && !h.classList.contains('catmin')) { h.classList.add('catmin'); catShow(); } if (!panel.hidden) closePanel(); ctxClose(); popClose(); if (vis('#e3tk')) ticketClose(); if (vis('#camview')) closeCam(); ALT.on = false; LOCK.byUI = true; LOCK.tryT = 0; cursorRule(); canvas.focus(); }
+function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); const fine = matchMedia('(pointer:fine)').matches, F = WALK.on && fine && !LOCK.on && !uiOpen(); if (F !== FREE.on) { FREE.on = F; document.documentElement.classList.toggle('freeaim', F); if (!F) carryEnd(true); }
+  const r0 = $('#e3resume'); if (r0) r0.hidden = true; if (!WALK.on || LOCK.fail || !fine) return; const U = uiOpen();
+  if (U && LOCK.on) { LOCK.byUI = true; unlock(); } else if (!U && !LOCK.on && LOCK.byUI && performance.now() - (LOCK.tryT || 0) > 400) { LOCK.tryT = performance.now(); LOCK.byUI = false; lockReq('auto'); }
+}
 /* equipos reales del cliente (UniFi, Meraki o cargados a mano): se ponen en la maqueta y muestran su estado en vivo */
 const EXT = { list: [], at: null, errs: [], pending: null, demo: false, busy: false, t: 0 };
 const EXT_DEMO = [['U7 Pro · Oficina E1', 'U7 Pro', 'network', 'online', '10.0.10.21'], ['U6 Mesh · Andén 3', 'U6 Mesh', 'network', 'offline', '10.0.10.34'], ['USW Pro 24 PoE · Rack E1', 'USW Pro 24 PoE', 'network', 'online', '10.0.10.2'],
@@ -3797,7 +3802,7 @@ function initGame() {
 html.walking .e3cross{width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:0;background:none;box-shadow:none}
 html.walking .e3cross::before,html.walking .e3cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 html.walking .e3cross::before{left:8px;top:0;width:2px;height:18px} html.walking .e3cross::after{top:8px;left:0;height:2px;width:18px}
-html.locked canvas,html.freeaim canvas{cursor:none!important}
+html.walking.locked canvas,html.walking.freeaim canvas{cursor:none!important}
 html.walking.hotbar #editbar{display:none!important}
 html.hotbar.walking .e3walk{bottom:calc(var(--gb) + 70px)} html.hotbar.walking .e3cat{bottom:calc(var(--gb) + 126px)} html.hotbar.walking .e3help{bottom:calc(var(--gb) + 124px)}
 html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
@@ -3822,6 +3827,8 @@ html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.wal
 .e3ext{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 72px);z-index:13;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font:500 13px var(--f-ui);cursor:pointer;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .e3ext b{color:var(--accent)} .e3ext .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ok,#2a9d5c)} .e3ext .dot.crit{background:#d64545}
 html.walking .e3ext,html.editing .e3ext[data-k=ubicar]{display:none}
+.e3pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:31;display:grid;gap:8px;min-width:240px;padding:16px;border-radius:14px;color:var(--ink);font:13px var(--f-ui)} .e3pause b{font-size:16px;margin-bottom:2px} .e3pause .btn{justify-content:space-between;display:flex;align-items:center;gap:10px}
+html.walking canvas{cursor:default!important}
 kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
 .e3tile[draggable=true]{cursor:grab}
 .e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}
@@ -3851,6 +3858,8 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   const tk = document.createElement('div'); tk.id = 'e3tk'; tk.className = 'e3tk glass'; tk.hidden = true; tk.setAttribute('role', 'dialog'); tk.setAttribute('aria-label', 'Crear ticket'); document.body.appendChild(tk);
   tk.addEventListener('click', e => { const m = e.target.closest('[data-tkm]'); if (m && TKD) { TKD.m = m.dataset.tkm; tk.querySelectorAll('[data-tkm]').forEach(x => x.setAttribute('aria-pressed', String(x === m))); return; } const a = e.target.closest('[data-tk]'); if (!a) return; if (a.dataset.tk === 'x') ticketClose(); if (a.dataset.tk === 'send') ticketSend(); });
   tk.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ticketClose(); } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ticketSend(); });
+  const pz = document.createElement('div'); pz.id = 'e3pause'; pz.className = 'e3pause glass'; pz.hidden = true; pz.setAttribute('role', 'dialog'); pz.setAttribute('aria-label', 'Pausa'); document.body.appendChild(pz);
+  pz.addEventListener('click', e => { const b = e.target.closest('[data-pz]'); if (!b) return; const a = b.dataset.pz; if (a === 'seguir') { toPlay(); lockReq('click'); } if (a === 'cat') { pausa(false); catToggle(true); } if (a === 'ed') { setEdit(!ED.on); pausa(true); } if (a === 'help') helpSet(!HELP.open); if (a === 'salir') { pausa(false); exitWalk(); } });
   const rs = document.createElement('div'); rs.id = 'e3resume'; rs.className = 'e3resume'; rs.hidden = true; rs.innerHTML = 'Hacé clic en la pantalla para volver a la mira<small>Alt mantenido: mouse libre un momento · Esc: soltar el mouse</small>'; document.body.appendChild(rs);
   rs.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); lockReq('click'); });
   if (cat) cat.addEventListener('click', e => { if (WALK.on && e.target.closest('[data-ck3]')) setTimeout(() => catToggle(false), 0); });
@@ -3859,16 +3868,17 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   addEventListener('blur', () => { ALT.on = false; });
   // teclado: números, Tab, H, F, T, R para girar la pieza
   window.addEventListener('keydown', e => { const t = e.target; if (t.closest && t.closest('input,select,textarea')) return; const k = e.key, kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey || e.altKey;
-    if (k === 'Escape' && (LOCK.on || performance.now() - (LOCK.offT || 0) < 350)) { e.preventDefault(); e.stopImmediatePropagation(); if (LOCK.on) document.exitPointerLock(); return; }
+    if (k === 'Escape' && WALK.on) { e.preventDefault(); e.stopImmediatePropagation(); if (performance.now() - (LOCK.offT || 0) < 350) return; if (uiOpen()) toPlay(); else pausa(true); return; }
+    if (!mod && kl === 'i' && WALK.on) { e.preventDefault(); e.stopImmediatePropagation(); if (!canHot()) { hotName(canEdit() ? 'Prendé la edición con F para abrir el catálogo' : 'El catálogo es para editar'); return; } if (vis('#e3cat')) toPlay(); else catToggle(true); return; }
     if (!mod && kl === 'h' && WALK.on) { e.preventDefault(); helpSet(!HELP.open); return; }
     if (!mod && kl === 'f' && canEdit() && !GALV.id) { e.preventDefault(); e.stopImmediatePropagation(); setEdit(!ED.on); hotName(ED.on ? 'Edición prendida · F para volver al paseo' : 'Paseo · F para editar'); return; }
     if (!mod && kl === 't' && !GALV.id) { const id = AIM() ? pickAim(CX(), CY()) : (SEL || pickAim(GHOST.x || CX(), GHOST.y || CY())); if (id) { e.preventDefault(); e.stopImmediatePropagation(); ticketPop(id); } else if (WALK.on) hotName('Apuntá con la mira al equipo y apretá T'); return; }
     if (!canHot() || mod) return;
     if (/^[0-9]$/.test(k)) { e.preventDefault(); e.stopImmediatePropagation(); const i = (+k + 9) % 10; if (HOT.hover && !$('#e3cat').hidden) hotAssign(i, HOT.hover); else selectSlot(i); return; }
-    if (k === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); catToggle(); return; }
+    if (k === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); if (WALK.on && vis('#e3cat')) toPlay(); else catToggle(); return; }
     if (kl === 'r' && ED.tool === 'prop' && (BK[ED.propk] || (FK[ED.propk] && !FK[ED.propk].wall))) { e.preventDefault(); e.stopImmediatePropagation(); ROT.off += (e.shiftKey ? -1 : 1) * Math.PI / 2; GHOST.key = ''; if (GHOST.d) GHOST.d.yaw = undefined; if (!LOCK.on) ghostMove({ clientX: GHOST.x, clientY: GHOST.y }); hotName('Girado'); } }, true);
   // mouse tomado: todo va a la mira
-  window.addEventListener('pointerdown', e => { if (FREE.on && e.target === canvas && e.pointerType === 'mouse') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
+  window.addEventListener('pointerdown', e => { if (FREE.on && e.target === canvas && e.pointerType === 'mouse') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (!LOCK.fail && e.button === 0) lockReq('click'); aimDown(e.button); return; }
     if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
     if (WALK.on && !uiOpen() && e.target === canvas && e.button === 0 && e.pointerType === 'mouse' && !LOCK.fail && matchMedia('(pointer:fine)').matches) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); ctxClose(); popClose(); lockReq('click'); } }, true);
   window.addEventListener('pointerup', e => { if (FREE.on && LOCK.carry && e.button === 0) { e.stopPropagation(); e.stopImmediatePropagation(); carryEnd(false); return; } if (!LOCK.on) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.button === 0) carryEnd(false); }, true);
