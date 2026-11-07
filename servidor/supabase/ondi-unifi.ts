@@ -119,7 +119,18 @@ Deno.serve(async (req) => {
         const { data: acc } = await db.from('ondi_accesos').select('user_id').eq('org_id', org).eq('site_id', sid).eq('user_id', user.id).maybeSingle();
         if (!acc) return json({ error: 'No tenés acceso a este cliente.' }, 403);
       }
-      const link = (s.data && s.data[marca]) || null;
+      let link = (s.data && s.data[marca]) || null;
+      // enlace por nombre (cargado a mano): se busca el sitio con ese nombre y se guardan los ids reales
+      if (link && link.porNombre && marca === 'unifi') {
+        const k0 = await clave(link.propia ? sid : '');
+        if (!k0) return json({ error: 'Falta la clave de UniFi.' }, 400);
+        const [hs, ss] = await Promise.all([ui(k0, 'hosts'), ui(k0, 'sites')]);
+        const n = String(link.nombre || '').trim().toLowerCase(), hn = (h: any) => String(h.reportedState?.hostname || h.reportedState?.name || h.name || '').toLowerCase();
+        const hit = ss.find((x: any) => siteOut(x).nombre.toLowerCase() === n) || ss.find((x: any) => { const h = hs.find((y: any) => y.id === x.hostId); return h && hn(h).includes(n); }) || ss.find((x: any) => siteOut(x).nombre.toLowerCase().includes(n));
+        if (!hit) return json({ error: `No encontré un sitio de UniFi llamado "${link.nombre}". Elegilo en la lista de sitios.` }, 404);
+        link = { hostId: hit.hostId, siteId: hit.siteId, nombre: siteOut(hit).nombre, propia: !!link.propia, at: new Date().toISOString() };
+        await db.from('ondi_sites').update({ data: { ...(s.data || {}), [marca]: link } }).eq('org_id', org).eq('id', sid);
+      }
       if (!link || !link.hostId) return json({ error: marca === 'meraki' ? 'Este cliente todavía no está enlazado con Meraki.' : 'Este cliente todavía no está enlazado con UniFi.' }, 400);
       const k = await clave(link.propia ? sid : '');
       if (!k) return json({ error: marca === 'meraki' ? 'Falta la clave de Meraki.' : 'Falta la clave de UniFi.' }, 400);
