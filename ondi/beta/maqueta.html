@@ -3719,6 +3719,56 @@ function uiOpen() { return !panel.hidden || vis('#camview') || !CTX.hidden || !P
 function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); if (!WALK.on || LOCK.fail || !matchMedia('(pointer:fine)').matches) { $('#e3resume') && ($('#e3resume').hidden = true); return; } const U = uiOpen();
   if (U && LOCK.on) { LOCK.byUI = true; document.exitPointerLock(); } else if (!U && !LOCK.on && LOCK.byUI && performance.now() - (LOCK.tryT || 0) > 400) { LOCK.tryT = performance.now(); LOCK.byUI = false; lockReq('auto'); }
   const r = $('#e3resume'); if (r) r.hidden = LOCK.on || U || LOCK.byUI; }
+/* equipos reales del cliente (UniFi, Meraki o cargados a mano): se ponen en la maqueta y muestran su estado en vivo */
+const EXT = { list: [], at: null, errs: [], pending: null, demo: false, busy: false, t: 0 };
+const EXT_DEMO = [['U7 Pro · Oficina E1', 'U7 Pro', 'network', 'online', '10.0.10.21'], ['U6 Mesh · Andén 3', 'U6 Mesh', 'network', 'offline', '10.0.10.34'], ['USW Pro 24 PoE · Rack E1', 'USW Pro 24 PoE', 'network', 'online', '10.0.10.2'],
+  ['UDM Pro Max · Portería', 'UDM Pro Max', 'network', 'online', '10.0.10.1'], ['G5 Bullet · Portón 2', 'G5 Bullet', 'protect', 'online', '10.0.20.12'], ['USW Flex Mini · Oficina', 'USW Flex Mini', 'network', 'online', '10.0.10.5']]
+  .map(([nombre, modelo, linea, estado, ip], i) => ({ uid: 'demo:' + i, marca: 'unifi', nombre, modelo, linea, estado, ip, mac: '74:83:c2:00:0' + i + ':1' + i, version: '7.1.' + (60 + i), demo: true }));
+function extTool(x) { const s = [x.linea, x.modelo, x.tipo, x.nombre].join(' ').toLowerCase();
+  if (x.tipo === 'camara' || /protect|camera|cámara|bullet|dome|domo|turret|\bg[345]\b|^mv/.test(s)) return 'cam';
+  if (x.tipo === 'ap' || /\bu[67]\b|\bu[67] |uap|\bap\b|mesh|nanohd|wi-?fi|access point|^mr/.test(s)) return 'ap';
+  return 'wr'; }
+const extOf = uid => EXT.list.find(x => x.uid === uid);
+const extSt = e => ['online', 'en_linea'].includes(e) ? 'ok' : ['offline', 'caido'].includes(e) ? 'crit' : e ? 'warn' : 'warn';
+const extTxt = e => ({ online: 'En línea', en_linea: 'En línea', offline: 'Caído', caido: 'Caído', alerting: 'Con alertas', atencion: 'Atención', dormant: 'Inactivo' }[e] || 'Sin dato');
+const EXTN = { unifi: 'UniFi', meraki: 'Meraki' };
+async function extLoad(force) { if (EXT.busy) return; const now = Date.now(); if (!force && now - EXT.t < 55000) return; EXT.busy = true; EXT.t = now;
+  try { if (HOST && HOST.equipos) { const r = await HOST.equipos(); EXT.list = (r && r.list) || []; EXT.errs = (r && r.errs) || []; EXT.demo = false; }
+    else { EXT.list = EXT_DEMO.map(x => ({ ...x })); EXT.errs = []; EXT.demo = true; }
+    EXT.at = new Date(); } catch (e) { EXT.errs = ['No se pudieron leer los equipos: ' + ((e && e.message) || e)]; }
+  EXT.busy = false; extSync(); extCat(); }
+function extSync() { for (const d of DEV) { if (!d.ext) continue; const x = extOf(d.ext.uid); const st = x ? extSt(x.estado) : 'warn';
+    if (x) { d.extInfo = x; if (d.name !== x.nombre) d.name = x.nombre; }
+    if (d.status !== st) { const was = d.status; d.status = st; devObj(d); devTag(d); if (was && was !== st && EXT.at) { if (st === 'crit') { log('crit', `${x ? x.nombre : d.id} se cayó`, d.id); toast(`${x ? x.nombre : d.id} se cayó`); } else if (was === 'crit' && st === 'ok') log('ok', `${x ? x.nombre : d.id} volvió`, d.id); } } }
+  if (SEL && DEV.some(d => d.id === SEL && d.ext)) renderPanel(true); }
+function extCat() { const used = new Set(DEV.filter(d => d.ext).map(d => d.ext.uid)), free = EXT.list.filter(x => !used.has(x.uid) && !x.consola);
+  for (let i = ALL3.length - 1; i >= 0; i--) if (ALL3[i].k.startsWith('ext:')) ALL3.splice(i, 1); const ci = CAT3.findIndex(c => c[0].startsWith('Equipos del cliente')); if (ci >= 0) CAT3.splice(ci, 1);
+  if (free.length) { const IC = { cam: 'cam', ap: 'ap', wr: 'rack' }, items = free.map(x => ['ext:' + x.uid, (extSt(x.estado) === 'crit' ? '⚠ ' : '') + x.nombre, IC[extTool(x)], [x.modelo, x.ip, x.mac, EXTN[x.marca] || x.marca, extTxt(x.estado)].filter(Boolean).join(' ')]);
+    CAT3.unshift([`Equipos del cliente sin ubicar (${free.length})${EXT.demo ? ' · demo' : ''}`, items]); items.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c: 'Equipos del cliente' })); }
+  renderCat(true); hotRender(); }
+armItem = (o => function (k) { if (!k.startsWith('ext:')) return o(k); const x = extOf(k.slice(4)); if (!x) return; if (!ED.on) setEdit(true); const t = extTool(x);
+  EXT.pending = x.uid; GHOST.key = ''; GHOST.d = null; if (t === 'cam') ED.camKind = /dome|domo|turret/i.test(x.modelo) ? 'domo' : 'bullet'; setTool(t); CATK = k; renderCat(true); hotRender(); hotName('Poné ' + x.nombre + ' donde está instalado'); })(armItem);
+addDevRaw = (o => function (d) { if (d.custom && !d.ext && EXT.pending && CATK === 'ext:' + EXT.pending) { const x = extOf(EXT.pending); if (x) { d.ext = { uid: x.uid, marca: x.marca, mac: x.mac || '' }; d.name = x.nombre; d.kind = x.modelo || d.kind; d.extInfo = x; d.status = extSt(x.estado); if (d.type === 'cam' && x.marca) d.marca = EXTN[x.marca] || d.marca; }
+    EXT.pending = null; setTimeout(() => { CATK = null; setTool('sel'); extCat(); if (x) hotName(x.nombre + ' quedó enlazado · su estado se ve en vivo'); }, 0); }
+  return o(d); })(addDevRaw);
+rmDevRaw = (o => function (id) { const d = DEV.find(q => q.id === id), r = o(id); if (d && d.ext) setTimeout(extCat, 0); return r; })(rmDevRaw);
+panelContent = (o => function (id) { const r = o(id); const d = DEV.find(q => q.id === id); if (!r || !d || !d.ext) return r; const x = d.extInfo || extOf(d.ext.uid), mins = EXT.at ? Math.max(0, Math.round((Date.now() - EXT.at) / 60000)) : null;
+  const live = x ? `<div class="edbox" style="border-style:solid"><b>En vivo · ${escH(EXTN[d.ext.marca] || d.ext.marca || 'Equipo')}${EXT.demo ? ' (demo)' : ''}</b><dl class="rows">${row('Estado', `<span class="pill ${extSt(x.estado) === 'ok' ? 'ok' : extSt(x.estado) === 'crit' ? 'crit' : 'warn'}">${extTxt(x.estado)}</span>`)}${row('Equipo', escH(x.nombre))}${x.modelo ? row('Modelo', escH(x.modelo)) : ''}${x.ip ? row('IP', `<span class="mono">${escH(x.ip)}</span>`) : ''}${x.version && canEdit() ? row('Firmware', escH(x.version) + (x.actualizar ? ' · hay versión nueva' : '')) : ''}${mins != null ? row('Leído', mins < 1 ? 'recién' : 'hace ' + mins + ' min') : ''}</dl>${canEdit() ? '<button class="btn" data-ed="extoff">Desenlazar de este punto</button>' : ''}</div>`
+    : `<div class="edbox"><b>Enlazado</b><p class="ehelp">Este punto está enlazado a un equipo que ya no aparece en ${escH(EXTN[d.ext.marca] || d.ext.marca)}. ${canEdit() ? '' : ''}</p>${canEdit() ? '<button class="btn" data-ed="extoff">Desenlazar</button>' : ''}</div>`;
+  r.t = d.name || r.t; if (x) r.pill = `<span class="pill ${extSt(x.estado) === 'ok' ? 'ok' : extSt(x.estado) === 'crit' ? 'crit' : 'warn'}">${extTxt(x.estado)}</span>`; r.body = live + r.body; return r; })(panelContent);
+edAction = (o => function (a, val) { if (a !== 'extoff') return o(a, val); const d = SEL && DEV.find(q => q.id === SEL); if (!d || !d.ext) return; const before = snapD(d); delete d.ext; delete d.extInfo; delete d.name; d.status = 'ok'; devObj(d); devTag(d); edSave(); recChange(d, before, d.id + ' desenlazado'); extCat(); renderPanel(true); })(edAction);
+// enlazar un punto que ya estaba en la maqueta con un equipo real
+panelContent = (o => function (id) { const r = o(id); const d = DEV.find(q => q.id === id); if (!r || !d || d.ext || !canEdit() || !ED.on || SENS[d.type] || d.type === 'rd') return r;
+  const used = new Set(DEV.filter(q => q.ext).map(q => q.ext.uid)), free = EXT.list.filter(x => !used.has(x.uid) && !x.consola); if (!free.length) return r;
+  const same = free.filter(x => extTool(x) === (d.type === 'cam' ? 'cam' : d.type === 'ap' ? 'ap' : 'wr')), rest = free.filter(x => !same.includes(x));
+  r.body += `<div class="edbox"><b>Equipo real</b><label class="ef"><span>Enlazar con</span><select data-ed="extlink"><option value="">Elegí un equipo${EXT.demo ? ' (demo)' : ''}…</option>${[...same, ...rest].map(x => `<option value="${escH(x.uid)}">${escH(x.nombre)}${x.modelo ? ' · ' + escH(x.modelo) : ''} · ${extTxt(x.estado)}</option>`).join('')}</select></label><p class="ehelp">Así este punto muestra si el equipo está en línea o caído.</p></div>`; return r; })(panelContent);
+edAction = (o => function (a, val) { if (a !== 'extlink') return o(a, val); const d = SEL && DEV.find(q => q.id === SEL), x = val && extOf(val); if (!d || !x) return; const before = snapD(d);
+  d.ext = { uid: x.uid, marca: x.marca, mac: x.mac || '' }; d.name = x.nombre; d.extInfo = x; d.status = extSt(x.estado);
+  if (!d.custom) ED.moved[d.id] = { ...(ED.moved[d.id] || {}), ext: d.ext, name: d.name };
+  devObj(d); devTag(d); edSave(); recChange(d, before, d.id + ' enlazado con ' + x.nombre); extCat(); renderPanel(true); hotName(d.id + ' enlazado con ' + x.nombre); })(edAction);
+edAction = (o => function (a, val) { if (a === 'extoff') { const d = SEL && DEV.find(q => q.id === SEL); if (d && !d.custom && ED.moved[d.id]) { delete ED.moved[d.id].ext; delete ED.moved[d.id].name; } } return o(a, val); })(edAction);
+typePop = (o => function (d, ...a) { if (d && d.ext) return; return o(d, ...a); })(typePop);
+function extInit() { extLoad(true); setInterval(() => extLoad(false), 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) extLoad(false); }); }
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3810,8 +3860,8 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel });
-  hotRender(); requestAnimationFrame(gameTick); }
+  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel });
+  hotRender(); requestAnimationFrame(gameTick); extInit(); }
 
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }

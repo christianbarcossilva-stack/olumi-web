@@ -223,6 +223,7 @@ tr:last-child td{border-bottom:0}
 .pill.info{background:var(--accent-soft);color:var(--accent-ink)} .nb{font-style:normal;display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--crit);color:#fff;font-size:11px;font-weight:700;margin-left:4px}
 .ped{display:grid;gap:8px} .pedh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start} .pedh > div{display:grid;gap:2px} .pedh .muted{font-size:12.5px} .pedt{margin:0;white-space:pre-wrap;font-size:14px}
 .sopo{display:grid;gap:6px;padding:12px;border-radius:12px;background:var(--warn-soft, rgba(192,130,8,.14));margin:10px 0;font-size:13px} .sopo span{color:var(--muted)}
+.brand{min-width:0}.sorg{display:grid;gap:6px}.sorgrow{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}.sorgrow>div{display:grid;gap:2px;min-width:0}.sorgrow select{width:100%;min-width:0}
 </style>
 </head>
 <body>
@@ -276,7 +277,7 @@ const nfmt = n => n == null ? '—' : Number(n).toLocaleString('es-UY');
 
 /* ---------- estado ---------- */
 const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'panel', tab: 'maqueta', atab: 'empresa', claves: null, auth: 'login', msg: '', info: '', falta: '',
-  link: {}, sitiosUI: {}, acc: null, code: undefined, eq: {}, man: {}, maqSave: '', armed: null, test: {}, org: null, team: null, ajustes: null, modal: null, manForm: null };
+  link: {}, sitiosUI: {}, sitiosOrg: {}, acc: null, code: undefined, eq: {}, man: {}, maqSave: '', armed: null, test: {}, org: null, team: null, ajustes: null, modal: null, manForm: null };
 const CODE = (new URLSearchParams(location.search).get('codigo') || '').toUpperCase();
 const staff = () => S.ctx && S.ctx.kind === 'org';
 const editor = () => staff() && ['owner', 'admin', 'encargado', 'tecnico'].includes(S.ctx.role);
@@ -464,9 +465,13 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
   MAQ = { site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia',
     plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url),
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
+    equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
+      return { at: E.at, errs: E.errs.map(x => BR[x.k].n + ': ' + x.m), list: [
+        ...E.list.map(d => ({ uid: (d.marca || 'unifi') + ':' + (d.mac || d.id), marca: d.marca || 'unifi', nombre: d.nombre, modelo: d.modelo, linea: d.linea, ip: d.ip, mac: d.mac, estado: d.estado, version: d.version, consola: d.consola, actualizar: d.actualizar })),
+        ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=7" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=8" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; setSave('Guardando…');
@@ -498,7 +503,7 @@ function sorted(rows) { const w = d => ['offline', 'caido'].includes(d.estado) ?
 async function loadMan(st) { const r = await SB.from('ondi_equipos').select('*').eq('org_id', st.org_id).eq('site_id', st.id).order('nombre'); if (r.error) { if (faltaSQL(r.error)) S.falta11 = true; S.man[st.id] = []; } else S.man[st.id] = r.data || []; return S.man[st.id]; }
 async function loadEq(st) { const l = linksOf(st), out = { list: [], errs: [], wifi: null, at: new Date().toISOString() };
   await Promise.all([loadMan(st), ...l.map(async k => { try { const r = await fn({ accion: 'equipos', site: st.id, marca: k });
-      out.list.push(...r.equipos.map(d => ({ ...d, origen: BR[k].n.split(' ').pop() + (r.consola && r.consola !== BR[k].n.split(' ').pop() ? ' · ' + r.consola : '') })));
+      out.list.push(...r.equipos.map(d => ({ ...d, marca: k, origen: BR[k].n.split(' ').pop() + (r.consola && r.consola !== BR[k].n.split(' ').pop() ? ' · ' + r.consola : '') })));
       if (k === 'unifi' && r.sitio && (r.sitio.clientesWifi != null || r.sitio.clientesCable != null)) out.wifi = (r.sitio.clientesWifi || 0) + (r.sitio.clientesCable || 0); } catch (e) { out.errs.push({ k, m: errTxt(e) }); } })]);
   S.eq[st.id] = out;
   const man = S.man[st.id] || [], all = [...out.list, ...man], res = { total: all.length, caidos: all.filter(d => ['offline', 'caido'].includes(d.estado)).length, at: out.at };
@@ -576,6 +581,17 @@ function empresaView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div clas
     <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.nombre || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}${m.ultimo ? ' · entró ' + esc(ago(m.ultimo)) : ''}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div></div>`; }
 async function loadOrg() { const [o, t] = await Promise.all([SB.from('orgs').select('id,name,plan,join_code').eq('id', orgId()).maybeSingle(), SB.rpc('ondi_equipo', { o: orgId() }).then(r => r.error ? SB.from('members').select('user_id,role,display_name,email').eq('org_id', orgId()) : r)]);
   S.org = o.data || { name: S.ctx.name }; S.team = (t.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)); if (S.view === 'ajustes') render(); }
+/* sitios de la cuenta de la marca: a qué cliente de Ondi va cada uno */
+function sitiosOrgBlock(k) { const L = S.sitiosOrg[k];
+  if (L === undefined) { S.sitiosOrg[k] = 'cargando'; fn({ accion: 'sitios', alcance: '', marca: k }).then(r => { S.sitiosOrg[k] = r; render(); }).catch(er => { S.sitiosOrg[k] = { error: errTxt(er) }; render(); }); }
+  const head = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px"><h3 style="margin:0;font-size:15px">Sitios de esta cuenta</h3><button class="btn sm" data-sorgref="${k}">${IC.ref}Actualizar</button></div>`;
+  if (!L || L === 'cargando') return head + '<p class="muted" style="font-size:13.5px">Buscando los sitios…</p>';
+  if (L.error) return head + `<div class="err">${esc(L.error)}</div>`;
+  const sitios = L.sitios || []; if (!sitios.length) return head + '<p class="muted">Esta clave no ve ningún sitio.</p>';
+  const de = x => S.sites.find(st => st.data && st.data[k] && st.data[k].hostId === x.hostId && st.data[k].siteId === x.siteId);
+  return head + `<p class="muted" style="font-size:13px;margin:4px 0 8px">Elegí qué sitio es de qué cliente. Los que dejes en "No usar" no aparecen en Ondi.</p><div class="sorg">${sitios.map(x => { const c = de(x), v = c ? c.id : '';
+    return `<div class="sorgrow"><div><b>${esc(x.nombre)}</b><small class="muted">${x.equipos ?? '?'} equipos${x.caidos ? ` · <span style="color:var(--crit)">${x.caidos} caídos</span>` : ''}${x.isp ? ' · ' + esc(x.isp) : ''}</small></div>
+      ${admin() ? `<select data-sorg="${k}|${esc(x.hostId)}|${esc(x.siteId)}" aria-label="Cliente de ${esc(x.nombre)}"><option value="" ${!v ? 'selected' : ''}>No usar</option>${S.sites.map(st => `<option value="${st.id}" ${v === st.id ? 'selected' : ''}>${esc(st.name)}</option>`).join('')}<option value="__new">+ Crear el cliente "${esc(x.nombre)}"</option></select>` : `<span class="tag">${c ? esc(c.name) : 'No usado'}</span>`}</div>`; }).join('')}</div>`; }
 function marcasView() { return `<p class="muted" style="margin:0">Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
   <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k];
     return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${b.via}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : '<span class="pill off">Con agente</span>'}</header>
@@ -583,6 +599,7 @@ function marcasView() { return `<p class="muted" style="margin:0">Las claves que
       ${b.ready ? `${k ? `<p>Clave cargada · termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}</p>` : ''}
         ${admin() ? `<form class="inline" data-do-f="keyorg" data-k="${b.k}"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave de API'}<input id="ko-${b.k}" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
           <div class="acts">${k ? `<button class="btn" data-probar="${b.k}">${T === 'cargando' ? 'Probando…' : 'Probar la conexión'}</button><button class="btn danger ${S.armed === 'del:' + b.k ? 'arm' : ''}" data-delkey="${b.k}">${S.armed === 'del:' + b.k ? '¿Seguro? Tocá de nuevo' : 'Borrar la clave'}</button>` : ''}</div>
+          ${k ? sitiosOrgBlock(b.k) : ''}
           ${T && T !== 'cargando' ? (T.error ? `<div class="err">${esc(T.error)}</div>` : `<div class="okmsg">Conectado: ${T.consolas} ${b.k === 'meraki' ? 'organizaci' + (T.consolas === 1 ? 'ón' : 'ones') : 'consola' + (T.consolas === 1 ? '' : 's')} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}
           <details><summary class="muted" style="cursor:pointer;font-size:13.5px">Cómo sacar la clave</summary><ol class="how">${b.steps.map(x => `<li>${x}</li>`).join('')}</ol></details>` : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}`
       : `<p class="muted" style="font-size:13px">Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
@@ -686,11 +703,18 @@ document.addEventListener('change', async e => {
   if (e.target.id === 'ctxsel' || e.target.id === 'ctxsel2') { S.ctx = S.ctxs.find(c => c.key === e.target.value) || S.ctx; ls.set('ondi.ctx', S.ctx.key); history.replaceState(null, '', location.pathname); await loadCtx(); }
   if (e.target.dataset.arol) { const st = S.site, r = await SB.rpc('ondi_set_rol', { o: st.org_id, s: st.id, u: e.target.dataset.arol, nuevo: e.target.value }); if (r.error) { toast(errTxt(r.error)); return; } const a = (S.acc.list || []).find(x => x.user_id === e.target.dataset.arol); if (a) a.rol = e.target.value; toast('Permiso cambiado'); return; }
   if (e.target.dataset.splan) { const r = await SB.rpc('ondi_super_empresa', { o: e.target.dataset.splan, nuevo_plan: e.target.value, activa: null, nota: null }); if (r.error) toast(errTxt(r.error)); else toast('Plan cambiado'); return; }
+  if (e.target.dataset.sorg) { const [k, hostId, siteId] = e.target.dataset.sorg.split('|'), x = (((S.sitiosOrg[k] || {}).sitios) || []).find(o => o.hostId === hostId && o.siteId === siteId), val = e.target.value; e.target.disabled = true;
+    try { const link = { hostId, siteId, nombre: x ? x.nombre : siteId, propia: false, at: new Date().toISOString() };
+      for (const st of S.sites.filter(st => st.data && st.data[k] && st.data[k].hostId === hostId && st.data[k].siteId === siteId && st.id !== val)) { await saveSite(st, { data: { [k]: null } }); delete S.eq[st.id]; }
+      if (val === '__new') { const r = await SB.from('ondi_sites').insert({ org_id: orgId(), name: link.nombre, data: { base: 'vacia', [k]: link } }).select().single(); if (r.error) throw r.error; S.sites.push(r.data); S.sites.sort((a, b) => a.name.localeCompare(b.name, 'es')); toast('Cliente ' + link.nombre + ' creado y enlazado'); }
+      else if (val) { const st = S.sites.find(q => q.id === val); await saveSite(st, { data: { [k]: link } }); delete S.eq[st.id]; toast(link.nombre + ' enlazado con ' + st.name); }
+      else toast(link.nombre + ' ya no se usa en Ondi'); } catch (er) { toast(errTxt(er)); }
+    render(); return; }
   if (e.target.dataset.cuenta) { const k = e.target.dataset.cuenta; S.link[k] = { propia: e.target.value === 'propia' }; S.sitiosUI[k] = null; render(); }
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
   if (t.dataset.pf) { S.pf = t.dataset.pf; render(); return; } if (t.dataset.stab) { S.stab = t.dataset.stab; render(); return; }
   try { if (t.dataset.sin || t.dataset.sout) { const o = t.dataset.sin || t.dataset.sout, r = await SB.rpc('ondi_super_soporte', { o, entrar: !!t.dataset.sin }); if (r.error) throw r.error; if (t.dataset.sin) { ls.set('ondi.ctx', 'org:' + o); toast('Entraste en modo soporte por 2 horas'); await boot(); } else { S.sp = null; await boot(); S.view = 'super'; render(); } return; }
     if (t.dataset.sgo) { ls.set('ondi.ctx', 'org:' + t.dataset.sgo); await boot(); return; }
@@ -709,6 +733,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (t.dataset.buscar) { const k = t.dataset.buscar, propia = (S.link[k] || {}).propia ?? !!((st.data || {})[k] || {}).propia; S.sitiosUI[k] = 'cargando'; render();
       try { S.sitiosUI[k] = await fn({ accion: 'sitios', alcance: propia ? st.id : '', marca: k }); } catch (er) { S.sitiosUI[k] = { error: errTxt(er) }; } render(); return; }
     if (t.dataset.unlink) { const k = t.dataset.unlink, d = { ...(st.data || {}) }; delete d[k]; delete d.resumen; const r = await SB.from('ondi_sites').update({ data: d }).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); delete S.eq[st.id]; toast('Desenlazado'); render(); return; }
+    if (t.dataset.sorgref) { delete S.sitiosOrg[t.dataset.sorgref]; render(); return; }
     if (t.dataset.probar) { const k = t.dataset.probar; S.test[k] = 'cargando'; render(); try { S.test[k] = await fn({ accion: 'probar', alcance: '', marca: k }); } catch (er) { S.test[k] = { error: errTxt(er) }; } render(); return; }
     if (t.dataset.delkey) { const k = t.dataset.delkey; if (!arm('del:' + k)) return; const r = await SB.rpc(k === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', k === 'unifi' ? { o: orgId(), alcance: '', clave: '' } : { o: orgId(), alcance: '', marca: k, clave: '' }); if (r.error) throw r.error; S.test[k] = null; toast('Clave borrada'); await loadClaves(); return; }
     if (t.dataset.rm) { if (!arm('rm:' + t.dataset.rm)) return; const r = await SB.from('ondi_accesos').delete().eq('org_id', st.org_id).eq('site_id', st.id).eq('user_id', t.dataset.rm); if (r.error) throw r.error; S.acc.list = S.acc.list.filter(a => a.user_id !== t.dataset.rm); toast('Acceso quitado'); render(); return; }
@@ -738,7 +763,7 @@ document.addEventListener('submit', async e => { const f = e.target.closest('[da
       S.startPlano = base === 'plano'; openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Subí el plano o la foto para empezar.' : 'Cliente creado'); }
     if (k === 'keyorg' || k === 'keysite') { const m = f.dataset.k, val = v((k === 'keyorg' ? 'ko-' : 'ks-') + m); if (!val) throw { message: 'clave_invalida' }; const sc = k === 'keyorg' ? '' : st.id;
       const r = await SB.rpc(m === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', m === 'unifi' ? { o: orgId(), alcance: sc, clave: val } : { o: orgId(), alcance: sc, marca: m, clave: val }); if (r.error) throw r.error;
-      toast('Clave guardada en el servidor'); S.test[m] = null; await loadClaves();
+      toast('Clave guardada en el servidor'); S.test[m] = null; delete S.sitiosOrg[m]; await loadClaves();
       if (k === 'keyorg') { S.test[m] = 'cargando'; render(); try { S.test[m] = await fn({ accion: 'probar', alcance: '', marca: m }); } catch (er) { S.test[m] = { error: errTxt(er) }; } render(); } }
     if (k === 'datos') { await saveSite(st, { name: v('d_name') || st.name, data: { parque: v('d_parque'), razon: v('d_rs'), direccion: v('d_dir'), contacto: v('d_cont'), notas: ($('#d_notas') || {}).value || '' } }); toast('Guardado'); render(); }
     if (k === 'delsite') { if (v('del_name').toLowerCase() !== st.name.trim().toLowerCase()) throw { message: 'Escribí el nombre exacto del cliente.' };
