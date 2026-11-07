@@ -1386,18 +1386,18 @@ function panelContent(id) {
         ${row('Cámaras', S.camOn + ' de ' + S.cams.length + ' en línea', '')}${row('Wi-Fi', S.aps.length + ' AP · ' + S.cli + ' dispositivos')}
         ${(N.extra || []).map(([k, v]) => row(k, v)).join('')}${row('Último ingreso', N.lastIn || '—')}</dl>`;
       const al = S.alerts[0]; if (al) body += `<div class="diag ${al.status === 'warn' ? 'warn' : ''}"><b>${al.id} · ${al.status === 'crit' ? 'sin señal' : 'atención'}</b>${al.type === 'cam' ? 'Cámara de ' + al.loc.split(' · ')[1] + ' sin imagen.' : 'Interferencia alta en 2,4 GHz.'} Tocá el pin para ver el diagnóstico.</div>`;
-      acts = (S.cams[0] ? `<button class="btn pri" data-act="cams" data-id="${S.cams[0].id}">Ver cámaras</button>` : '') + '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
+      acts = (S.cams[0] ? `<button class="btn pri" data-act="cams" data-id="${S.cams[0].id}">Ver cámaras</button>` : '') + '<button class="btn" data-act="ticket">Crear ticket</button>'; }
     acts += `<button class="btn" data-act="walk" data-id="${N.id}">Entrar caminando</button><button class="btn" data-act="inner" data-id="${N.id}">Ver adentro</button><button class="btn" data-act="cut" data-id="${N.id}">${N.cut ? 'Poner el techo' : 'Sacar el techo'}</button>`; }
   else if (e.t === 'cam') { const d = e.d; ey = 'Cámara · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || d.loc;
     pill = d.status === 'crit' ? `<span class="pill crit">Sin señal desde ${fmt(new Date(NOW0 - 14 * 60000))}</span>` : '<span class="pill ok">Grabando</span>';
     body = `<dl class="rows">${row('Tipo', d.kind)}${row('Grabación', 'NVR · 30 días')}${row('Disponibilidad 30 días', d.status === 'crit' ? '97,1 %' : '99,9 %')}${row('Último movimiento', d.status === 'crit' ? '—' : fmt(new Date(Date.now() - 60000 * (2 + (d.x | 0) % 9))))}</dl>`;
     if (d.status === 'crit') body += `<div class="diag"><b>Diagnóstico de Ondi</b>El switch de la nave responde, pero el puerto 7 dejó de entregar PoE. Revisar el cable o el inyector antes de cambiar la cámara.</div>`;
-    acts = `<button class="btn pri" data-act="live" data-id="${d.id}">Ver en vivo</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>`; }
+    acts = `<button class="btn pri" data-act="live" data-id="${d.id}">Ver en vivo</button><button class="btn" data-act="ticket">Crear ticket</button>`; }
   else if (e.t === 'ap') { const d = e.d; ey = 'Access point · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
     pill = d.status === 'warn' ? '<span class="pill warn">Interferencia alta</span>' : '<span class="pill ok">En línea</span>';
     body = `<dl class="rows">${row('Modelo', d.kind)}${row('Dispositivos conectados', d.cli)}${row('Canal 2,4 GHz', d.status === 'warn' ? '6 · 71 % ocupado' : '11 · 18 % ocupado')}${row('Canal 5 GHz', '36 · 80 MHz')}${row('Enlace', d.nave ? 'Fibra → switch de la nave' : 'Fibra → rack core')}</dl>`;
     if (d.status === 'warn') body += `<div class="diag warn"><b>Recomendación de Ondi</b>Pasar el 2,4 GHz al canal 1 y bajar la potencia a media. Los lectores de mano de los operarios se conectan en esa banda.</div>`;
-    acts = '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
+    acts = '<button class="btn" data-act="ticket">Crear ticket</button>'; }
   else if (SENS[e.t]) { ({ ey, t, s, pill, body, acts } = sensPanel(e.d)); }
   else if (e.t === 'rd') { const d = e.d; ey = 'Control de acceso · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
     pill = '<span class="pill ok">En servicio</span>'; body = `<dl class="rows">${row('Tipo', d.kind)}${row('Accesos hoy', d.hoy)}${row('Último acceso', fmt(new Date(Date.now() - 180000)))}${row('Rechazados hoy', d.id === 'R-01' ? '2' : '0')}</dl>`; }
@@ -1430,7 +1430,7 @@ function panelContent(id) {
   else if (e.t === 'admin') { const ap = DEV.find(d => d.admin && d.type === 'ap'), mo = DEV.find(d => d.id === 'R-03'); ey = PARK; t = 'Oficinas del polo'; s = 'Entre E1 y E8 · administración y sala técnica';
     pill = '<span class="pill ok">Todo en orden</span>';
     body = `<dl class="rows">${row('Wi-Fi', ap.id + ' · ' + ap.cli + ' dispositivos')}${row('Molinete de personal', mo.hoy + ' accesos hoy')}${row('Sala técnica', 'Rack core RK-01')}${row('Estacionamiento', '44 lugares')}</dl>`;
-    acts = '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
+    acts = '<button class="btn" data-act="ticket">Crear ticket</button>'; }
   else if (e.t === 'zona') { const Z = e.Z; ey = Z.ey; t = Z.name; s = Z.s;
     if (Z.id === 'sr') { const cams = DEV.filter(d => d.zona === 'sr' && d.type === 'cam'), ap = DEV.find(d => d.zona === 'sr' && d.type === 'ap');
       pill = '<span class="pill ok">Cámaras grabando</span>';
@@ -1474,7 +1474,7 @@ function focusTarget(p, zoom) {
 function closePanel() { SEL = null; FOLLOW = false; panel.hidden = true; updateChips(); updGizmo(); }
 $('#pX').onclick = closePanel;
 $('#pActs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.act;
-  if (a === 'ticket') { const n = 2300 + Math.floor(Math.random() * 600); toast('Ticket OL-' + n + ' creado en Olumi (demo)'); const c = panelContent(SEL); log('info', `Ticket OL-${n} creado · ${c.t}`, SEL); sendVan(SEL, n); }
+  if (a === 'ticket') { ticketFor(SEL); }
   if (a === 'quote') toast('Cotización armada para ' + (b.dataset.id || 'E6') + ' (demo)');
   if (a === 'live' || a === 'cams') openCam(b.dataset.id);
   if (a === 'cab') openCab(b.dataset.id);
@@ -2546,7 +2546,7 @@ function sensPanel(d) { const S = SENS[d.type], nv = d.nave && naveById(d.nave),
   const val = d.type === 'humo' ? 'Sin humo' : d.type === 'temp' ? (d.skind === 'frio' ? '3,4 °C' : (20.5 + Math.abs(d.x % 3)).toFixed(1).replace('.', ',') + ' °C · ' + (45 + Math.round(Math.abs(d.z) % 12)) + ' % de humedad') : d.type === 'pir' ? 'Sin movimiento · zona armada' : 'En reposo';
   return { ey: S.n + ' · ' + d.id, t: nv ? nv.full : (d.loc || '').split(' · ')[0] || 'Predio', s: d.kind, pill: d.status === 'ok' ? '<span class="pill ok">En línea</span>' : '<span class="pill warn">Atención</span>',
     body: `<dl class="rows">${row('Lectura', val)}${row('Ubicación', escH(d.loc || ''))}${row('Altura', h)}${row('Batería', '96 %')}${row('Última prueba', fmt(new Date(Date.now() - 3600000 * 5)))}</dl>`,
-    acts: `<button class="btn" data-act="walkd" data-id="${d.id}">Ver de cerca</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>` }; }
+    acts: `<button class="btn" data-act="walkd" data-id="${d.id}">Ver de cerca</button><button class="btn" data-act="ticket">Crear ticket</button>` }; }
 
 /* ---------- utilidades 3D ---------- */
 let VLAST = null;
@@ -2740,15 +2740,15 @@ function openCtx(x, y) { popClose(); const id = pick3(x, y), e = id && entity(id
   else if (d) { select(d.id, false);
     if (d.type === 'cam') add('Ver la cámara', () => openCam(d.id), 'doble clic');
     if (['gab', 'wr', 'rack'].includes(d.type)) add('Abrir ' + (d.type === 'gab' ? 'el gabinete' : 'el rack'), () => openCab(d.id));
-    add('Ver de cerca, caminando', () => walkTo(d)); if (!isProp(d) && !isLbl(d)) add('Crear ticket en Olumi', () => ticketFor(d.id)); if (isLbl(d) && ed) add('Cambiar el nombre', () => namePop(d, x, y));
+    add('Ver de cerca, caminando', () => walkTo(d)); if (!isProp(d) && !isLbl(d)) add('Crear ticket', () => ticketFor(d.id)); if (isLbl(d) && ed) add('Cambiar el nombre', () => namePop(d, x, y));
     if (ed && !(d.type === 'rack' && !d.custom)) { sep(); add('Copiar', editing(() => copySel()), 'Ctrl+C'); add('Cortar', editing(cutSel), 'Ctrl+X'); add('Duplicar', editing(dupSel), 'Ctrl+D');
       add('Pegar acá', editing(() => pasteAt(x, y)), 'Ctrl+V', '', !CLIP); sep();
       add('Girar 90°', editing(() => nudge(0, 0, 0, Math.PI / 2)), 'R');
       if (gzHasY(d)) { add('Subir 0,5 m', editing(() => nudge(0, 0, 0.5)), 'Re Pág'); add('Bajar 0,5 m', editing(() => nudge(0, 0, -0.5)), 'Av Pág'); }
       sep(); add('Borrar', editing(() => removeId(d.id)), 'Supr', 'danger'); } }
   else { const N = e && e.t === 'nave' ? e.N : null, g = groundAt(x, y);
-    if (N) { select(N.id, false); add('Entrar caminando', () => enterWalk(N)); add(N.cut ? 'Poner el techo' : 'Sacar el techo', () => toggleCut(N)); add('Diseñar la planta', () => openGal(N.id)); add('Crear ticket en Olumi', () => ticketFor(N.id)); }
-    else if (e && e.t) add('Crear ticket en Olumi', () => ticketFor(id));
+    if (N) { select(N.id, false); add('Entrar caminando', () => enterWalk(N)); add(N.cut ? 'Poner el techo' : 'Sacar el techo', () => toggleCut(N)); add('Diseñar la planta', () => openGal(N.id)); add('Crear ticket', () => ticketFor(N.id)); }
+    else if (e && e.t) add('Crear ticket', () => ticketFor(id));
     if (!WALK.on) add('Caminar desde acá', () => enterWalk(null, g));
     if (ed) { sep(); add('Pegar acá', editing(() => pasteAt(x, y)), 'Ctrl+V', '', !CLIP); add('Deshacer', histUndo, 'Ctrl+Z', '', !HIST.length); add('Rehacer', histRedo, 'Ctrl+Shift+Z', '', !FUT.length);
       items.push({ grid: true }); } }
@@ -3424,7 +3424,8 @@ html.placing #labels,html.placing #labels *{pointer-events:none!important} .plbl
 const BK = {
   wpan: { n: 'Pared 2 m', L: 2, wall: 1, tags: 'muro tabique panel bloque' }, wpan1: { n: 'Pared 1 m', L: 1, wall: 1, tags: 'muro tabique panel corta' },
   wdoor: { n: 'Pared con puerta', L: 2, wall: 1, door: 1, tags: 'puerta entrada abertura' }, wwin: { n: 'Pared con ventana', L: 2, wall: 1, tags: 'ventana vidrio abertura' },
-  wglass: { n: 'Mampara de vidrio', L: 2, wall: 1, thin: 1, tags: 'vidrio blindex division' }, col: { n: 'Columna', solid: 1, tags: 'pilar' },
+  wglass: { n: 'Mampara de vidrio', L: 2, wall: 1, thin: 1, tags: 'vidrio blindex division' }, col: { n: 'Columna de oficina', solid: 1, tags: 'pilar' },
+  colg: { n: 'Columna del galpón', solid: 1, tall: 1, tags: 'pilar estructura perfil acero techo portico' },
   ceil: { n: 'Techo de oficina 2×2', flat: 1, tags: 'cielorraso techo losa luz' }, piso: { n: 'Piso 2×2', flat: 1, floor: 1, tags: 'baldosa ceramica alfombra' }
 };
 // muebles (los de pared se pegan a la pared que apuntás)
@@ -3436,7 +3437,7 @@ const FK = {
 };
 Object.entries(BK).forEach(([k, v]) => { PK[k] = { n: v.n, tags: v.tags, out: false, build: true }; });
 Object.entries(FK).forEach(([k, v]) => { PK[k] = { n: v.n, tags: v.tags, out: false, furn: true }; });
-Object.assign(PRE3, { wpan: 'PD-', wpan1: 'PD-', wdoor: 'PU-', wwin: 'VE-', wglass: 'MV-', col: 'CL-', ceil: 'CR-', piso: 'PI-', silla: 'SL-', sillon: 'SO-', mreun: 'MR-', recep: 'RC-', bibl: 'BI-', planta: 'MC-', impr: 'IM-', heladera: 'HE-', cocina: 'CC-', tv: 'TV-', split: 'AC-', pizarra: 'PZ-' });
+Object.assign(PRE3, { wpan: 'PD-', wpan1: 'PD-', wdoor: 'PU-', wwin: 'VE-', wglass: 'MV-', col: 'CL-', colg: 'CG-', ceil: 'CR-', piso: 'PI-', silla: 'SL-', sillon: 'SO-', mreun: 'MR-', recep: 'RC-', bibl: 'BI-', planta: 'MC-', impr: 'IM-', heladera: 'HE-', cocina: 'CC-', tv: 'TV-', split: 'AC-', pizarra: 'PZ-' });
 Object.assign(CIC, {
   door: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V4h9v17"/><path d="M14 4l5 2v15"/><circle cx="11.5" cy="13" r=".8" fill="currentColor"/></svg>',
   win: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg>',
@@ -3448,8 +3449,8 @@ Object.assign(CIC, {
 });
 { // el catálogo: Construcción arriba, Muebles al lado
   const byName = new Map(CAT3.map(c => [c[0], c]));
-  const B = [['prop:wpan', 'Pared 2 m', 'wall'], ['prop:wpan1', 'Pared 1 m', 'wall'], ['prop:wdoor', 'Pared con puerta', 'door'], ['prop:wwin', 'Pared con ventana', 'win'], ['prop:wglass', 'Mampara de vidrio', 'win'], ['prop:col', 'Columna', 'wall'], ['prop:ceil', 'Techo de oficina', 'ceil'], ['prop:piso', 'Piso', 'zone']].map(([k, n, ic]) => [k, n, ic, BK[k.slice(5)].tags]);
-  const cons = byName.get('Construcción'); if (cons) cons[1] = [...B, ...cons[1].map(it => it[0] === 'draw:wall:pared' ? [it[0], 'Pared larga (dibujar)', it[2], it[3]] : it)];
+  const B = [['prop:wpan', 'Pared 2 m', 'wall'], ['prop:wpan1', 'Pared 1 m', 'wall'], ['prop:wdoor', 'Pared con puerta', 'door'], ['prop:wwin', 'Pared con ventana', 'win'], ['prop:wglass', 'Mampara de vidrio', 'win'], ['prop:colg', 'Columna del galpón', 'colg'], ['prop:col', 'Columna de oficina', 'wall'], ['prop:ceil', 'Techo de oficina', 'ceil'], ['prop:piso', 'Piso', 'zone']].map(([k, n, ic]) => [k, n, ic, BK[k.slice(5)].tags]);
+  const cons = byName.get('Construcción'); if (cons) cons[1] = [B[0], B[1], B[2], B[3], B[4], B[5], ['colauto', 'Columnas del galpón (todas)', 'colg', 'pilares automatico estructura'], ...B.slice(6), ...cons[1].map(it => it[0] === 'draw:wall:pared' ? [it[0], 'Pared larga (dibujar)', it[2], it[3]] : it)];
   const FI = { silla: 'chair', sillon: 'sofa', mreun: 'box', recep: 'box', bibl: 'shelf', planta: 'plant', impr: 'box', heladera: 'box', cocina: 'box', tv: 'tv', split: 'box', pizarra: 'tv' };
   const furn = Object.keys(FK).map(k => ['prop:' + k, FK[k].n, FI[k], FK[k].tags]), ad = byName.get('Adentro y oficina');
   const mueb = ['Muebles y oficina', [...furn, ...(ad ? ad[1] : [])]]; byName.delete('Adentro y oficina'); byName.set('Muebles y oficina', mueb);
@@ -3475,6 +3476,8 @@ function buildGeo(p) { const g = new Geo(), k = p.k, H = 2.7, T = 0.06, WC = p.c
   else if (k === 'wglass') { g.box(-1, 0, -0.04, 1, 0.08, 0.04, FR); g.box(-1, H - 0.06, -0.04, 1, H, 0.04, FR); for (const x of [-1, 1]) g.box(x - 0.025, 0, -0.04, x + 0.025, H, 0.04, FR);
     g.box(-0.975, 0.08, -0.01, 0.975, H - 0.06, 0.01, '#A9CFE0', { e: 0.25 }); }
   else if (k === 'col') g.box(-0.15, 0, -0.15, 0.15, H, 0.15, '#D9D6CF', top);
+  else if (k === 'colg') { const HH = p.h || 10, ST = '#6E7F8E', STd = '#55646F'; g.box(-0.2, 0, -0.16, 0.2, HH, -0.13, ST, { top: STd }); g.box(-0.2, 0, 0.13, 0.2, HH, 0.16, ST, { top: STd }); g.box(-0.013, 0, -0.13, 0.013, HH, 0.13, STd);
+    g.box(-0.3, 0, -0.26, 0.3, 0.03, 0.26, '#59636C'); for (let i = 0; i < 4; i++) g.box(-0.27, 0.03 + i * 0.25, -0.23, 0.27, 0.16 + i * 0.25, 0.23, i % 2 ? '#2B2B2B' : '#E8B52A', { ao: 1 }); g.box(-0.27, 1.03, -0.23, 0.27, 1.06, 0.23, '#2B2B2B', { ao: 1 }); }
   else if (k === 'ceil') { g.box(-1, H - 0.04, -1, 1, H, 1, '#F3F2EE'); g.box(-0.3, H - 0.05, -0.3, 0.3, H - 0.04, 0.3, '#FFFFFF', { e: 0.9 }); }
   else if (k === 'piso') { const c = ['#C9B79C', '#B7BCC0', '#9AA7B0'][(p.seed || 0) % 3]; g.box(-1, 0, -1, 1, 0.02, 1, c); }
   else if (k === 'silla') chairAt(g, 0, 0, 1);
@@ -3495,7 +3498,8 @@ propGeo = (o => p => (BK[p.k] || FK[p.k]) ? buildGeo(p) : o(p))(propGeo);
 
 /* superficies: las paredes y techos que armás también sirven para colgar equipos */
 let HITSKIP = null;
-function bpBox(Q) { const B = BK[Q.k]; if (!B || B.floor) return null; if (B.wall) { const t = B.thin ? 0.04 : 0.065; return [[-B.L / 2, 0, -t], [B.L / 2, 2.7, t]]; } if (B.solid) return [[-0.15, 0, -0.15], [0.15, 2.7, 0.15]]; if (B.flat) return [[-1, 2.64, -1], [1, 2.7, 1]]; return null; }
+const propH = Q => Q.k === 'colg' ? (Q.h || 10) : 2.7;
+function bpBox(Q) { const B = BK[Q.k]; if (!B || B.floor) return null; if (Q.k === 'colg') return [[-0.2, 0, -0.16], [0.2, propH(Q), 0.16]]; if (B.wall) { const t = B.thin ? 0.04 : 0.065; return [[-B.L / 2, 0, -t], [B.L / 2, 2.7, t]]; } if (B.solid) return [[-0.15, 0, -0.15], [0.15, 2.7, 0.15]]; if (B.flat) return [[-1, 2.64, -1], [1, 2.7, 1]]; return null; }
 surfHit = (o => function (r) { let best = o(r); if (!PROPS.length) return best;
   for (const Q of PROPS) { if (Q.id === HITSKIP) continue; const bb = bpBox(Q); if (!bb) continue; const N = naveAt(Q.x, Q.z, 1); if (!N || !openNave(N)) continue;
     const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), ro = [r.o[0] - Q.x, r.o[1] - (Q.y || 0), r.o[2] - Q.z], lo = [ro[0] * ex[0] + ro[2] * ex[1], ro[1], ro[0] * ez[0] + ro[2] * ez[1]], ld = [r.d[0] * ex[0] + r.d[2] * ex[1], r.d[1], r.d[0] * ez[0] + r.d[2] * ez[1]];
@@ -3523,14 +3527,15 @@ placeProp = (o => function (p, x, y) { const B = BK[p.k], F = FK[p.k]; if (!B &&
   if (!g) { const q = planeAt(r, 0.06); g = q && q[3] < 400 ? [q[0], q[2]] : groundAt(x, y); }
   p.x = g[0]; p.z = g[1]; p.y = naveAt(g[0], g[1], 1) ? 0.06 : 0;
   if (fresh) p.yaw = viewYaw(p.x, p.z);
-  if (B) { gridSnap(p, B.flat ? 1 : 0.5); endSnap(p); } })(placeProp);
+  if (B) { gridSnap(p, B.flat ? 1 : 0.5); endSnap(p); }
+  if (p.k === 'colg') { const N = naveAt(p.x, p.z, 1); p.h = N ? N.h : 8; if (N) { if (fresh) p.yaw = baseYaw(p.x, p.z); beamSnap(N, p); } } })(placeProp);
 const sameSpot = p => PROPS.some(Q => Q.k === p.k && Math.hypot(Q.x - p.x, Q.z - p.z) < 0.05 && Math.abs(Math.sin((Q.yaw || 0) - (p.yaw || 0))) < 0.05);
 e3Tool = (o => function (t, e) { if (t === 'prop' && BK[ED.propk]) { const G = mkProp(ED.propk); G.id = 'ed-test'; placeProp(G, e.clientX, e.clientY); if (sameSpot(G)) { hotName('Ya hay una igual ahí'); return true; } } return o(t, e); })(e3Tool);
 
 /* caminar: las paredes armadas frenan, la puerta deja pasar */
 walkFree = (o => function (x, z) { if (!o(x, z)) return false; const rr = 0.3, y = WALK.y;
-  for (const Q of PROPS) { const B = BK[Q.k]; if (!B || !(B.wall || B.solid)) continue; const dx = x - Q.x, dz = z - Q.z; if (dx * dx + dz * dz > 9) continue; const y0 = Q.y || 0; if (y - 1.6 > y0 + 2.7 || y + 0.2 < y0) continue;
-    const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), lx = dx * ex[0] + dz * ex[1], lz = dx * ez[0] + dz * ez[1], hl = B.wall ? B.L / 2 : 0.15, ht = B.wall ? 0.06 : 0.15;
+  for (const Q of PROPS) { const B = BK[Q.k]; if (!B || !(B.wall || B.solid)) continue; const dx = x - Q.x, dz = z - Q.z; if (dx * dx + dz * dz > 9) continue; const y0 = Q.y || 0; if (y - 1.6 > y0 + propH(Q) || y + 0.2 < y0) continue;
+    const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), lx = dx * ex[0] + dz * ex[1], lz = dx * ez[0] + dz * ez[1], hl = B.wall ? B.L / 2 : Q.k === 'colg' ? 0.2 : 0.15, ht = B.wall ? 0.06 : Q.k === 'colg' ? 0.16 : 0.15;
     if (Math.abs(lx) < hl + rr && Math.abs(lz) < ht + rr) { if (B.door && Math.abs(lx) < 0.4) continue; return false; } }
   return true; })(walkFree);
 
@@ -3600,8 +3605,9 @@ function aimText() { if (!WALK.on || !LOCK.on) return aimShow(''); if (LOCK.carr
   const id = pickAim(CX(), CY()); if (!id) return aimShow(''); const e = entity(id); if (!e || e.t === 'nave' || e.t === 'truck' || e.t === 'fork' || e.t === 'fiber') return aimShow('');
   const d = e.d, nm = d ? (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' <b>' + escH(d.id) + '</b>' : e.t === 'prop' ? escH(e.P.name || (PK[e.P.k] || {}).n || e.P.id) : e.t === 'plbl' ? escH(e.L.text) : e.t === 'item' ? escH(e.R.o.name || e.R.o.id) : escH(id);
   if (ed && t === 'del') return aimShow('Clic para borrar · ' + nm, 'del');
-  if (ed) return aimShow(nm + ' · clic para elegir, mantené para mover');
-  if (d && d.type === 'cam') return aimShow(nm + ' · clic para ver la cámara', 'cam'); if (d && SENS[d.type]) return aimShow(nm + ' · clic para ver los datos'); aimShow(nm); }
+  const tk = d && tkOk() ? ' · <kbd>T</kbd> ticket' : '';
+  if (ed) return aimShow(nm + ' · clic para elegir, mantené para mover' + tk);
+  if (d && d.type === 'cam') return aimShow(nm + ' · clic para ver la cámara' + tk, 'cam'); if (d && SENS[d.type]) return aimShow(nm + ' · clic para ver los datos' + tk); aimShow(nm + tk); }
 function gameTick() { requestAnimationFrame(gameTick); if (!WALK.on) return; const now = performance.now();
   if (LOCK.on && LOCK.carry) carryStep();
   if (LOCK.on && ED.on && canEdit() && !LOCK.carry && now - LOCK.ghT > 33) { LOCK.ghT = now; GHOST.x = CX(); GHOST.y = CY(); ghostMove(cev()); }
@@ -3616,23 +3622,24 @@ const HELP = { open: (() => { try { return localStorage.getItem('ondi.help') !==
 function helpSet(on) { HELP.open = on; try { localStorage.setItem('ondi.help', on ? '1' : '0'); } catch (e) {} helpRender(); walkHud(); }
 const kb = s => s.split(' ').map(k => `<kbd>${k}</kbd>`).join(' ');
 function helpRender() { const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
-  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir']];
+  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
+  if (canEdit()) rows.push([kb('F'), ed ? 'Apagar la edición' : 'Prender la edición']);
   if (!ed) rows.push(['Clic', 'En una cámara, ves lo que ve · en un sensor, sus datos']);
   else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
-  el.innerHTML = `<div class="e3hh"><b>${ed ? 'Comandos de edición' : 'Cómo moverte'}</b><button class="e3x" data-help="0" title="Ocultar la ayuda · H" aria-label="Ocultar la ayuda">−</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>${ed ? '<p>Para cambiar la barra: abrí el catálogo, pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero.</p>' : ''}`; }
+  el.innerHTML = `<div class="e3hh"><b>${ed ? 'Controles de edición' : 'Controles'}</b><button class="e3x" data-help="0" title="Ocultar los controles · H" aria-label="Ocultar los controles">−</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>${ed ? '<p>Para cambiar la barra: abrí el catálogo, pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero.</p>' : ''}`; }
 walkHud = function () { const on = WALK.on; HUD.hidden = !on; $('#e3pad').hidden = !on; $('#e3cross').hidden = !on; const wb = $('#walkb'); if (wb) wb.setAttribute('aria-pressed', String(on)); helpRender(); if (!on) { aimShow(''); return; }
   const ed = ED.on && canEdit();
   HUD.innerHTML = `<div><b>${WALK.N ? escH(WALK.N.full) : 'Parque'}</b><span>${ed ? 'Editando' : 'Paseo'} · ojos a <b id="e3alt">${WALK.y.toFixed(1).replace('.', ',')} m</b></span></div>`
-    + (canEdit() ? `<button class="btn ${ed ? 'pri' : ''}" data-w="ed" aria-pressed="${ed}" title="Prender o apagar la edición">${ed ? 'Editando' : 'Editar'}</button>` : '')
+    + (canEdit() ? `<button class="btn ${ed ? 'pri' : ''}" data-w="ed" aria-pressed="${ed}" title="Prender o apagar la edición · F">${ed ? 'Editando' : 'Editar'} <kbd>F</kbd></button>` : '')
     + (ed ? '<button class="btn" data-w="eye" title="Volver a la altura de los ojos">1,7 m</button><button class="btn" data-w="top">Al techo</button>' : '')
-    + `<button class="btn" data-w="help" aria-pressed="${HELP.open}" title="Ver los comandos · H">? Ayuda</button><button class="btn" data-w="exit">Salir</button>`; };
+    + `<button class="btn" data-w="help" aria-pressed="${HELP.open}" title="Ver los controles · H">Controles <kbd>H</kbd></button><button class="btn" data-w="exit">Salir</button>`; };
 HUD.addEventListener('click', e => { const b = e.target.closest('button[data-w]'); if (!b) return; if (b.dataset.w === 'ed') { setEdit(!ED.on); } if (b.dataset.w === 'help') helpSet(!HELP.open); });
 
 /* sensor visto por el cliente: el número y lo justo */
 sensPanel = (o => function (d) { const r = o(d); if (canEdit()) return r; const S = SENS[d.type], nv = d.nave && naveById(d.nave);
   const val = d.type === 'humo' ? 'Sin humo' : d.type === 'temp' ? (d.skind === 'frio' ? '3,4 °C' : (20.5 + Math.abs(d.x % 3)).toFixed(1).replace('.', ',') + ' °C') : d.type === 'pir' ? 'Sin movimiento' : 'En reposo';
   return { ey: S.n, t: 'Sensor ' + d.id, s: nv ? nv.full : (d.loc || '').split(' · ')[0] || 'Predio', pill: d.status === 'ok' ? '<span class="pill ok">Funcionando</span>' : '<span class="pill warn">Revisar</span>',
-    body: `<dl class="rows">${row('Número', escH(d.id))}${row('Lectura', val)}${row('Lugar', escH((d.loc || '').split(' · ').slice(-1)[0] || '—'))}</dl>`, acts: '' }; })(sensPanel);
+    body: `<dl class="rows">${row('Número', escH(d.id))}${row('Lectura', val)}${row('Lugar', escH((d.loc || '').split(' · ').slice(-1)[0] || '—'))}</dl>`, acts: tkOk() ? '<button class="btn" data-act="ticket">Pedir un arreglo</button>' : '' }; })(sensPanel);
 
 /* enganches con lo que ya existía */
 setTool = (o => function (t) { o(t); hotRender(); })(setTool);
@@ -3641,6 +3648,45 @@ renderCat = (o => function (k) { o(k); const el = $('#e3cat'); if (!el) return; 
 enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { hotRender(); helpRender(); lockReq('auto'); } })(enterWalk);
 exitWalk = (o => function () { if (LOCK.on) document.exitPointerLock(); carryEnd(true); o(); helpRender(); })(exitWalk);
 
+/* vigas del galpón: también sirven para colgar equipos; columnas del galpón bajo las vigas */
+CIC.colg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10M7 21h10M12 3v18"/><path d="M3 3h18" stroke-dasharray="2 2"/></svg>';
+function beamLines(N) { const t = 0.3, alongX = (N.x1 - N.x0) >= (N.z1 - N.z0), L = []; if (alongX) for (let x = N.x0 + 4.5; x < N.x1 - 1; x += 9) L.push(x); else for (let z = N.z0 + 4.5; z < N.z1 - 1; z += 9) L.push(z); return { alongX, L, t }; }
+naveBoxes = (o => function (N) { const B = o(N); if (!(WALK.on && WALK.N === N)) return B; const { alongX, L, t } = beamLines(N), h = N.h;
+  for (const c of L) B.push(alongX ? { mn: [c - 0.14, h - 0.65, N.z0 + t], mx: [c + 0.14, h, N.z1 - t], k: 'beam' } : { mn: [N.x0 + t, h - 0.65, c - 0.14], mx: [N.x1 - t, h, c + 0.14], k: 'beam' }); return B; })(naveBoxes);
+function beamSnap(N, p) { const { alongX, L } = beamLines(N), v = alongX ? p.x : p.z; let best = null; for (const c of L) if (Math.abs(c - v) < 1.6 && (best === null || Math.abs(c - v) < Math.abs(best - v))) best = c; if (best !== null) { if (alongX) p.x = best; else p.z = best; } }
+function autoCols(N) { if (!N) { toast('Entrá a un galpón o tocalo primero'); return; } const { alongX, L } = beamLines(N), span = alongX ? N.z1 - N.z0 : N.x1 - N.x0, a0 = alongX ? N.z0 : N.x0, n = Math.floor(span / 20);
+  if (!n) { toast(N.full + ' tiene una luz de ' + Math.round(span) + ' m: no lleva columnas en el medio'); return; }
+  const items = naveBoxesBase(N).filter(b => b.k === 'item'), busy = (x, z) => items.some(b => x > b.mn[0] - 0.35 && x < b.mx[0] + 0.35 && z > b.mn[2] - 0.35 && z < b.mx[2] + 0.35), added = [];
+  for (const c of L.filter((_, j) => j % 2 === 1 || L.length < 3)) for (let i = 1; i <= n; i++) { let w = a0 + span * i / (n + 1), ok = false; for (const dv of [0, 1, -1, 2, -2, 3, -3]) { const x = alongX ? c : w + dv, z = alongX ? w + dv : c; if (!busy(x, z)) { w += dv; ok = true; break; } } if (!ok) continue;
+    const x = alongX ? c : w, z = alongX ? w : c; if (PROPS.some(Q => Q.k === 'colg' && Math.hypot(Q.x - x, Q.z - z) < 0.6)) continue;
+    const p = mkProp('colg'); Object.assign(p, { x, z, y: 0.06, h: N.h, yaw: yawDir(N.t[0], N.t[1]) }); addAnyRaw(p); added.push(snapD(p)); }
+  if (!added.length) { toast('Ya tiene columnas o no hay lugar libre'); return; } edSave();
+  histPush({ label: added.length + ' columnas en ' + N.code, undo: () => added.forEach(s => rmAnyRaw(s.id)), redo: () => added.forEach(s => addAnyRaw(JSON.parse(JSON.stringify(s)))) });
+  toast(added.length + ' columnas puestas en ' + N.full + ' · borrá las que no van con la tecla 2'); }
+const naveBoxesBase = N => naveBoxes(N);
+armItem = (o => function (k) { if (k === 'colauto') { const e = SEL && entity(SEL); autoCols(e && e.t === 'nave' ? e.N : e && e.N ? e.N : (WALK.on && WALK.N) || NAVES.find(n => n.cut)); return; } return o(k); })(armItem);
+
+/* ticket desde el lugar: apuntás al equipo, T, elegís qué pasa y se manda */
+const tkOk = () => !HOST || !!HOST.canTicket || canEdit();
+const TKM = [['no', 'No funciona', 'problema'], ['mover', 'Moverlo de lugar', 'cambio'], ['cambiar', 'Cambiarlo por otro', 'cambio'], ['otro', 'Otra cosa', 'otro']];
+let TKD = null;
+function tkName(id) { const e = entity(id); if (!e) return id; const d = e.d; if (d) return (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' ' + d.id; if (e.t === 'nave') return e.N.full; if (e.t === 'prop') return (PK[e.P.k] || {}).n || e.P.id; if (e.t === 'item') return e.R.o.name || id; return id; }
+function tkWhere(id) { const e = entity(id); if (!e) return ''; const d = e.d; if (d) { const N = d.nave && naveById(d.nave); return [N ? N.full : '', d.loc ? d.loc.split(' · ').slice(-1)[0] : ''].filter(Boolean).join(' · '); } if (e.N) return e.N.full; return ''; }
+function ticketPop(id) { if (!id) return; if (!tkOk()) { toast('Para pedir arreglos necesitás que tu instaladora te dé permiso de pedir'); return; } if (LOCK.on) document.exitPointerLock();
+  TKD = { id, m: 'no' }; const el = $('#e3tk'); el.hidden = false; const w = tkWhere(id);
+  el.innerHTML = `<div class="e3hh"><b>Ticket · ${escH(tkName(id))}</b><button class="e3x" data-tk="x" aria-label="Cerrar">×</button></div>${w ? `<p class="e3tkw">${escH(w)}</p>` : ''}
+    <div class="e3chips">${TKM.map(([k, n]) => `<button data-tkm="${k}" aria-pressed="${k === 'no'}">${n}</button>`).join('')}</div>
+    <textarea id="e3tkn" rows="3" placeholder="Contá un poco más (opcional): qué pasa, a dónde moverlo…"></textarea>
+    <div class="e3tka"><button class="btn" data-tk="x">Cancelar</button><button class="btn pri" data-tk="send">${HOST && ROLE === 'cli' ? 'Mandar a la instaladora' : 'Crear ticket'}</button></div>`;
+  setTimeout(() => { const t = $('#e3tkn'); if (t) t.focus(); }, 30); }
+function ticketClose() { const el = $('#e3tk'); if (el) el.hidden = true; TKD = null; canvas.focus(); }
+async function ticketSend() { if (!TKD) return; const D = TKD, M = TKM.find(m => m[0] === D.m), nota = ($('#e3tkn').value || '').trim(), w = tkWhere(D.id);
+  const texto = `${M[1]} · ${tkName(D.id)}${w ? ' · ' + w : ''}${nota ? '\n' + nota : ''}`; const b = $('#e3tk [data-tk="send"]'); if (b) { b.disabled = true; b.textContent = 'Mandando…'; }
+  if (HOST && HOST.ticket) { try { const n = await HOST.ticket({ tipo: M[2], texto, equipo: D.id }); ticketClose(); log('info', `Ticket ${n ? '#' + n : ''} · ${M[1]} · ${tkName(D.id)}`, D.id);
+      toast(ROLE === 'cli' ? 'Listo, se lo mandamos a la instaladora · lo seguís en Ayuda' : 'Ticket creado · lo ves en Pedidos'); if (ROLE !== 'cli') sendVan(D.id, n || 1); }
+    catch (e) { if (b) { b.disabled = false; b.textContent = 'Probar de nuevo'; } toast(/permiso/.test(String(e && e.message)) ? 'No tenés permiso para pedir arreglos en este sitio' : 'No se pudo mandar el ticket, probá de nuevo'); } return; }
+  const n = 2300 + Math.floor(Math.random() * 600); ticketClose(); toast('Ticket #' + n + ' creado (demo) · ' + M[1]); log('info', `Ticket #${n} · ${M[1]} · ${tkName(D.id)}`, D.id); sendVan(D.id, n); }
+ticketFor = id => ticketPop(id);
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3667,6 +3713,12 @@ html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
 .e3x{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--glass-strong);color:var(--ink);font:700 16px var(--f-ui);cursor:pointer;line-height:1}
 .e3help dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0;align-items:center} .e3help dt{white-space:nowrap;font-size:12px;color:var(--muted)} .e3help dd{margin:0;font-size:12.5px}
 .e3help p{margin:8px 0 0;font-size:11.5px;color:var(--muted);line-height:1.35}
+
+.e3tk{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(380px,calc(100vw - 32px));z-index:30;padding:12px 14px 14px;border-radius:14px;font:13px var(--f-ui);color:var(--ink);display:grid;gap:10px}
+.e3tk .e3hh{margin:0} .e3tkw{margin:-6px 0 0;font-size:12px;color:var(--muted)} .e3tk textarea{width:100%;box-sizing:border-box;border-radius:9px;border:1px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);font:13px var(--f-ui);padding:8px;resize:vertical}
+.e3tka{display:flex;justify-content:flex-end;gap:8px} .e3tk .e3chips{display:flex;flex-wrap:wrap;gap:6px}
+.e3tk .e3chips button{border-radius:999px;border:1px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);font:600 12.5px var(--f-ui);padding:6px 11px;cursor:pointer} .e3tk .e3chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.e3walk kbd,.e3aim kbd{font-size:10px;padding:0 4px;min-width:0;margin-left:2px} .e3aim kbd{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.4)}
 kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
 .e3tile[draggable=true]{cursor:grab}
 .e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}
@@ -3693,10 +3745,15 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
     cat.addEventListener('click', e => { if (e.target.closest('[data-q="hide"]')) { try { localStorage.setItem('ondi.catmin', '1'); } catch (x) {} } }, true); }
   const mini = $('#e3catmini'); if (mini) { mini.innerHTML = CIC.shelf + '<span>Catálogo</span> <kbd>Tab</kbd>'; mini.addEventListener('click', () => { try { localStorage.setItem('ondi.catmin', '0'); } catch (x) {} }); }
   try { if (localStorage.getItem('ondi.catmin') === '1') document.documentElement.classList.add('catmin'); } catch (e) {}
-  // teclado: números, Tab, H, R para girar la pieza
+  const tk = document.createElement('div'); tk.id = 'e3tk'; tk.className = 'e3tk glass'; tk.hidden = true; tk.setAttribute('role', 'dialog'); tk.setAttribute('aria-label', 'Crear ticket'); document.body.appendChild(tk);
+  tk.addEventListener('click', e => { const m = e.target.closest('[data-tkm]'); if (m && TKD) { TKD.m = m.dataset.tkm; tk.querySelectorAll('[data-tkm]').forEach(x => x.setAttribute('aria-pressed', String(x === m))); return; } const a = e.target.closest('[data-tk]'); if (!a) return; if (a.dataset.tk === 'x') ticketClose(); if (a.dataset.tk === 'send') ticketSend(); });
+  tk.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ticketClose(); } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ticketSend(); });
+  // teclado: números, Tab, H, F, T, R para girar la pieza
   window.addEventListener('keydown', e => { const t = e.target; if (t.closest && t.closest('input,select,textarea')) return; const k = e.key, kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey || e.altKey;
     if (k === 'Escape' && (LOCK.on || performance.now() - (LOCK.offT || 0) < 350)) { e.preventDefault(); e.stopImmediatePropagation(); if (LOCK.on) document.exitPointerLock(); return; }
     if (!mod && kl === 'h' && WALK.on) { e.preventDefault(); helpSet(!HELP.open); return; }
+    if (!mod && kl === 'f' && canEdit() && !GALV.id) { e.preventDefault(); e.stopImmediatePropagation(); setEdit(!ED.on); hotName(ED.on ? 'Edición prendida · F para volver al paseo' : 'Paseo · F para editar'); return; }
+    if (!mod && kl === 't' && !GALV.id) { const id = LOCK.on ? pickAim(CX(), CY()) : (SEL || pickAim(GHOST.x || CX(), GHOST.y || CY())); if (id) { e.preventDefault(); e.stopImmediatePropagation(); ticketPop(id); } else if (WALK.on) hotName('Apuntá con la mira al equipo y apretá T'); return; }
     if (!canHot() || mod) return;
     if (/^[0-9]$/.test(k)) { e.preventDefault(); e.stopImmediatePropagation(); const i = (+k + 9) % 10; if (HOT.hover && !$('#e3cat').hidden) hotAssign(i, HOT.hover); else selectSlot(i); return; }
     if (k === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); catToggle(); return; }
@@ -3709,7 +3766,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel });
+  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines });
   hotRender(); requestAnimationFrame(gameTick); }
 
 /* ---------- arranque ---------- */
