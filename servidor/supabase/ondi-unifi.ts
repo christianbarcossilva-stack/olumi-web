@@ -88,7 +88,9 @@ Deno.serve(async (req) => {
 
   // ¿qué clave usar?
   const clave = async (scope: string) => {
-    const { data } = await db.from('ondi_secretos').select('scope,value').eq('org_id', org).eq('kind', marca).in('scope', scope ? [scope, ''] : ['']);
+    // ojo: .in('scope', ['']) arma "in.()" y no encuentra la clave de la empresa (scope vacío); se traen todas y se elige acá
+    const { data, error } = await db.from('ondi_secretos').select('scope,value').eq('org_id', org).eq('kind', marca);
+    if (error) throw new Error('No se pudo leer la clave guardada.');
     const row = (data || []).find((r: any) => r.scope === scope) || (data || []).find((r: any) => r.scope === '');
     return row ? row.value as string : null;
   };
