@@ -223,7 +223,7 @@ tr:last-child td{border-bottom:0}
 .pill.info{background:var(--accent-soft);color:var(--accent-ink)} .nb{font-style:normal;display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--crit);color:#fff;font-size:11px;font-weight:700;margin-left:4px}
 .ped{display:grid;gap:8px} .pedh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start} .pedh > div{display:grid;gap:2px} .pedh .muted{font-size:12.5px} .pedt{margin:0;white-space:pre-wrap;font-size:14px}
 .sopo{display:grid;gap:6px;padding:12px;border-radius:12px;background:var(--warn-soft, rgba(192,130,8,.14));margin:10px 0;font-size:13px} .sopo span{color:var(--muted)}
-.brand{min-width:0}.sorg{display:grid;gap:6px}.sorgrow{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}.sorgrow>div{display:grid;gap:2px;min-width:0}.sorgrow select{width:100%;min-width:0}
+.brand{min-width:0}.eqtabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding-bottom:2px}.eqtabs button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;font:600 13.5px var(--f-body);cursor:pointer}.eqtabs button span,.seg button span{opacity:.6;font-weight:500;margin-left:3px}.eqtabs button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}.eqfil{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.seg{display:inline-flex;flex-wrap:wrap;gap:4px}.seg button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 10px;font:500 13px var(--f-body);cursor:pointer}.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}#eqq{flex:1;min-width:180px;max-width:320px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:13.5px var(--f-body)}.sorg{display:grid;gap:6px}.sorgrow{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}.sorgrow>div{display:grid;gap:2px;min-width:0}.sorgrow select{width:100%;min-width:0}
 </style>
 </head>
 <body>
@@ -471,10 +471,10 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=8" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=9" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
-function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; setSave('Guardando…');
+function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
@@ -486,22 +486,41 @@ window.addEventListener('beforeunload', e => { if (/Guardando/.test(S.maqSave)) 
 /* equipos: nube + cargados a mano */
 const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Esperando el agente'] };
 const estPill = e => { const x = EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
+const EQT = { cam: 'Cámaras', sw: 'Switches', ap: 'Wi-Fi', gw: 'Routers y gateways', otro: 'Otros' };
+function eqTipo(d) { if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw', ap: 'ap', router: 'gw' }[d.tipo] || 'otro';
+  const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
+  if (/protect|camera|cámara|camara|bullet|dome|domo|turret|\bg[345]\b|^mv\d|nvr/.test(t)) return 'cam';
+  if (/usw|switch|^ms\d|flex mini|\bus-?\d/.test(t)) return 'sw';
+  if (/udm|uxg|usg|ucg|gateway|dream|^mx\d|router|cloud key/.test(t)) return 'gw';
+  if (/\bu[67]\b|uap|\bap\b|mesh|nanohd|access point|^mr\d|wi-?fi/.test(t)) return 'ap';
+  return 'otro'; }
 function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M = S.man[st.id];
   if (!E) { setTimeout(() => loadEq(st), 0); return '<div class="card empty">Trayendo los equipos…</div>'; }
-  const rows = [...E.list, ...(M || []).map(d => ({ nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))];
-  const on = rows.filter(d => ['online', 'en_linea'].includes(d.estado)).length, off = rows.filter(d => ['offline', 'caido'].includes(d.estado)).length;
+  const loc = new Map(((S.maqExt || {})[st.id] || []).map(x => [x.uid, x]));
+  const all = [...E.list.map(d => ({ ...d, uid: (d.marca || 'unifi') + ':' + (d.mac || d.id) })), ...(M || []).map(d => ({ uid: 'man:' + d.id, tipo: d.tipo, nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))]
+    .map(d => ({ ...d, cat: eqTipo(d), lugar: loc.has(d.uid) ? loc.get(d.uid).lugar : '' }));
   const errs = E.errs.map(x => `<div class="err" style="margin-bottom:8px">${esc(BR[x.k].n)}: ${esc(x.m)}</div>`).join('');
-  if (!rows.length && !errs) return `<div class="card empty"><b>Todavía no hay equipos</b><span>${staff() ? 'Enlazá el cliente con UniFi o Meraki, o cargá equipos a mano, en la pestaña Integraciones.' : 'La instaladora los tiene que cargar.'}</span>${staff() ? '<button class="btn pri" data-tab="integ">Ir a Integraciones</button>' : ''}</div>`;
+  if (!all.length && !errs) return `<div class="card empty"><b>Todavía no hay equipos</b><span>${staff() ? 'Enlazá el cliente con UniFi o Meraki, o cargá equipos a mano, en la pestaña Integraciones.' : 'La instaladora los tiene que cargar.'}</span>${staff() ? '<button class="btn pri" data-tab="integ">Ir a Integraciones</button>' : ''}</div>`;
+  const lugares = [...new Set(all.map(d => d.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), sinU = all.filter(d => !d.lugar).length;
+  let tab = S.eqTab || ''; if (tab && tab !== '__sin' && !lugares.includes(tab)) tab = ''; const f = S.eqF || '', q = (S.eqQ || '').trim().toLowerCase();
+  const inTab = all.filter(d => !tab || (tab === '__sin' ? !d.lugar : d.lugar === tab)), rows = inTab.filter(d => (!f || d.cat === f) && (!q || [d.nombre, d.modelo, d.ip, d.mac].join(' ').toLowerCase().includes(q)));
+  const on = inTab.filter(d => ['online', 'en_linea'].includes(d.estado)).length, off = inTab.filter(d => ['offline', 'caido'].includes(d.estado)).length;
+  const cnt = c => inTab.filter(d => d.cat === c).length, cats = Object.keys(EQT).filter(c => cnt(c));
   sorted(rows);
-  return `${errs}<div class="kpis"><div><b>${rows.length}</b><span>equipos</span></div><div><b style="color:var(--ok)">${on}</b><span>en línea</span></div><div><b style="color:${off ? 'var(--crit)' : 'inherit'}">${off}</b><span>caídos ahora</span></div>
+  const tabsH = `<div class="eqtabs" role="tablist" aria-label="Lugares">${[['', 'Todos', all.length], ...lugares.map(x => [x, x, all.filter(d => d.lugar === x).length]), ...(sinU && lugares.length ? [['__sin', 'Sin ubicar en la maqueta', sinU]] : [])].map(([v, n, c]) => `<button role="tab" aria-selected="${tab === v}" data-eqtab="${esc(v)}">${esc(n)} <span>${c}</span></button>`).join('')}</div>`;
+  const filt = `<div class="eqfil"><span class="seg">${[['', 'Todos', inTab.length], ...cats.map(c => [c, EQT[c], cnt(c)])].map(([v, n, c]) => `<button aria-pressed="${f === v}" data-eqf="${v}">${n} <span>${c}</span></button>`).join('')}</span><input id="eqq" type="search" placeholder="Buscar por nombre, modelo o IP" value="${esc(S.eqQ || '')}" aria-label="Buscar equipo"></div>`;
+  return `${errs}<div class="kpis"><div><b>${inTab.length}</b><span>equipos${tab ? ' en ' + esc(tab === '__sin' ? 'sin ubicar' : tab) : ''}</span></div><div><b style="color:var(--ok)">${on}</b><span>en línea</span></div><div><b style="color:${off ? 'var(--crit)' : 'inherit'}">${off}</b><span>caídos ahora</span></div>
       <div><b>${E.wifi ?? '—'}</b><span>dispositivos conectados${E.wifi != null ? ' (UniFi)' : ''}</span></div></div>
+    ${lugares.length ? tabsH : `<p class="muted" style="font-size:13.5px;margin:0 0 10px">Para ver los equipos por lugar, ponelos en la maqueta: en el editor aparecen en "Equipos del cliente sin ubicar".</p>`}
     <div class="card"><div class="pad" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><h2 style="margin:0">Equipos</h2><span class="acts"><span class="muted" style="font-size:13px">${l.length ? 'Leído ' + ago(E.at) : ''}</span><button class="btn sm" data-do="eqref">${IC.ref}Actualizar</button></span></div>
-    <div class="tscroll"><table><thead><tr><th>Estado</th><th>Nombre</th><th>Modelo</th><th>IP</th><th>Origen</th><th>Firmware</th></tr></thead><tbody>
-    ${rows.map(d => `<tr><td>${estPill(d.estado)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td>${esc(d.origen || '')}</td><td>${esc(d.version || '')}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('')}
+    <div class="pad" style="padding-top:0">${filt}</div>
+    <div class="tscroll"><table><thead><tr><th>Estado</th><th>Nombre</th><th>Tipo</th><th>Lugar</th><th>Modelo</th><th>IP</th><th>Origen</th><th>Firmware</th></tr></thead><tbody>
+    ${rows.map(d => `<tr><td>${estPill(d.estado)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(EQT[d.cat])}</td><td>${d.lugar ? esc(d.lugar) : '<span class="muted">Sin ubicar</span>'}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td>${esc(d.origen || '')}</td><td>${esc(d.version || '')}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No hay equipos con ese filtro.</td></tr>'}
     </tbody></table></div></div>`; }
 function sorted(rows) { const w = d => ['offline', 'caido'].includes(d.estado) ? 0 : ['alerting', 'atencion'].includes(d.estado) ? 1 : 2; rows.sort((a, b) => w(a) - w(b) || String(a.nombre).localeCompare(String(b.nombre), 'es')); }
 async function loadMan(st) { const r = await SB.from('ondi_equipos').select('*').eq('org_id', st.org_id).eq('site_id', st.id).order('nombre'); if (r.error) { if (faltaSQL(r.error)) S.falta11 = true; S.man[st.id] = []; } else S.man[st.id] = r.data || []; return S.man[st.id]; }
 async function loadEq(st) { const l = linksOf(st), out = { list: [], errs: [], wifi: null, at: new Date().toISOString() };
+  SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle().then(r => { const x = r && r.data && r.data.data && r.data.data.ext; S.maqExt = S.maqExt || {}; S.maqExt[st.id] = Array.isArray(x) ? x : []; if (S.site === st && S.tab === 'equipos') render(); }, () => {});
   await Promise.all([loadMan(st), ...l.map(async k => { try { const r = await fn({ accion: 'equipos', site: st.id, marca: k });
       out.list.push(...r.equipos.map(d => ({ ...d, marca: k, origen: BR[k].n.split(' ').pop() + (r.consola && r.consola !== BR[k].n.split(' ').pop() ? ' · ' + r.consola : '') })));
       if (k === 'unifi' && r.sitio && (r.sitio.clientesWifi != null || r.sitio.clientesCable != null)) out.wifi = (r.sitio.clientesWifi || 0) + (r.sitio.clientesCable || 0); } catch (e) { out.errs.push({ k, m: errTxt(e) }); } })]);
@@ -699,6 +718,7 @@ document.addEventListener('submit', async e => { const f = e.target.closest('[da
     if (k === 'join') { await joinCode(v('a_code')); await boot(); }
     if (k === 'solic') { const r = await SB.from('ondi_solicitudes').insert({ email: S.user.email, nombre: v('s_nom'), empresa: v('s_emp'), instaladora: v('s_ins') || null, telefono: v('s_tel') || null, mensaje: v('s_msg') || null }); if (r.error) throw r.error; showAuth('solsent'); }
   } catch (err) { S.msg = errTxt(err); render(); } finally { btn.disabled = false; } });
+document.addEventListener('input', e => { if (e.target.id === 'eqq') { S.eqQ = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#eqq'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} } } });
 document.addEventListener('change', async e => {
   if (e.target.id === 'ctxsel' || e.target.id === 'ctxsel2') { S.ctx = S.ctxs.find(c => c.key === e.target.value) || S.ctx; ls.set('ondi.ctx', S.ctx.key); history.replaceState(null, '', location.pathname); await loadCtx(); }
   if (e.target.dataset.arol) { const st = S.site, r = await SB.rpc('ondi_set_rol', { o: st.org_id, s: st.id, u: e.target.dataset.arol, nuevo: e.target.value }); if (r.error) { toast(errTxt(r.error)); return; } const a = (S.acc.list || []).find(x => x.user_id === e.target.dataset.arol); if (a) a.rol = e.target.value; toast('Permiso cambiado'); return; }
@@ -714,7 +734,7 @@ document.addEventListener('change', async e => {
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej]'); if (!t || S.auth) return;
   if (t.dataset.pf) { S.pf = t.dataset.pf; render(); return; } if (t.dataset.stab) { S.stab = t.dataset.stab; render(); return; }
   try { if (t.dataset.sin || t.dataset.sout) { const o = t.dataset.sin || t.dataset.sout, r = await SB.rpc('ondi_super_soporte', { o, entrar: !!t.dataset.sin }); if (r.error) throw r.error; if (t.dataset.sin) { ls.set('ondi.ctx', 'org:' + o); toast('Entraste en modo soporte por 2 horas'); await boot(); } else { S.sp = null; await boot(); S.view = 'super'; render(); } return; }
     if (t.dataset.sgo) { ls.set('ondi.ctx', 'org:' + t.dataset.sgo); await boot(); return; }
@@ -733,6 +753,8 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (t.dataset.buscar) { const k = t.dataset.buscar, propia = (S.link[k] || {}).propia ?? !!((st.data || {})[k] || {}).propia; S.sitiosUI[k] = 'cargando'; render();
       try { S.sitiosUI[k] = await fn({ accion: 'sitios', alcance: propia ? st.id : '', marca: k }); } catch (er) { S.sitiosUI[k] = { error: errTxt(er) }; } render(); return; }
     if (t.dataset.unlink) { const k = t.dataset.unlink, d = { ...(st.data || {}) }; delete d[k]; delete d.resumen; const r = await SB.from('ondi_sites').update({ data: d }).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); delete S.eq[st.id]; toast('Desenlazado'); render(); return; }
+    if (t.dataset.eqtab !== undefined) { S.eqTab = t.dataset.eqtab; S.eqF = ''; render(); return; }
+    if (t.dataset.eqf !== undefined) { S.eqF = t.dataset.eqf; render(); return; }
     if (t.dataset.sorgref) { delete S.sitiosOrg[t.dataset.sorgref]; render(); return; }
     if (t.dataset.probar) { const k = t.dataset.probar; S.test[k] = 'cargando'; render(); try { S.test[k] = await fn({ accion: 'probar', alcance: '', marca: k }); } catch (er) { S.test[k] = { error: errTxt(er) }; } render(); return; }
     if (t.dataset.delkey) { const k = t.dataset.delkey; if (!arm('del:' + k)) return; const r = await SB.rpc(k === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', k === 'unifi' ? { o: orgId(), alcance: '', clave: '' } : { o: orgId(), alcance: '', marca: k, clave: '' }); if (r.error) throw r.error; S.test[k] = null; toast('Clave borrada'); await loadClaves(); return; }

@@ -3561,9 +3561,12 @@ function catToggle(force) { const el = $('#e3cat'); if (!el || !ED.on) return; c
 
 /* el mouse tomado: mirar como en un juego de disparos, la acción va a la mira */
 const LOCK = { on: false, fail: false, req: '', carry: null, mv: 0, aimT: 0, ghT: 0 };
+// mira libre: cuando el navegador no deja tomar el mouse (por ejemplo, adentro de otra página), se mira moviendo el mouse sin apretar y se gira más acercándolo al borde
+const FREE = { on: false, in: false, x: 0, y: 0 };
+const AIM = () => LOCK.on || FREE.on;
 function lockReq(why) { if (LOCK.fail || LOCK.on || !canvas.requestPointerLock || !matchMedia('(pointer:fine)').matches) return false; LOCK.req = why;
-  try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => { if (why === 'click') lockFail(); }); } catch (e) { if (why === 'click') lockFail(); return false; } return true; }
-function lockFail() { if (LOCK.fail) return; if (LOCK.ok) { hotName('Hacé clic de nuevo para tomar el mouse'); return; } LOCK.fail = true; toast('Acá no se puede tomar el mouse: arrastrá para mirar'); helpRender(); }
+  try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(er => { if (why === 'click' || (er && /Security|NotSupported|WrongDocument/.test(er.name))) lockFail(); }); } catch (e) { if (why === 'click' || /Security|NotSupported/.test(e && e.name)) lockFail(); return false; } return true; }
+function lockFail() { if (LOCK.fail) return; if (LOCK.ok) { hotName('Hacé clic de nuevo para tomar el mouse'); return; } LOCK.fail = true; hotName('Mové el mouse para mirar · acercalo al borde para girar'); cursorRule(); helpRender(); }
 document.addEventListener('pointerlockchange', () => { const was = LOCK.on; LOCK.on = document.pointerLockElement === canvas; if (LOCK.on) LOCK.ok = true; if (was && !LOCK.on) LOCK.offT = performance.now(); document.documentElement.classList.toggle('locked', LOCK.on);
   if (!LOCK.on) { carryEnd(true); aimShow(''); if (ED.on && isDevTool(ED.tool)) ghostHide(); }
   if (LOCK.on && !was) hotName(ED.on && canEdit() ? 'Mouse tomado · Esc lo suelta' : 'Mové el mouse para mirar · Esc lo suelta'); walkHud(); });
@@ -3603,7 +3606,7 @@ function carryEnd(cancel) { const C2 = LOCK.carry; LOCK.carry = null; if (!C2) r
   if (C2.k === 'dev') markMoved(C2.d); edSave(); recChange(C2.d, C2.before, C2.d.id + ' movido'); hotName(C2.d.id + ' movido'); }
 function aimShow(t, cls) { const el = $('#e3aim'); if (!el) return; el.hidden = !t; if (t) { el.innerHTML = t; el.className = 'e3aim ' + (cls || ''); } }
 const DEVN = { cam: 'Cámara', ap: 'Wi-Fi', gab: 'Gabinete', wr: 'Rack', rack: 'Rack', rd: 'Lector de acceso' };
-function aimText() { if (!WALK.on || !LOCK.on) return aimShow(''); if (LOCK.carry && LOCK.carry.moved) return aimShow('Soltá para dejarlo · ' + escH(LOCK.carry.id));
+function aimText() { if (!WALK.on || !AIM()) return aimShow(''); if (LOCK.carry && LOCK.carry.moved) return aimShow('Soltá para dejarlo · ' + escH(LOCK.carry.id));
   const ed = ED.on && canEdit(), t = ED.tool; if (ed && t !== 'sel' && t !== 'del') return aimShow('');
   const id = pickAim(CX(), CY()); if (!id) return aimShow(''); const e = entity(id); if (!e || e.t === 'nave' || e.t === 'truck' || e.t === 'fork' || e.t === 'fiber') return aimShow('');
   const d = e.d, nm = d ? (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' <b>' + escH(d.id) + '</b>' : e.t === 'prop' ? escH(e.P.name || (PK[e.P.k] || {}).n || e.P.id) : e.t === 'plbl' ? escH(e.L.text) : e.t === 'item' ? escH(e.R.o.name || (e.R.k === 'wl' ? WK[e.R.o.k].n : e.R.k === 'tr' ? TK[e.R.o.k].n : e.R.o.id)) : escH(id);
@@ -3612,8 +3615,9 @@ function aimText() { if (!WALK.on || !LOCK.on) return aimShow(''); if (LOCK.carr
   if (ed) return aimShow(nm + ' · clic: opciones · mantené: mover' + (e.t === 'item' && e.R.k === 'wl' ? ' (desde la punta: estirar)' : '') + tk);
   if (d && d.type === 'cam') return aimShow(nm + ' · clic para ver la cámara' + tk, 'cam'); if (d && SENS[d.type]) return aimShow(nm + ' · clic para ver los datos' + tk); aimShow(nm + tk); }
 function gameTick() { requestAnimationFrame(gameTick); if (!WALK.on) return; const now = performance.now();
-  if (LOCK.on && LOCK.carry) carryStep();
-  if (LOCK.on && ED.on && canEdit() && !LOCK.carry && now - LOCK.ghT > 33) { LOCK.ghT = now; GHOST.x = CX(); GHOST.y = CY(); ghostMove(cev()); }
+  if (FREE.on && FREE.in) { const ex = FREE.x / W, ey = FREE.y / H, m = 0.07, sp = 1.8 * 0.016; if (ex < m) WALK.yaw += sp * (m - ex) / m; else if (ex > 1 - m) WALK.yaw -= sp * (ex - 1 + m) / m; if (ey < m) WALK.pitch = clamp(WALK.pitch + sp * 0.6 * (m - ey) / m, -1.45, 1.45); else if (ey > 1 - m) WALK.pitch = clamp(WALK.pitch - sp * 0.6 * (ey - 1 + m) / m, -1.45, 1.45); }
+  if (AIM() && LOCK.carry) carryStep();
+  if (AIM() && ED.on && canEdit() && !LOCK.carry && now - LOCK.ghT > 33) { LOCK.ghT = now; GHOST.x = CX(); GHOST.y = CY(); ghostMove(cev()); }
   if (now - LOCK.aimT > 120) { LOCK.aimT = now; aimText(); cursorRule(); } }
 
 /* caminar: volar solo en edición, ayuda que se achica */
@@ -3625,7 +3629,7 @@ const HELP = { open: (() => { try { return localStorage.getItem('ondi.help') !==
 function helpSet(on) { HELP.open = on; try { localStorage.setItem('ondi.help', on ? '1' : '0'); } catch (e) {} helpRender(); walkHud(); }
 const kb = s => s.split(' ').map(k => `<kbd>${k}</kbd>`).join(' ');
 function helpRender() { const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
-  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir'], [kb('Alt'), 'Mantenelo para usar el mouse un momento'], ['Menús', 'Al abrir uno aparece el mouse; al cerrarlo vuelve la mira'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
+  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Mirar moviéndolo (sin apretar) · al borde gira más' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), LOCK.fail ? 'Salir del paseo' : 'Soltar el mouse · otra vez para salir'], [kb('Alt'), 'Mantenelo para usar el mouse un momento'], ['Menús', 'Al abrir uno aparece el mouse; al cerrarlo vuelve la mira'], [kb('T'), 'Ticket de lo que apuntás (no anda, moverlo, cambiarlo)']];
   if (canEdit()) rows.push([kb('F'), ed ? 'Apagar la edición' : 'Prender la edición']);
   if (!ed) rows.push(['Clic', 'En una cámara, ves lo que ve · en un sensor, sus datos']);
   else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], [kb('1') + ' Mano', 'Clic: opciones de lo que apuntás · mantené: moverlo'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
@@ -3716,7 +3720,8 @@ e3Action = (o => function (a, val) { if (a !== 'wlen' && a !== 'wrot') return o(
 const ALT = { on: false };
 const vis = s => { const el = document.querySelector(s); return !!el && !el.hidden; };
 function uiOpen() { return !panel.hidden || vis('#camview') || !CTX.hidden || !POP.hidden || vis('#e3tk') || !!GALV.id || vis('#cabview') || (ED.on && canEdit() && vis('#e3cat')) || ALT.on; }
-function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); if (!WALK.on || LOCK.fail || !matchMedia('(pointer:fine)').matches) { $('#e3resume') && ($('#e3resume').hidden = true); return; } const U = uiOpen();
+function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); const fine = matchMedia('(pointer:fine)').matches, F = WALK.on && LOCK.fail && fine && !uiOpen(); if (F !== FREE.on) { FREE.on = F; document.documentElement.classList.toggle('freeaim', F); if (!F) carryEnd(true); }
+  if (!WALK.on || LOCK.fail || !fine) { $('#e3resume') && ($('#e3resume').hidden = true); return; } const U = uiOpen();
   if (U && LOCK.on) { LOCK.byUI = true; document.exitPointerLock(); } else if (!U && !LOCK.on && LOCK.byUI && performance.now() - (LOCK.tryT || 0) > 400) { LOCK.tryT = performance.now(); LOCK.byUI = false; lockReq('auto'); }
   const r = $('#e3resume'); if (r) r.hidden = LOCK.on || U || LOCK.byUI; }
 /* equipos reales del cliente (UniFi, Meraki o cargados a mano): se ponen en la maqueta y muestran su estado en vivo */
@@ -3768,6 +3773,7 @@ edAction = (o => function (a, val) { if (a !== 'extlink') return o(a, val); cons
   devObj(d); devTag(d); edSave(); recChange(d, before, d.id + ' enlazado con ' + x.nombre); extCat(); renderPanel(true); hotName(d.id + ' enlazado con ' + x.nombre); })(edAction);
 edAction = (o => function (a, val) { if (a === 'extoff') { const d = SEL && DEV.find(q => q.id === SEL); if (d && !d.custom && ED.moved[d.id]) { delete ED.moved[d.id].ext; delete ED.moved[d.id].name; } } return o(a, val); })(edAction);
 typePop = (o => function (d, ...a) { if (d && d.ext) return; return o(d, ...a); })(typePop);
+edState = (o => function () { const st = o(); st.ext = DEV.filter(d => d.ext).map(d => { const N = d.nave && naveById(d.nave); return { uid: d.ext.uid, id: d.id, nombre: d.name || d.id, lugar: N ? N.full : ((d.loc || '').split(' · ')[0] || 'Predio'), nave: d.nave || '' }; }); return st; })(edState);
 function extInit() { extLoad(true); setInterval(() => extLoad(false), 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) extLoad(false); }); }
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
@@ -3785,7 +3791,7 @@ function initGame() {
 html.walking .e3cross{width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:0;background:none;box-shadow:none}
 html.walking .e3cross::before,html.walking .e3cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 html.walking .e3cross::before{left:8px;top:0;width:2px;height:18px} html.walking .e3cross::after{top:8px;left:0;height:2px;width:18px}
-html.locked canvas{cursor:none}
+html.locked canvas,html.freeaim canvas{cursor:none!important}
 html.walking.hotbar #editbar{display:none!important}
 html.hotbar.walking .e3walk{bottom:calc(var(--gb) + 70px)} html.hotbar.walking .e3cat{bottom:calc(var(--gb) + 126px)} html.hotbar.walking .e3help{bottom:calc(var(--gb) + 124px)}
 html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
@@ -3847,17 +3853,19 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
     if (k === 'Escape' && (LOCK.on || performance.now() - (LOCK.offT || 0) < 350)) { e.preventDefault(); e.stopImmediatePropagation(); if (LOCK.on) document.exitPointerLock(); return; }
     if (!mod && kl === 'h' && WALK.on) { e.preventDefault(); helpSet(!HELP.open); return; }
     if (!mod && kl === 'f' && canEdit() && !GALV.id) { e.preventDefault(); e.stopImmediatePropagation(); setEdit(!ED.on); hotName(ED.on ? 'Edición prendida · F para volver al paseo' : 'Paseo · F para editar'); return; }
-    if (!mod && kl === 't' && !GALV.id) { const id = LOCK.on ? pickAim(CX(), CY()) : (SEL || pickAim(GHOST.x || CX(), GHOST.y || CY())); if (id) { e.preventDefault(); e.stopImmediatePropagation(); ticketPop(id); } else if (WALK.on) hotName('Apuntá con la mira al equipo y apretá T'); return; }
+    if (!mod && kl === 't' && !GALV.id) { const id = AIM() ? pickAim(CX(), CY()) : (SEL || pickAim(GHOST.x || CX(), GHOST.y || CY())); if (id) { e.preventDefault(); e.stopImmediatePropagation(); ticketPop(id); } else if (WALK.on) hotName('Apuntá con la mira al equipo y apretá T'); return; }
     if (!canHot() || mod) return;
     if (/^[0-9]$/.test(k)) { e.preventDefault(); e.stopImmediatePropagation(); const i = (+k + 9) % 10; if (HOT.hover && !$('#e3cat').hidden) hotAssign(i, HOT.hover); else selectSlot(i); return; }
     if (k === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); catToggle(); return; }
     if (kl === 'r' && ED.tool === 'prop' && (BK[ED.propk] || (FK[ED.propk] && !FK[ED.propk].wall))) { e.preventDefault(); e.stopImmediatePropagation(); ROT.off += (e.shiftKey ? -1 : 1) * Math.PI / 2; GHOST.key = ''; if (GHOST.d) GHOST.d.yaw = undefined; if (!LOCK.on) ghostMove({ clientX: GHOST.x, clientY: GHOST.y }); hotName('Girado'); } }, true);
   // mouse tomado: todo va a la mira
-  window.addEventListener('pointerdown', e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
+  window.addEventListener('pointerdown', e => { if (FREE.on && e.target === canvas && e.pointerType === 'mouse') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
+    if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
     if (WALK.on && !uiOpen() && e.target === canvas && e.button === 0 && e.pointerType === 'mouse' && !LOCK.fail && matchMedia('(pointer:fine)').matches) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); ctxClose(); popClose(); lockReq('click'); } }, true);
-  window.addEventListener('pointerup', e => { if (!LOCK.on) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.button === 0) carryEnd(false); }, true);
-  window.addEventListener('pointermove', e => { if (!LOCK.on) return; e.stopPropagation(); e.stopImmediatePropagation(); lookMove(e.movementX || 0, e.movementY || 0); }, true);
-  for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
+  window.addEventListener('pointerup', e => { if (FREE.on && LOCK.carry && e.button === 0) { e.stopPropagation(); e.stopImmediatePropagation(); carryEnd(false); return; } if (!LOCK.on) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.button === 0) carryEnd(false); }, true);
+  window.addEventListener('pointermove', e => { if (FREE.on && e.pointerType === 'mouse') { const onC = e.target === canvas; FREE.in = onC; FREE.x = e.clientX; FREE.y = e.clientY; if (onC) { e.stopPropagation(); e.stopImmediatePropagation(); if (FREE.prime) lookMove(e.movementX || 0, e.movementY || 0); FREE.prime = true; } else FREE.prime = false; return; }
+    if (!LOCK.on) return; e.stopPropagation(); e.stopImmediatePropagation(); lookMove(e.movementX || 0, e.movementY || 0); }, true);
+  for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
   if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel });
