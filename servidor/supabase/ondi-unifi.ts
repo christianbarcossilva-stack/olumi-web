@@ -1,4 +1,5 @@
-// Ondi · conexión con UniFi (Site Manager API de Ubiquiti, https://api.ui.com).
+// Ondi · conexión con las nubes de las marcas: UniFi (Site Manager API, https://api.ui.com) y Cisco Meraki (Dashboard API, https://api.meraki.com).
+// Todas las acciones aceptan marca: 'unifi' (si no se manda) o 'meraki'.
 // La app nunca ve la clave: la guarda ondi_set_unifi() en la tabla ondi_secretos y solo esta función la lee, del lado del servidor.
 // Acciones (POST JSON):
 //   { accion: 'probar', org, alcance? }   → prueba la clave guardada ('' = la de la empresa, o el id de un cliente)
@@ -36,6 +37,25 @@ async function ui(key: string, path: string, query = '') {
   return (last.body && last.body.data) || [];
 }
 
+// Meraki: Dashboard API v1 con la clave en X-Cisco-Meraki-API-Key.
+const MK = 'https://api.meraki.com/api/v1';
+async function mk(key: string, path: string) {
+  const r = await fetch(MK + path, { headers: { 'X-Cisco-Meraki-API-Key': key, Accept: 'application/json' } }).catch(() => null);
+  if (!r) throw new Error('unifi_sin_conexion');
+  if (r.status === 401 || r.status === 403) throw new Error('clave_rechazada');
+  if (r.status === 429) throw new Error('muchos_pedidos');
+  if (!r.ok) throw new Error('unifi_' + r.status);
+  return await r.json().catch(() => []);
+}
+async function mkSitios(key: string) {
+  const orgs = await mk(key, '/organizations'); const out: any[] = [];
+  for (const o of orgs.slice(0, 20)) { const nets = await mk(key, `/organizations/${o.id}/networks?perPage=1000`).catch(() => []);
+    for (const n of nets) out.push({ siteId: n.id, hostId: o.id, nombre: `${o.name} · ${n.name}`, zona: n.timeZone || '', equipos: null, caidos: null, isp: (n.productTypes || []).join(', ') }); }
+  return { orgs: orgs.length, sitios: out };
+}
+const mkDev = (d: any) => ({ id: d.serial, nombre: d.name || d.model || d.serial, modelo: d.model || '', linea: d.productType || '', mac: d.mac || '', ip: d.lanIp || d.publicIp || '',
+  estado: d.status === 'online' ? 'online' : d.status === 'offline' ? 'offline' : d.status || '', version: '', firmware: '', actualizar: null, consola: d.productType === 'appliance', desde: d.lastReportedAt || null });
+
 const siteOut = (s: any) => ({
   siteId: s.siteId, hostId: s.hostId,
   nombre: (s.meta && (s.meta.desc || s.meta.name)) || s.siteId,
@@ -58,7 +78,8 @@ Deno.serve(async (req) => {
   const userDb = createClient(url, ANON_KEY, { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } });
   const { data: { user } } = await userDb.auth.getUser();
   if (!user) return json({ error: 'Iniciá sesión de nuevo.' }, 401);
-  const { accion, org, alcance, site } = await req.json().catch(() => ({}));
+  const { accion, org, alcance, site, marca: mq } = await req.json().catch(() => ({}));
+  const marca = mq === 'meraki' ? 'meraki' : 'unifi';
   if (!org || !/^[0-9a-f-]{36}$/i.test(String(org))) return json({ error: 'Falta la empresa.' }, 400);
 
   const db = createClient(url, SERVICE_KEY);
@@ -67,7 +88,7 @@ Deno.serve(async (req) => {
 
   // ¿qué clave usar?
   const clave = async (scope: string) => {
-    const { data } = await db.from('ondi_secretos').select('scope,value').eq('org_id', org).eq('kind', 'unifi').in('scope', scope ? [scope, ''] : ['']);
+    const { data } = await db.from('ondi_secretos').select('scope,value').eq('org_id', org).eq('kind', marca).in('scope', scope ? [scope, ''] : ['']);
     const row = (data || []).find((r: any) => r.scope === scope) || (data || []).find((r: any) => r.scope === '');
     return row ? row.value as string : null;
   };
@@ -77,7 +98,8 @@ Deno.serve(async (req) => {
       if (!staff) return json({ error: 'No tenés permiso en esta empresa.' }, 403);
       const sc = String(alcance || '');
       const k = await clave(sc);
-      if (!k) return json({ error: 'Todavía no se cargó la clave de UniFi.' }, 400);
+      if (!k) return json({ error: marca === 'meraki' ? 'Todavía no se cargó la clave de Meraki.' : 'Todavía no se cargó la clave de UniFi.' }, 400);
+      if (marca === 'meraki') { const r = await mkSitios(k); return accion === 'probar' ? json({ ok: true, consolas: r.orgs, sitios: r.sitios.length }) : json({ ok: true, sitios: r.sitios }); }
       if (accion === 'probar') {
         const hosts = await ui(k, 'hosts');
         const sites = await ui(k, 'sites');
@@ -95,10 +117,12 @@ Deno.serve(async (req) => {
         const { data: acc } = await db.from('ondi_accesos').select('user_id').eq('org_id', org).eq('site_id', sid).eq('user_id', user.id).maybeSingle();
         if (!acc) return json({ error: 'No tenés acceso a este cliente.' }, 403);
       }
-      const link = (s.data && s.data.unifi) || null;
-      if (!link || !link.hostId) return json({ error: 'Este cliente todavía no está enlazado con UniFi.' }, 400);
+      const link = (s.data && s.data[marca]) || null;
+      if (!link || !link.hostId) return json({ error: marca === 'meraki' ? 'Este cliente todavía no está enlazado con Meraki.' : 'Este cliente todavía no está enlazado con UniFi.' }, 400);
       const k = await clave(link.propia ? sid : '');
-      if (!k) return json({ error: 'Falta la clave de UniFi.' }, 400);
+      if (!k) return json({ error: marca === 'meraki' ? 'Falta la clave de Meraki.' : 'Falta la clave de UniFi.' }, 400);
+      if (marca === 'meraki') { const devs = await mk(k, `/organizations/${link.hostId}/devices/statuses?perPage=1000&networkIds[]=${encodeURIComponent(link.siteId)}`);
+        return json({ ok: true, consola: link.nombre || 'Meraki', actualizado: new Date().toISOString(), sitio: null, equipos: devs.map(mkDev) }); }
       const [groups, sites] = await Promise.all([ui(k, 'devices', '?hostIds[]=' + encodeURIComponent(link.hostId)), ui(k, 'sites')]);
       const g = groups.find((x: any) => x.hostId === link.hostId) || groups[0] || { devices: [] };
       const st = sites.find((x: any) => x.siteId === link.siteId) || sites.find((x: any) => x.hostId === link.hostId) || null;
@@ -108,7 +132,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     const m = String((e as Error).message || e);
     const txt: Record<string, string> = {
-      clave_rechazada: 'UniFi rechazó la clave. Revisá que esté bien copiada y que no la hayan borrado en unifi.ui.com.',
+      clave_rechazada: marca === 'meraki' ? 'Meraki rechazó la clave. Revisá que esté bien copiada y que tenga acceso a la organización.' : 'UniFi rechazó la clave. Revisá que esté bien copiada y que no la hayan borrado en unifi.ui.com.',
       muchos_pedidos: 'UniFi pidió esperar un poco: probá de nuevo en un minuto.',
     };
     console.error('ondi-unifi', accion, m);

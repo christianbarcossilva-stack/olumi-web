@@ -188,6 +188,38 @@ tr:last-child td{border-bottom:0}
   .maq{height:calc(100vh - 260px);min-height:380px}
 }
 @media (min-width:861px){.mnav{display:none}}
+/* panel, ajustes, marcas y alta de clientes */
+.stabs{display:flex;gap:4px;flex-wrap:wrap}
+.stabs button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:7px 14px;font-weight:500;font-size:14px;color:var(--muted)}
+.stabs button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.brands{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.brand{display:grid;gap:10px;align-content:start}
+.brand header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.brand h3{margin:0;font-size:16px}
+.brand p{margin:0;font-size:13.5px;color:var(--muted)}
+.brand .via{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mark{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;flex:none}
+.bhead{display:flex;gap:12px;align-items:center}
+.modal{position:fixed;inset:0;background:rgba(10,14,18,.55);display:grid;place-items:center;z-index:70;padding:16px}
+.modal > div{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px;display:grid;gap:14px}
+.modal h2{font-family:var(--f-display);margin:0;font-size:22px}
+.bases{display:grid;gap:8px}
+.bases label{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 10px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.bases label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.bases input{margin-top:3px;accent-color:var(--accent)}
+.bases b{font-size:15px} .bases small{grid-column:2;color:var(--muted);font-size:13px}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px}
+.chk input{accent-color:var(--accent);width:16px;height:16px}
+.clrow{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,.7fr)) auto;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);text-align:left;width:100%;background:none;border-left:0;border-right:0;border-bottom:0}
+.clrow:first-child{border-top:0}
+.clrow:hover{background:var(--sunken)}
+.clrow .n{display:grid;gap:2px;min-width:0} .clrow .n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clrow .n span{font-size:12.5px;color:var(--muted)}
+.clrow .v{font-variant-numeric:tabular-nums;font-size:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.form2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.form2 .full{grid-column:1/-1}
+@media (max-width:860px){.clrow{grid-template-columns:minmax(0,1fr) auto}.clrow .v{display:none}.form2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -205,27 +237,47 @@ const HERE = location.origin + location.pathname;
 const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const ROLN = { owner: 'Dueño', admin: 'Administrador', encargado: 'Encargado', tecnico: 'Técnico', ventas: 'Ventas', administracion: 'Administración', subcontratista: 'Subcontratista', viewer: 'Solo lectura' };
 const IC = {
+  panel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
   sites: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg>',
-  plug: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5"/></svg>',
+  cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
   back: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   ref: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
 };
+// marcas: las de nube se conectan con una clave; las demás, con el agente Ondi en la red del cliente
+const BRANDS = [
+  { k: 'unifi', n: 'Ubiquiti UniFi', c: '#1F6FEB', ab: 'UI', via: 'Nube', ready: true, what: 'Switches, Wi-Fi, gateways y consolas.', how: 'Clave de API de unifi.ui.com (Site Manager).',
+    steps: ['Entrá a <b>unifi.ui.com</b> con la cuenta que administra a tus clientes.', 'Abrí <b>API</b> (abajo a la izquierda) y tocá <b>Create API Key</b>.', 'Copiala (UniFi la muestra una sola vez), pegala acá y tocá <b>Guardar</b>.'] },
+  { k: 'meraki', n: 'Cisco Meraki', c: '#5B9F3A', ab: 'MK', via: 'Nube', ready: true, what: 'Switches, Wi-Fi, firewalls y cámaras MV.', how: 'Clave de API del Dashboard de Meraki.',
+    steps: ['Entrá a <b>dashboard.meraki.com</b>.', 'En <b>Organización → API y webhooks</b> activá el acceso por API.', 'En <b>Mi perfil → Claves de API</b> generá una, pegala acá y tocá <b>Guardar</b>.'] },
+  { k: 'tplink', n: 'TP-Link Omada y VIGI', c: '#2BA6A0', ab: 'TP', via: 'Nube o agente', what: 'Switches, Wi-Fi, routers y cámaras VIGI.', how: 'Omada Cloud (Open API) o el agente en la red local.' },
+  { k: 'mikrotik', n: 'MikroTik', c: '#293239', ab: 'MT', via: 'Agente', what: 'Routers, switches y enlaces.', how: 'API REST de RouterOS 7, desde el agente.' },
+  { k: 'cisco', n: 'Cisco Catalyst y Business', c: '#049FD9', ab: 'CS', via: 'Agente', what: 'Switches y routers.', how: 'SNMP v2c o v3, desde el agente.' },
+  { k: 'hikvision', n: 'Hikvision', c: '#D7262B', ab: 'HK', via: 'Agente', what: 'Cámaras, NVR y control de acceso.', how: 'ISAPI en la red local, desde el agente.' },
+  { k: 'dahua', n: 'Dahua', c: '#C8102E', ab: 'DH', via: 'Agente', what: 'Cámaras, NVR y control de acceso.', how: 'API HTTP de Dahua y ONVIF, desde el agente.' },
+  { k: 'intelbras', n: 'Intelbras', c: '#00A859', ab: 'IB', via: 'Agente', what: 'Cámaras, NVR, control de acceso y switches.', how: 'API HTTP (la misma base que Dahua) y ONVIF, desde el agente.' },
+  { k: 'honeywell', n: 'Honeywell', c: '#E4002B', ab: 'HW', via: 'Agente', what: 'Cámaras, NVR y control de acceso.', how: 'ONVIF y SNMP, desde el agente.' }
+];
+const BR = Object.fromEntries(BRANDS.map(b => [b.k, b]));
+const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
+const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', otro: 'Otro' };
+const BASES = { vacia: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos.'], plano: ['Desde un plano o una foto', 'Subís un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'El parque logístico completo de la demo, para mostrar cómo queda.'] };
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
-let toastT; const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); };
+let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
 const fmtD = d => d ? new Date(d).toLocaleString('es-UY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const ago = d => { if (!d) return ''; const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 1 ? 'recién' : m < 60 ? 'hace ' + m + ' min' : m < 1440 ? 'hace ' + Math.round(m / 60) + ' h' : fmtD(d); };
+const nfmt = n => n == null ? '—' : Number(n).toLocaleString('es-UY');
 
 /* ---------- estado ---------- */
-const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'clientes', tab: 'maqueta', claves: null, auth: 'login', msg: '', info: '', falta: false,
-  unifi: {}, sitiosUI: null, acc: null, code: undefined, eq: {}, maqSave: '', armed: null };
+const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'panel', tab: 'maqueta', atab: 'empresa', claves: null, auth: 'login', msg: '', info: '', falta: '',
+  link: {}, sitiosUI: {}, acc: null, code: undefined, eq: {}, man: {}, maqSave: '', armed: null, test: {}, org: null, team: null, ajustes: null, modal: null, manForm: null };
 const CODE = (new URLSearchParams(location.search).get('codigo') || '').toUpperCase();
 const staff = () => S.ctx && S.ctx.kind === 'org';
 const editor = () => staff() && ['owner', 'admin', 'encargado', 'tecnico'].includes(S.ctx.role);
 const admin = () => staff() && ['owner', 'admin'].includes(S.ctx.role);
 const orgId = () => S.ctx && S.ctx.org;
-const faltaSQL = e => e && /ondi_|relation .* does not exist|Could not find the (function|table)|schema cache/i.test(e.message || '') ;
+const faltaSQL = e => e && /ondi_|relation .* does not exist|Could not find the (function|table)|schema cache/i.test(e.message || '');
 function errTxt(e) { const m = (e && (e.message || e.error)) || String(e || '');
   if (/Invalid login/i.test(m)) return 'Email o contraseña incorrectos.';
   if (/already registered|already exists/i.test(m)) return 'Ese email ya tiene cuenta: entrá con tu contraseña.';
@@ -233,11 +285,11 @@ function errTxt(e) { const m = (e && (e.message || e.error)) || String(e || '');
   if (/Password should|at least 6/i.test(m)) return 'La contraseña tiene que tener al menos 6 caracteres.';
   if (/codigo_invalido/.test(m)) return 'Ese código no existe. Revisalo con quien te lo pasó.';
   if (/demasiados_intentos/.test(m)) return 'Demasiados intentos con códigos. Esperá una hora.';
-  if (/sin_permiso/.test(m)) return 'No tenés permiso para hacer eso en esta empresa.';
-  if (/clave_invalida/.test(m)) return 'Esa clave no parece una clave de UniFi. Copiala de nuevo.';
+  if (/sin_permiso|row-level security/.test(m)) return 'No tenés permiso para hacer eso en esta empresa.';
+  if (/clave_invalida/.test(m)) return 'Esa clave no parece válida. Copiala de nuevo.';
   if (/rate limit/i.test(m)) return 'Se mandaron demasiados emails. Probá en una hora.';
   if (/fetch|network|Failed to send/i.test(m)) return 'Sin conexión con el servidor. Revisá internet y probá de nuevo.';
-  if (faltaSQL(e)) return 'Falta preparar la base de Ondi (correr ondi-1.0.sql en Supabase).';
+  if (faltaSQL(e)) return 'Falta preparar la base de Ondi en Supabase.';
   return m || 'Algo salió mal. Probá de nuevo.'; }
 
 /* ---------- entrada ---------- */
@@ -268,20 +320,6 @@ function authView() {
   return `<div class="auth"><div class="authcard">${logo()}${b}</div></div>`;
 }
 function showAuth(mode, msg) { S.auth = mode; S.msg = msg || ''; render(); }
-document.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; const k = a.dataset.a;
-  if (k === 'logout') return logout(); S.info = ''; showAuth(k); const f = $('#root input'); if (f) f.focus(); });
-document.addEventListener('submit', async e => { const f = e.target.closest('[data-f]'); if (!f) return; e.preventDefault(); const btn = f.querySelector('[type=submit]'); btn.disabled = true; S.msg = '';
-  const v = id => (($('#' + id) || {}).value || '').trim();
-  try { const k = f.dataset.f;
-    if (k === 'login') { const { error } = await SB.auth.signInWithPassword({ email: v('a_email'), password: $('#a_pass').value }); if (error) throw error; await boot(); }
-    if (k === 'signup') { const { data, error } = await SB.auth.signUp({ email: v('a_email'), password: $('#a_pass').value, options: { data: { name: v('a_name') }, emailRedirectTo: HERE + (CODE ? '?codigo=' + encodeURIComponent(CODE) : '') } }); if (error) throw error;
-      if (data.user && Array.isArray(data.user.identities) && !data.user.identities.length) { S.info = 'Ese email ya tiene cuenta: entrá con tu contraseña o usá "Olvidé mi contraseña".'; return showAuth('login'); }
-      if (!data.session) return showAuth('check'); await boot(); }
-    if (k === 'forgot') { const { error } = await SB.auth.resetPasswordForEmail(v('a_email'), { redirectTo: HERE }); if (error) throw error; showAuth('sent'); }
-    if (k === 'setpass') { const { error } = await SB.auth.updateUser({ password: $('#a_pass').value }); if (error) throw error; history.replaceState(null, '', location.pathname + location.search); S.auth = 'login'; await boot(); }
-    if (k === 'neworg') { const r = await SB.rpc('create_org', { org_name: v('a_org'), my_name: myName() }); if (r.error) throw r.error; ls.set('ondi.ctx', 'org:' + r.data); await boot(); }
-    if (k === 'join') { await joinCode(v('a_code')); await boot(); }
-  } catch (err) { S.msg = errTxt(err); render(); } finally { btn.disabled = false; } });
 const myName = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || (S.user && S.user.email) || '';
 async function joinCode(raw) { const c = raw.toUpperCase().replace(/\s/g, '');
   if (/^[A-Z0-9]{4}-?[A-Z0-9]{4}$/.test(c)) { const r = await SB.rpc('ondi_join', { code: c, my_name: myName() }); if (r.error && !/codigo_invalido/.test(r.error.message)) throw r.error;
@@ -299,26 +337,26 @@ async function boot() {
   if (CODE && !ls.get('ondi.used.' + CODE)) { try { await joinCode(CODE); ls.set('ondi.used.' + CODE, '1'); toast('Listo: te sumamos con el código ' + CODE); } catch (e) { S.msg = errTxt(e); } history.replaceState(null, '', location.pathname); }
   const [mems, accs] = await Promise.all([SB.from('members').select('org_id,role,orgs(name)').eq('user_id', S.user.id), SB.rpc('ondi_mis_accesos')]);
   if (mems.error) return showAuth('login', errTxt(mems.error));
-  S.falta = !!(accs.error && faltaSQL(accs.error));
+  S.falta = accs.error && faltaSQL(accs.error) ? '1.0' : '';
   S.ctxs = [...(mems.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)).map(m => ({ kind: 'org', key: 'org:' + m.org_id, org: m.org_id, role: m.role, name: (m.orgs && m.orgs.name) || 'Empresa' })),
     ...((accs.data) || []).map(a => ({ kind: 'acc', key: 'acc:' + a.org_id + ':' + a.site_id, org: a.org_id, site: a.site_id, name: a.site_name, sub: a.org_name }))];
   if (!S.ctxs.length) return showAuth('start', S.msg);
   S.ctx = S.ctxs.find(c => c.key === ls.get('ondi.ctx')) || S.ctxs[0]; ls.set('ondi.ctx', S.ctx.key);
   S.auth = null; await loadCtx();
 }
-async function loadCtx() { S.sites = []; S.site = null; S.claves = null; S.view = 'clientes'; S.tab = 'maqueta';
+async function loadCtx() { S.sites = []; S.site = null; S.claves = null; S.org = null; S.team = null; S.ajustes = null; S.tab = 'maqueta'; S.view = staff() ? 'panel' : 'clientes'; S.eq = {}; S.man = {};
   if (S.falta) return render();
   const q = SB.from('ondi_sites').select('*').eq('org_id', orgId()); const r = S.ctx.kind === 'acc' ? await q.eq('id', S.ctx.site) : await q.order('name');
-  if (r.error) { if (faltaSQL(r.error)) S.falta = true; else toast(errTxt(r.error)); }
+  if (r.error) { if (faltaSQL(r.error)) S.falta = '1.0'; else toast(errTxt(r.error)); }
   S.sites = r.data || [];
-  if (staff()) loadClaves();
+  if (staff()) { loadClaves(); SB.from('ondi_equipos').select('org_id').limit(1).then(x => { if (x.error && faltaSQL(x.error)) { S.falta11 = true; render(); } }); }
   if (S.ctx.kind === 'acc' && S.sites[0]) { S.site = S.sites[0]; S.view = 'site'; }
   else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last); if (st && location.hash === '#c') { S.site = st; S.view = 'site'; } }
   render(); }
 async function loadClaves() { const r = await SB.rpc('ondi_claves', { o: orgId() }); S.claves = r.error ? [] : r.data || []; render(); }
-const claveDe = sc => (S.claves || []).find(c => c.scope === sc && c.kind === 'unifi');
+const claveDe = (sc, k = 'unifi') => (S.claves || []).find(c => c.scope === sc && c.kind === k);
 
-/* ---------- UniFi (función del servidor) ---------- */
+/* ---------- función del servidor ---------- */
 async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { body: { org: orgId(), ...body } });
   if (r.error) { let m = ''; try { const j = await r.error.context.json(); m = j && j.error; } catch (e) {} if (!m && /Failed to send|not found|404/i.test(r.error.message || '')) m = 'Falta publicar la función ondi-unifi en Supabase.'; throw { message: m || r.error.message }; }
   if (r.data && r.data.error) throw { message: r.data.error }; return r.data; }
@@ -327,104 +365,153 @@ async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { bo
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
-  const navItems = staff() ? [['clientes', 'Clientes', IC.sites], ['unifi', 'Conexión UniFi', IC.plug]] : [['clientes', 'Mi sitio', IC.sites]];
+  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites]];
   const cur = S.view === 'site' ? 'clientes' : S.view;
   const nav = navItems.map(([k, n, ic]) => `<button data-nav="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic}<span>${n}</span></button>`).join('');
   const who = staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
-  const keepMaq = S.view === 'site' && S.tab === 'maqueta' && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
+  const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
   $('#root').innerHTML = `<div class="app"><aside class="side">${logo()}
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
       <div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
-    <main id="main">${S.falta ? faltaView() : S.view === 'unifi' ? unifiOrgView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>`;
-  if (S.view === 'site' && S.tab === 'maqueta' && S.site) mountMaq();
+    <main id="main">${S.falta ? faltaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    ${S.modal ? modalView() : ''}`;
+  if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
+  if (S.modal === 'newsite') { const f = $('#ns_name'); if (f) f.focus(); }
 }
 function faltaView() { return `<div class="wrap"><div class="head"><div><h1>Falta preparar la base</h1><p>La cuenta funciona, pero en Supabase todavía no están las tablas de Ondi.</p></div></div>
-  <div class="card pad"><ol class="how"><li>Entrá a <b>supabase.com</b> → el proyecto de Olumi → <b>SQL Editor</b>.</li><li>Pegá el archivo <b>servidor/supabase/ondi-1.0.sql</b> y tocá <b>Run</b>.</li><li>Volvé acá y recargá la página.</li></ol></div></div>`; }
+  <div class="card pad"><ol class="how"><li>Entrá a <b>supabase.com</b> → el proyecto de Olumi → <b>SQL Editor</b>.</li><li>Pegá <b>servidor/supabase/ondi-1.0.sql</b> y después <b>ondi-1.1.sql</b>, y tocá <b>Run</b> en cada uno.</li><li>Volvé acá y recargá la página.</li></ol></div></div>`; }
+const falta11 = () => S.falta11 ? `<div class="card pad"><div class="err">Falta correr <b>ondi-1.1.sql</b> en Supabase para guardar ajustes, planos y equipos cargados a mano.</div></div>` : '';
+const linksOf = st => CLOUD.filter(k => st.data && st.data[k] && st.data[k].hostId);
+const resumen = st => (st.data && st.data.resumen) || null;
 
+/* panel de inicio */
+function panelView() { const tot = S.sites.length, linked = S.sites.filter(st => linksOf(st).length).length;
+  const eqs = S.sites.reduce((a, st) => { const r = resumen(st); return r ? { t: a.t + (r.total || 0), c: a.c + (r.caidos || 0), n: a.n + 1 } : a; }, { t: 0, c: 0, n: 0 });
+  const marcas = CLOUD.filter(k => claveDe('', k)).map(k => BR[k].n);
+  const hora = new Date().getHours(), saludo = hora < 12 ? 'Buen día' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
+  const rows = S.sites.map(st => { const r = resumen(st), l = linksOf(st), man = (st.data && st.data.manuales) || 0;
+    const dot = r ? (r.caidos ? 'down' : 'ok') : 'off';
+    return `<button class="clrow" data-site="${esc(st.id)}"><span class="n"><b>${esc(st.name)}</b><span>${esc((st.data && st.data.direccion) || BASES[(st.data && st.data.base) || 'vacia'][0])}</span></span>
+      <span class="v">${r ? nfmt(r.total) + ' equipos' : '—'}</span><span class="v" style="color:${r && r.caidos ? 'var(--crit)' : 'inherit'}">${r ? nfmt(r.caidos) + ' caídos' : '—'}</span>
+      <span class="v">${l.length ? l.map(k => BR[k].n.split(' ').pop()).join(' · ') : man ? man + ' a mano' : 'Sin enlazar'}</span><span class="pill ${dot}">${r ? (r.caidos ? 'Con caídos' : 'En orden') : 'Sin datos'}</span></button>`; }).join('');
+  return `<div class="wrap"><div class="head"><div><h1>${saludo}${S.user.user_metadata && S.user.user_metadata.name ? ', ' + esc(S.user.user_metadata.name.split(' ')[0]) : ''}</h1>
+      <p>${tot ? `${tot} ${tot === 1 ? 'cliente' : 'clientes'} en ${esc(S.ctx.name)}, ${linked} con monitoreo en vivo.` : 'Empezá dando de alta tu primer cliente.'}</p></div>
+      <div class="acts">${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div></div>
+    ${falta11()}
+    <div class="kpis"><div><b>${tot}</b><span>clientes</span></div><div><b>${linked}</b><span>con monitoreo en vivo</span></div>
+      <div><b>${eqs.n ? nfmt(eqs.t) : '—'}</b><span>equipos vistos${eqs.n ? ' (última lectura)' : ''}</span></div><div><b style="color:${eqs.c ? 'var(--crit)' : 'inherit'}">${eqs.n ? nfmt(eqs.c) : '—'}</b><span>caídos</span></div></div>
+    <div class="grid2"><div class="card"><div class="pad" style="padding-bottom:4px"><h2>Clientes</h2></div>${rows || `<div class="empty"><b>Todavía no hay clientes</b><span>${admin() ? 'Creá el primero: podés arrancar con la maqueta en blanco o desde un plano.' : 'Un administrador tiene que crearlos.'}</span>${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div>`}</div>
+      <div style="display:grid;gap:18px;align-content:start"><div class="card pad"><h2>Marcas conectadas</h2>${marcas.length ? `<p class="muted" style="margin:0 0 10px">${marcas.map(esc).join(' · ')}</p>` : '<p class="muted" style="margin:0 0 10px">Todavía ninguna. UniFi y Meraki se conectan con una clave; las demás marcas, con el agente.</p>'}<button class="btn" data-goaj="integraciones">Ver integraciones</button></div>
+        <div class="card pad"><h2>Avisos</h2><p class="muted" style="margin:0 0 10px">Elegí quién se entera cuando algo se cae.</p><button class="btn" data-goaj="avisos">Configurar avisos</button></div></div></div></div>`; }
+
+/* clientes */
 function sitesView() {
   if (!staff()) return `<div class="wrap"><div class="empty card"><b>Todavía no hay datos de tu sitio</b><span>Avisale a la instaladora.</span></div></div>`;
-  const list = S.sites.map(st => { const u = st.data && st.data.unifi, n = (st.data && st.data.accesos) || 0;
+  const list = S.sites.map(st => { const l = linksOf(st), b = (st.data && st.data.base) || 'vacia';
     return `<button class="cl" data-site="${esc(st.id)}"><b>${esc(st.name)}</b><span class="muted" style="font-size:13.5px">${esc((st.data && st.data.direccion) || 'Sin dirección')}</span>
-      <span class="row">${u && u.hostId ? `<span class="pill ok">UniFi enlazado</span>` : '<span class="pill off">Sin enlazar</span>'}${st.data && st.data.maqueta ? '<span class="tag">Maqueta armada</span>' : ''}</span></button>`; }).join('');
-  return `<div class="wrap"><div class="head"><div><h1>Clientes</h1><p>Cada cliente tiene su maqueta, sus equipos de UniFi y el acceso para su gente de IT.</p></div>
-    <div class="acts">${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div></div>
-    ${S.newsite ? `<div class="card pad"><h2>Nuevo cliente</h2><form class="form" data-do-f="newsite" style="max-width:520px"><label class="fld">Nombre del cliente<input id="ns_name" required maxlength="120" placeholder="Empresa o parque"></label>
-      <label class="fld">Dirección <small>(opcional)</small><input id="ns_dir" maxlength="200"></label><div class="acts"><button class="btn pri" type="submit">Crear</button><button class="btn" type="button" data-do="cancelnew">Cancelar</button></div></form></div>` : ''}
-    ${S.sites.length ? `<div class="clist">${list}</div>` : `<div class="card empty"><b>Todavía no hay clientes</b><span>${admin() ? 'Creá el primero con "Nuevo cliente".' : 'Un administrador de la empresa tiene que crearlos.'}</span></div>`}
-    ${!claveDe('') && admin() ? `<div class="card pad"><h2>Falta conectar UniFi</h2><p class="muted" style="margin:0 0 10px">Con la clave de tu cuenta de UniFi, Ondi trae los equipos de todos tus clientes.</p><button class="btn" data-nav="unifi">Conectar UniFi</button></div>` : ''}</div>`; }
+      <span class="row">${l.length ? l.map(k => `<span class="pill ok">${BR[k].n.split(' ').pop()}</span>`).join('') : '<span class="pill off">Sin enlazar</span>'}<span class="tag">${BASES[b] ? BASES[b][0] : 'Maqueta'}</span></span></button>`; }).join('');
+  return `<div class="wrap"><div class="head"><div><h1>Clientes</h1><p>Cada cliente tiene su maqueta, sus equipos y el acceso para su gente de IT.</p></div>
+    <div class="acts">${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div></div>${falta11()}
+    ${S.sites.length ? `<div class="clist">${list}</div>` : `<div class="card empty"><b>Todavía no hay clientes</b><span>${admin() ? 'Creá el primero con "Nuevo cliente".' : 'Un administrador de la empresa tiene que crearlos.'}</span></div>`}</div>`; }
+function modalView() {
+  if (S.modal === 'newsite') return `<div class="modal" data-closemodal><div role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">Nuevo cliente</h2>
+    <form class="form" data-do-f="newsite"><div class="form2"><label class="fld full">Nombre del cliente<input id="ns_name" required maxlength="120" placeholder="Empresa o parque"></label>
+      <label class="fld">Razón social <small>(opcional)</small><input id="ns_rs" maxlength="120"></label><label class="fld">Dirección <small>(opcional)</small><input id="ns_dir" maxlength="200"></label></div>
+      <div class="fld">Cómo empieza la maqueta<div class="bases">${Object.entries(BASES).map(([k, [n, d]], i) => `<label><input type="radio" name="base" value="${k}" ${i === 0 ? 'checked' : ''}><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
+      <div class="acts"><button class="btn pri" type="submit">Crear el cliente</button><button class="btn" type="button" data-do="closemodal">Cancelar</button></div></form></div></div>`;
+  return ''; }
 
-function siteHead() { const st = S.site;
-  return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', st.data && st.data.unifi && st.data.unifi.hostId ? 'UniFi: ' + (st.data.unifi.nombre || st.data.unifi.siteId) : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
-function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['unifi', 'Integración UniFi'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
+function siteHead() { const st = S.site, l = linksOf(st);
+  return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
+function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
   return `<div class="wrap wide"><div id="sitehead">${siteHead()}</div><div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${n}</button>`).join('')}</div>
-    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'unifi' ? unifiSiteView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
+    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
 
 /* maqueta */
 let MAQ = null, maqT = null;
 function maqBar() { return `<span class="save" id="savest">${editor() ? esc(S.maqSave || 'Los cambios se guardan solos.') : 'Solo lectura.'}</span><span class="grow"></span>
   ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}<button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button>`; }
 async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
-  const r = await SB.from('ondi_maquetas').select('data,updated_at').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle();
+  const base = (st.data && st.data.base) || 'vacia';
+  const [r, pl] = await Promise.all([SB.from('ondi_maquetas').select('data,updated_at').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(),
+    base === 'polo' ? Promise.resolve({ data: null }) : SB.from('ondi_planos').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle()]);
   if (S.site !== st || !$('#maqbox')) return;
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
   const data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null;
-  S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Maqueta de base: tocá el lápiz para empezar a armarla.' : '');
-  MAQ = { site: st.id, org: st.org_id, state: data, role: editor() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, save: st2 => queueSave(st, st2) };
-  window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=1" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
+  MAQ = { site: st.id, org: st.org_id, state: data, role: editor() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, base: base === 'polo' ? 'polo' : 'vacia',
+    plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url) };
+  S.startPlano = false; window.__ondiMaqueta = MAQ;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=3" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
-function queueSave(st, data) { if (!editor()) return; MAQ.state = data; S.maqSave = 'Guardando…'; const s = $('#savest'); if (s) s.textContent = S.maqSave;
+function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
+function queueSave(st, data) { if (!editor()) return; MAQ.state = data; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
-    S.maqSave = r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' });
-    const s2 = $('#savest'); if (s2) s2.textContent = S.maqSave;
+    setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
-window.addEventListener('beforeunload', e => { if (S.maqSave === 'Guardando…') { e.preventDefault(); e.returnValue = ''; } });
+async function savePlano(st, url) { if (!editor()) return; MAQ.plano = url; setSave('Guardando el plano…');
+  const r = url ? await SB.from('ondi_planos').upsert({ org_id: st.org_id, site_id: st.id, data: url }, { onConflict: 'org_id,site_id' }) : await SB.from('ondi_planos').delete().eq('org_id', st.org_id).eq('site_id', st.id);
+  setSave(r.error ? 'No se pudo guardar el plano: ' + errTxt(r.error) : url ? 'Plano guardado' : 'Plano quitado'); }
+window.addEventListener('beforeunload', e => { if (/Guardando/.test(S.maqSave)) { e.preventDefault(); e.returnValue = ''; } });
 
-/* equipos */
-function equiposView() { const st = S.site, u = st.data && st.data.unifi, E = S.eq[st.id];
-  if (!u || !u.hostId) return `<div class="card empty"><b>Este cliente todavía no está enlazado con UniFi</b><span>${staff() ? 'Enlazalo en la pestaña Integración UniFi.' : 'La instaladora lo tiene que enlazar.'}</span>${staff() ? '<button class="btn pri" data-tab="unifi">Enlazar con UniFi</button>' : ''}</div>`;
-  if (!E) { setTimeout(() => loadEq(st), 0); return '<div class="card empty">Trayendo los equipos desde UniFi…</div>'; }
-  if (E.error) return `<div class="card pad"><div class="err">${esc(E.error)}</div><p></p><button class="btn" data-do="eqref">${IC.ref}Probar de nuevo</button></div>`;
-  const on = E.equipos.filter(d => d.estado === 'online').length, off = E.equipos.length - on, sit = E.sitio || {};
-  const est = d => d.estado === 'online' ? '<span class="pill ok">En línea</span>' : d.estado === 'offline' ? '<span class="pill down">Caído</span>' : `<span class="pill warn">${esc(d.estado || 'sin dato')}</span>`;
-  return `<div class="kpis"><div><b>${E.equipos.length}</b><span>equipos en ${esc(E.consola || 'la consola')}</span></div><div><b style="color:${off ? 'var(--crit)' : 'var(--ok)'}">${off}</b><span>caídos ahora</span></div>
-      <div><b>${sit.clientesWifi ?? '—'}</b><span>dispositivos por Wi-Fi</span></div><div><b>${sit.clientesCable ?? '—'}</b><span>dispositivos por cable</span></div></div>
-    <div class="card"><div class="pad" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><h2 style="margin:0">Equipos UniFi</h2><span class="acts"><span class="muted" style="font-size:13px">${E.actualizado ? 'UniFi actualizó ' + ago(E.actualizado) : ''}</span><button class="btn sm" data-do="eqref">${IC.ref}Actualizar</button></span></div>
-    <div class="tscroll"><table><thead><tr><th>Estado</th><th>Nombre</th><th>Modelo</th><th>IP</th><th>MAC</th><th>Firmware</th></tr></thead><tbody>
-    ${E.equipos.sort((a, b) => (a.estado === 'online') - (b.estado === 'online') || a.nombre.localeCompare(b.nombre, 'es')).map(d => `<tr><td>${est(d)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td class="mono">${esc(d.mac)}</td><td>${esc(d.version)}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">UniFi no devolvió equipos para esta consola.</td></tr>'}
+/* equipos: nube + cargados a mano */
+const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Esperando el agente'] };
+const estPill = e => { const x = EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
+function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M = S.man[st.id];
+  if (!E) { setTimeout(() => loadEq(st), 0); return '<div class="card empty">Trayendo los equipos…</div>'; }
+  const rows = [...E.list, ...(M || []).map(d => ({ nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))];
+  const on = rows.filter(d => ['online', 'en_linea'].includes(d.estado)).length, off = rows.filter(d => ['offline', 'caido'].includes(d.estado)).length;
+  const errs = E.errs.map(x => `<div class="err" style="margin-bottom:8px">${esc(BR[x.k].n)}: ${esc(x.m)}</div>`).join('');
+  if (!rows.length && !errs) return `<div class="card empty"><b>Todavía no hay equipos</b><span>${staff() ? 'Enlazá el cliente con UniFi o Meraki, o cargá equipos a mano, en la pestaña Integraciones.' : 'La instaladora los tiene que cargar.'}</span>${staff() ? '<button class="btn pri" data-tab="integ">Ir a Integraciones</button>' : ''}</div>`;
+  sorted(rows);
+  return `${errs}<div class="kpis"><div><b>${rows.length}</b><span>equipos</span></div><div><b style="color:var(--ok)">${on}</b><span>en línea</span></div><div><b style="color:${off ? 'var(--crit)' : 'inherit'}">${off}</b><span>caídos ahora</span></div>
+      <div><b>${E.wifi ?? '—'}</b><span>dispositivos conectados${E.wifi != null ? ' (UniFi)' : ''}</span></div></div>
+    <div class="card"><div class="pad" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><h2 style="margin:0">Equipos</h2><span class="acts"><span class="muted" style="font-size:13px">${l.length ? 'Leído ' + ago(E.at) : ''}</span><button class="btn sm" data-do="eqref">${IC.ref}Actualizar</button></span></div>
+    <div class="tscroll"><table><thead><tr><th>Estado</th><th>Nombre</th><th>Modelo</th><th>IP</th><th>Origen</th><th>Firmware</th></tr></thead><tbody>
+    ${rows.map(d => `<tr><td>${estPill(d.estado)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td>${esc(d.origen || '')}</td><td>${esc(d.version || '')}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('')}
     </tbody></table></div></div>`; }
-async function loadEq(st) { try { S.eq[st.id] = await fn({ accion: 'equipos', site: st.id }); } catch (e) { S.eq[st.id] = { error: errTxt(e) }; } if (S.site === st && S.tab === 'equipos') render(); }
+function sorted(rows) { const w = d => ['offline', 'caido'].includes(d.estado) ? 0 : ['alerting', 'atencion'].includes(d.estado) ? 1 : 2; rows.sort((a, b) => w(a) - w(b) || String(a.nombre).localeCompare(String(b.nombre), 'es')); }
+async function loadMan(st) { const r = await SB.from('ondi_equipos').select('*').eq('org_id', st.org_id).eq('site_id', st.id).order('nombre'); if (r.error) { if (faltaSQL(r.error)) S.falta11 = true; S.man[st.id] = []; } else S.man[st.id] = r.data || []; return S.man[st.id]; }
+async function loadEq(st) { const l = linksOf(st), out = { list: [], errs: [], wifi: null, at: new Date().toISOString() };
+  await Promise.all([loadMan(st), ...l.map(async k => { try { const r = await fn({ accion: 'equipos', site: st.id, marca: k });
+      out.list.push(...r.equipos.map(d => ({ ...d, origen: BR[k].n.split(' ').pop() + (r.consola && r.consola !== BR[k].n.split(' ').pop() ? ' · ' + r.consola : '') })));
+      if (k === 'unifi' && r.sitio && (r.sitio.clientesWifi != null || r.sitio.clientesCable != null)) out.wifi = (r.sitio.clientesWifi || 0) + (r.sitio.clientesCable || 0); } catch (e) { out.errs.push({ k, m: errTxt(e) }); } })]);
+  S.eq[st.id] = out;
+  const man = S.man[st.id] || [], all = [...out.list, ...man], res = { total: all.length, caidos: all.filter(d => ['offline', 'caido'].includes(d.estado)).length, at: out.at };
+  if (editor() && !out.errs.length) { st.data = { ...(st.data || {}), resumen: res, manuales: man.length }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); }
+  if (S.site === st && S.tab === 'equipos') render(); }
 
-/* integración UniFi del cliente */
-function unifiSiteView() { const st = S.site, u = (st.data && st.data.unifi) || {}, propia = S.unifi.propia ?? !!u.propia, kOrg = claveDe(''), kSite = claveDe(st.id), kUse = propia ? kSite : kOrg, linked = !!u.hostId;
+/* integraciones del cliente */
+function cloudBlock(st, k) { const B = BR[k], u = (st.data && st.data[k]) || {}, L = S.link[k] || {}, propia = L.propia ?? !!u.propia, kOrg = claveDe('', k), kSite = claveDe(st.id, k), kUse = propia ? kSite : kOrg, linked = !!u.hostId, lista = S.sitiosUI[k];
   const step = (n, cls, t, body) => `<div class="step ${cls}"><i>${cls === 'done' ? '✓' : n}</i><div><h3>${t}</h3>${body}</div></div>`;
-  const s1 = `<p>¿Con qué cuenta de UniFi se ve la red de este cliente?</p><div class="radio">
-      <label><input type="radio" name="cuenta" value="org" ${!propia ? 'checked' : ''} ${admin() ? '' : 'disabled'}><span><b>La cuenta de ${esc(S.ctx.name)}</b><small>${kOrg ? 'Cargada · termina en ' + esc(kOrg.hint) : 'Todavía no está cargada'}</small></span></label>
-      <label><input type="radio" name="cuenta" value="propia" ${propia ? 'checked' : ''} ${admin() ? '' : 'disabled'}><span><b>Una cuenta propia del cliente</b><small>${kSite ? 'Cargada · termina en ' + esc(kSite.hint) : 'Si el cliente es el dueño de su consola en unifi.ui.com'}</small></span></label></div>
-    ${!propia && !kOrg ? `<p style="margin-top:10px">${admin() ? '<button class="btn" data-nav="unifi">Cargar la clave de la empresa</button>' : 'Un administrador tiene que cargar la clave.'}</p>` : ''}
-    ${propia && admin() ? `<form class="inline" data-do-f="keysite" style="margin-top:10px"><label class="fld">Clave de API del cliente<input id="ks" type="password" autocomplete="off" placeholder="${kSite ? 'Pegá una nueva para cambiarla' : 'Pegala acá'}"></label><button class="btn pri" type="submit">Guardar</button></form>` : ''}`;
-  const lista = S.sitiosUI;
+  const s1 = `<div class="radio"><label><input type="radio" name="cuenta-${k}" data-cuenta="${k}" value="org" ${!propia ? 'checked' : ''} ${admin() ? '' : 'disabled'}><span><b>La cuenta de ${esc(S.ctx.name)}</b><small>${kOrg ? 'Cargada · termina en ' + esc(kOrg.hint) : 'Todavía no está cargada'}</small></span></label>
+      <label><input type="radio" name="cuenta-${k}" data-cuenta="${k}" value="propia" ${propia ? 'checked' : ''} ${admin() ? '' : 'disabled'}><span><b>Una cuenta propia del cliente</b><small>${kSite ? 'Cargada · termina en ' + esc(kSite.hint) : 'Si el cliente tiene su propia cuenta de ' + B.n.split(' ').pop()}</small></span></label></div>
+    ${!propia && !kOrg ? `<p style="margin-top:10px">${admin() ? `<button class="btn" data-goaj="integraciones">Cargar la clave de la empresa</button>` : 'Un administrador tiene que cargar la clave.'}</p>` : ''}
+    ${propia && admin() ? `<form class="inline" data-do-f="keysite" data-k="${k}" style="margin-top:10px"><label class="fld">Clave de API del cliente<input id="ks-${k}" type="password" autocomplete="off" placeholder="${kSite ? 'Pegá una nueva para cambiarla' : 'Pegala acá'}"></label><button class="btn pri" type="submit">Guardar</button></form>` : ''}`;
   const s2 = !kUse ? '<p>Primero cargá la clave.</p>' : `<p>Elegí cuál de los sitios de esa cuenta es este cliente.</p>
     ${lista && lista.error ? `<div class="err">${esc(lista.error)}</div><p></p>` : ''}
-    ${lista && lista.sitios ? `<div class="slist">${lista.sitios.map(x => `<button data-pick="${esc(x.hostId)}|${esc(x.siteId)}"><b>${esc(x.nombre)}</b><span class="tag">${x.equipos ?? '?'} equipos</span><small>${esc(x.isp || x.zona || x.siteId)}</small>${x.caidos ? `<small style="color:var(--crit)">${x.caidos} caídos</small>` : '<small></small>'}</button>`).join('') || '<p class="muted">Esa cuenta no tiene sitios.</p>'}</div>` : ''}
-    ${editor() ? `<p style="margin-top:10px"><button class="btn ${lista ? '' : 'pri'}" data-do="buscar">${lista === 'cargando' ? 'Buscando…' : lista ? 'Buscar de nuevo' : 'Buscar los sitios'}</button></p>` : ''}`;
-  const s3 = linked ? `<p><span class="pill ok">Enlazado</span> con <b>${esc(u.nombre || u.siteId)}</b>${u.at ? ' · ' + esc(fmtD(u.at)) : ''}.</p><div class="acts"><button class="btn" data-tab="equipos">Ver los equipos</button>${editor() ? '<button class="btn danger" data-do="unlink">Desenlazar</button>' : ''}</div>`
-    : '<p>Cuando elijas el sitio, los equipos aparecen en la pestaña Equipos.</p>';
-  return `<div class="grid2"><div class="card pad"><div class="steps">${step(1, kUse ? 'done' : 'now', 'Cuenta de UniFi', s1)}${step(2, linked ? 'done' : kUse ? 'now' : '', 'Sitio de UniFi', s2)}${step(3, linked ? 'done' : '', 'Listo', s3)}</div></div>
-    <div class="card pad"><h2>Cómo funciona</h2><ol class="how"><li>La clave es de <b>solo lectura</b>: Ondi ve los equipos, no cambia nada en la red.</li><li>Queda guardada en el servidor. Nadie la puede ver después, ni desde acá.</li><li>UniFi agrupa los equipos por consola (UDM, Cloud Key, UCG). Si un cliente tiene varias, creá un cliente por consola o avisanos.</li><li>Otras marcas (switches, cámaras y NVR) se suman con el agente local más adelante.</li></ol></div></div>`; }
-
-/* conexión UniFi de la empresa */
-function unifiOrgView() { const k = claveDe(''), T = S.test;
-  return `<div class="wrap"><div class="head"><div><h1>Conexión UniFi</h1><p>La clave de la cuenta de UniFi de ${esc(S.ctx.name)}. Con una sola clave Ondi ve las consolas de todos los clientes que administrás desde esa cuenta.</p></div></div>
-  <div class="grid2"><div class="card pad"><h2>Clave de API</h2><p>${k ? `<span class="pill ok">Cargada</span> termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}` : '<span class="pill off">Sin cargar</span>'}</p>
-    ${admin() ? `<form class="inline" data-do-f="keyorg"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave'}<input id="ko" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
-      <div class="acts" style="margin-top:12px">${k ? `<button class="btn" data-do="probar">${T === 'cargando' ? 'Probando…' : 'Probar la conexión'}</button><button class="btn danger ${S.armed === 'delkey' ? 'arm' : ''}" data-do="delkey">${S.armed === 'delkey' ? '¿Seguro? Tocá de nuevo' : 'Borrar la clave'}</button>` : ''}</div>
-      ${T && T !== 'cargando' ? (T.error ? `<div class="err" style="margin-top:12px">${esc(T.error)}</div>` : `<div class="okmsg" style="margin-top:12px">Conectado: ${T.consolas} consola${T.consolas === 1 ? '' : 's'} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}`
-      : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}</div>
-    <div class="card pad"><h2>Cómo sacar la clave</h2><ol class="how"><li>Entrá a <b>unifi.ui.com</b> con la cuenta que administra a tus clientes.</li><li>Abajo a la izquierda: <b>API</b> (o Ajustes → API Keys).</li><li>Tocá <b>Create API Key</b>, ponele de nombre <b>Ondi</b> y copiala. UniFi la muestra una sola vez.</li><li>Pegala acá y tocá <b>Guardar</b>. Después, <b>Probar la conexión</b>.</li></ol>
-    <p class="muted" style="font-size:13.5px;margin:12px 0 0">No la mandes por WhatsApp ni por email: pegala directo acá.</p></div></div></div>`; }
+    ${lista && lista.sitios ? `<div class="slist">${lista.sitios.map(x => `<button data-pick="${k}|${esc(x.hostId)}|${esc(x.siteId)}"><b>${esc(x.nombre)}</b><span class="tag">${x.equipos ?? '?'} equipos</span><small>${esc(x.isp || x.zona || x.siteId)}</small>${x.caidos ? `<small style="color:var(--crit)">${x.caidos} caídos</small>` : '<small></small>'}</button>`).join('') || '<p class="muted">Esa cuenta no tiene sitios.</p>'}</div>` : ''}
+    ${editor() ? `<p style="margin-top:10px"><button class="btn ${lista ? '' : 'pri'}" data-buscar="${k}">${lista === 'cargando' ? 'Buscando…' : lista ? 'Buscar de nuevo' : 'Buscar los sitios'}</button></p>` : ''}`;
+  const s3 = linked ? `<p><span class="pill ok">Enlazado</span> con <b>${esc(u.nombre || u.siteId)}</b>${u.at ? ' · ' + esc(fmtD(u.at)) : ''}.</p><div class="acts"><button class="btn" data-tab="equipos">Ver los equipos</button>${editor() ? `<button class="btn danger" data-unlink="${k}">Desenlazar</button>` : ''}</div>` : '<p>Cuando elijas el sitio, los equipos aparecen en la pestaña Equipos.</p>';
+  return `<div class="card pad"><div class="bhead" style="margin-bottom:14px"><span class="mark" style="background:${B.c}">${B.ab}</span><div><h2 style="margin:0">${B.n}</h2><span class="muted" style="font-size:13px">${linked ? 'Enlazado' : 'Sin enlazar'}</span></div></div>
+    <div class="steps">${step(1, kUse ? 'done' : 'now', 'Cuenta', s1)}${step(2, linked ? 'done' : kUse ? 'now' : '', 'Sitio', s2)}${step(3, linked ? 'done' : '', 'Listo', s3)}</div></div>`; }
+function integView() { const st = S.site, M = S.man[st.id], F = S.manForm;
+  if (M === undefined) { setTimeout(async () => { await loadMan(st); if (S.site === st && S.tab === 'integ') render(); }, 0); }
+  const agentes = BRANDS.filter(b => !b.ready);
+  const form = F ? `<form class="form" data-do-f="man" style="margin-top:6px"><div class="form2">
+      <label class="fld">Marca<select id="mf_marca">${agentes.map(b => `<option value="${b.k}" ${F.marca === b.k ? 'selected' : ''}>${b.n}</option>`).join('')}<option value="otra" ${F.marca === 'otra' ? 'selected' : ''}>Otra marca</option></select></label>
+      <label class="fld">Tipo<select id="mf_tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${F.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label class="fld">Nombre<input id="mf_nombre" required maxlength="80" value="${esc(F.nombre || '')}" placeholder="Ej.: NVR portería"></label><label class="fld">Modelo <small>(opcional)</small><input id="mf_modelo" maxlength="80" value="${esc(F.modelo || '')}"></label>
+      <label class="fld">IP en la red del cliente <small>(opcional)</small><input id="mf_ip" maxlength="60" value="${esc(F.ip || '')}" placeholder="192.168.1.20"></label><label class="fld">Ubicación <small>(opcional)</small><input id="mf_ubic" maxlength="120" value="${esc(F.ubicacion || '')}"></label></div>
+      <div class="acts"><button class="btn pri" type="submit">${F.id ? 'Guardar' : 'Agregar el equipo'}</button><button class="btn" type="button" data-do="mancancel">Cancelar</button></div></form>` : '';
+  const list = (M || []).map(d => `<div><span><b>${esc(d.nombre)}</b><br><span class="muted" style="font-size:13px">${esc([BR[d.marca] ? BR[d.marca].n : d.marca, TIPOS[d.tipo] || d.tipo, d.modelo, d.ip].filter(Boolean).join(' · '))}</span></span>
+      <span class="acts">${estPill(d.estado)}${editor() ? `<button class="btn sm" data-manedit="${esc(d.id)}">Cambiar</button><button class="btn sm danger ${S.armed === 'man:' + d.id ? 'arm' : ''}" data-mandel="${esc(d.id)}">${S.armed === 'man:' + d.id ? '¿Seguro?' : 'Borrar'}</button>` : ''}</span></div>`).join('');
+  return `${falta11()}<div class="grid2" style="align-items:start"><div style="display:grid;gap:18px">${CLOUD.map(k => cloudBlock(st, k)).join('')}</div>
+    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell se leen con el agente Ondi instalado en la red del cliente. Cargalos acá y, cuando el agente esté andando, se ponen en vivo solos.</p>
+      ${M === undefined ? '<p class="muted">Cargando…</p>' : list ? `<div class="ppl">${list}</div>` : '<p class="muted">Todavía no cargaste equipos.</p>'}
+      ${editor() && !F ? `<p style="margin-top:12px"><button class="btn pri" data-do="manadd">${IC.plus}Agregar equipo</button></p>` : ''}${form}</div></div>`; }
 
 /* accesos del IT del cliente */
 function accesosView() { const st = S.site;
@@ -437,67 +524,143 @@ function accesosView() { const st = S.site;
         : admin() ? '<button class="btn pri" data-do="newcode">Crear el código</button>' : '<p class="muted">Un administrador lo tiene que crear.</p>'}
       <ol class="how" style="margin-top:14px"><li>Le pasás el enlace o el código.</li><li>Crea su cuenta con su email (o entra con la que tenga).</li><li>Queda adentro, en solo lectura. Lo ves en la lista de la derecha.</li></ol></div>
     <div class="card pad"><h2>Quién tiene acceso</h2>${list === null ? '<p class="muted">Cargando…</p>' : list.length ? `<div class="ppl">${list.map(a => `<div><span><b>${esc(a.name || a.email)}</b><br><span class="muted" style="font-size:13px">${esc(a.email || '')} · desde ${esc(fmtD(a.created_at))}</span></span>${admin() ? `<button class="btn sm danger ${S.armed === 'rm:' + a.user_id ? 'arm' : ''}" data-rm="${esc(a.user_id)}">${S.armed === 'rm:' + a.user_id ? '¿Seguro?' : 'Quitar'}</button>` : ''}</div>`).join('')}</div>` : '<p class="muted">Nadie todavía.</p>'}
-    <p class="muted" style="font-size:13.5px;margin:14px 0 0">Tu equipo (técnicos y encargados) entra con el código de equipo de Olumi, en Ajustes → Equipo.</p></div></div>`; }
+    <p class="muted" style="font-size:13.5px;margin:14px 0 0">Tu equipo (técnicos y encargados) entra con el código de equipo, en Ajustes → Empresa.</p></div></div>`; }
 async function loadAcc(st) { const [c, l] = await Promise.all([admin() ? SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: false }) : Promise.resolve({ data: null }), SB.from('ondi_accesos').select('user_id,email,name,created_at').eq('org_id', st.org_id).eq('site_id', st.id).order('created_at')]);
   if (S.site !== st) return; S.code = c.error ? null : c.data; S.acc.list = l.data || []; if (S.tab === 'accesos') render(); }
 
-/* datos */
-function datosView() { const st = S.site, d = st.data || {};
-  return `<div class="grid2"><div class="card pad"><h2>Datos del cliente</h2><form class="form" data-do-f="datos"><label class="fld">Nombre<input id="d_name" value="${esc(st.name)}" required maxlength="120" ${editor() ? '' : 'disabled'}></label>
-    <label class="fld">Nombre en la maqueta <small>(si es distinto, por ejemplo el nombre del parque)</small><input id="d_parque" value="${esc(d.parque || '')}" maxlength="80" ${editor() ? '' : 'disabled'}></label>
-    <label class="fld">Dirección<input id="d_dir" value="${esc(d.direccion || '')}" maxlength="200" ${editor() ? '' : 'disabled'}></label>
-    <label class="fld">Contacto de IT<input id="d_cont" value="${esc(d.contacto || '')}" maxlength="200" placeholder="Nombre, teléfono o email" ${editor() ? '' : 'disabled'}></label>
-    <label class="fld">Notas<textarea id="d_notas" maxlength="2000" ${editor() ? '' : 'disabled'}>${esc(d.notas || '')}</textarea></label>
+/* datos del cliente */
+function datosView() { const st = S.site, d = st.data || {}, dis = editor() ? '' : 'disabled';
+  return `<div class="grid2"><div class="card pad"><h2>Datos del cliente</h2><form class="form" data-do-f="datos"><div class="form2"><label class="fld full">Nombre<input id="d_name" value="${esc(st.name)}" required maxlength="120" ${dis}></label>
+    <label class="fld">Razón social<input id="d_rs" value="${esc(d.razon || '')}" maxlength="120" ${dis}></label><label class="fld">Nombre en la maqueta<input id="d_parque" value="${esc(d.parque || '')}" maxlength="80" placeholder="${esc(st.name)}" ${dis}></label>
+    <label class="fld full">Dirección<input id="d_dir" value="${esc(d.direccion || '')}" maxlength="200" ${dis}></label>
+    <label class="fld">Contacto de IT<input id="d_cont" value="${esc(d.contacto || '')}" maxlength="200" placeholder="Nombre, teléfono o email" ${dis}></label><label class="fld">Base de la maqueta<input value="${esc((BASES[d.base || 'vacia'] || BASES.vacia)[0])}" disabled></label>
+    <label class="fld full">Notas<textarea id="d_notas" maxlength="2000" ${dis}>${esc(d.notas || '')}</textarea></label></div>
     ${editor() ? '<div><button class="btn pri" type="submit">Guardar</button></div>' : ''}</form></div>
-    ${admin() ? `<div class="card pad"><h2>Borrar el cliente</h2><p class="muted">Se borran su maqueta, el enlace con UniFi y los accesos de su gente. No se puede deshacer.</p>
+    ${admin() ? `<div class="card pad"><h2>Borrar el cliente</h2><p class="muted">Se borran su maqueta, el plano, los equipos cargados, el enlace con las marcas y los accesos de su gente. No se puede deshacer.</p>
       <form class="form" data-do-f="delsite"><label class="fld">Escribí el nombre para confirmar<input id="del_name" autocomplete="off" placeholder="${esc(st.name)}"></label><div><button class="btn danger" type="submit">Borrar ${esc(st.name)}</button></div></form></div>` : ''}</div>`; }
+
+/* ajustes */
+function ajustesView() { const t = S.atab;
+  const tabs = [['empresa', 'Empresa y equipo'], ['integraciones', 'Integraciones'], ['avisos', 'Avisos'], ['cuenta', 'Mi cuenta']];
+  return `<div class="wrap"><div class="head"><div><h1>Ajustes</h1><p>${esc(S.ctx.name)} · ${esc(ROLN[S.ctx.role] || S.ctx.role)}</p></div></div>
+    <div class="stabs">${tabs.map(([k, n]) => `<button data-atab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${falta11()}
+    ${t === 'empresa' ? empresaView() : t === 'integraciones' ? marcasView() : t === 'avisos' ? avisosView() : cuentaView()}</div>`; }
+function empresaView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div class="card empty">Cargando…</div>'; }
+  const o = S.org, T = S.team || [];
+  return `<div class="grid2"><div class="card pad"><h2>${esc(o.name)}</h2><dl class="rows" style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:8px 0 0;font-size:14px"><dt class="muted">Plan</dt><dd style="margin:0">${esc(o.plan || '—')}</dd><dt class="muted">Clientes en Ondi</dt><dd style="margin:0">${S.sites.length}</dd><dt class="muted">Tu rol</dt><dd style="margin:0">${esc(ROLN[S.ctx.role] || S.ctx.role)}</dd></dl>
+      ${o.join_code && admin() ? `<h3 style="margin:18px 0 6px;font-size:15px">Sumar a alguien de tu equipo</h3><p class="muted" style="margin:0 0 8px;font-size:14px">Le pasás este código; entra a Ondi, elige "Tengo un código" y queda en tu empresa. El rol se lo das en Olumi.</p><p><span class="code">${esc(o.join_code)}</span></p>` : ''}
+      <p class="muted" style="font-size:13.5px;margin:14px 0 0">El nombre de la empresa, el plan y los roles se cambian en <a href="../../olumi/app/" target="_blank" rel="noopener">Olumi → Ajustes</a>: es la misma cuenta.</p></div>
+    <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div></div>`; }
+async function loadOrg() { const [o, t] = await Promise.all([SB.from('orgs').select('id,name,plan,join_code').eq('id', orgId()).maybeSingle(), SB.from('members').select('user_id,role,display_name,email').eq('org_id', orgId())]);
+  S.org = o.data || { name: S.ctx.name }; S.team = (t.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)); if (S.view === 'ajustes') render(); }
+function marcasView() { return `<p class="muted" style="margin:0">Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
+  <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k];
+    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${b.via}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : '<span class="pill off">Con agente</span>'}</header>
+      <p>${b.what} ${b.how}</p>
+      ${b.ready ? `${k ? `<p>Clave cargada · termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}</p>` : ''}
+        ${admin() ? `<form class="inline" data-do-f="keyorg" data-k="${b.k}"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave de API'}<input id="ko-${b.k}" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
+          <div class="acts">${k ? `<button class="btn" data-probar="${b.k}">${T === 'cargando' ? 'Probando…' : 'Probar la conexión'}</button><button class="btn danger ${S.armed === 'del:' + b.k ? 'arm' : ''}" data-delkey="${b.k}">${S.armed === 'del:' + b.k ? '¿Seguro? Tocá de nuevo' : 'Borrar la clave'}</button>` : ''}</div>
+          ${T && T !== 'cargando' ? (T.error ? `<div class="err">${esc(T.error)}</div>` : `<div class="okmsg">Conectado: ${T.consolas} ${b.k === 'meraki' ? 'organizaci' + (T.consolas === 1 ? 'ón' : 'ones') : 'consola' + (T.consolas === 1 ? '' : 's')} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}
+          <details><summary class="muted" style="cursor:pointer;font-size:13.5px">Cómo sacar la clave</summary><ol class="how">${b.steps.map(x => `<li>${x}</li>`).join('')}</ol></details>` : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}`
+      : `<p class="muted" style="font-size:13px">Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
+    <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:var(--accent)">AG</span><div><h3>Agente Ondi</h3><span class="via">En la red del cliente</span></div></div><span class="pill warn">En preparación</span></header>
+      <p>Un programa chico que va en una mini PC, una Raspberry o un servidor del cliente. Lee los equipos de la red local (SNMP, ONVIF, ISAPI, API de MikroTik y Dahua) y manda el estado a Ondi cada minuto, sin abrir puertos.</p></div></div>`; }
+function avisosView() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return '<div class="card empty">Cargando…</div>'; }
+  const A = (S.ajustes.avisos) || {}, ev = A.eventos || { caido: true, recupera: true, grabacion: true, firmware: false }, dis = admin() ? '' : 'disabled';
+  return `<div class="grid2"><div class="card pad"><h2>Quién recibe los avisos</h2><p class="muted" style="margin-top:0">Por ahora los avisos son solo para tu empresa, no para el cliente.</p>
+    <form class="form" data-do-f="avisos"><label class="fld">Emails <small>(uno por línea)</small><textarea id="av_mail" ${dis}>${esc((A.emails || []).join('\n'))}</textarea></label>
+      <label class="fld">WhatsApp <small>(uno por línea, con código de país: 59899123456)</small><textarea id="av_wa" ${dis}>${esc((A.whatsapp || []).join('\n'))}</textarea></label>
+      <div class="fld">Avisar cuando<div style="display:grid;gap:8px;margin-top:4px">${[['caido', 'Un equipo se cae'], ['recupera', 'Vuelve a estar en línea'], ['grabacion', 'Un NVR deja de grabar'], ['firmware', 'Hay firmware nuevo']].map(([k, n]) => `<label class="chk"><input type="checkbox" id="av_${k}" ${ev[k] ? 'checked' : ''} ${dis}>${n}</label>`).join('')}</div></div>
+      <label class="fld">Esperar antes de avisar<select id="av_espera" ${dis}>${[1, 3, 5, 10, 15].map(m => `<option value="${m}" ${(A.espera || 5) === m ? 'selected' : ''}>${m} minuto${m === 1 ? '' : 's'}</option>`).join('')}</select></label>
+      ${admin() ? '<div><button class="btn pri" type="submit">Guardar</button></div>' : ''}</form></div>
+    <div class="card pad"><h2>Cómo funciona</h2><ol class="how"><li>Ondi revisa los equipos de cada cliente cada minuto.</li><li>Si uno sigue caído pasado el tiempo de espera, avisa por email y WhatsApp a los de esta lista.</li><li>Cuando vuelve, avisa que se recuperó.</li></ol>
+      <p class="muted" style="font-size:13.5px">El envío automático se prende con el monitoreo continuo, que es el próximo paso. Lo que guardes acá queda listo para ese momento.</p></div></div>`; }
+async function loadAjustes() { const r = await SB.from('ondi_ajustes').select('data').eq('org_id', orgId()).maybeSingle(); if (r.error && faltaSQL(r.error)) S.falta11 = true; S.ajustes = (r.data && r.data.data) || {}; if (S.view === 'ajustes') render(); }
+function cuentaView() { const u = S.user;
+  return `<div class="grid2"><div class="card pad"><h2>Mi cuenta</h2><form class="form" data-do-f="perfil"><label class="fld">Nombre<input id="pf_name" value="${esc((u.user_metadata && u.user_metadata.name) || '')}" maxlength="80"></label><label class="fld">Email<input value="${esc(u.email)}" disabled></label><div><button class="btn pri" type="submit">Guardar</button></div></form></div>
+    <div class="card pad"><h2>Contraseña</h2><form class="form" data-do-f="pass"><label class="fld">Contraseña nueva<input id="pf_pass" type="password" minlength="6" autocomplete="new-password" required></label><div><button class="btn" type="submit">Cambiar la contraseña</button></div></form>
+      <p class="muted" style="font-size:13.5px;margin:16px 0 0">Es la misma cuenta de Olumi.</p><div class="acts" style="margin-top:12px"><button class="btn" data-a="logout">Salir</button></div></div></div>`; }
 
 /* ---------- acciones ---------- */
 async function saveSite(st, patch) { const data = { ...(st.data || {}), ...(patch.data || {}) }; const upd = { data }; if (patch.name) upd.name = patch.name;
   const r = await SB.from('ondi_sites').update(upd).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); return st; }
-function openSite(id) { const st = S.sites.find(x => x.id === id); if (!st) return; S.site = st; S.view = 'site'; S.tab = 'maqueta'; S.unifi = {}; S.sitiosUI = null; S.acc = null; ls.set('ondi.site.' + orgId(), id); history.replaceState(null, '', '#c'); render(); scrollTo(0, 0); }
+function openSite(id, tab) { const st = S.sites.find(x => x.id === id); if (!st) return; S.site = st; S.view = 'site'; S.tab = tab || 'maqueta'; S.link = {}; S.sitiosUI = {}; S.acc = null; S.manForm = null; ls.set('ondi.site.' + orgId(), id); history.replaceState(null, '', '#c'); render(); scrollTo(0, 0); }
+document.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a || !S.auth && a.dataset.a !== 'logout') return; const k = a.dataset.a;
+  if (k === 'logout') return logout(); S.info = ''; showAuth(k); const f = $('#root input'); if (f) f.focus(); });
+document.addEventListener('submit', async e => { const f = e.target.closest('[data-f]'); if (!f) return; e.preventDefault(); const btn = f.querySelector('[type=submit]'); btn.disabled = true; S.msg = '';
+  const v = id => (($('#' + id) || {}).value || '').trim();
+  try { const k = f.dataset.f;
+    if (k === 'login') { const { error } = await SB.auth.signInWithPassword({ email: v('a_email'), password: $('#a_pass').value }); if (error) throw error; await boot(); }
+    if (k === 'signup') { const { data, error } = await SB.auth.signUp({ email: v('a_email'), password: $('#a_pass').value, options: { data: { name: v('a_name') }, emailRedirectTo: HERE + (CODE ? '?codigo=' + encodeURIComponent(CODE) : '') } }); if (error) throw error;
+      if (data.user && Array.isArray(data.user.identities) && !data.user.identities.length) { S.info = 'Ese email ya tiene cuenta: entrá con tu contraseña o usá "Olvidé mi contraseña".'; return showAuth('login'); }
+      if (!data.session) return showAuth('check'); await boot(); }
+    if (k === 'forgot') { const { error } = await SB.auth.resetPasswordForEmail(v('a_email'), { redirectTo: HERE }); if (error) throw error; showAuth('sent'); }
+    if (k === 'setpass') { const { error } = await SB.auth.updateUser({ password: $('#a_pass').value }); if (error) throw error; history.replaceState(null, '', location.pathname + location.search); S.auth = 'login'; await boot(); }
+    if (k === 'neworg') { const r = await SB.rpc('create_org', { org_name: v('a_org'), my_name: myName() }); if (r.error) throw r.error; ls.set('ondi.ctx', 'org:' + r.data); await boot(); }
+    if (k === 'join') { await joinCode(v('a_code')); await boot(); }
+  } catch (err) { S.msg = errTxt(err); render(); } finally { btn.disabled = false; } });
 document.addEventListener('change', async e => {
   if (e.target.id === 'ctxsel' || e.target.id === 'ctxsel2') { S.ctx = S.ctxs.find(c => c.key === e.target.value) || S.ctx; ls.set('ondi.ctx', S.ctx.key); history.replaceState(null, '', location.pathname); await loadCtx(); }
-  if (e.target.name === 'cuenta') { S.unifi.propia = e.target.value === 'propia'; S.sitiosUI = null; render(); }
+  if (e.target.dataset.cuenta) { const k = e.target.dataset.cuenta; S.link[k] = { propia: e.target.value === 'propia' }; S.sitiosUI[k] = null; render(); }
 });
-document.addEventListener('click', async e => { const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm]'); if (!t) return;
-  if (t.dataset.nav) { S.view = t.dataset.nav; S.site = null; history.replaceState(null, '', location.pathname); S.test = null; render(); return; }
+const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
+document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
+  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-delkey],[data-manedit],[data-mandel]'); if (!t || S.auth) return;
+  if (t.dataset.nav) { S.view = t.dataset.nav; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
   if (t.dataset.site) return openSite(t.dataset.site);
-  if (t.dataset.tab) { S.tab = t.dataset.tab; render(); return; }
+  if (t.dataset.tab) { S.tab = t.dataset.tab; S.manForm = null; render(); return; }
+  if (t.dataset.atab) { S.atab = t.dataset.atab; render(); return; }
+  if (t.dataset.goaj) { S.view = 'ajustes'; S.atab = t.dataset.goaj; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
   const st = S.site;
   try {
-    if (t.dataset.pick) { const [hostId, siteId] = t.dataset.pick.split('|'), x = (S.sitiosUI.sitios || []).find(o => o.hostId === hostId && o.siteId === siteId);
-      await saveSite(st, { data: { unifi: { hostId, siteId, nombre: x ? x.nombre : siteId, propia: !!(S.unifi.propia ?? (st.data.unifi || {}).propia), at: new Date().toISOString() } } }); delete S.eq[st.id]; toast('Enlazado con ' + (x ? x.nombre : siteId)); render(); return; }
-    if (t.dataset.rm) { const k = 'rm:' + t.dataset.rm; if (S.armed !== k) { S.armed = k; render(); setTimeout(() => { if (S.armed === k) { S.armed = null; render(); } }, 4000); return; } S.armed = null;
-      const r = await SB.from('ondi_accesos').delete().eq('org_id', st.org_id).eq('site_id', st.id).eq('user_id', t.dataset.rm); if (r.error) throw r.error; S.acc.list = S.acc.list.filter(a => a.user_id !== t.dataset.rm); toast('Acceso quitado'); render(); return; }
+    if (t.dataset.pick) { const [k, hostId, siteId] = t.dataset.pick.split('|'), x = ((S.sitiosUI[k] || {}).sitios || []).find(o => o.hostId === hostId && o.siteId === siteId);
+      await saveSite(st, { data: { [k]: { hostId, siteId, nombre: x ? x.nombre : siteId, propia: !!((S.link[k] || {}).propia ?? ((st.data || {})[k] || {}).propia), at: new Date().toISOString() } } }); delete S.eq[st.id]; toast('Enlazado con ' + (x ? x.nombre : siteId)); render(); return; }
+    if (t.dataset.buscar) { const k = t.dataset.buscar, propia = (S.link[k] || {}).propia ?? !!((st.data || {})[k] || {}).propia; S.sitiosUI[k] = 'cargando'; render();
+      try { S.sitiosUI[k] = await fn({ accion: 'sitios', alcance: propia ? st.id : '', marca: k }); } catch (er) { S.sitiosUI[k] = { error: errTxt(er) }; } render(); return; }
+    if (t.dataset.unlink) { const k = t.dataset.unlink, d = { ...(st.data || {}) }; delete d[k]; delete d.resumen; const r = await SB.from('ondi_sites').update({ data: d }).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); delete S.eq[st.id]; toast('Desenlazado'); render(); return; }
+    if (t.dataset.probar) { const k = t.dataset.probar; S.test[k] = 'cargando'; render(); try { S.test[k] = await fn({ accion: 'probar', alcance: '', marca: k }); } catch (er) { S.test[k] = { error: errTxt(er) }; } render(); return; }
+    if (t.dataset.delkey) { const k = t.dataset.delkey; if (!arm('del:' + k)) return; const r = await SB.rpc(k === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', k === 'unifi' ? { o: orgId(), alcance: '', clave: '' } : { o: orgId(), alcance: '', marca: k, clave: '' }); if (r.error) throw r.error; S.test[k] = null; toast('Clave borrada'); await loadClaves(); return; }
+    if (t.dataset.rm) { if (!arm('rm:' + t.dataset.rm)) return; const r = await SB.from('ondi_accesos').delete().eq('org_id', st.org_id).eq('site_id', st.id).eq('user_id', t.dataset.rm); if (r.error) throw r.error; S.acc.list = S.acc.list.filter(a => a.user_id !== t.dataset.rm); toast('Acceso quitado'); render(); return; }
+    if (t.dataset.manedit) { const d = (S.man[st.id] || []).find(x => x.id === t.dataset.manedit); if (d) { S.manForm = { ...d }; render(); } return; }
+    if (t.dataset.mandel) { const id = t.dataset.mandel; if (!arm('man:' + id)) return; const r = await SB.from('ondi_equipos').delete().eq('org_id', st.org_id).eq('site_id', st.id).eq('id', id); if (r.error) throw r.error; S.man[st.id] = S.man[st.id].filter(x => x.id !== id); delete S.eq[st.id]; toast('Equipo borrado'); render(); return; }
     const a = t.dataset.do;
-    if (a === 'newsite') { S.newsite = true; render(); const f = $('#ns_name'); if (f) f.focus(); }
-    if (a === 'cancelnew') { S.newsite = false; render(); }
+    if (a === 'newsite') { S.modal = 'newsite'; render(); }
+    if (a === 'closemodal') { S.modal = null; render(); }
+    if (a === 'manadd') { S.manForm = { marca: 'hikvision', tipo: 'camara' }; render(); }
+    if (a === 'mancancel') { S.manForm = null; render(); }
     if (a === 'eqref') { delete S.eq[st.id]; render(); }
-    if (a === 'buscar') { S.sitiosUI = 'cargando'; render(); const propia = S.unifi.propia ?? !!(st.data.unifi || {}).propia; try { S.sitiosUI = await fn({ accion: 'sitios', alcance: propia ? st.id : '' }); } catch (er) { S.sitiosUI = { error: errTxt(er) }; } render(); }
-    if (a === 'unlink') { const d = { ...(st.data || {}) }; delete d.unifi; const r = await SB.from('ondi_sites').update({ data: d }).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); delete S.eq[st.id]; toast('Desenlazado'); render(); }
-    if (a === 'probar') { S.test = 'cargando'; render(); try { S.test = await fn({ accion: 'probar', alcance: '' }); } catch (er) { S.test = { error: errTxt(er) }; } render(); }
-    if (a === 'delkey') { if (S.armed !== 'delkey') { S.armed = 'delkey'; render(); setTimeout(() => { if (S.armed === 'delkey') { S.armed = null; render(); } }, 4000); return; } S.armed = null;
-      const r = await SB.rpc('ondi_set_unifi', { o: orgId(), alcance: '', clave: '' }); if (r.error) throw r.error; S.test = null; toast('Clave borrada'); await loadClaves(); }
-    if (a === 'newcode') { const r = await SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: !!S.code }); if (r.error) throw r.error; S.code = r.data; toast(S.code ? 'Código nuevo listo' : ''); render(); }
+    if (a === 'newcode') { const r = await SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: !!S.code }); if (r.error) throw r.error; S.code = r.data; toast('Código nuevo listo'); render(); }
     if (a === 'nocode') { const r = await SB.rpc('ondi_sin_codigo', { o: st.org_id, s: st.id }); if (r.error) throw r.error; S.code = null; toast('Código desactivado: los que ya entraron siguen hasta que los quites'); render(); }
     if (a === 'copylink') { const link = HERE + '?codigo=' + encodeURIComponent(S.code); try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch (er) { prompt('Copiá el enlace:', link); } }
     if (a === 'maqfull') { const b = $('#maqbox'); if (!b) return; if (b.requestFullscreen && !document.fullscreenElement) b.requestFullscreen().catch(() => b.classList.toggle('full')); else if (document.fullscreenElement) document.exitFullscreen(); else b.classList.toggle('full'); }
     if (a === 'maqexport') { const blob = new Blob([JSON.stringify(MAQ && MAQ.state || {}, null, 1)], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'maqueta-' + st.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
     if (a === 'maqimport') { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!d || d.v !== 1) throw 0;
-        const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: d }, { onConflict: 'org_id,site_id' }); if (r.error) throw r.error; toast('Armado importado'); mountMaq(); } catch (er) { toast(er && er.message ? errTxt(er) : 'Ese archivo no es un armado de maqueta.'); } }; inp.click(); }
+        const cur = (MAQ && MAQ.state) || {}, merged = { ...cur, ...d, meta: { ...(cur.meta || {}), ...(d.meta || {}) } };
+        const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: merged }, { onConflict: 'org_id,site_id' }); if (r.error) throw r.error; toast('Armado importado'); mountMaq(); } catch (er) { toast(er && er.message ? errTxt(er) : 'Ese archivo no es un armado de maqueta.'); } }; inp.click(); }
   } catch (er) { toast(errTxt(er)); } });
 document.addEventListener('submit', async e => { const f = e.target.closest('[data-do-f]'); if (!f) return; e.preventDefault(); const k = f.dataset.doF, btn = f.querySelector('[type=submit]'); btn.disabled = true; const st = S.site; const v = id => (($('#' + id) || {}).value || '').trim();
   try {
-    if (k === 'newsite') { const r = await SB.from('ondi_sites').insert({ org_id: orgId(), name: v('ns_name'), data: v('ns_dir') ? { direccion: v('ns_dir') } : {} }).select().single(); if (r.error) throw r.error; S.sites.push(r.data); S.sites.sort((a, b) => a.name.localeCompare(b.name, 'es')); S.newsite = false; openSite(r.data.id); toast('Cliente creado'); }
-    if (k === 'keyorg' || k === 'keysite') { const val = v(k === 'keyorg' ? 'ko' : 'ks'); if (!val) throw { message: 'clave_invalida' };
-      const r = await SB.rpc('ondi_set_unifi', { o: orgId(), alcance: k === 'keyorg' ? '' : st.id, clave: val }); if (r.error) throw r.error; toast('Clave guardada en el servidor'); S.test = null; await loadClaves();
-      if (k === 'keyorg') { S.test = 'cargando'; render(); try { S.test = await fn({ accion: 'probar', alcance: '' }); } catch (er) { S.test = { error: errTxt(er) }; } render(); } }
-    if (k === 'datos') { await saveSite(st, { name: v('d_name') || st.name, data: { parque: v('d_parque'), direccion: v('d_dir'), contacto: v('d_cont'), notas: ($('#d_notas') || {}).value || '' } }); toast('Guardado'); render(); }
+    if (k === 'newsite') { const base = (f.querySelector('input[name=base]:checked') || {}).value || 'vacia', data = { base }; if (v('ns_dir')) data.direccion = v('ns_dir'); if (v('ns_rs')) data.razon = v('ns_rs');
+      const r = await SB.from('ondi_sites').insert({ org_id: orgId(), name: v('ns_name'), data }).select().single(); if (r.error) throw r.error; S.sites.push(r.data); S.sites.sort((a, b) => a.name.localeCompare(b.name, 'es')); S.modal = null;
+      S.startPlano = base === 'plano'; openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Subí el plano o la foto para empezar.' : 'Cliente creado'); }
+    if (k === 'keyorg' || k === 'keysite') { const m = f.dataset.k, val = v((k === 'keyorg' ? 'ko-' : 'ks-') + m); if (!val) throw { message: 'clave_invalida' }; const sc = k === 'keyorg' ? '' : st.id;
+      const r = await SB.rpc(m === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', m === 'unifi' ? { o: orgId(), alcance: sc, clave: val } : { o: orgId(), alcance: sc, marca: m, clave: val }); if (r.error) throw r.error;
+      toast('Clave guardada en el servidor'); S.test[m] = null; await loadClaves();
+      if (k === 'keyorg') { S.test[m] = 'cargando'; render(); try { S.test[m] = await fn({ accion: 'probar', alcance: '', marca: m }); } catch (er) { S.test[m] = { error: errTxt(er) }; } render(); } }
+    if (k === 'datos') { await saveSite(st, { name: v('d_name') || st.name, data: { parque: v('d_parque'), razon: v('d_rs'), direccion: v('d_dir'), contacto: v('d_cont'), notas: ($('#d_notas') || {}).value || '' } }); toast('Guardado'); render(); }
     if (k === 'delsite') { if (v('del_name').toLowerCase() !== st.name.trim().toLowerCase()) throw { message: 'Escribí el nombre exacto del cliente.' };
       const r = await SB.from('ondi_sites').delete().eq('org_id', st.org_id).eq('id', st.id); if (r.error) throw r.error; S.sites = S.sites.filter(x => x !== st); S.site = null; S.view = 'clientes'; toast('Cliente borrado'); render(); }
+    if (k === 'man') { const F = S.manForm, row = { marca: v('mf_marca'), tipo: v('mf_tipo'), nombre: v('mf_nombre'), modelo: v('mf_modelo') || null, ip: v('mf_ip') || null, ubicacion: v('mf_ubic') || null };
+      const r = F.id ? await SB.from('ondi_equipos').update(row).eq('org_id', st.org_id).eq('site_id', st.id).eq('id', F.id).select().single() : await SB.from('ondi_equipos').insert({ org_id: st.org_id, site_id: st.id, ...row }).select().single();
+      if (r.error) throw r.error; const L = S.man[st.id] || (S.man[st.id] = []); const i = L.findIndex(x => x.id === r.data.id); if (i >= 0) L[i] = r.data; else L.push(r.data); S.manForm = null; delete S.eq[st.id]; toast(F.id ? 'Equipo guardado' : 'Equipo agregado'); render(); }
+    if (k === 'avisos') { const lines = id => (($('#' + id) || {}).value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+      const wa = lines('av_wa').map(x => x.replace(/[^\d]/g, '')).filter(x => x.length >= 8), mails = lines('av_mail').filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+      const avisos = { emails: mails, whatsapp: wa, eventos: Object.fromEntries(['caido', 'recupera', 'grabacion', 'firmware'].map(x => [x, !!($('#av_' + x) || {}).checked])), espera: +v('av_espera') || 5 };
+      const data = { ...(S.ajustes || {}), avisos }; const r = await SB.from('ondi_ajustes').upsert({ org_id: orgId(), data }, { onConflict: 'org_id' }); if (r.error) throw r.error; S.ajustes = data; toast('Avisos guardados'); render(); }
+    if (k === 'perfil') { const r = await SB.auth.updateUser({ data: { name: v('pf_name') } }); if (r.error) throw r.error; S.user = r.data.user; toast('Guardado'); render(); }
+    if (k === 'pass') { const r = await SB.auth.updateUser({ password: $('#pf_pass').value }); if (r.error) throw r.error; toast('Contraseña cambiada'); $('#pf_pass').value = ''; }
   } catch (er) { toast(errTxt(er)); } finally { btn.disabled = false; } });
-document.addEventListener('fullscreenchange', () => {});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
 
 if (SB) SB.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') showAuth('setpass'); if (ev === 'SIGNED_OUT' && !S.auth) location.reload(); });
 boot().catch(e => showAuth('login', errTxt(e)));
