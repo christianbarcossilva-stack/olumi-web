@@ -3419,11 +3419,304 @@ html.placing #labels,html.placing #labels *{pointer-events:none!important} .plbl
 @media (max-width:860px){.galview .cabb{grid-template-columns:1fr!important}}`;
 { const st = document.createElement('style'); st.textContent = CAT_CSS; document.head.appendChild(st); }
 
+/* ---------- modo juego: barra 1–0, mira con el mouse tomado, construcción de oficinas y muebles ---------- */
+// piezas de construcción (se pegan a una grilla de 0,5 m y quedan de frente a donde mirás)
+const BK = {
+  wpan: { n: 'Pared 2 m', L: 2, wall: 1, tags: 'muro tabique panel bloque' }, wpan1: { n: 'Pared 1 m', L: 1, wall: 1, tags: 'muro tabique panel corta' },
+  wdoor: { n: 'Pared con puerta', L: 2, wall: 1, door: 1, tags: 'puerta entrada abertura' }, wwin: { n: 'Pared con ventana', L: 2, wall: 1, tags: 'ventana vidrio abertura' },
+  wglass: { n: 'Mampara de vidrio', L: 2, wall: 1, thin: 1, tags: 'vidrio blindex division' }, col: { n: 'Columna', solid: 1, tags: 'pilar' },
+  ceil: { n: 'Techo de oficina 2×2', flat: 1, tags: 'cielorraso techo losa luz' }, piso: { n: 'Piso 2×2', flat: 1, floor: 1, tags: 'baldosa ceramica alfombra' }
+};
+// muebles (los de pared se pegan a la pared que apuntás)
+const FK = {
+  silla: { n: 'Silla de oficina', tags: 'asiento' }, sillon: { n: 'Sillón', tags: 'sofa espera' }, mreun: { n: 'Mesa de reunión', tags: 'sala reuniones sillas' },
+  recep: { n: 'Mostrador de recepción', tags: 'recepcion entrada' }, bibl: { n: 'Biblioteca', tags: 'estante libros archivo' }, planta: { n: 'Planta en maceta', tags: 'maceta verde' },
+  impr: { n: 'Impresora', tags: 'fotocopiadora' }, heladera: { n: 'Heladera', tags: 'refrigerador cocina' }, cocina: { n: 'Mesada de cocina', tags: 'kitchenette pileta' },
+  tv: { n: 'Pantalla en la pared', wall: 1, tags: 'tv monitor televisor' }, split: { n: 'Aire acondicionado', wall: 1, tags: 'split clima' }, pizarra: { n: 'Pizarra', wall: 1, tags: 'pizarron' }
+};
+Object.entries(BK).forEach(([k, v]) => { PK[k] = { n: v.n, tags: v.tags, out: false, build: true }; });
+Object.entries(FK).forEach(([k, v]) => { PK[k] = { n: v.n, tags: v.tags, out: false, furn: true }; });
+Object.assign(PRE3, { wpan: 'PD-', wpan1: 'PD-', wdoor: 'PU-', wwin: 'VE-', wglass: 'MV-', col: 'CL-', ceil: 'CR-', piso: 'PI-', silla: 'SL-', sillon: 'SO-', mreun: 'MR-', recep: 'RC-', bibl: 'BI-', planta: 'MC-', impr: 'IM-', heladera: 'HE-', cocina: 'CC-', tv: 'TV-', split: 'AC-', pizarra: 'PZ-' });
+Object.assign(CIC, {
+  door: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V4h9v17"/><path d="M14 4l5 2v15"/><circle cx="11.5" cy="13" r=".8" fill="currentColor"/></svg>',
+  win: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg>',
+  ceil: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M5 6v3M19 6v3M9 12h6"/><path d="M12 9v3" stroke-dasharray="1.5 1.5"/></svg>',
+  chair: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10v8H7zM6 14h12M12 14v4M8 21l4-3 4 3"/></svg>',
+  sofa: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 11h4v4h10v-4h4v7H3zM6 18v2M18 18v2"/></svg>',
+  plant: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 15h8l-1 6H9zM12 15V9"/><path d="M12 10c0-3-2-5-5-5 0 3 2 5 5 5zM12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/></svg>',
+  tv: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M9 21h6M12 17v4"/></svg>'
+});
+{ // el catálogo: Construcción arriba, Muebles al lado
+  const byName = new Map(CAT3.map(c => [c[0], c]));
+  const B = [['prop:wpan', 'Pared 2 m', 'wall'], ['prop:wpan1', 'Pared 1 m', 'wall'], ['prop:wdoor', 'Pared con puerta', 'door'], ['prop:wwin', 'Pared con ventana', 'win'], ['prop:wglass', 'Mampara de vidrio', 'win'], ['prop:col', 'Columna', 'wall'], ['prop:ceil', 'Techo de oficina', 'ceil'], ['prop:piso', 'Piso', 'zone']].map(([k, n, ic]) => [k, n, ic, BK[k.slice(5)].tags]);
+  const cons = byName.get('Construcción'); if (cons) cons[1] = [...B, ...cons[1].map(it => it[0] === 'draw:wall:pared' ? [it[0], 'Pared larga (dibujar)', it[2], it[3]] : it)];
+  const FI = { silla: 'chair', sillon: 'sofa', mreun: 'box', recep: 'box', bibl: 'shelf', planta: 'plant', impr: 'box', heladera: 'box', cocina: 'box', tv: 'tv', split: 'box', pizarra: 'tv' };
+  const furn = Object.keys(FK).map(k => ['prop:' + k, FK[k].n, FI[k], FK[k].tags]), ad = byName.get('Adentro y oficina');
+  const mueb = ['Muebles y oficina', [...furn, ...(ad ? ad[1] : [])]]; byName.delete('Adentro y oficina'); byName.set('Muebles y oficina', mueb);
+  const order = ['Equipos activos', 'Sensores y alarmas', 'Construcción', 'Muebles y oficina', 'Estanterías', 'Cableado', 'Exterior y decoración', 'Nombres y textos', 'Base del predio'];
+  const out = order.filter(n => byName.has(n)).map(n => byName.get(n)); for (const [n, c] of byName) if (!order.includes(n)) out.push(c);
+  CAT3.length = 0; CAT3.push(...out); ALL3.length = 0; ALL3.push(...CAT3.flatMap(([c, items]) => items.map(([k, n, ic, tags]) => ({ k, n, ic, tags, c })))); }
+
+// giro: hacia dónde apunta el eje x local de un objeto con yaw
+const YS = (() => { try { const a = M.xf(M.trs(0, 0, 0, Math.PI / 2), [1, 0, 0]); return a[2] < 0 ? -1 : 1; } catch (e) { return -1; } })();
+const axX = y => [Math.cos(y), YS * Math.sin(y)], axZ = y => [-YS * Math.sin(y), Math.cos(y)], yawDir = (dx, dz) => Math.atan2(YS * dz, dx);
+
+/* geometría de las piezas nuevas */
+function chairAt(g, x, z, bz, col = '#2F3B46') { g.prism(x, 0, z, 0.27, 0.05, 5, '#33383D'); g.prism(x, 0.05, z, 0.03, 0.4, 6, '#5A5F64'); g.box(x - 0.23, 0.44, z - 0.23, x + 0.23, 0.51, z + 0.23, col);
+  const b0 = z + bz * 0.19, b1 = z + bz * 0.25; g.box(x - 0.22, 0.51, Math.min(b0, b1), x + 0.22, 0.98, Math.max(b0, b1), col); }
+function buildGeo(p) { const g = new Geo(), k = p.k, H = 2.7, T = 0.06, WC = p.col || '#ECE9E2', top = { top: '#F7F5F0' }, FR = '#5E6870';
+  const wall = (x0, y0, x1, y1) => g.box(x0, y0, -T, x1, y1, T, WC, top), skirt = (x0, x1) => g.box(x0, 0, -T - 0.012, x1, 0.1, T + 0.012, '#7E858C', { ao: 1 });
+  if (k === 'wpan' || k === 'wpan1') { const h = BK[k].L / 2; wall(-h, 0, h, H); skirt(-h, h); }
+  else if (k === 'wdoor') { wall(-1, 0, -0.5, H); wall(0.5, 0, 1, H); wall(-0.5, 2.15, 0.5, H); skirt(-1, -0.5); skirt(0.5, 1);
+    g.box(-0.5, 0, -T - 0.01, -0.45, 2.15, T + 0.01, FR); g.box(0.45, 0, -T - 0.01, 0.5, 2.15, T + 0.01, FR); g.box(-0.5, 2.1, -T - 0.01, 0.5, 2.15, T + 0.01, FR);
+    g.box(-0.45, 0.01, T, -0.41, 2.08, T + 0.86, '#B08A62', { top: '#C49B70' }); g.box(-0.41, 1.0, T + 0.7, -0.36, 1.04, T + 0.8, '#C9CED2'); }
+  else if (k === 'wwin') { wall(-1, 0, -0.6, H); wall(0.6, 0, 1, H); wall(-0.6, 0, 0.6, 1); wall(-0.6, 2.1, 0.6, H); skirt(-1, 1);
+    g.box(-0.6, 1, -0.012, 0.6, 2.1, 0.012, '#9FC3D4', { e: 0.2 }); g.box(-0.62, 0.97, -T - 0.03, 0.62, 1.01, T + 0.03, FR); g.box(-0.02, 1, -0.02, 0.02, 2.1, 0.02, FR); }
+  else if (k === 'wglass') { g.box(-1, 0, -0.04, 1, 0.08, 0.04, FR); g.box(-1, H - 0.06, -0.04, 1, H, 0.04, FR); for (const x of [-1, 1]) g.box(x - 0.025, 0, -0.04, x + 0.025, H, 0.04, FR);
+    g.box(-0.975, 0.08, -0.01, 0.975, H - 0.06, 0.01, '#A9CFE0', { e: 0.25 }); }
+  else if (k === 'col') g.box(-0.15, 0, -0.15, 0.15, H, 0.15, '#D9D6CF', top);
+  else if (k === 'ceil') { g.box(-1, H - 0.04, -1, 1, H, 1, '#F3F2EE'); g.box(-0.3, H - 0.05, -0.3, 0.3, H - 0.04, 0.3, '#FFFFFF', { e: 0.9 }); }
+  else if (k === 'piso') { const c = ['#C9B79C', '#B7BCC0', '#9AA7B0'][(p.seed || 0) % 3]; g.box(-1, 0, -1, 1, 0.02, 1, c); }
+  else if (k === 'silla') chairAt(g, 0, 0, 1);
+  else if (k === 'sillon') { const c = '#5A6E7F'; g.box(-0.9, 0.08, -0.4, 0.9, 0.45, 0.4, c); g.box(-0.9, 0.45, 0.2, 0.9, 0.88, 0.4, c); g.box(-0.9, 0.45, -0.4, -0.74, 0.66, 0.2, c); g.box(0.74, 0.45, -0.4, 0.9, 0.66, 0.2, c); g.box(-0.85, 0, -0.35, 0.85, 0.08, 0.35, '#2B2F33'); }
+  else if (k === 'mreun') { g.box(-1.2, 0.72, -0.55, 1.2, 0.77, 0.55, '#B89B78'); g.box(-0.9, 0, -0.12, 0.9, 0.72, 0.12, '#6B5B4B'); for (const x of [-0.7, 0, 0.7]) { chairAt(g, x, -0.85, -1); chairAt(g, x, 0.85, 1); } }
+  else if (k === 'recep') { g.box(-1.2, 0, -0.3, 1.2, 1.05, 0.3, '#6F7E8B'); g.box(-1.25, 1.05, -0.38, 1.25, 1.1, 0.42, '#D9D2C3'); g.box(-1.15, 0.72, 0.3, 1.15, 0.76, 0.75, '#D9D2C3'); g.box(-0.3, 0.76, 0.35, 0.3, 1.1, 0.39, '#20282F', { e: 0.25 }); chairAt(g, 0, 1.15, 1); }
+  else if (k === 'bibl') { g.box(-0.9, 0, -0.18, 0.9, 2.0, 0.18, '#8C6E52', { top: '#A3825F' }); const r = seeded((p.seed || 3) * 7 + 1), BC = ['#3E6E8E', '#B5523B', '#E0B04A', '#4E8A5A', '#7A5C99', '#D9D2C3'];
+    for (let i = 0; i < 4; i++) { const y = 0.12 + i * 0.48; let x = -0.82; while (x < 0.78) { const w = 0.05 + r() * 0.07, hh = 0.25 + r() * 0.13; g.box(x, y, -0.2, x + w, y + hh, -0.17, BC[(r() * BC.length) | 0]); x += w + 0.01; } g.box(-0.88, y - 0.03, -0.19, 0.88, y, -0.17, '#6E553F'); } }
+  else if (k === 'planta') { g.prism(0, 0, 0, 0.22, 0.45, 8, '#B5653A', { top: '#5C4632' }); g.blob(0, 0.95, 0, 0.42, P.tree, { rings: 3, seg: 8 }); g.blob(0.12, 1.25, 0.05, 0.3, P.tree2, { rings: 3, seg: 7 }); }
+  else if (k === 'impr') { g.box(-0.3, 0, -0.28, 0.3, 0.95, 0.28, '#E3E6E9', { top: '#C9CED2' }); g.box(-0.2, 0.95, -0.1, 0.2, 1.0, 0.2, '#3A4148'); g.box(-0.22, 0.6, -0.3, 0.22, 0.64, -0.28, '#8A9198'); }
+  else if (k === 'heladera') { g.box(-0.35, 0, -0.33, 0.35, 1.8, 0.33, '#DCE0E3', { top: '#E9ECEE' }); g.box(0.24, 0.85, -0.36, 0.28, 1.5, -0.33, '#8A9198'); g.box(-0.35, 1.2, -0.336, 0.35, 1.21, -0.33, '#9AA1A7'); }
+  else if (k === 'cocina') { g.box(-1.2, 0, -0.3, 1.2, 0.88, 0.3, '#E7E3DA'); g.box(-1.22, 0.88, -0.32, 1.22, 0.92, 0.32, '#3B4047'); g.box(0.2, 0.9, -0.2, 0.7, 0.93, 0.2, '#AEB6BC'); g.box(-1.2, 1.5, 0.05, 1.2, 2.2, 0.3, '#E7E3DA'); }
+  else if (k === 'tv') { g.box(-0.62, 1.15, 0, 0.62, 1.88, 0.05, '#1A1F24'); g.box(-0.58, 1.19, 0.05, 0.58, 1.84, 0.056, '#2C4458', { e: 0.55 }); }
+  else if (k === 'split') { g.box(-0.45, 2.15, 0, 0.45, 2.45, 0.22, '#F4F5F6', { top: '#FFFFFF' }); g.box(-0.4, 2.17, 0.22, 0.4, 2.2, 0.226, '#B9C0C6'); }
+  else if (k === 'pizarra') { g.box(-0.9, 0.9, 0, 0.9, 2.0, 0.025, '#9AA3AA'); g.box(-0.86, 0.94, 0.025, 0.86, 1.96, 0.03, '#FBFBFA', { e: 0.15 }); }
+  return g; }
+propGeo = (o => p => (BK[p.k] || FK[p.k]) ? buildGeo(p) : o(p))(propGeo);
+
+/* superficies: las paredes y techos que armás también sirven para colgar equipos */
+let HITSKIP = null;
+function bpBox(Q) { const B = BK[Q.k]; if (!B || B.floor) return null; if (B.wall) { const t = B.thin ? 0.04 : 0.065; return [[-B.L / 2, 0, -t], [B.L / 2, 2.7, t]]; } if (B.solid) return [[-0.15, 0, -0.15], [0.15, 2.7, 0.15]]; if (B.flat) return [[-1, 2.64, -1], [1, 2.7, 1]]; return null; }
+surfHit = (o => function (r) { let best = o(r); if (!PROPS.length) return best;
+  for (const Q of PROPS) { if (Q.id === HITSKIP) continue; const bb = bpBox(Q); if (!bb) continue; const N = naveAt(Q.x, Q.z, 1); if (!N || !openNave(N)) continue;
+    const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), ro = [r.o[0] - Q.x, r.o[1] - (Q.y || 0), r.o[2] - Q.z], lo = [ro[0] * ex[0] + ro[2] * ex[1], ro[1], ro[0] * ez[0] + ro[2] * ez[1]], ld = [r.d[0] * ex[0] + r.d[2] * ex[1], r.d[1], r.d[0] * ez[0] + r.d[2] * ez[1]];
+    const h = rayAABBn(lo, ld, bb[0], bb[1]); if (!h || h.t <= 0 || (best && h.t >= best.t)) continue;
+    const n = [h.n[0] * ex[0] + h.n[2] * ez[0], h.n[1], h.n[0] * ex[1] + h.n[2] * ez[1]]; best = { t: h.t, n, k: 'bprop', N, prop: Q, p: [r.o[0] + r.d[0] * h.t, r.o[1] + r.d[1] * h.t, r.o[2] + r.d[2] * h.t] }; }
+  return best; })(surfHit);
+
+/* poner piezas: grilla, de frente a la vista, R para girar, pegadas a la punta de otra pared */
+const ROT = { off: 0 };
+function baseYaw(x, z) { const N = naveAt(x, z, 1); return N ? yawDir(N.t[0], N.t[1]) : 0; }
+function viewYaw(x, z) { const v = view(W, H), r = v.x || [1, 0, 0], y = yawDir(r[0], r[2]), b = baseYaw(x, z), q = Math.PI / 2; return b + Math.round((y - b) / q) * q + ROT.off; }
+function gridSnap(p, step) { const N = naveAt(p.x, p.z, 1); if (N) { const [u, d] = toLocal(N, p.x, p.z), [x, z] = NP(N, Math.round(u / step) * step, -Math.round(d / step) * step); p.x = x; p.z = z; } else { p.x = Math.round(p.x / step) * step; p.z = Math.round(p.z / step) * step; } }
+function wallEnds(Q) { const B = BK[Q.k], a = axX(Q.yaw || 0), h = B.L / 2; return [[Q.x - a[0] * h, Q.z - a[1] * h], [Q.x + a[0] * h, Q.z + a[1] * h]]; }
+function endSnap(p) { if (!BK[p.k] || !BK[p.k].wall) return; let bd = 0.45, sh = null; const mine = wallEnds(p);
+  for (const Q of PROPS) { if (Q.id === p.id || !BK[Q.k] || !BK[Q.k].wall || Math.hypot(Q.x - p.x, Q.z - p.z) > 4) continue; for (const q of wallEnds(Q)) for (const m of mine) { const d = Math.hypot(q[0] - m[0], q[1] - m[1]); if (d > 0.002 && d < bd) { bd = d; sh = [q[0] - m[0], q[1] - m[1]]; } } }
+  if (sh) { p.x += sh[0]; p.z += sh[1]; } }
+function planeAt(r, y) { if (Math.abs(r.d[1]) < 1e-6) return null; const t = (y - r.o[1]) / r.d[1]; return t > 0 ? [r.o[0] + r.d[0] * t, y, r.o[2] + r.d[2] * t, t] : null; }
+placeProp = (o => function (p, x, y) { const B = BK[p.k], F = FK[p.k]; if (!B && !F) return o(p, x, y);
+  const fresh = !PROPS.includes(p), r = rayNow(x, y); HITSKIP = p.id; const h = surfHit(r); HITSKIP = null;
+  if (F && F.wall && h && Math.abs(h.n[1]) < 0.4) { p.x = h.p[0] + h.n[0] * 0.01; p.z = h.p[2] + h.n[2] * 0.01; p.y = h.N ? 0.06 : 0; p.yaw = Math.atan2(-h.n[2], h.n[0]) - Math.PI / 2; return; }
+  let g = null;
+  if (B && B.flat && !B.floor && r.d[1] > 0) { const q = planeAt(r, 2.76); if (q && (!h || q[3] <= h.t + 0.01)) g = [q[0], q[2]]; }
+  if (!g && h && h.n[1] > 0.5 && h.p[1] < 0.4) g = [h.p[0], h.p[2]];
+  if (!g && h && Math.abs(h.n[1]) < 0.4) g = [h.p[0] + h.n[0] * 0.4, h.p[2] + h.n[2] * 0.4];
+  if (!g) { const q = planeAt(r, 0.06); g = q && q[3] < 400 ? [q[0], q[2]] : groundAt(x, y); }
+  p.x = g[0]; p.z = g[1]; p.y = naveAt(g[0], g[1], 1) ? 0.06 : 0;
+  if (fresh) p.yaw = viewYaw(p.x, p.z);
+  if (B) { gridSnap(p, B.flat ? 1 : 0.5); endSnap(p); } })(placeProp);
+const sameSpot = p => PROPS.some(Q => Q.k === p.k && Math.hypot(Q.x - p.x, Q.z - p.z) < 0.05 && Math.abs(Math.sin((Q.yaw || 0) - (p.yaw || 0))) < 0.05);
+e3Tool = (o => function (t, e) { if (t === 'prop' && BK[ED.propk]) { const G = mkProp(ED.propk); G.id = 'ed-test'; placeProp(G, e.clientX, e.clientY); if (sameSpot(G)) { hotName('Ya hay una igual ahí'); return true; } } return o(t, e); })(e3Tool);
+
+/* caminar: las paredes armadas frenan, la puerta deja pasar */
+walkFree = (o => function (x, z) { if (!o(x, z)) return false; const rr = 0.3, y = WALK.y;
+  for (const Q of PROPS) { const B = BK[Q.k]; if (!B || !(B.wall || B.solid)) continue; const dx = x - Q.x, dz = z - Q.z; if (dx * dx + dz * dz > 9) continue; const y0 = Q.y || 0; if (y - 1.6 > y0 + 2.7 || y + 0.2 < y0) continue;
+    const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), lx = dx * ex[0] + dz * ex[1], lz = dx * ez[0] + dz * ez[1], hl = B.wall ? B.L / 2 : 0.15, ht = B.wall ? 0.06 : 0.15;
+    if (Math.abs(lx) < hl + rr && Math.abs(lz) < ht + rr) { if (B.door && Math.abs(lx) < 0.4) continue; return false; } }
+  return true; })(walkFree);
+
+/* barra de herramientas 1–0 */
+const HOT_DEF = ['sel', 'del', 'dev:ap', 'dev:cam:domo', 'dev:humo', 'prop:wpan', 'prop:wdoor', 'prop:wwin', 'prop:desk', 'plbl'];
+const HOT = { slots: (() => { try { const s = JSON.parse(localStorage.getItem('ondi.hotbar')); if (Array.isArray(s) && s.length === 10) return s; } catch (e) {} return HOT_DEF.slice(); })(), hover: null };
+const HOTX = { sel: ['Elegir y mover', 'sel'], del: ['Borrar', 'del'] };
+const canHot = () => ED.on && canEdit() && !GALV.id;
+function hotSave() { try { localStorage.setItem('ondi.hotbar', JSON.stringify(HOT.slots)); } catch (e) {} }
+function hotInfo(k) { if (!k) return null; if (HOTX[k]) return { n: HOTX[k][0], ic: CIC[HOTX[k][1]] }; const it = ALL3.find(x => x.k === k); return it ? { n: it.n, ic: CIC[it.ic] || CIC.box } : null; }
+function hotCur() { const t = ED.tool; return HOT.slots.findIndex(k => k && ((CATK && k === CATK) || (!CATK && k === t && (t === 'sel' || t === 'del')))); }
+function hotRender() { const el = $('#e3hot'); if (!el) return; el.hidden = !canHot(); document.documentElement.classList.toggle('hotbar', canHot()); if (el.hidden) return; const cur = hotCur();
+  el.innerHTML = HOT.slots.map((k, i) => { const f = hotInfo(k), key = (i + 1) % 10; return `<button class="e3hs ${i === cur ? 'on' : ''} ${f ? '' : 'empty'}" data-hs="${i}" draggable="${f ? 'true' : 'false'}" title="${f ? escH(f.n) : 'Vacío: arrastrá algo del catálogo'} · tecla ${key}" aria-label="Tecla ${key}: ${f ? escH(f.n) : 'vacía'}"><i>${key}</i>${f ? f.ic.replace(/width="\d+" height="\d+"/, 'width="22" height="22"') : ''}</button>`; }).join('')
+    + `<button class="e3hcat" data-hcat="1" title="Catálogo · Tab" aria-label="Abrir o cerrar el catálogo">${CIC.shelf.replace(/width="\d+" height="\d+"/, 'width="20" height="20"')}<i>Tab</i></button>`; }
+let HNT = 0;
+function hotName(t) { const el = $('#e3hname'); if (!el) return; el.textContent = t; el.classList.add('on'); clearTimeout(HNT); HNT = setTimeout(() => el.classList.remove('on'), 1600); }
+function selectSlot(i) { const k = HOT.slots[i], key = (i + 1) % 10; if (!k) { hotName('Tecla ' + key + ' vacía · abrí el catálogo (Tab) y arrastrá algo acá'); return; }
+  if (k === 'sel' || k === 'del') { CATK = null; setTool(k); renderCat(true); } else armItem(k); const f = hotInfo(k); if (f) hotName(f.n); hotRender(); }
+function hotAssign(i, k) { const j = HOT.slots.indexOf(k); if (j >= 0 && j !== i) HOT.slots[j] = HOT.slots[i] || null; HOT.slots[i] = k; hotSave(); hotRender(); const f = hotInfo(k); hotName((f ? f.n : k) + ' en la tecla ' + ((i + 1) % 10)); }
+function catToggle(force) { const el = $('#e3cat'); if (!el || !ED.on) return; const html = document.documentElement, open = force !== undefined ? force : html.classList.contains('catmin');
+  html.classList.toggle('catmin', !open); try { localStorage.setItem('ondi.catmin', open ? '0' : '1'); } catch (e) {} catShow();
+  if (open) { if (LOCK.on) document.exitPointerLock(); const q = $('#e3q'); if (q && matchMedia('(pointer:fine)').matches) setTimeout(() => q.focus(), 30); } else if (WALK.on) { lockReq('auto'); canvas.focus(); } }
+
+/* el mouse tomado: mirar como en un juego de disparos, la acción va a la mira */
+const LOCK = { on: false, fail: false, req: '', carry: null, mv: 0, aimT: 0, ghT: 0 };
+function lockReq(why) { if (LOCK.fail || LOCK.on || !canvas.requestPointerLock || !matchMedia('(pointer:fine)').matches) return false; LOCK.req = why;
+  try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => { if (why === 'click') lockFail(); }); } catch (e) { if (why === 'click') lockFail(); return false; } return true; }
+function lockFail() { if (LOCK.fail) return; if (LOCK.ok) { hotName('Hacé clic de nuevo para tomar el mouse'); return; } LOCK.fail = true; toast('Acá no se puede tomar el mouse: arrastrá para mirar'); helpRender(); }
+document.addEventListener('pointerlockchange', () => { const was = LOCK.on; LOCK.on = document.pointerLockElement === canvas; if (LOCK.on) LOCK.ok = true; if (was && !LOCK.on) LOCK.offT = performance.now(); document.documentElement.classList.toggle('locked', LOCK.on);
+  if (!LOCK.on) { carryEnd(true); aimShow(''); if (ED.on && isDevTool(ED.tool)) ghostHide(); }
+  if (LOCK.on && !was) hotName(ED.on && canEdit() ? 'Mouse tomado · Esc lo suelta' : 'Mové el mouse para mirar · Esc lo suelta'); walkHud(); });
+document.addEventListener('pointerlockerror', () => { if (LOCK.req === 'click') lockFail(); });
+const CX = () => W / 2, CY = () => H / 2, cev = (b = 0) => ({ clientX: CX(), clientY: CY(), button: b, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, preventDefault() {}, stopPropagation() {} });
+function lookMove(mx, my) { if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; WALK.yaw -= mx * 0.0024; WALK.pitch = clamp(WALK.pitch - my * 0.0024, -1.45, 1.45); LOCK.mv += Math.abs(mx) + Math.abs(my); }
+function placeDevAt(tool, x, y) { const d = mkDev(tool); if (!d) return null; if (GHOST.d && GHOST.on && DEVT[tool][0] === GHOST.d.type) d.yaw = GHOST.d.yaw;
+  smartPlace(d, x, y); d.loc = locFor(d); addDevRaw(d); recAdd(d); edSave(); log('info', `${d.id} agregado · ${d.loc}`, d.id); hotName(d.id + ' puesto · clic derecho para cambiarle el tipo'); return d; }
+function placePropAt(k, x, y) { const p = mkProp(k); placeProp(p, x, y); if (BK[k] && sameSpot(p)) { hotName('Ya hay una igual ahí'); return null; } addAnyRaw(p); recAdd(p); edSave(); bumpUse('prop:' + k); hotName((PK[k] || {}).n + ' puesto'); return p; }
+function pickAim(x, y) { const id = pick3(x, y), e = id && entity(id); if (e && (e.d || e.t === 'prop' || e.t === 'plbl' || e.t === 'item')) return id;
+  const S = new Set([...DEV.map(d => d.id), ...PROPS.map(q => q.id)]), r = ray(view(W, H), x, y, W, H); let best = null, bt = Infinity;
+  for (const o of OBJ) { if (!o.pick || !o.on || !S.has(o.id)) continue; const [mn, mx] = aabb(o), t = rayBox(r.o, r.d, mn, mx); if (t !== null && t < bt) { bt = t; best = o.id; } } return best; }
+function aimDown(b) { const x = CX(), y = CY(); if (b === 2 || b === 1) { document.exitPointerLock(); setTimeout(() => openCtx(x, y), 20); return; } if (b !== 0) return;
+  if (!(ED.on && canEdit())) { const id = pickAim(x, y); if (!id) { if (SEL) closePanel(); return; } const d = DEV.find(q => q.id === id);
+    if (d && d.type === 'cam') { document.exitPointerLock(); select(id, false); openCam(id); return; } select(id, false); return; }
+  const t = ED.tool;
+  if (t === 'sel') { const id = pickAim(x, y); if (!id) { if (SEL) closePanel(); return; } const IR = innerRef(id); LOCK.mv = 0;
+    if (IR && IR.k === 'it') { itemDrag(IR, x, y, true); LOCK.carry = { k: 'it', id, t0: performance.now() }; return; }
+    const P2 = PROPS.find(q => q.id === id), d = DEV.find(q => q.id === id); if (P2 || d) { LOCK.carry = { k: P2 ? 'prop' : 'dev', id, d: P2 || d, before: snapD(P2 || d), t0: performance.now(), moved: false }; return; }
+    select(id, false); return; }
+  if (t === 'del') { const id = pickAim(x, y); if (id) removeId(id); return; }
+  if (isDevTool(t)) { placeDevAt(t, x, y); return; }
+  if (t === 'prop') { placePropAt(ED.propk, x, y); return; }
+  if (t === 'plbl') { document.exitPointerLock(); setTimeout(() => e3Tool('plbl', cev()), 20); return; }
+  if (t === 'it' || t === 'draw') { e3Tool(t, cev()); return; }
+  document.exitPointerLock(); toast('Esa herramienta se usa desde la vista de arriba'); }
+function carryStep() { const C2 = LOCK.carry; if (!C2) return; if (!C2.moved && LOCK.mv < 14 && performance.now() - C2.t0 < 260) return; C2.moved = true; const x = CX(), y = CY();
+  if (C2.k === 'it') { if (ITDRAG) itemDrag(ITDRAG.R, x, y); return; }
+  if (C2.k === 'prop') { HITSKIP = C2.d.id; placeProp(C2.d, x, y); HITSKIP = null; propObj(C2.d); return; }
+  smartPlace(C2.d, x, y); if (C2.d.custom || C2.d.mount === 'ceiling') C2.d.loc = locFor(C2.d); devObj(C2.d); devTag(C2.d); if (SEL === C2.d.id) updGizmo(); }
+function carryEnd(cancel) { const C2 = LOCK.carry; LOCK.carry = null; if (!C2) return;
+  if (C2.k === 'it') { itemDragEnd(); if (!C2.moved && !cancel) select(C2.id, false); return; }
+  if (!C2.moved) { if (!cancel) select(C2.id, false); return; }
+  if (C2.k === 'dev') markMoved(C2.d); edSave(); recChange(C2.d, C2.before, C2.d.id + ' movido'); hotName(C2.d.id + ' movido'); }
+function aimShow(t, cls) { const el = $('#e3aim'); if (!el) return; el.hidden = !t; if (t) { el.innerHTML = t; el.className = 'e3aim ' + (cls || ''); } }
+const DEVN = { cam: 'Cámara', ap: 'Wi-Fi', gab: 'Gabinete', wr: 'Rack', rack: 'Rack', rd: 'Lector de acceso' };
+function aimText() { if (!WALK.on || !LOCK.on) return aimShow(''); if (LOCK.carry && LOCK.carry.moved) return aimShow('Soltá para dejarlo · ' + escH(LOCK.carry.id));
+  const ed = ED.on && canEdit(), t = ED.tool; if (ed && t !== 'sel' && t !== 'del') return aimShow('');
+  const id = pickAim(CX(), CY()); if (!id) return aimShow(''); const e = entity(id); if (!e || e.t === 'nave' || e.t === 'truck' || e.t === 'fork' || e.t === 'fiber') return aimShow('');
+  const d = e.d, nm = d ? (SENS[d.type] ? SENS[d.type].n : DEVN[d.type] || d.type) + ' <b>' + escH(d.id) + '</b>' : e.t === 'prop' ? escH(e.P.name || (PK[e.P.k] || {}).n || e.P.id) : e.t === 'plbl' ? escH(e.L.text) : e.t === 'item' ? escH(e.R.o.name || e.R.o.id) : escH(id);
+  if (ed && t === 'del') return aimShow('Clic para borrar · ' + nm, 'del');
+  if (ed) return aimShow(nm + ' · clic para elegir, mantené para mover');
+  if (d && d.type === 'cam') return aimShow(nm + ' · clic para ver la cámara', 'cam'); if (d && SENS[d.type]) return aimShow(nm + ' · clic para ver los datos'); aimShow(nm); }
+function gameTick() { requestAnimationFrame(gameTick); if (!WALK.on) return; const now = performance.now();
+  if (LOCK.on && LOCK.carry) carryStep();
+  if (LOCK.on && ED.on && canEdit() && !LOCK.carry && now - LOCK.ghT > 33) { LOCK.ghT = now; GHOST.x = CX(); GHOST.y = CY(); ghostMove(cev()); }
+  if (now - LOCK.aimT > 120) { LOCK.aimT = now; aimText(); } }
+
+/* caminar: volar solo en edición, ayuda que se achica */
+stepWalk = (o => function (dt) { if (!WALK.on) return; const fly = ED.on && canEdit(); let saved = null;
+  if (!fly) { saved = ['q', 'e', 'c', ' '].filter(k => WALK.keys.has(k)); saved.forEach(k => WALK.keys.delete(k)); WALK.pad.v = 0; }
+  o(dt);
+  if (saved) { saved.forEach(k => WALK.keys.add(k)); if (Math.abs(WALK.y - 1.7) > 0.005) { WALK.y += (1.7 - WALK.y) * Math.min(1, dt * 5); if (Math.abs(WALK.y - 1.7) < 0.01) WALK.y = 1.7; const a = $('#e3alt'); if (a) a.textContent = WALK.y.toFixed(1).replace('.', ',') + ' m'; } } })(stepWalk);
+const HELP = { open: (() => { try { return localStorage.getItem('ondi.help') !== '0'; } catch (e) { return true; } })() };
+function helpSet(on) { HELP.open = on; try { localStorage.setItem('ondi.help', on ? '1' : '0'); } catch (e) {} helpRender(); walkHud(); }
+const kb = s => s.split(' ').map(k => `<kbd>${k}</kbd>`).join(' ');
+function helpRender() { const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
+  const rows = [[kb('W A S D'), 'Caminar'], ['Mouse', LOCK.fail ? 'Arrastrá para mirar' : 'Mirar · hacé clic en la pantalla para tomar el mouse'], [kb('Shift'), 'Ir más rápido'], [kb('Esc'), 'Soltar el mouse · otra vez para salir']];
+  if (!ed) rows.push(['Clic', 'En una cámara, ves lo que ve · en un sensor, sus datos']);
+  else rows.push([kb('E') + ' ' + kb('Q'), 'Subir y bajar volando (también Espacio y C)'], [kb('1') + '…' + kb('0'), 'Elegir herramienta de la barra'], ['Rueda', 'Cambiar de herramienta'], ['Clic', 'Poner, borrar o elegir donde apunta la mira'], ['Mantener', 'Con “Elegir”: agarrar y mover'], [kb('R'), 'Girar lo que vas a poner'], [kb('Tab'), 'Abrir o cerrar el catálogo'], [kb('Ctrl') + ' ' + kb('Z'), 'Deshacer'], ['Clic derecho', 'Más opciones de lo que apuntás']);
+  el.innerHTML = `<div class="e3hh"><b>${ed ? 'Comandos de edición' : 'Cómo moverte'}</b><button class="e3x" data-help="0" title="Ocultar la ayuda · H" aria-label="Ocultar la ayuda">−</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>${ed ? '<p>Para cambiar la barra: abrí el catálogo, pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero.</p>' : ''}`; }
+walkHud = function () { const on = WALK.on; HUD.hidden = !on; $('#e3pad').hidden = !on; $('#e3cross').hidden = !on; const wb = $('#walkb'); if (wb) wb.setAttribute('aria-pressed', String(on)); helpRender(); if (!on) { aimShow(''); return; }
+  const ed = ED.on && canEdit();
+  HUD.innerHTML = `<div><b>${WALK.N ? escH(WALK.N.full) : 'Parque'}</b><span>${ed ? 'Editando' : 'Paseo'} · ojos a <b id="e3alt">${WALK.y.toFixed(1).replace('.', ',')} m</b></span></div>`
+    + (canEdit() ? `<button class="btn ${ed ? 'pri' : ''}" data-w="ed" aria-pressed="${ed}" title="Prender o apagar la edición">${ed ? 'Editando' : 'Editar'}</button>` : '')
+    + (ed ? '<button class="btn" data-w="eye" title="Volver a la altura de los ojos">1,7 m</button><button class="btn" data-w="top">Al techo</button>' : '')
+    + `<button class="btn" data-w="help" aria-pressed="${HELP.open}" title="Ver los comandos · H">? Ayuda</button><button class="btn" data-w="exit">Salir</button>`; };
+HUD.addEventListener('click', e => { const b = e.target.closest('button[data-w]'); if (!b) return; if (b.dataset.w === 'ed') { setEdit(!ED.on); } if (b.dataset.w === 'help') helpSet(!HELP.open); });
+
+/* sensor visto por el cliente: el número y lo justo */
+sensPanel = (o => function (d) { const r = o(d); if (canEdit()) return r; const S = SENS[d.type], nv = d.nave && naveById(d.nave);
+  const val = d.type === 'humo' ? 'Sin humo' : d.type === 'temp' ? (d.skind === 'frio' ? '3,4 °C' : (20.5 + Math.abs(d.x % 3)).toFixed(1).replace('.', ',') + ' °C') : d.type === 'pir' ? 'Sin movimiento' : 'En reposo';
+  return { ey: S.n, t: 'Sensor ' + d.id, s: nv ? nv.full : (d.loc || '').split(' · ')[0] || 'Predio', pill: d.status === 'ok' ? '<span class="pill ok">Funcionando</span>' : '<span class="pill warn">Revisar</span>',
+    body: `<dl class="rows">${row('Número', escH(d.id))}${row('Lectura', val)}${row('Lugar', escH((d.loc || '').split(' · ').slice(-1)[0] || '—'))}</dl>`, acts: '' }; })(sensPanel);
+
+/* enganches con lo que ya existía */
+setTool = (o => function (t) { o(t); hotRender(); })(setTool);
+setEdit = (o => function (on) { o(on); hotRender(); if (WALK.on) walkHud(); if (!ED.on) { carryEnd(true); } })(setEdit);
+renderCat = (o => function (k) { o(k); const el = $('#e3cat'); if (!el) return; el.querySelectorAll('[data-ck3]').forEach(b => { b.draggable = true; }); hotRender(); })(renderCat);
+enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { hotRender(); helpRender(); lockReq('auto'); } })(enterWalk);
+exitWalk = (o => function () { if (LOCK.on) document.exitPointerLock(); carryEnd(true); o(); helpRender(); })(exitWalk);
+
+function initGame() {
+  const css = document.createElement('style'); css.textContent = `
+.e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
+.e3hs{position:relative;width:clamp(30px,calc((100vw - 90px) / 11),52px);aspect-ratio:1;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.e3hs i,.e3hcat i{position:absolute;left:5px;top:2px;font:700 10px var(--f-ui);font-style:normal;color:var(--muted)} .e3hs svg{width:46%;height:46%}
+.e3hs:hover{border-color:var(--accent)} .e3hs.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--glass-strong))} .e3hs.on i{color:var(--accent)}
+.e3hs.empty{border-style:dashed;opacity:.6} .e3hs.drop{border-style:solid;border-color:var(--accent);opacity:1}
+.e3hcat{position:relative;width:40px;height:clamp(30px,calc((100vw - 90px) / 11),52px);margin-left:4px;border-radius:10px;border:0;background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.e3hcat i{left:auto;right:0;top:auto;bottom:1px;font-size:9px} .e3hcat:hover{background:var(--glass-strong)}
+.e3hname{position:fixed;left:50%;bottom:calc(var(--gb) + 74px);transform:translateX(-50%);z-index:15;padding:5px 12px;border-radius:8px;background:rgba(15,20,24,.78);color:#fff;font:600 13px var(--f-ui);pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+.e3hname.on{opacity:1}
+.e3aim{position:fixed;left:50%;top:calc(50% + 20px);transform:translateX(-50%);z-index:9;padding:4px 10px;border-radius:7px;background:rgba(15,20,24,.62);color:#fff;font:500 12.5px var(--f-ui);pointer-events:none;white-space:nowrap}
+.e3aim.del{background:rgba(196,43,43,.85)} .e3aim.cam{background:rgba(15,20,24,.75)}
+html.walking .e3cross{width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:0;background:none;box-shadow:none}
+html.walking .e3cross::before,html.walking .e3cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+html.walking .e3cross::before{left:8px;top:0;width:2px;height:18px} html.walking .e3cross::after{top:8px;left:0;height:2px;width:18px}
+html.locked canvas{cursor:none}
+html.walking.hotbar #editbar{display:none!important}
+html.hotbar.walking .e3walk{bottom:calc(var(--gb) + 70px)} html.hotbar.walking .e3cat{bottom:calc(var(--gb) + 126px)} html.hotbar.walking .e3help{bottom:calc(var(--gb) + 124px)}
+html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
+.e3walk{padding:5px 5px 5px 12px;gap:5px} .e3walk .btn{white-space:nowrap;height:32px;padding:0 10px;font-size:12.5px} .e3walk > div b:first-child{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.e3help{position:fixed;right:var(--gr);bottom:calc(var(--gb) + 70px);width:280px;max-height:calc(100vh - var(--gt) - var(--gb) - 215px);overflow:auto;z-index:14;padding:10px 12px 12px;border-radius:12px;font:13px var(--f-ui);color:var(--ink)}
+.e3hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px} .e3hh b{font-size:13px}
+.e3x{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--glass-strong);color:var(--ink);font:700 16px var(--f-ui);cursor:pointer;line-height:1}
+.e3help dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0;align-items:center} .e3help dt{white-space:nowrap;font-size:12px;color:var(--muted)} .e3help dd{margin:0;font-size:12.5px}
+.e3help p{margin:8px 0 0;font-size:11.5px;color:var(--muted);line-height:1.35}
+kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
+.e3tile[draggable=true]{cursor:grab}
+.e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}
+@media (max-width:760px){.e3help{left:var(--gl);right:var(--gr);width:auto;top:calc(var(--gt) + 60px);bottom:auto} html.hotbar .e3cat{bottom:calc(var(--gb) + 70px)}}
+`; document.head.appendChild(css);
+  const hot = document.createElement('div'); hot.id = 'e3hot'; hot.className = 'e3hot glass'; hot.hidden = true; hot.setAttribute('role', 'toolbar'); hot.setAttribute('aria-label', 'Barra de herramientas 1 a 0'); document.body.appendChild(hot);
+  const nm = document.createElement('div'); nm.id = 'e3hname'; nm.className = 'e3hname'; nm.setAttribute('aria-live', 'polite'); document.body.appendChild(nm);
+  const aim = document.createElement('div'); aim.id = 'e3aim'; aim.className = 'e3aim'; aim.hidden = true; document.body.appendChild(aim);
+  const hp = document.createElement('aside'); hp.id = 'e3help'; hp.className = 'e3help glass'; hp.hidden = true; hp.setAttribute('aria-label', 'Ayuda de movimiento'); document.body.appendChild(hp);
+  hp.addEventListener('click', e => { if (e.target.closest('[data-help]')) helpSet(false); });
+  // barra: clic elige, clic derecho vacía, arrastrar ordena o asigna
+  hot.addEventListener('click', e => { const s = e.target.closest('[data-hs]'); if (s) { selectSlot(+s.dataset.hs); return; } if (e.target.closest('[data-hcat]')) catToggle(); });
+  hot.addEventListener('contextmenu', e => { const s = e.target.closest('[data-hs]'); if (!s) return; e.preventDefault(); const i = +s.dataset.hs; if (HOT.slots[i]) { HOT.slots[i] = null; hotSave(); hotRender(); hotName('Tecla ' + ((i + 1) % 10) + ' vacía'); } });
+  hot.addEventListener('dragstart', e => { const s = e.target.closest('[data-hs]'); if (!s) return; e.dataTransfer.setData('text/ondi-slot', s.dataset.hs); e.dataTransfer.effectAllowed = 'move'; });
+  hot.addEventListener('dragover', e => { const s = e.target.closest('[data-hs]'); if (!s) return; e.preventDefault(); hot.querySelectorAll('.drop').forEach(x => x.classList.remove('drop')); s.classList.add('drop'); });
+  hot.addEventListener('dragleave', e => { const s = e.target.closest('[data-hs]'); if (s) s.classList.remove('drop'); });
+  hot.addEventListener('drop', e => { const s = e.target.closest('[data-hs]'); if (!s) return; e.preventDefault(); const i = +s.dataset.hs, k = e.dataTransfer.getData('text/ondi'), from = e.dataTransfer.getData('text/ondi-slot');
+    if (k) hotAssign(i, k); else if (from !== '') { const j = +from, a = HOT.slots[j]; HOT.slots[j] = HOT.slots[i]; HOT.slots[i] = a; hotSave(); hotRender(); } });
+  const cat = $('#e3cat');
+  if (cat) { cat.addEventListener('dragstart', e => { const b = e.target.closest('[data-ck3]'); if (!b) return; e.dataTransfer.setData('text/ondi', b.dataset.ck3); e.dataTransfer.effectAllowed = 'copy'; });
+    cat.addEventListener('mouseover', e => { const b = e.target.closest('[data-ck3]'); HOT.hover = b ? b.dataset.ck3 : null; }); cat.addEventListener('mouseleave', () => { HOT.hover = null; });
+    const hb = cat.querySelector('[data-q="hide"]'); if (hb) { hb.classList.add('e3hide'); hb.title = 'Minimizar el catálogo · Tab'; hb.innerHTML = '− <span>Tab</span>'; }
+    const ft = cat.querySelector('.e3foot'); if (ft) ft.innerHTML = 'Para ponerlo en la barra de abajo: arrastralo a un casillero, o pasá el mouse por arriba y apretá el número. Clic derecho sobre cualquier cosa para más opciones.';
+    cat.addEventListener('click', e => { if (e.target.closest('[data-q="hide"]')) { try { localStorage.setItem('ondi.catmin', '1'); } catch (x) {} } }, true); }
+  const mini = $('#e3catmini'); if (mini) { mini.innerHTML = CIC.shelf + '<span>Catálogo</span> <kbd>Tab</kbd>'; mini.addEventListener('click', () => { try { localStorage.setItem('ondi.catmin', '0'); } catch (x) {} }); }
+  try { if (localStorage.getItem('ondi.catmin') === '1') document.documentElement.classList.add('catmin'); } catch (e) {}
+  // teclado: números, Tab, H, R para girar la pieza
+  window.addEventListener('keydown', e => { const t = e.target; if (t.closest && t.closest('input,select,textarea')) return; const k = e.key, kl = k.toLowerCase(), mod = e.ctrlKey || e.metaKey || e.altKey;
+    if (k === 'Escape' && (LOCK.on || performance.now() - (LOCK.offT || 0) < 350)) { e.preventDefault(); e.stopImmediatePropagation(); if (LOCK.on) document.exitPointerLock(); return; }
+    if (!mod && kl === 'h' && WALK.on) { e.preventDefault(); helpSet(!HELP.open); return; }
+    if (!canHot() || mod) return;
+    if (/^[0-9]$/.test(k)) { e.preventDefault(); e.stopImmediatePropagation(); const i = (+k + 9) % 10; if (HOT.hover && !$('#e3cat').hidden) hotAssign(i, HOT.hover); else selectSlot(i); return; }
+    if (k === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); catToggle(); return; }
+    if (kl === 'r' && ED.tool === 'prop' && (BK[ED.propk] || (FK[ED.propk] && !FK[ED.propk].wall))) { e.preventDefault(); e.stopImmediatePropagation(); ROT.off += (e.shiftKey ? -1 : 1) * Math.PI / 2; GHOST.key = ''; if (GHOST.d) GHOST.d.yaw = undefined; if (!LOCK.on) ghostMove({ clientX: GHOST.x, clientY: GHOST.y }); hotName('Girado'); } }, true);
+  // mouse tomado: todo va a la mira
+  window.addEventListener('pointerdown', e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); aimDown(e.button); return; }
+    if (WALK.on && e.target === canvas && e.button === 0 && e.pointerType === 'mouse' && !LOCK.fail && matchMedia('(pointer:fine)').matches) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); ctxClose(); popClose(); lockReq('click'); } }, true);
+  window.addEventListener('pointerup', e => { if (!LOCK.on) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.button === 0) carryEnd(false); }, true);
+  window.addEventListener('pointermove', e => { if (!LOCK.on) return; e.stopPropagation(); e.stopImmediatePropagation(); lookMove(e.movementX || 0, e.movementY || 0); }, true);
+  for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
+  window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
+    let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
+  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel });
+  hotRender(); requestAnimationFrame(gameTick); }
+
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
 if (BLANK) PHOTO.src = (HOST && HOST.plano) || '';
 edLoad(); initSim(); if (BLANK && PHOTO.src) { LAYERS.foto = true; const lb = document.querySelector('.lay[data-l="foto"]'); if (lb) lb.setAttribute('aria-pressed', 'true'); }
-buildAll(); makeLabels(); ENV = env(); resize(); setRole(ROLE); initBlankUI(); initEd3d();
+buildAll(); makeLabels(); ENV = env(); resize(); setRole(ROLE); initBlankUI(); initEd3d(); initGame();
 if (BLANK) { const nt = document.querySelector('.note'); if (nt) nt.textContent = 'Escala real en metros. Subí un plano o una foto como base y dibujá los galpones, las calles y los equipos encima.';
   const fl = document.querySelector('.lay[data-l="foto"]'); if (fl) [...fl.childNodes].forEach(n => { if (n.nodeType === 3 && /Foto/.test(n.textContent)) n.textContent = n.textContent.replace(/Foto aérea/, 'Plano de base'); });
   fl && fl.querySelectorAll('span').forEach(sp => { if (/Foto aérea/.test(sp.textContent)) sp.textContent = 'Plano de base'; });
