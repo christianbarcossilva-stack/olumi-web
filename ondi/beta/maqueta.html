@@ -3786,6 +3786,15 @@ edAction = (o => function (a, val) { if (a === 'extoff') { const d = SEL && DEV.
 typePop = (o => function (d, ...a) { if (d && d.ext) return; return o(d, ...a); })(typePop);
 edState = (o => function () { const st = o(); st.ext = DEV.filter(d => d.ext).map(d => { const N = d.nave && naveById(d.nave); return { uid: d.ext.uid, id: d.id, nombre: d.name || d.id, lugar: N ? N.full : ((d.loc || '').split(' · ')[0] || 'Predio'), nave: d.nave || '' }; }); return st; })(edState);
 function extInit() { extLoad(true); setInterval(() => extLoad(false), 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) extLoad(false); }); }
+/* maqueta genérica para arrancar: un galpón con calle de acceso, portón, estacionamiento y algo de verde */
+function genericStart() { if (!BLANK || !HOST || !HOST.generica || (HOST.state && HOST.state.v === 1) || NAVES.length) return;
+  ED.roads.push({ id: 'CL-1', name: 'Calle de acceso', w: 9, pts: [[-80, 46], [80, 46]] }, { id: 'CL-2', name: 'Entrada', w: 7, pts: [[0, 46], [0, 20]] });
+  const N = { id: 'n1', code: 'G1', name: 'Galpón principal', rubro: 'Galpón', x0: -30, x1: 30, z0: -25, z1: 15, h: 10, face: 'S', custom: true };
+  prepNave(N); NAVES.push(N); rebuildBlank(); buildNave(N); chipFor(N);
+  const P2 = (k, x, z, yaw = 0) => { const p = mkProp(k); Object.assign(p, { x, z, y: 0, yaw }); addAnyRaw(p); };
+  for (let i = 0; i < 5; i++) P2('car', 14 + i * 3.2, 30, Math.PI / 2);
+  for (const x of [-40, -28, 28, 40]) P2('tree', x, 56);
+  edSave(); setTimeout(() => flyTo({ tx: 0, tz: 8, zoom: 150, pitch: 0.85 }, 1.4), 400); }
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3824,7 +3833,7 @@ html.hotbar .e3cat{bottom:calc(var(--gb) + 76px)}
 @media (hover:hover) and (pointer:fine){html.walking .topbar,html.walking .controls{display:none!important}
 html.walking .e3walk{top:var(--gt);bottom:auto!important} html.walking .e3help{top:calc(var(--gt) + 58px);bottom:auto!important} html.walking.panelopen .e3help{display:none}
 html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.walking .panel{top:calc(var(--gt) + 58px)}}
-.e3ext{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--gt) + 72px);z-index:13;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font:500 13px var(--f-ui);cursor:pointer;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.e3ext{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 72px);z-index:13;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font:500 13px var(--f-ui);cursor:pointer;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .e3ext b{color:var(--accent)} .e3ext .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ok,#2a9d5c)} .e3ext .dot.crit{background:#d64545}
 html.walking .e3ext,html.editing .e3ext[data-k=ubicar]{display:none}
 .e3pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:31;display:grid;gap:8px;min-width:240px;padding:16px;border-radius:14px;color:var(--ink);font:13px var(--f-ui)} .e3pause b{font-size:16px;margin-bottom:2px} .e3pause .btn{justify-content:space-between;display:flex;align-items:center;gap:10px}
@@ -3888,7 +3897,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
   if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel });
-  hotRender(); requestAnimationFrame(gameTick); extInit(); }
+  hotRender(); requestAnimationFrame(gameTick); extInit(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }

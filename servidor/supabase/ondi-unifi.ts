@@ -56,6 +56,15 @@ async function mkSitios(key: string) {
 const mkDev = (d: any) => ({ id: d.serial, nombre: d.name || d.model || d.serial, modelo: d.model || '', linea: d.productType || '', mac: d.mac || '', ip: d.lanIp || d.publicIp || '',
   estado: d.status === 'online' ? 'online' : d.status === 'offline' ? 'offline' : d.status || '', version: '', firmware: '', actualizar: null, consola: d.productType === 'appliance', desde: d.lastReportedAt || null });
 
+// Network de la consola, a través de la nube (necesita una clave con alcance "UniFi Applications" → Network)
+async function conn(key: string, hostId: string, path: string) {
+  const r = await fetch(`${UI}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1/${path}`, { headers: { 'X-API-KEY': key, Accept: 'application/json' } }).catch(() => null);
+  if (!r) throw new Error('sin conexión'); if (!r.ok) throw new Error(String(r.status));
+  return await r.json().catch(() => null);
+}
+const macN = (m: string) => String(m || '').toLowerCase().replace(/[^0-9a-f]/g, '');
+const intOut = (d: any) => ({ id: d.id, nombre: d.name || d.model || d.macAddress, modelo: d.model || '', linea: 'network', mac: d.macAddress || '', ip: d.ipAddress || '',
+  estado: d.state === 'ONLINE' ? 'online' : d.state === 'OFFLINE' ? 'offline' : String(d.state || '').toLowerCase(), version: d.firmwareVersion || '', firmware: '', actualizar: d.firmwareUpdatable || null, consola: false, desde: null });
 const siteOut = (s: any) => ({
   siteId: s.siteId, hostId: s.hostId,
   nombre: (s.meta && (s.meta.desc || s.meta.name)) || s.siteId,
@@ -139,7 +148,21 @@ Deno.serve(async (req) => {
       const [groups, sites] = await Promise.all([ui(k, 'devices', '?hostIds[]=' + encodeURIComponent(link.hostId)), ui(k, 'sites')]);
       const g = groups.find((x: any) => x.hostId === link.hostId) || groups[0] || { devices: [] };
       const st = sites.find((x: any) => x.siteId === link.siteId) || sites.find((x: any) => x.hostId === link.hostId) || null;
-      return json({ ok: true, consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos: (g.devices || []).map(devOut) });
+      // la consola puede tener varios sitios (varios clientes): se dejan solo los equipos de este sitio
+      let equipos = (g.devices || []).map(devOut), aviso = '';
+      const nSites = sites.filter((x: any) => x.hostId === link.hostId).length;
+      if (nSites > 1) {
+        try {
+          const ns = ((await conn(k, link.hostId, 'sites?limit=200')) || {}).data || [];
+          const ref = st && st.meta ? String(st.meta.name || '') : '', nom = st ? siteOut(st).nombre.toLowerCase() : '';
+          const hit = ns.find((x: any) => x.internalReference && x.internalReference === ref) || ns.find((x: any) => String(x.name || '').toLowerCase() === nom);
+          if (!hit) throw new Error('no encontré el sitio en la consola');
+          const dv = ((await conn(k, link.hostId, `sites/${hit.id}/devices?limit=500`)) || {}).data || [];
+          const byMac = new Map(equipos.map((e: any) => [macN(e.mac), e]));
+          equipos = dv.map((d: any) => byMac.get(macN(d.macAddress)) || intOut(d));
+        } catch (e) { aviso = `La consola tiene ${nSites} sitios y no pude separar los de este (${(e as Error).message}). Se ven todos los equipos de la consola: revisá que la clave tenga también el alcance "UniFi Applications → Network".`; }
+      }
+      return json({ ok: true, consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos, aviso });
     }
     return json({ error: 'Acción desconocida.' }, 400);
   } catch (e) {
