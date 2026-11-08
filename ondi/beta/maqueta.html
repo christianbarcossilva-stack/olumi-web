@@ -4381,6 +4381,104 @@ e3Panel = (o => function (e) { const c = o(e); if (c && e.t === 'prop') { if (e.
 renderCat = (o => function (k) { if (MUE.st === 'idle' && ED.on) mueLoad(); return o(k); })(renderCat);
 setTimeout(() => { if (PROPS.some(p => String(p.k).startsWith('km:'))) mueLoad(); }, 300);
 
+/* ---------- celular y tablet: caminar como en un juego (pantalla limpia; los menús se abren cuando los tocás) ---------- */
+const TOUCH = (() => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches || (('ontouchstart' in window) && Math.min(innerWidth, innerHeight) < 820); } catch (e) { return false; } })();
+document.documentElement.classList.toggle('touch', TOUCH);
+if (TOUCH) HELP.open = false; // en el celular la ayuda no aparece sola
+const TM = { open: false, hint: false };
+{ const st = document.createElement('style'); st.textContent = `
+html.touch.walking .topbar,html.touch.walking .kpiwrap,html.touch.walking .dock,html.touch.walking .controls,html.touch.walking #e3catmini,html.touch.walking #editbar,html.touch.walking .e3aim{display:none!important}
+html.touch .e3hs > i,html.touch .e3hcat > i{display:none} html.touch.walking:not(.hotopen) .e3hcat{display:none}
+html.touch.walking .e3walk{left:calc(var(--gl) + env(safe-area-inset-left));right:calc(var(--gr) + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));bottom:auto;transform:none;max-width:none;padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+html.touch.walking .e3walk > *{pointer-events:auto}
+.tb{width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:rgba(12,16,20,.55);color:#fff;font:600 20px/1 var(--f-ui);display:grid;place-items:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);flex:none;touch-action:manipulation}
+.tb.on{background:var(--accent);border-color:transparent}
+.tn{flex:1;min-width:0;text-align:center;padding-top:6px;pointer-events:none!important}
+.tn b{display:inline-block;max-width:100%;padding:5px 12px;border-radius:999px;background:rgba(12,16,20,.5);color:#fff;font:600 13px var(--f-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .6s}
+.tn small{display:block;margin-top:4px;color:#fff;font:500 11.5px var(--f-ui);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.tmenu{position:fixed;right:calc(var(--gr) + env(safe-area-inset-right));top:calc(64px + env(safe-area-inset-top));width:min(280px,calc(100vw - 32px));display:grid;gap:6px;padding:8px;border-radius:16px;z-index:16;background:var(--glass-strong);border:1px solid var(--line-strong);box-shadow:var(--shadow);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.tmenu button{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;border-radius:11px;border:0;background:transparent;color:var(--ink);font:500 15px var(--f-ui);text-align:left}
+.tmenu button:active{background:var(--line)} .tmenu button.pri{background:var(--accent);color:#fff} .tmenu hr{border:0;border-top:1px solid var(--line);margin:2px 4px}
+.e3joy{position:fixed;left:calc(var(--gl) + 14px + env(safe-area-inset-left));bottom:calc(var(--gb) + 22px + env(safe-area-inset-bottom));width:124px;height:124px;border-radius:50%;z-index:14;background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.04));border:1.5px solid rgba(255,255,255,.28);touch-action:none}
+.e3joy i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,.35);border:1.5px solid rgba(255,255,255,.55);box-shadow:0 2px 10px rgba(0,0,0,.25)}
+html.touch .e3pad{display:none!important}
+html.touch.walking.editing .e3pad{display:grid!important;left:auto;right:calc(var(--gr) + 10px + env(safe-area-inset-right));bottom:calc(var(--gb) + 92px + env(safe-area-inset-bottom));grid-template-columns:48px;grid-template-rows:48px 48px;gap:8px}
+html.touch .e3pad [data-a="f"],html.touch .e3pad [data-a="s"]{display:none} html.touch .e3pad [data-a="v"][data-v="1"]{grid-area:1/1} html.touch .e3pad [data-a="v"][data-v="-1"]{grid-area:2/1}
+html.touch .e3pad button{width:48px;height:48px;background:rgba(12,16,20,.55);color:#fff;border-color:rgba(255,255,255,.22)}
+html.touch.walking .e3hot{bottom:calc(var(--gb) + 14px + env(safe-area-inset-bottom));left:auto;right:calc(var(--gr) + 10px + env(safe-area-inset-right));transform:none;max-width:calc(100vw - 180px);overflow-x:auto;scrollbar-width:none}
+html.touch.walking .e3hot::-webkit-scrollbar{display:none}
+html.touch.walking:not(.hotopen) .e3hot .e3hs:not(.on):not(.hotx){display:none}
+html.touch.walking .e3hs{width:48px} html.touch .e3hs kbd,html.touch .e3hs .k{display:none}
+html.touch.walking.hotopen .e3hot{left:calc(var(--gl) + 10px);right:calc(var(--gr) + 10px);max-width:none;z-index:17}
+.hotx{font:700 16px var(--f-ui)}
+html.touch.walking .e3help{left:calc(var(--gl) + 10px);right:calc(var(--gr) + 10px);top:auto;bottom:calc(var(--gb) + 10px + env(safe-area-inset-bottom));width:auto;max-height:60vh;z-index:18}
+html.touch.walking .e3cat{z-index:18}
+.thint{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:15;padding:12px 16px;border-radius:14px;background:rgba(12,16,20,.7);color:#fff;font:500 14px/1.45 var(--f-ui);text-align:center;pointer-events:none;transition:opacity .8s;max-width:80vw}
+.maq.juego{inset:0!important;z-index:80!important}`; document.head.appendChild(st); }
+// botones de arriba: salir a la izquierda, menú a la derecha; el nombre del lugar se va solo
+walkHud = (o => function () { o(); if (!TOUCH || !WALK.on) { if (!WALK.on) { TM.open = false; const m = $('#tmenu'); if (m) m.hidden = true; } return; }
+  const ed = ED.on && canEdit(), nm = WALK.C ? WALK.C.n : WALK.N ? WALK.N.full : 'Parque';
+  HUD.innerHTML = `<button class="tb" data-w="exit" aria-label="Salir del paseo">✕</button><div class="tn"><b id="tnb">${escH(nm)}</b>${ed ? '<small>Editando</small>' : ''}</div><button class="tb ${TM.open ? 'on' : ''}" data-w="menu" aria-label="Menú" aria-expanded="${TM.open}">☰</button>`;
+  let m = $('#tmenu'); if (!m) { m = document.createElement('div'); m.id = 'tmenu'; m.className = 'tmenu'; document.body.appendChild(m); m.addEventListener('click', tmClick); }
+  m.hidden = !TM.open; if (!TM.open) { tnFade(nm); return; }
+  m.innerHTML = (canEdit() ? `<button data-t="ed" class="${ed ? '' : 'pri'}">✎ ${ed ? 'Dejar de editar' : 'Editar'}</button>` : '')
+    + (ed ? '<button data-t="cat">▦ Catálogo</button><button data-t="eye">👁 Altura de los ojos</button><button data-t="top">⤒ Al techo</button>' : '')
+    + '<button data-t="ir">⌖ Ir a un lugar</button><button data-t="help">? Cómo se juega</button><hr><button data-t="exit">✕ Salir del paseo</button>';
+  tnFade(nm); })(walkHud);
+function tnFade(nm) { const b = $('#tnb'); if (b) { if (TM.last !== nm) { TM.last = nm; TM.until = performance.now() + 3500; clearTimeout(TM.fade); TM.fade = setTimeout(() => { const q = $('#tnb'); if (q) q.style.opacity = 0; }, 3600); } b.style.opacity = performance.now() < TM.until ? 1 : 0; } }
+function tmClick(e) { const b = e.target.closest('[data-t]'); if (!b) return; const a = b.dataset.t; TM.open = false;
+  if (a === 'ed') { setEdit(!(ED.on && canEdit())); }
+  else if (a === 'cat') { catToggle(true); }
+  else if (a === 'eye') { WALK.y = 1.7; } else if (a === 'top') { WALK.y = WALK.N ? WALK.N.h - 0.6 : 8; }
+  else if (a === 'ir') { PAUSE.ir = true; pausa(true); }
+  else if (a === 'help') { helpSet(true); }
+  else if (a === 'exit') { exitWalk(); return; }
+  walkHud(); }
+HUD.addEventListener('click', e => { if (!TOUCH) return; const b = e.target.closest('[data-w]'); if (!b) return;
+  if (b.dataset.w === 'menu') { e.stopPropagation(); e.stopImmediatePropagation(); TM.open = !TM.open; walkHud(); } }, true);
+// ayuda pensada para el dedo
+helpRender = (o => function () { if (!TOUCH) return o(); const el = $('#e3help'); if (!el) return; el.hidden = !(WALK.on && HELP.open); if (el.hidden) return; const ed = ED.on && canEdit();
+  const rows = [['Círculo de abajo', 'Caminar'], ['Arrastrar el dedo', 'Mirar alrededor'], ['Tocar', ed ? 'Usar la herramienta donde tocás' : 'Ver lo que ve una cámara o los datos de un equipo'], ['Mantener', 'Más opciones de lo que tocás'], ['☰', 'Menú: editar, catálogo, ir a un lugar y salir']];
+  if (ed) rows.push(['⤒ ⤓', 'Subir y bajar volando'], ['Herramienta', 'Tocá la de abajo a la derecha para elegir otra']);
+  el.innerHTML = `<div class="e3hh"><b>Cómo se juega</b><button class="e3x" data-help="0" aria-label="Cerrar">✕</button></div><dl>${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>`; })(helpRender);
+// joystick para caminar
+{ const j = document.createElement('div'); j.id = 'e3joy'; j.className = 'e3joy'; j.hidden = true; j.innerHTML = '<i></i>'; document.body.appendChild(j); const th = j.firstChild; let pid = null;
+  const set = e => { const r = j.getBoundingClientRect(), R = r.width / 2, dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R), L = Math.hypot(dx, dy), k = L > R ? R / L : 1;
+    th.style.transform = `translate(${dx * k}px,${dy * k}px)`; const nx = dx * k / R, ny = dy * k / R, mag = Math.hypot(nx, ny);
+    if (mag < 0.18) { WALK.pad.f = 0; WALK.pad.s = 0; } else { WALK.pad.f = -ny; WALK.pad.s = nx; if (mag > 0.94) WALK.keys.add('shift'); else WALK.keys.delete('shift'); } };
+  j.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); pid = e.pointerId; j.setPointerCapture(pid); set(e); });
+  j.addEventListener('pointermove', e => { if (e.pointerId === pid) set(e); });
+  const off = e => { if (e.pointerId !== pid) return; pid = null; th.style.transform = ''; WALK.pad.f = 0; WALK.pad.s = 0; WALK.keys.delete('shift'); }; j.addEventListener('pointerup', off); j.addEventListener('pointercancel', off); }
+walkHud = (o => function () { o(); const j = $('#e3joy'); if (j) j.hidden = !(TOUCH && WALK.on); })(walkHud);
+// barra de herramientas: en el celular se ve solo la elegida; tocándola se abre
+hotRender = (o => function () { o(); if (!TOUCH) return; const el = $('#e3hot'); if (!el || el.querySelector('.hotx')) return; const b = document.createElement('button'); b.className = 'e3hs hotx'; b.dataset.hotx = '1'; b.setAttribute('aria-label', 'Ver todas las herramientas');
+  b.textContent = document.documentElement.classList.contains('hotopen') ? '✕' : '⋯'; el.appendChild(b); })(hotRender);
+document.addEventListener('click', e => { if (!TOUCH || !WALK.on) return; const h = document.documentElement, hb = e.target.closest('#e3hot'); if (!hb) { if (h.classList.contains('hotopen')) { h.classList.remove('hotopen'); hotRender(); } return; }
+  if (e.target.closest('.hotx')) { e.preventDefault(); e.stopPropagation(); h.classList.toggle('hotopen'); hotRender(); return; }
+  const s = e.target.closest('.e3hs'); if (!s) return; if (!h.classList.contains('hotopen')) { e.preventDefault(); e.stopPropagation(); h.classList.add('hotopen'); hotRender(); return; }
+  setTimeout(() => { h.classList.remove('hotopen'); hotRender(); }, 60); }, true);
+// al entrar: pantalla completa en la app y una ayuda corta que se va sola
+enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!TOUCH || was) return; try { HOST && HOST.juego && HOST.juego(true); } catch (e) {}
+  if (!TM.hint) { TM.hint = true; const d = document.createElement('div'); d.className = 'thint'; d.innerHTML = 'Círculo de abajo: caminar<br>Arrastrá el dedo para mirar · ☰ menú'; document.body.appendChild(d); setTimeout(() => { d.style.opacity = 0; }, 3200); setTimeout(() => d.remove(), 4200); } })(enterWalk);
+exitWalk = (o => function () { const was = WALK.on; o(); if (TOUCH && was) { TM.open = false; TM.last = null; const m = $('#tmenu'); if (m) m.hidden = true; document.documentElement.classList.remove('hotopen'); try { HOST && HOST.juego && HOST.juego(false); } catch (e) {} } })(exitWalk);
+setEdit = (o => function (on) { o(on); if (TOUCH && WALK.on) walkHud(); })(setEdit);
+
+// en el celular los textos hablan de tocar y arrastrar, no de mouse, clic o teclas
+if (TOUCH) { const R = [[/[Dd]oble clic, Enter o Esc para terminar/g, 'Tocá dos veces para terminar'], [/[Dd]oble clic o Enter para terminar/g, 'Tocá dos veces para terminar'], [/, Esc para cancelar/g, ''],
+    [/doble clic para volver al tamaño normal/g, 'tocá dos veces para volver al tamaño normal'], [/[Dd]oble clic/g, 'Tocá dos veces'], [/también clic derecho \(o Ctrl\) y arrastrar/g, 'también con dos dedos'], [/con clic derecho y arrastrar, o Ctrl \+ arrastrar/g, 'con dos dedos'],
+    [/también clic derecho sobre un galpón/g, 'también manteniendo apretado un galpón'], [/[Cc]lic derecho sob/g, 'Mantené apretado sob'], [/[Cc]lic derecho para/g, 'Mantené apretado para'], [/clic derecho/g, 'mantener apretado'], [/Clic derecho/g, 'Mantener apretado'],
+    [/pasá el mouse por un ítem y apretá un número, o arrastralo a un casillero/g, 'tocá un ítem para usarlo'], [/arrastralo a un casillero, o pasá el mouse por arriba y apretá el número/g, 'tocalo para usarlo'],
+    [/el equipo sigue al mouse/g, 'el equipo sigue al dedo'], [/sigue al puntero/g, 'sigue al dedo'], [/Ahora apuntá a la esquina opuesta y hacé clic/g, 'Ahora tocá la esquina opuesta'], [/Hacé clic/g, 'Tocá'], [/hacé clic/g, 'tocá'], [/Clic para/g, 'Tocá para'],
+    [/rueda o pellizco/g, 'pellizcá'], [/Q y E para bajar y subir · Shift para ir rápido/g, 'el círculo de abajo para caminar'], [/Mové el mouse para mirar · Esc lo suelta/g, 'Arrastrá el dedo para mirar']];
+  const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue; let t2 = t; for (const [a, b] of R) t2 = t2.replace(a, b); if (t2 !== t) n.nodeValue = t2; }
+    else if (n.nodeType === 1 && !/^(INPUT|TEXTAREA|SCRIPT|STYLE|CANVAS)$/.test(n.tagName)) { if (n.title) { let t = n.title; for (const [a, b] of R) t = t.replace(a, b); if (t !== n.title) n.title = t; } n.childNodes.forEach(fix); } };
+  new MutationObserver(ms => ms.forEach(m => { if (m.type === 'characterData') fix(m.target); else m.addedNodes.forEach(fix); })).observe(document.body, { subtree: true, childList: true, characterData: true }); fix(document.body);
+  const st = document.createElement('style'); st.textContent = 'html.touch kbd{display:none!important}'; document.head.appendChild(st);
+  // tocar dos veces = doble clic (para terminar calles, paredes y fibras)
+  let tap0 = null; canvas.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') return; const n = performance.now();
+    if (tap0 && n - tap0.t < 320 && Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) < 30) { tap0 = null; canvas.dispatchEvent(new MouseEvent('dblclick', { clientX: e.clientX, clientY: e.clientY, bubbles: true })); return; }
+    tap0 = { t: n, x: e.clientX, y: e.clientY }; }); }
+
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -4485,7 +4583,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { TOK, roomAt, placePropAt, L2W, W2L, MUE, MUEK, mueLoad, roomMake, roomFrame, roomSide, RMD, PISOS, PROPS, refreshAny, propObj, entity, edState, pickAt, pickRoad, removeId, e3Action, getSEL: () => SEL, roadsBuild, casList, casAt, irA, outPlace, RH, VD, selRoad, vdStart, vdMove, vdEnd, GPT, BPT, pzSeed, PRM, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
+  if (window.__e3) Object.assign(window.__e3, { TOUCH, TM, TOK, roomAt, placePropAt, L2W, W2L, MUE, MUEK, mueLoad, roomMake, roomFrame, roomSide, RMD, PISOS, PROPS, refreshAny, propObj, entity, edState, pickAt, pickRoad, removeId, e3Action, getSEL: () => SEL, roadsBuild, casList, casAt, irA, outPlace, RH, VD, selRoad, vdStart, vdMove, vdEnd, GPT, BPT, pzSeed, PRM, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
   hotRender(); requestAnimationFrame(gameTick); extInit(); cabInit2(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */

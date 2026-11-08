@@ -129,7 +129,7 @@ main{min-width:0;padding:26px 28px 56px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .maq{position:relative;height:calc(100vh - 250px);min-height:460px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--sunken)}
 .maq iframe{width:100%;height:100%;border:0;display:block}
-.maq.full{position:fixed;inset:30px 0 0 0;height:auto;z-index:40;border-radius:0;border:0}
+.maq.full{position:fixed;inset:30px 0 0 0;height:auto;z-index:40;border-radius:0;border:0} .maq.juego{inset:0;height:100dvh;z-index:90}
 .maqbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .maqbar .grow{flex:1}
 .save{font-size:12.5px;color:var(--muted)}
@@ -508,7 +508,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
   const data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null;
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
-  MAQ = { site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
+  MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
     plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url),
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
     equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
@@ -517,7 +517,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=16" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=17" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
