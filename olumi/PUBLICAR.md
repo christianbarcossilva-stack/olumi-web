@@ -14,10 +14,11 @@
 - Ninguna optimización puede bajar la calidad, la seguridad ni romper lo que ya anda: se prueba antes y después.
 - Revisión completa del código: martes 10/11, antes de pasar la beta a clientes.
 
-## Direcciones (a partir del martes 10/11, cuando se pase la beta a clientes)
-- **unitytech.uy/olumi/** → la app de los clientes (hoy está en /olumi/app/).
+## Direcciones (quedan fijas, decisión de Christian 7/11)
+- **unitytech.uy/olumi/app/** → la app de los clientes.
 - **unitytech.uy/olumi/beta/** → pruebas anticipadas; pasa a clientes solo cuando Christian lo decide.
-- /olumi/app/ queda solo para redirigir (enlaces viejos, invitaciones, app de Windows y apps instaladas).
+- **unitytech.uy/ondi/app/** → Ondi (con su beta en /ondi/beta/).
+- unitytech.uy/olumi/ sigue siendo la página de Olumi (ventas, planes, descargas).
 
 ## Páginas web (unitytech.uy, /olumi/, /ondi/, /estiba/)
 - Todas usan el estilo común `familia.css` + `familia.js` (raíz del sitio): letra del sistema, nav global "Unity Tech · Olumi · Ondi", nav de cada producto, botones píldora, modo claro/oscuro (sigue al equipo, con botón ◐ que se recuerda en `ut.theme`).
