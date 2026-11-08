@@ -125,7 +125,7 @@ async function leerEquipos(db: Db, org: string, s: any, marca: string, cache: Ma
   const g = groups.find((x: any) => x.hostId === link.hostId) || groups[0] || { devices: [] };
   const st = sites.find((x: any) => x.siteId === link.siteId) || sites.find((x: any) => x.hostId === link.hostId) || null;
   // la consola puede tener varios sitios (varios clientes): se dejan solo los equipos de este sitio
-  let equipos = (g.devices || []).map(devOut), aviso = '';
+  let equipos = (g.devices || []).map(devOut), aviso = '', reparto = 'unifi';
   const nSites = sites.filter((x: any) => x.hostId === link.hostId).length;
   if (nSites > 1) {
     try {
@@ -137,12 +137,34 @@ async function leerEquipos(db: Db, org: string, s: any, marca: string, cache: Ma
       const byMac = new Map(equipos.map((e: any) => [macN(e.mac), e]));
       equipos = dv.map((d: any) => byMac.get(macN(d.macAddress)) || intOut(d));
     } catch (e) {
-      // sin separar no se muestra nada: nunca se mezclan equipos de otros clientes de la misma consola
-      equipos = [];
-      aviso = `La consola tiene ${nSites} sitios y UniFi no me deja ver cuáles equipos son de este (${(e as Error).message}). Para no mezclar clientes no muestro equipos hasta arreglarlo: ${/owner/i.test((e as Error).message) ? 'la clave de Site Manager tiene que estar creada desde la cuenta dueña (owner) de la consola, no desde una cuenta administradora.' : 'la clave de Site Manager tiene que tener también permiso de Network ("UniFi Applications → Network").'}`; }
+      // sin separar por sitio: se usa el reparto que se hizo en Ondi (Integraciones → Repartir equipos); si no hay, no se muestra nada
+      const asig = Array.isArray(link.asig) ? new Set(link.asig.map(macN)) : null;
+      if (asig && asig.size) { equipos = equipos.filter((x: any) => asig.has(macN(x.mac))); reparto = 'ondi'; }
+      else { equipos = []; aviso = `La consola tiene ${nSites} sitios y UniFi no dice de qué sitio es cada equipo con esta clave (${(e as Error).message}). Repartí los equipos entre los clientes en Ajustes → Integraciones → UniFi → Repartir equipos.`; }
+    }
   }
-  return { consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos, aviso };
+  return { consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos, aviso, reparto: nSites > 1 ? reparto : 'unico' };
 }
+
+// propuesta de reparto de los equipos de una consola entre sus sitios: por nombre, por el gateway de cada sitio, por red y por cantidad
+const sinAcento = (t: string) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function proponer(devs: any[], sitios: any[]) {
+  const red = (ip: string) => { const m = /^(\d+)\.(\d+)\.(\d+)\.\d+$/.exec(String(ip || '')); return m ? `${m[1]}.${m[2]}.${m[3]}` : ''; };
+  const S2 = sitios.map((x: any) => ({ id: x.siteId, n: sinAcento(siteOut(x).nombre), gw: macN(x.meta && x.meta.gatewayMac || ''), cap: siteOut(x).equipos ?? 0 }));
+  const out = new Map<string, { site: string, motivo: string }>();
+  for (const d of devs) { const nm = sinAcento(d.nombre); const s1 = S2.find(x => x.n.length >= 4 && nm.includes(x.n)); if (s1) out.set(macN(d.mac), { site: s1.id, motivo: 'nombre' });
+    const s2 = S2.find(x => x.gw && x.gw === macN(d.mac)); if (s2) out.set(macN(d.mac), { site: s2.id, motivo: 'gateway' }); }
+  // redes: cada red va al sitio que más votos tiene adentro; las que no tienen votos, por cantidad de equipos
+  const grupos = new Map<string, any[]>(); for (const d of devs) { const r = red(d.ip); if (!r) continue; if (!grupos.has(r)) grupos.set(r, []); grupos.get(r)!.push(d); }
+  const usado = new Map<string, number>(); const suma = (id: string, n: number) => usado.set(id, (usado.get(id) || 0) + n);
+  const sinVoto: [string, any[]][] = [];
+  for (const [r, L] of grupos) { const votos = new Map<string, number>(); L.forEach(d => { const o = out.get(macN(d.mac)); if (o) votos.set(o.site, (votos.get(o.site) || 0) + 1); });
+    const best = [...votos.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (best) { L.forEach(d => { if (!out.has(macN(d.mac))) out.set(macN(d.mac), { site: best[0], motivo: 'red' }); }); suma(best[0], L.length); } else sinVoto.push([r, L]); }
+  sinVoto.sort((a, b) => b[1].length - a[1].length);
+  for (const [, L] of sinVoto) { const libre = S2.map(x => ({ x, f: x.cap - (usado.get(x.id) || 0) })).filter(o => o.f > 0).sort((a, b) => Math.abs(a.f - L.length) - Math.abs(b.f - L.length));
+    const t = libre[0]; if (!t) continue; L.forEach(d => out.set(macN(d.mac), { site: t.x.id, motivo: 'cantidad' })); suma(t.x.id, L.length); }
+  return out; }
 
 const tipoDe = (d: any) => { const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
   if (/protect|camera|cámara|camara|bullet|dome|domo|turret|\bg[345]\b|^mv\d|nvr/.test(t)) return 'cam';
@@ -263,6 +285,37 @@ Deno.serve(async (req) => {
       }
       const sites = await ui(k, 'sites');
       return json({ ok: true, sitios: sites.map(siteOut) });
+    }
+
+    if (accion === 'consola' || accion === 'repartir') {
+      if (!staff) return json({ error: 'No tenés permiso en esta empresa.' }, 403);
+      const hostId = String(body.hostId || ''); if (!hostId) return json({ error: 'Falta la consola.' }, 400);
+      const k = await clave(''); if (!k) return json({ error: 'Todavía no se cargó la clave de UniFi.' }, 400);
+      const { data: ss } = await db.from('ondi_sites').select('id,name,data').eq('org_id', org);
+      const clientes = (ss || []).filter((x: any) => x.data && x.data.unifi && x.data.unifi.hostId === hostId);
+      if (accion === 'repartir') {
+        if (!mem || !['owner', 'admin'].includes(mem.role)) return json({ error: 'Solo el dueño o un administrador puede repartir los equipos.' }, 403);
+        const A = body.asig && typeof body.asig === 'object' ? body.asig : {}; const res: any[] = [];
+        for (const c of clientes) { const macs = Array.isArray(A[c.id]) ? [...new Set(A[c.id].map((m: any) => macN(String(m))).filter(Boolean))].slice(0, 2000) : [];
+          const { data: cur } = await db.from('ondi_sites').select('data').eq('org_id', org).eq('id', c.id).maybeSingle(); const dd = (cur && cur.data) || c.data || {};
+          await db.from('ondi_sites').update({ data: { ...dd, unifi: { ...dd.unifi, asig: macs, asigAt: new Date().toISOString() } } }).eq('org_id', org).eq('id', c.id);
+          const s2 = { ...c, data: { ...dd, unifi: { ...dd.unifi, asig: macs } } }; const cache = new Map();
+          try { const r = await leerEquipos(db, org, s2, 'unifi', cache); await procesar(db, org, c.id, 'unifi', r.equipos, r.aviso).catch(() => null); res.push({ id: c.id, equipos: r.equipos.length, reparto: r.reparto }); } catch (e) { res.push({ id: c.id, error: String((e as Error).message) }); } }
+        return json({ ok: true, clientes: res }); }
+      const [groups, sites] = await Promise.all([ui(k, 'devices', '?hostIds[]=' + encodeURIComponent(hostId)), ui(k, 'sites')]);
+      const g = groups.find((x: any) => x.hostId === hostId) || { devices: [] }, sh = sites.filter((x: any) => x.hostId === hostId);
+      const devs = (g.devices || []).map(devOut); let auto = false;
+      // si la clave es de la cuenta dueña, UniFi dice el sitio de cada equipo y no hace falta repartir
+      const real = new Map<string, string>();
+      try { const ns = ((await conn(k, hostId, 'sites?limit=200')) || {}).data || [];
+        for (const st of sh) { const ref = st.meta ? String(st.meta.name || '') : '', hit = ns.find((x: any) => x.internalReference === ref) || ns.find((x: any) => String(x.name || '').toLowerCase() === siteOut(st).nombre.toLowerCase()); if (!hit) continue;
+          const dv = ((await conn(k, hostId, `sites/${hit.id}/devices?limit=500`)) || {}).data || []; dv.forEach((d: any) => real.set(macN(d.macAddress), st.siteId)); }
+        auto = real.size > 0; } catch (e) { auto = false; }
+      const prop = auto ? new Map([...real].map(([m, s1]) => [m, { site: s1, motivo: 'unifi' }])) : proponer(devs, sh);
+      const asignado = new Map<string, string>(); for (const c of clientes) (c.data.unifi.asig || []).forEach((m: string) => asignado.set(macN(m), c.id));
+      return json({ ok: true, auto, consola: g.hostName || '', sitios: sh.map((x: any) => ({ ...siteOut(x), cliente: (clientes.find((c: any) => c.data.unifi.siteId === x.siteId) || {}).id || null })),
+        clientes: clientes.map((c: any) => ({ id: c.id, name: c.name, siteId: c.data.unifi.siteId, asig: (c.data.unifi.asig || []).length })),
+        equipos: devs.map((d: any) => { const p0 = prop.get(macN(d.mac)); return { ...d, tipo: tipoDe(d), sugerido: p0 ? p0.site : null, motivo: p0 ? p0.motivo : null, asignado: asignado.get(macN(d.mac)) || null }; }) });
     }
 
     if (accion === 'equipos') {
