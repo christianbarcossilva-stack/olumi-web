@@ -709,7 +709,8 @@ function actividadView() { if (S.act === undefined) { S.act = null; SB.from('ond
   return S.act.length ? `<div class="card"><div class="tscroll"><table><thead><tr><th>Cuándo</th><th>Qué</th><th>Cliente</th><th>Detalle</th><th>Quién</th></tr></thead><tbody>${S.act.map(a => `<tr><td>${esc(fmtD(a.created_at))}</td><td><b>${esc(a.que)}</b></td><td>${esc(siteN(a.site_id))}</td><td>${esc(a.detalle || '')}</td><td>${esc(a.email || '')}</td></tr>`).join('')}</tbody></table></div></div>` : '<div class="card empty"><b>Sin movimientos todavía</b><span>Acá queda quién creó clientes, dio accesos, cargó claves o editó maquetas.</span></div>'; }
 
 /* ---------- acciones ---------- */
-async function saveSite(st, patch) { const data = { ...(st.data || {}), ...(patch.data || {}) }; const upd = { data }; if (patch.name) upd.name = patch.name;
+async function saveSite(st, patch) { const cur = await SB.from('ondi_sites').select('data').eq('org_id', st.org_id).eq('id', st.id).maybeSingle(); // leer lo último del servidor para no pisar cambios hechos en otro lado
+  const base = (cur && !cur.error && cur.data && cur.data.data) || st.data || {}; const data = { ...base, ...(patch.data || {}) }; const upd = { data }; if (patch.name) upd.name = patch.name;
   const r = await SB.from('ondi_sites').update(upd).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); return st; }
 function openSite(id, tab) { const st = S.sites.find(x => x.id === id); if (!st) return; S.site = st; S.view = 'site'; S.tab = tab || 'maqueta'; S.link = {}; S.sitiosUI = {}; S.acc = null; S.manForm = null; ls.set('ondi.site.' + orgId(), id); history.replaceState(null, '', '#c'); render(); scrollTo(0, 0); }
 document.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a || !S.auth && a.dataset.a !== 'logout') return; const k = a.dataset.a;
