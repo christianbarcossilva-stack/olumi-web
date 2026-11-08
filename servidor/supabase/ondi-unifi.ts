@@ -139,7 +139,7 @@ async function leerEquipos(db: Db, org: string, s: any, marca: string, cache: Ma
     } catch (e) {
       // sin separar no se muestra nada: nunca se mezclan equipos de otros clientes de la misma consola
       equipos = [];
-      aviso = `La consola tiene ${nSites} sitios y UniFi no me deja ver cuáles equipos son de este (${(e as Error).message}). Para no mezclar clientes no muestro equipos hasta arreglarlo: la clave de Site Manager tiene que tener también permiso de Network ("UniFi Applications → Network").`; }
+      aviso = `La consola tiene ${nSites} sitios y UniFi no me deja ver cuáles equipos son de este (${(e as Error).message}). Para no mezclar clientes no muestro equipos hasta arreglarlo: ${/owner/i.test((e as Error).message) ? 'la clave de Site Manager tiene que estar creada desde la cuenta dueña (owner) de la consola, no desde una cuenta administradora.' : 'la clave de Site Manager tiene que tener también permiso de Network ("UniFi Applications → Network").'}`; }
   }
   return { consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos, aviso };
 }
