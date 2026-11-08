@@ -968,7 +968,10 @@ function buildBase() { if (BLANK) return buildBaseBlank();
   // balanza de camiones: plataforma en el carril de salida y casilla de control con el rack
   { const [a, b, c, d] = R(146, 166, 718.2, 721.8); g.box(a, 0, b, c, 0.18, d, P.parapet, { top: mulc(C(P.road), 1.35) }); for (let x = 146; x <= 166.1; x += 4) { const [e, f, h2, i2] = R(x - 0.08, x + 0.08, 718.2, 721.8); gg.flat(e, f, h2, i2, 0.2, P.markY); }
     const [k0, k1, k2, k3] = R(145.6, 166.4, 717.8, 718.2); g.box(k0, 0, k1, k2, 0.22, k3, P.markY); const [m0, m1, m2, m3] = R(145.6, 166.4, 721.8, 722.2); g.box(m0, 0, m1, m2, 0.22, m3, P.markY); }
-  { const [a, b, c, d] = pbox(157.5, 166, 722.5, 725.9, 3, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); g.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet); }
+  // la casilla va aparte: al entrar caminando se esconde por fuera y se ve por dentro
+  { const gb = new Geo(), [a, b, c, d] = R(157.5, 166, 722.5, 725.9); gb.box(a, 0, b, c, 3, d, P.wall, { top: P.roof }); gb.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); gb.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet);
+    const [e0, , e1] = R(164.5, 165.5, 0, 0); gb.box(e0, 0, b - 0.07, e1, 2.1, b, P.door, { ao: 0.95 }); gb.box(e0 - 0.06, 2.1, b - 0.08, e1 + 0.06, 2.18, b, P.frame);
+    obj('cas-bal', { geo: gb, layer: 'base' }); }
   // camiones estacionados esperando turno, al sur de la entrada
   for (let i = 0; i < 7; i++) { const z0 = 790 + i * 3.7; if (i === 3) continue; const [a, b, c, d] = R(51, 64.5, z0, z0 + 2.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); g.box(a, 0, b + 0.3, a + 1.2, 1.1, d - 0.3, P.tire); g.box(c - 4.5, 0, b + 0.3, c - 1.5, 1.1, d - 0.3, P.tire); }
   for (let i = 0; i < 3; i++) { const x0 = 84 + i * 4.2; const [a, b, c, d] = R(x0, x0 + 2.5, 770, 783.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); }
@@ -1038,9 +1041,11 @@ function buildBase() { if (BLANK) return buildBaseBlank();
     // isla amarilla entre carriles
     { const [a, b, c, d] = R(52.5, 71.5, 725.9, 727.3); g.box(a, 0, b, c, 0.25, d, YEL, { top: YEL }); }
     // caseta gris vidriada en la punta sur
-    { const [a, b, c, d] = R(55.6, 65.4, 737.4, 742.4); g.box(a, 0, b, c, 3, d, GRY, { top: P.roof, ao: 0.9 }); g.box(a - 0.04, 1.05, b - 0.04, c + 0.04, 2.55, d + 0.04, P.glass, { e: P.glassE * 0.7 }); g.box(a - 0.2, 3, b - 0.2, c + 0.2, 3.25, d + 0.2, P.parapet); }
+    { const gp = new Geo(), [a, b, c, d] = R(55.6, 65.4, 737.4, 742.4); gp.box(a, 0, b, c, 3, d, GRY, { top: P.roof, ao: 0.9 }); gp.box(a - 0.04, 1.05, b - 0.04, c + 0.04, 2.55, d + 0.04, P.glass, { e: P.glassE * 0.7 }); gp.box(a - 0.2, 3, b - 0.2, c + 0.2, 3.25, d + 0.2, P.parapet);
+      const [e0, , e1] = R(57.1, 58.1, 0, 0); gp.box(e0, 0, d + 0.04, e1, 2.1, d + 0.11, P.door, { ao: 0.95 }); gp.box(e0 - 0.06, 2.1, d + 0.04, e1 + 0.06, 2.18, d + 0.12, P.frame);
+      obj('cas-por', { geo: gp, layer: 'base' }); }
     // molinete y reja para el ingreso a pie
-    for (const [x0, x1, y0, y1] of [[54.5, 66, 743.2, 743.35], [54.5, 54.65, 743.2, 748.6], [65.85, 66, 743.2, 748.6], [54.5, 59, 748.45, 748.6]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 2.1, d, GRY, { ao: 1 }); }
+    for (const [x0, x1, y0, y1] of [[54.5, 56.9, 743.2, 743.35], [58.3, 66, 743.2, 743.35], [54.5, 54.65, 743.2, 748.6], [65.85, 66, 743.2, 748.6], [54.5, 59, 748.45, 748.6]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 2.1, d, GRY, { ao: 1 }); }
     for (const x of [60.5, 62, 63.5]) { const [a, b, c, d] = R(x - 0.25, x + 0.25, 748.2, 748.9); g.box(a, 0, b, c, 1.1, d, '#B8C0C6', { ao: 1 }); }
     // vallas amarillas del patio de camiones y contenedor "Ingreso transportistas"
     for (let x = 72; x < 95; x += 2.2) { const [a, b, c, d] = R(x, x + 1.9, 737, 737.6); g.box(a, 0, b, c, 0.85, d, YEL, { ao: 1 }); }
@@ -3501,7 +3506,7 @@ let HITSKIP = null;
 const propH = Q => Q.k === 'colg' ? (Q.h || 10) : 2.7;
 function bpBox(Q) { const B = BK[Q.k]; if (!B || B.floor) return null; if (Q.k === 'colg') return [[-0.2, 0, -0.16], [0.2, propH(Q), 0.16]]; if (B.wall) { const t = B.thin ? 0.04 : 0.065; return [[-B.L / 2, 0, -t], [B.L / 2, 2.7, t]]; } if (B.solid) return [[-0.15, 0, -0.15], [0.15, 2.7, 0.15]]; if (B.flat) return [[-1, 2.64, -1], [1, 2.7, 1]]; return null; }
 surfHit = (o => function (r) { let best = o(r); if (!PROPS.length) return best;
-  for (const Q of PROPS) { if (Q.id === HITSKIP) continue; const bb = bpBox(Q); if (!bb) continue; const N = naveAt(Q.x, Q.z, 1); if (!N || !openNave(N)) continue;
+  for (const Q of PROPS) { if (Q.id === HITSKIP) continue; const bb = bpBox(Q); if (!bb) continue; const N = naveAt(Q.x, Q.z, 1) || null; if (N ? !openNave(N) : !WALK.on) continue;
     const ex = axX(Q.yaw || 0), ez = axZ(Q.yaw || 0), ro = [r.o[0] - Q.x, r.o[1] - (Q.y || 0), r.o[2] - Q.z], lo = [ro[0] * ex[0] + ro[2] * ex[1], ro[1], ro[0] * ez[0] + ro[2] * ez[1]], ld = [r.d[0] * ex[0] + r.d[2] * ex[1], r.d[1], r.d[0] * ez[0] + r.d[2] * ez[1]];
     const h = rayAABBn(lo, ld, bb[0], bb[1]); if (!h || h.t <= 0 || (best && h.t >= best.t)) continue;
     const n = [h.n[0] * ex[0] + h.n[2] * ez[0], h.n[1], h.n[0] * ex[1] + h.n[2] * ez[1]]; best = { t: h.t, n, k: 'bprop', N, prop: Q, p: [r.o[0] + r.d[0] * h.t, r.o[1] + r.d[1] * h.t, r.o[2] + r.d[2] * h.t] }; }
@@ -3722,8 +3727,9 @@ const ALT = { on: false };
 const vis = s => { const el = document.querySelector(s); return !!el && !el.hidden; };
 function uiOpen() { return PAUSE.on || !panel.hidden || vis('#camview') || !CTX.hidden || !POP.hidden || vis('#e3tk') || !!GALV.id || vis('#cabview') || (ED.on && canEdit() && vis('#e3cat')) || ALT.on; }
 const PAUSE = { on: false };
-function pausa(on) { PAUSE.on = !!on; const el = $('#e3pause'); if (!el) return; el.hidden = !PAUSE.on; if (!PAUSE.on) return; const ed = ED.on && canEdit();
-  el.innerHTML = `<b>Pausa</b><button class="btn pri" data-pz="seguir">Seguir <kbd>Esc</kbd></button>${canHot() ? '<button class="btn" data-pz="cat">Catálogo <kbd>I</kbd></button>' : ''}${canEdit() ? `<button class="btn" data-pz="ed">${ed ? 'Volver al paseo' : 'Editar'} <kbd>F</kbd></button>` : ''}<button class="btn" data-pz="help">Controles <kbd>H</kbd></button><button class="btn" data-pz="salir">Salir del galpón</button>`; }
+function pausa(on) { PAUSE.on = !!on; const el = $('#e3pause'); if (!el) return; el.hidden = !PAUSE.on; if (!PAUSE.on) { PAUSE.ir = false; return; } const ed = ED.on && canEdit();
+  if (PAUSE.ir) { el.innerHTML = irHtml(); return; }
+  el.innerHTML = `<b>Pausa</b><button class="btn pri" data-pz="seguir">Seguir <kbd>Esc</kbd></button>${canHot() ? '<button class="btn" data-pz="cat">Catálogo <kbd>I</kbd></button>' : ''}${canEdit() ? `<button class="btn" data-pz="ed">${ed ? 'Volver al paseo' : 'Editar'} <kbd>F</kbd></button>` : ''}<button class="btn" data-pz="ir">Ir a un lugar…</button><button class="btn" data-pz="help">Controles <kbd>H</kbd></button><button class="btn" data-pz="salir">Salir del paseo</button>`; }
 function toPlay() { pausa(false); const h = document.documentElement; if (WALK.on && !h.classList.contains('catmin')) { h.classList.add('catmin'); catShow(); } if (!panel.hidden) closePanel(); ctxClose(); popClose(); if (vis('#e3tk')) ticketClose(); if (vis('#camview')) closeCam(); ALT.on = false; LOCK.byUI = true; LOCK.tryT = 0; cursorRule(); canvas.focus(); }
 function cursorRule() { document.documentElement.classList.toggle('panelopen', !panel.hidden); const fine = matchMedia('(pointer:fine)').matches, F = WALK.on && fine && !LOCK.on && !uiOpen(); if (F !== FREE.on) { FREE.on = F; document.documentElement.classList.toggle('freeaim', F); if (!F) carryEnd(true); }
   const r0 = $('#e3resume'); if (r0) r0.hidden = true; if (!WALK.on || LOCK.fail || !fine) return; const U = uiOpen();
@@ -3859,6 +3865,98 @@ panelContent = (o => function (id) { const r = o(id); const d = DEV.find(x => x.
       r.body += `<div class="edbox" style="border-style:solid"><b>Dónde está conectado</b>${rutaTxt(cid, ru)}<button class="btn" data-cabgo="${cid}|${iid}|${pid}">Ver en el rack</button></div>`; return r; } }
   if (canEdit() && ED.on) r.body += `<p class="ehelp">Todavía no figura en ningún rack. Abrí el rack, tocá el puerto y elegí este equipo.</p>`;
   return r; })(panelContent);
+/* ---------- casillas del predio (balanza, portería): se entra caminando, se ven por dentro y se editan como un lugar más ---------- */
+const CT = 0.15;
+const CAS = BLANK ? [] : [
+  { id: 'bal', n: 'Casilla de la balanza', r: [157.5, 166, 722.5, 725.9], h: 3, door: { s: 'n', a: 164.5, b: 165.5 }, win: 'w', wy: [1.1, 2.4] },
+  { id: 'por', n: 'Portería', r: [55.6, 65.4, 737.4, 742.4], h: 3, door: { s: 's', a: 57.1, b: 58.1 }, win: 'band', wy: [1.05, 2.55] }
+].map(C => { const [x0, z0] = px(C.r[0], C.r[2]), [x1, z1] = px(C.r[1], C.r[3]), ns = C.door.s === 'n' || C.door.s === 's';
+  const a = ns ? px(C.door.a, 0)[0] : px(0, C.door.a)[1], b = ns ? px(C.door.b, 0)[0] : px(0, C.door.b)[1]; return { ...C, x0, x1, z0, z1, door: { s: C.door.s, a, b } }; });
+const casAt = (x, z, y = 1.7) => CAS.find(C => y < C.h && x > C.x0 && x < C.x1 && z > C.z0 && z < C.z1);
+// paredes por dentro, con los huecos de las ventanas y la puerta: sirven para dibujar y para apuntar
+function casWalls(C) { if (C._w) return C._w; const out = [], h = C.h - 0.12;
+  const sides = { n: [C.x0, C.x1], s: [C.x0, C.x1], w: [C.z0 + CT, C.z1 - CT], e: [C.z0 + CT, C.z1 - CT] };
+  for (const sd of ['n', 's', 'w', 'e']) { const [s0, s1] = sides[sd], ns = sd === 'n' || sd === 's', holes = [], D = C.door;
+    const full0 = ns ? C.x0 : C.z0, full1 = ns ? C.x1 : C.z1;
+    if (D.s === sd) holes.push([D.a, D.b, 0, 2.1]);
+    if (C.win === 'w') { for (let s = full0 + 0.5; s + 1.7 <= full1 - 0.3; s += 2.2) { if (D.s === sd && s < D.b + 0.05 && s + 1.7 > D.a - 0.05) continue; holes.push([s, s + 1.7, C.wy[0], C.wy[1]]); } }
+    else { const a = full0 + 0.3, b = full1 - 0.3; if (D.s === sd) { holes.push([a, D.a - 0.1, C.wy[0], C.wy[1]], [D.b + 0.1, b, C.wy[0], C.wy[1]]); } else holes.push([a, b, C.wy[0], C.wy[1]]); }
+    const bp = [...new Set([s0, s1, ...holes.flatMap(q => [q[0], q[1]])].filter(v => v >= s0 && v <= s1))].sort((u, v) => u - v);
+    for (let i = 0; i < bp.length - 1; i++) { const p = bp[i], q = bp[i + 1]; if (q - p < 0.005) continue;
+      const hy = holes.filter(o => o[0] <= p + 1e-6 && o[1] >= q - 1e-6).map(o => [o[2], o[3]]).sort((u, v) => u[0] - v[0]); let y = 0;
+      const put = (y0, y1) => { if (y1 - y0 < 0.01) return; const f = sd === 'n' ? [C.z0, C.z0 + CT] : sd === 's' ? [C.z1 - CT, C.z1] : sd === 'w' ? [C.x0, C.x0 + CT] : [C.x1 - CT, C.x1];
+        out.push(ns ? { mn: [p, y0, f[0]], mx: [q, y1, f[1]], k: 'cwall', sill: !!hy.length } : { mn: [f[0], y0, p], mx: [f[1], y1, q], k: 'cwall', sill: !!hy.length }); };
+      for (const [a, b] of hy) { put(y, a); y = Math.max(y, b); } put(y, h); } }
+  return (C._w = out); }
+function casBoxes(C, inside) { if (!inside) return [{ mn: [C.x0, 0, C.z0], mx: [C.x1, C.h, C.z1], k: 'cwall' }];
+  return [{ mn: [C.x0, -1, C.z0], mx: [C.x1, 0.07, C.z1], k: 'cfloor' }, { mn: [C.x0, C.h - 0.12, C.z0], mx: [C.x1, C.h + 1, C.z1], k: 'cceil' }, ...casWalls(C)]; }
+function casGeo(C) { const g = new Geo(), dk = isDark(), WALLc = dk ? '#7D8892' : '#EEF0F1', FL = dk ? '#59626B' : '#C9CCC8', CE = dk ? '#6A757E' : '#F6F7F7', FR = '#59636C';
+  g.box(C.x0, 0, C.z0, C.x1, 0.07, C.z1, FL, { top: FL, ao: 1 });
+  for (let x = C.x0 + 0.6; x < C.x1; x += 0.6) g.box(x - 0.006, 0.07, C.z0 + CT, x + 0.006, 0.072, C.z1 - CT, mulc(C2(FL), 0.9), { ao: 1 });
+  g.box(C.x0, C.h - 0.12, C.z0, C.x1, C.h, C.z1, CE, { bottom: true, ao: 1 });
+  const cx = (C.x0 + C.x1) / 2, cz = (C.z0 + C.z1) / 2; g.box(cx - 0.6, C.h - 0.14, cz - 0.3, cx + 0.6, C.h - 0.12, cz + 0.3, '#FFFFFF', { e: 0.95, bottom: true, ao: 1 });
+  for (const b of casWalls(C)) { g.box(b.mn[0], b.mn[1], b.mn[2], b.mx[0], b.mx[1], b.mx[2], WALLc, { top: b.sill ? '#D9D6CF' : WALLc, bottom: true, ao: 1 });
+    if (b.mn[1] < 0.01) { const ns = b.mx[0] - b.mn[0] > b.mx[2] - b.mn[2]; if (ns) g.box(b.mn[0], 0.07, b.mn[2] - 0.012, b.mx[0], 0.17, b.mx[2] + 0.012, '#7E858C', { ao: 1 }); else g.box(b.mn[0] - 0.012, 0.07, b.mn[2], b.mx[0] + 0.012, 0.17, b.mx[2], '#7E858C', { ao: 1 }); } }
+  // marco de la puerta
+  const D = C.door, fz = D.s === 'n' ? C.z0 : C.z1; if (D.s === 'n' || D.s === 's') { g.box(D.a - 0.05, 0, fz - 0.02, D.a, 2.15, fz + (D.s === 'n' ? CT + 0.02 : -CT - 0.02), FR); g.box(D.b, 0, fz - 0.02, D.b + 0.05, 2.15, fz + (D.s === 'n' ? CT + 0.02 : -CT - 0.02), FR); }
+  // lo de adentro: puesto de trabajo con monitor y silla
+  if (C.id === 'bal') { const z1 = C.z1 - CT, x = C.x0 + 3.2; g.box(x - 1.5, 0.74, z1 - 0.7, x + 1.5, 0.78, z1, '#D9D2C3'); g.box(x - 1.45, 0.07, z1 - 0.65, x - 1.4, 0.74, z1 - 0.05, FR); g.box(x + 1.4, 0.07, z1 - 0.65, x + 1.45, 0.74, z1 - 0.05, FR);
+    g.box(x - 0.3, 0.78, z1 - 0.2, x + 0.3, 1.15, z1 - 0.16, '#20282F', { e: 0.25 }); g.box(x + 0.6, 0.78, z1 - 0.35, x + 1.0, 1.0, z1 - 0.15, '#2B333B'); g.box(x + 0.64, 0.86, z1 - 0.36, x + 0.96, 0.96, z1 - 0.355, '#3FD07A', { e: 0.9 });
+    chairAt(g, x, z1 - 1.05, -1); g.box(C.x0 + CT, 0.07, C.z0 + CT + 0.1, C.x0 + CT + 0.5, 1.9, C.z0 + CT + 1.1, '#9AA6AE', { top: '#B4BEC5' }); }
+  if (C.id === 'por') { const z0 = C.z0 + CT, x = (C.x0 + C.x1) / 2; g.box(x - 3, 0.07, z0, x + 3, 1.0, z0 + 0.6, '#6F7E8B', { top: '#D9D2C3' }); for (const dx of [-1.6, -0.5, 0.6, 1.7]) { g.box(x + dx - 0.4, 1.0, z0 + 0.12, x + dx + 0.4, 1.5, z0 + 0.16, '#20282F', { e: 0.3 }); g.box(x + dx - 0.37, 1.03, z0 + 0.16, x + dx + 0.37, 1.47, z0 + 0.165, '#2C4458', { e: 0.6 }); }
+    chairAt(g, x - 1, z0 + 1.1, 1); chairAt(g, x + 1.2, z0 + 1.1, 1); g.box(C.x1 - CT - 0.5, 0.07, C.z1 - CT - 1.2, C.x1 - CT, 1.85, C.z1 - CT - 0.2, '#9AA6AE', { top: '#B4BEC5' }); }
+  return g; }
+const C2 = c => typeof c === 'string' ? (c => { const n = parseInt(c.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; })(c) : c;
+const CASO = new Map();
+function casIn(C) { const dk = isDark(); let o = CASO.get(C.id); if (!o || o.dk !== dk) { o = { id: 'cas-' + C.id + '-in', on: true, version: (o ? o.version : 0) + 1, layer: 'base', geo: casGeo(C), dk }; CASO.set(C.id, o); } return o; }
+sceneList = (o => function () { const L = o(); const C = WALK.on && !WALK.N && WALK.C; if (!C) return L; return L.filter(x => x.id !== 'cas-' + C.id).concat([casIn(C)]); })(sceneList);
+function casUpd() { const C = (WALK.on && casAt(WALK.x, WALK.z, WALK.y)) || null; if (C !== (WALK.C || null)) { WALK.C = C; walkHud(); if (C) toast('Entraste a ' + C.n); } }
+walkMove = (o => function (dx, dz) { o(dx, dz); casUpd(); })(walkMove);
+enterWalk = (o => function (...a) { o(...a); casUpd(); })(enterWalk);
+exitWalk = (o => function () { o(); WALK.C = null; })(exitWalk);
+stepWalk = (o => function (dt) { o(dt); if (!WALK.on) return; if (WALK.C && WALK.y > WALK.C.h - 0.4) WALK.y = WALK.C.h - 0.4; casUpd(); })(stepWalk);
+walkHud = (o => function () { o(); if (WALK.on && WALK.C) { const b = HUD.querySelector('div > b'); if (b) b.textContent = WALK.C.n; } })(walkHud);
+// las paredes frenan; se entra y se sale por la puerta
+walkFree = (o => function (x, z) { if (!o(x, z)) return false; if (WALK.y > 3.4) return true; const r = 0.3, m = CT + r;
+  for (const C of CAS) { if (x < C.x0 - r || x > C.x1 + r || z < C.z0 - r || z > C.z1 + r) continue;
+    if (x > C.x0 + m && x < C.x1 - m && z > C.z0 + m && z < C.z1 - m) return true;
+    const D = C.door, along = D.s === 'n' || D.s === 's' ? x : z, perp = D.s === 'n' ? z - C.z0 : D.s === 's' ? C.z1 - z : D.s === 'w' ? x - C.x0 : C.x1 - x;
+    if (along > D.a + 0.06 && along < D.b - 0.06 && perp > -r - 0.02 && perp < m + 0.05) return true;
+    return false; }
+  return true; })(walkFree);
+// apuntar: paredes, piso y techo de la casilla (por dentro) o su fachada (por fuera)
+surfHit = (o => function (r) { let best = o(r); if (!WALK.on || !CAS.length) return best;
+  for (const C of CAS) for (const b of casBoxes(C, WALK.C === C)) { const h = rayAABBn(r.o, r.d, b.mn, b.mx); if (h && h.t > 0 && (!best || h.t < best.t)) best = { t: h.t, n: h.n, k: b.k, N: null, cas: C }; }
+  if (best && best.cas) best.p = [r.o[0] + r.d[0] * best.t, r.o[1] + r.d[1] * best.t, r.o[2] + r.d[2] * best.t]; return best; })(surfHit);
+// equipos sobre superficies que no son de un galpón (casillas, paredes armadas afuera)
+function outPlace(d, h) { const p = h.p, n = h.n, T = d.type, up = n[1] > 0.5, down = n[1] < -0.5, wall = !up && !down, inC = h.cas && WALK.C === h.cas, cy = inC ? h.cas.h - 0.12 : h.prop ? 2.7 : (h.cas ? h.cas.h : 3);
+  d.nave = undefined; d.wn = null; d.cas = h.cas ? h.cas.id : undefined;
+  if (T === 'cam' || T === 'ap' || SENS[T]) {
+    if (wall) { d.mount = 'wall'; d.wn = [n[0], n[2]]; d.yaw = T === 'ap' ? Math.atan2(n[0], n[2]) : Math.atan2(-n[2], n[0]); anchorTo(d, [p[0], clamp(p[1], 0.6, inC ? cy - 0.3 : 12), p[2]]); }
+    else { d.mount = 'ceiling'; if (d.yaw === undefined) d.yaw = T === 'cam' ? -WALK.yaw : 0; anchorTo(d, [p[0], (down || !inC ? p[1] : cy) - 0.02, p[2]]); } }
+  else if (T === 'wr') { if (wall) { d.stand = false; d.yaw = Math.atan2(n[0], n[2]); d.y = clamp(p[1], 1.2, 2.4); d.x = p[0] + n[0] * 0.24; d.z = p[2] + n[2] * 0.24; } else { d.stand = true; d.y = 1.6; d.x = p[0]; d.z = p[2]; if (d.yaw === undefined) d.yaw = 0; } }
+  else { const dep = T === 'gab' ? GAB_SIZE[d.size || 'M'].d / 2 + 0.06 : 0.35; if (wall) { d.yaw = Math.atan2(n[0], n[2]); d.x = p[0] + n[0] * dep; d.z = p[2] + n[2] * dep; } else { d.x = p[0]; d.z = p[2]; if (d.yaw === undefined) d.yaw = 0; } d.y = 0; } }
+smartPlace = (o => function (d, x, y) { const h = surfHit(rayNow(x, y)); if (!h || h.N) return o(d, x, y); outPlace(d, h); return null; })(smartPlace);
+// muebles y piezas sobre el piso de la casilla
+placeProp = (o => function (p, x, y) { o(p, x, y); if (casAt(p.x, p.z, 1) && (p.y || 0) < 0.07) p.y = 0.07; })(placeProp);
+// ir directo a un lugar desde la pausa
+function irA(v) { const [t, id] = v.split(':');
+  if (t === 'n') { const N = naveById(id); if (N) enterWalk(N); }
+  if (t === 'c') { const C = CAS.find(c => c.id === id); if (!C) return; const D = C.door, m = (D.a + D.b) / 2, out = 2.4, p = D.s === 'n' ? [m, C.z0 - out] : D.s === 's' ? [m, C.z1 + out] : D.s === 'w' ? [C.x0 - out, m] : [C.x1 + out, m];
+    const ns = D.s === 'n' || D.s === 's', look = ns ? [m, 1.4, (C.z0 + C.z1) / 2] : [(C.x0 + C.x1) / 2, 1.4, m]; enterWalk(null, p, look); WALK.N = null; casUpd(); walkHud(); } }
+function irHtml() { const b = (v, n) => `<button class="btn" data-go="${v}">${escH(n)}</button>`;
+  return `<b>Ir a un lugar</b><div class="e3go">${NAVES.map(N => b('n:' + N.id, N.full)).join('')}${CAS.map(C => b('c:' + C.id, C.n)).join('')}</div><button class="btn" data-pz="volver">← Volver</button>`; }
+// piezas de afuera
+Object.assign(PK, { barrera: { n: 'Barrera vehicular', tags: 'porton acceso ingreso brazo', out: true }, molinete: { n: 'Molinete', tags: 'acceso peatonal torniquete', out: true }, cartel: { n: 'Cartel', tags: 'señal letrero', out: true }, bolardo: { n: 'Bolardo', tags: 'poste defensa', out: true } });
+Object.assign(PRE3, { barrera: 'BV-', molinete: 'MO-', cartel: 'CA-', bolardo: 'BO-' });
+propGeo = (o => p => { const k = p.k; if (!['barrera', 'molinete', 'cartel', 'bolardo'].includes(k)) return o(p); const g = new Geo();
+  if (k === 'barrera') { g.box(-0.25, 0, -0.2, 0.25, 1.0, 0.2, '#E3B436', { top: '#2B2B2B' }); for (let i = 0; i < 8; i++) g.box(0.2 + i * 0.55, 0.88, -0.04, 0.75 + i * 0.55, 0.96, 0.04, i % 2 ? '#F2F4F5' : '#C8352E', { ao: 1 }); g.box(4.4, 0, -0.04, 4.48, 0.88, 0.04, '#59636C'); }
+  else if (k === 'molinete') { g.box(-0.15, 0, -0.3, 0.15, 1.0, 0.3, '#B8C0C6', { top: '#8D98A0' }); for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; g.box(0.15, 0.85 + Math.sin(a) * 0.12, -0.02 + Math.cos(a) * 0.12, 0.6, 0.88 + Math.sin(a) * 0.12, 0.02 + Math.cos(a) * 0.12, '#D0D6DA', { ao: 1 }); } g.box(-0.6, 0, 0.4, 0.6, 1.0, 0.45, '#9AA6AE'); }
+  else if (k === 'cartel') { for (const x of [-0.9, 0.9]) g.box(x - 0.04, 0, -0.04, x + 0.04, 2.3, 0.04, '#59636C'); g.box(-1.05, 1.3, -0.03, 1.05, 2.3, 0.03, '#2F5FA3'); g.box(-0.9, 1.7, 0.03, 0.9, 1.9, 0.035, '#F2F4F5', { e: 0.3 }); }
+  else if (k === 'bolardo') { g.prism(0, 0, 0, 0.1, 0.9, 10, '#E3B436', { top: '#2B2B2B' }); g.prism(0, 0.6, 0, 0.102, 0.08, 10, '#2B2B2B'); }
+  return g; })(propGeo);
+{ const ex = CAT3.find(c => c[0] === 'Exterior y decoración'); if (ex) { const add = ['barrera', 'molinete', 'cartel', 'bolardo'].map(k => ['prop:' + k, PK[k].n, 'tree', PK[k].tags]); ex[1].push(...add); add.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c: 'Exterior y decoración' })); } }
+
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3900,7 +3998,7 @@ html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.wal
 .e3ext{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--gb) + 72px);z-index:13;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font:500 13px var(--f-ui);cursor:pointer;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .e3ext b{color:var(--accent)} .e3ext .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ok,#2a9d5c)} .e3ext .dot.crit{background:#d64545}
 html.walking .e3ext,html.editing .e3ext[data-k=ubicar]{display:none}
-.e3pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:31;display:grid;gap:8px;min-width:240px;padding:16px;border-radius:14px;color:var(--ink);font:13px var(--f-ui)} .e3pause b{font-size:16px;margin-bottom:2px} .e3pause .btn{justify-content:space-between;display:flex;align-items:center;gap:10px}
+.e3go{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:48vh;overflow:auto} .e3go .btn{justify-content:flex-start;text-align:left;font-size:12.5px} .e3pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:31;display:grid;gap:8px;min-width:240px;padding:16px;border-radius:14px;color:var(--ink);font:13px var(--f-ui)} .e3pause b{font-size:16px;margin-bottom:2px} .e3pause .btn{justify-content:space-between;display:flex;align-items:center;gap:10px}
 html.walking canvas{cursor:default!important}
 .ruta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:8px 10px;margin:6px 0 8px;border-radius:9px;background:color-mix(in srgb,var(--accent) 10%,transparent);font:12.5px/1.5 var(--f-ui)} .ruta small{width:100%;color:var(--muted);font-size:11px} .ruta i{font-style:normal;color:var(--muted)}
 .cbusca{margin-bottom:10px} .cbusca input{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);font:13px var(--f-ui)}
@@ -3935,7 +4033,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   tk.addEventListener('click', e => { const m = e.target.closest('[data-tkm]'); if (m && TKD) { TKD.m = m.dataset.tkm; tk.querySelectorAll('[data-tkm]').forEach(x => x.setAttribute('aria-pressed', String(x === m))); return; } const a = e.target.closest('[data-tk]'); if (!a) return; if (a.dataset.tk === 'x') ticketClose(); if (a.dataset.tk === 'send') ticketSend(); });
   tk.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ticketClose(); } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ticketSend(); });
   const pz = document.createElement('div'); pz.id = 'e3pause'; pz.className = 'e3pause glass'; pz.hidden = true; pz.setAttribute('role', 'dialog'); pz.setAttribute('aria-label', 'Pausa'); document.body.appendChild(pz);
-  pz.addEventListener('click', e => { const b = e.target.closest('[data-pz]'); if (!b) return; const a = b.dataset.pz; if (a === 'seguir') { toPlay(); lockReq('click'); } if (a === 'cat') { pausa(false); catToggle(true); } if (a === 'ed') { setEdit(!ED.on); pausa(true); } if (a === 'help') helpSet(!HELP.open); if (a === 'salir') { pausa(false); exitWalk(); } });
+  pz.addEventListener('click', e => { const go = e.target.closest('[data-go]'); if (go) { PAUSE.ir = false; irA(go.dataset.go); toPlay(); lockReq('click'); return; } const b = e.target.closest('[data-pz]'); if (!b) return; const a = b.dataset.pz; if (a === 'ir' || a === 'volver') { PAUSE.ir = a === 'ir'; pausa(true); return; } if (a === 'seguir') { toPlay(); lockReq('click'); } if (a === 'cat') { pausa(false); catToggle(true); } if (a === 'ed') { setEdit(!ED.on); pausa(true); } if (a === 'help') helpSet(!HELP.open); if (a === 'salir') { pausa(false); exitWalk(); } });
   const rs = document.createElement('div'); rs.id = 'e3resume'; rs.className = 'e3resume'; rs.hidden = true; rs.innerHTML = 'Hacé clic en la pantalla para volver a la mira<small>Alt mantenido: mouse libre un momento · Esc: soltar el mouse</small>'; document.body.appendChild(rs);
   rs.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); lockReq('click'); });
   if (cat) cat.addEventListener('click', e => { if (WALK.on && e.target.closest('[data-ck3]')) setTimeout(() => catToggle(false), 0); });
@@ -3963,7 +4061,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
+  if (window.__e3) Object.assign(window.__e3, { CAS, casAt, irA, outPlace, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
   hotRender(); requestAnimationFrame(gameTick); extInit(); cabInit2(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */
