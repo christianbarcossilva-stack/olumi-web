@@ -149,7 +149,7 @@ const tipoDe = (d: any) => { const t = [d.linea, d.modelo, d.nombre].join(' ').t
 const caido = (e: string) => e === 'offline' || e === 'caido';
 
 // registra cada caída una sola vez: abre la alerta al pasar a caído y, si vuelve sola antes de levantar el ticket, la cierra
-async function procesar(db: Db, org: string, sid: string, marca: string, equipos: any[]) {
+async function procesar(db: Db, org: string, sid: string, marca: string, equipos: any[], aviso = '') {
   const now = new Date().toISOString();
   const [{ data: prev }, { data: abiertas }] = await Promise.all([
     db.from('ondi_equipos_estado').select('uid,estado,desde,silenciado').eq('org_id', org).eq('site_id', sid),
@@ -168,7 +168,13 @@ async function procesar(db: Db, org: string, sid: string, marca: string, equipos
   for (const n of nuevas) await db.from('ondi_alertas').insert(n); // si ya hay una abierta, el índice único la frena
   if (cerrar.length) await db.from('ondi_alertas').update({ estado: 'cerrada', cerrada: now, volvio: now, nota: 'Volvió solo', actualizado: now }).in('id', cerrar);
   if (volvio.length) await db.from('ondi_alertas').update({ volvio: now, actualizado: now }).in('id', volvio).is('volvio', null);
-  const res = { total: equipos.length, caidos: equipos.filter((d: any) => caido(d.estado)).length, at: now };
+  // equipos que ya no son de este cliente (por ejemplo, al separar los sitios de una consola): se cierran sus alertas y se olvida su estado
+  if (equipos.length) { const vivos = new Set(equipos.map((d: any) => marca + ':' + (d.mac || d.id)));
+    const fuera = (abiertas || []).filter((a: any) => a.uid.startsWith(marca + ':') && !vivos.has(a.uid)).map((a: any) => a.id);
+    if (fuera.length) await db.from('ondi_alertas').update({ estado: 'cerrada', cerrada: now, nota: 'El equipo ya no figura en este cliente', actualizado: now }).in('id', fuera);
+    const viejos = (prev || []).filter((p: any) => p.uid.startsWith(marca + ':') && !vivos.has(p.uid)).map((p: any) => p.uid);
+    for (let i = 0; i < viejos.length; i += 100) await db.from('ondi_equipos_estado').delete().eq('org_id', org).eq('site_id', sid).in('uid', viejos.slice(i, i + 100)); }
+  const res: any = { total: equipos.length, caidos: equipos.filter((d: any) => caido(d.estado)).length, at: now }; if (aviso) res.aviso = aviso;
   await db.rpc('ondi_set_resumen', { o: org, s: sid, res });
   return { nuevas: nuevas.length, cerradas: cerrar.length };
 }
@@ -208,7 +214,7 @@ async function revisar(db: Db) {
   for (const s of sites || []) for (const marca of ['unifi', 'meraki']) {
     if (!(s.data && s.data[marca] && s.data[marca].hostId)) continue;
     if (Date.now() - t0 > 50000) { errores.push('Se cortó por tiempo: quedan clientes para la próxima vuelta.'); break; }
-    try { const r = await leerEquipos(db, s.org_id, s, marca, cache); const p = await procesar(db, s.org_id, s.id, marca, r.equipos); clientes++; if (p) { nuevas += p.nuevas; cerradas += p.cerradas; } }
+    try { const r = await leerEquipos(db, s.org_id, s, marca, cache); const p = await procesar(db, s.org_id, s.id, marca, r.equipos, r.aviso); clientes++; if (p) { nuevas += p.nuevas; cerradas += p.cerradas; } if (r.aviso) errores.push(`${s.name}: ${r.aviso}`); }
     catch (e) { errores.push(`${s.name}: ${errTxt(marca, String((e as Error).message || e))}`); }
   }
   const avisos = await avisarPendientes(db).catch(() => 0);
@@ -264,7 +270,7 @@ Deno.serve(async (req) => {
         if (!acc) return json({ error: 'No tenés acceso a este cliente.' }, 403);
       }
       const r = await leerEquipos(db, org, s, marca, new Map());
-      await procesar(db, org, sid, marca, r.equipos).catch(() => null);
+      await procesar(db, org, sid, marca, r.equipos, r.aviso).catch(() => null);
       return json({ ok: true, ...r });
     }
     return json({ error: 'Acción desconocida.' }, 400);

@@ -459,7 +459,7 @@ function panelView() { const tot = S.sites.length, linked = S.sites.filter(st =>
     const dot = r ? (r.caidos ? 'down' : 'ok') : 'off';
     return `<button class="clrow" data-site="${esc(st.id)}"><span class="n"><b>${esc(st.name)}</b><span>${esc((st.data && st.data.direccion) || BASES[(st.data && st.data.base) || 'vacia'][0])}</span></span>
       <span class="v">${r ? nfmt(r.total) + ' equipos' : '—'}</span><span class="v" style="color:${r && r.caidos ? 'var(--crit)' : 'inherit'}">${r ? nfmt(r.caidos) + ' caídos' : '—'}</span>
-      <span class="v">${l.length ? l.map(k => BR[k].n.split(' ').pop()).join(' · ') : man ? man + ' a mano' : 'Sin enlazar'}</span><span class="pill ${dot}">${r ? (r.caidos ? 'Con caídos' : 'En orden') : 'Sin datos'}</span></button>`; }).join('');
+      <span class="v">${l.length ? l.map(k => BR[k].n.split(' ').pop()).join(' · ') : man ? man + ' a mano' : 'Sin enlazar'}</span><span class="pill ${r && r.aviso ? 'warn' : dot}" ${r && r.aviso ? `title="${esc(r.aviso)}"` : ''}>${r && r.aviso ? 'Revisar enlace' : r ? (r.caidos ? 'Con caídos' : 'En orden') : 'Sin datos'}</span></button>`; }).join('');
   return `<div class="wrap"><div class="head"><div><h1>${saludo}${S.user.user_metadata && S.user.user_metadata.name ? ', ' + esc(S.user.user_metadata.name.split(' ')[0]) : ''}</h1>
       <p>${tot ? `${tot} ${tot === 1 ? 'cliente' : 'clientes'} en ${esc(S.ctx.name)}, ${linked} con monitoreo en vivo.` : 'Empezá dando de alta tu primer cliente.'}</p></div>
       <div class="acts">${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div></div>
