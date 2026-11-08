@@ -203,21 +203,6 @@ button{font:inherit;color:inherit}
 @keyframes bob{0%,100%{translate:0 0}50%{translate:0 -4px}}
 .tag{font-family:var(--f-mono);font-size:11.5px;font-weight:500;background:var(--accent);color:#fff;border-radius:6px;padding:3px 7px;white-space:nowrap;box-shadow:var(--shadow)}
 
-/* vista de cámara */
-.camview{position:fixed;top:calc(var(--gt) + 148px);right:calc(var(--gr) + 362px);width:440px;max-width:calc(100% - var(--gl) - var(--gr));
-  z-index:16;padding:8px;background:var(--glass-strong)}
-.camview .scr{position:relative;aspect-ratio:16/9;max-width:100%;border-radius:9px;overflow:hidden;background:#0b0e10}
-.camview canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.camview .fx{position:absolute;inset:0;pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 1px, transparent 1px 3px), radial-gradient(120% 100% at 50% 50%, transparent 60%, rgba(0,0,0,.45));
-  mix-blend-mode:multiply}
-.osd{position:absolute;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.osd .rec{color:#ff5a5f}
-.osd2{position:absolute;left:10px;bottom:8px;font-family:var(--f-mono);font-size:11px;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.nosig{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-size:15px;letter-spacing:.12em;text-shadow:0 1px 3px #000}
-.camview .bar2{display:flex;justify-content:space-between;align-items:center;padding:8px 4px 2px}
-.camview .bar2 b{font-size:13px}
-.camview .bar2 span{font-size:12px;color:var(--muted)}
 
 .toast{position:fixed;top:calc(var(--gt) + 72px);left:50%;transform:translateX(-50%);z-index:50;padding:10px 16px;font-weight:600;font-size:13px;
   display:flex;gap:8px;align-items:center;background:var(--glass-strong)}
@@ -253,7 +238,6 @@ button{font:inherit;color:inherit}
   .controls{flex-direction:column;bottom:calc(var(--gb) + 58px)}
   .controls button{width:34px;height:34px}
   .panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:58%;border-radius:18px 18px 0 0;padding:16px var(--gr) calc(env(safe-area-inset-bottom,0px) + 16px) var(--gl)}
-  .camview{top:calc(var(--gt) + 176px);left:var(--gl);right:var(--gr);width:auto}
   .inside{top:calc(var(--gt) + 176px)}
   .chip{padding:4px 8px 4px 7px;gap:6px} .chip b{font-size:12px} .chip span{display:none}
   .poi{display:none}
@@ -276,7 +260,7 @@ button{font:inherit;color:inherit}
   </a>
   <div class="search">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <input id="q" type="search" autocomplete="off" placeholder="Buscar cliente, nave, cámara o matrícula" aria-label="Buscar">
+    <input id="q" type="search" autocomplete="off" placeholder="Buscar empresa, nave, andén o matrícula" aria-label="Buscar">
     <div class="results glass" id="results" hidden></div>
   </div>
   <div class="tr">
@@ -284,7 +268,7 @@ button{font:inherit;color:inherit}
     <div class="live">En vivo <span class="mono" id="clock">--:--</span></div>
     <button class="iconbtn bell" id="bell" aria-label="Ver alertas">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
-      <em id="bellN">2</em>
+      <em id="bellN">4</em>
     </button>
   </div>
 </header>
@@ -293,17 +277,15 @@ button{font:inherit;color:inherit}
   <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg></div><small>Camiones en el predio</small><b id="kTr">0</b></div>
   <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-7h10v7M7 17h10"/></svg></div><small>Andenes ocupados</small><b id="kDk">0</b></div>
   <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.6-4 3.4-6.5 7-6.5s6.4 2.5 7 6.5"/></svg></div><small>Operarios en turno</small><b id="kOp">0</b></div>
-  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M6 20V9h3v11M10.5 20V5h3v15M15 20v-8h3v8"/></svg></div><small>Ingresos hoy</small><b id="kIn">0</b></div>
+  <div class="kpi glass"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg></div><small>Espera en portería</small><b id="kWt">0</b></div>
 </section>
 
 <aside class="layers glass" aria-label="Capas">
   <div class="eyebrow">Capas</div>
   <button class="lay" data-l="cli" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg><span>Empresas</span><i class="sw"></i></button>
-  <button class="lay" data-l="red" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg><span>Fibra y Wi-Fi</span><i class="sw"></i></button>
-  <button class="lay" data-l="cam" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h12l4-3v14l-4-3H3z"/></svg><span>Cámaras</span><i class="sw"></i></button>
-  <button class="lay" data-l="acc" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Accesos</span><i class="sw"></i></button>
+  <button class="lay" data-l="alr" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg><span>Alertas</span><i class="sw"></i></button>
   <button class="lay" data-l="log" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/></svg><span>Camiones</span><i class="sw"></i></button>
-  <div class="note">Parque, empresas, equipos y cifras de ejemplo. Escala real.</div>
+  <div class="note">Parque, empresas, operación y cifras de ejemplo. Escala real.</div>
 </aside>
 
 <section class="feed glass" aria-label="Actividad">
@@ -329,20 +311,9 @@ button{font:inherit;color:inherit}
   </div>
   <div id="pBody" style="display:grid;gap:14px"></div>
   <div class="acts" id="pActs"></div>
-  <div class="foot">Datos de ejemplo · se conectan con UniFi, NVR, lectores y el sistema del depósito</div>
+  <div class="foot">Datos de ejemplo · se conectan con el sistema del depósito (WMS), la agenda de turnos y la balanza</div>
 </aside>
 
-<div class="camview glass" id="camview" hidden>
-  <div class="scr">
-    <canvas id="camcanvas"></canvas>
-    <canvas id="noise" hidden></canvas>
-    <div class="fx"></div>
-    <div class="nosig" id="nosig" hidden>SIN SEÑAL</div>
-    <div class="osd"><span id="osdL"></span><span><span class="rec">● REC</span> <span id="osdT"></span></span></div>
-    <div class="osd2" id="osd2"></div>
-  </div>
-  <div class="bar2"><div><b id="cvT"></b> <span id="cvS"></span></div><button class="x" id="cvX" aria-label="Cerrar cámara"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-</div>
 
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
@@ -539,27 +510,27 @@ const pxs = pts => pts.map(([x, y]) => px(x, y));
 const FACE = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
 const RB = [242, 688], RR = 14; // rotonda
 const ring = (a0, a1) => { const out = []; const st = a1 > a0 ? 30 : -30; for (let a = a0; st > 0 ? a <= a1 + 0.1 : a >= a1 - 0.1; a += st) out.push([RB[0] + RR * Math.cos(a * Math.PI / 180), RB[1] - RR * Math.sin(a * Math.PI / 180)]); return out; };
-const G_IN = [[100, 706], [170, 704], [212, 692]], G_OUT = [[212, 692], [170, 700], [100, 700]];
+const G_IN = [[95, 729.6], [168, 729.4], [198, 720], [216, 704]], G_OUT = [[216, 702], [203, 712], [186, 717.5]];
 const NORTH = [[242, 660], [240, 620], [249, 545]], EASTR = [[270, 688], [420, 688], [560, 684]];
 // recorridos por nave: entrada desde la portería (eje de calle, en píxeles) y salida hasta la portería
 const ROUTES = {
-  e2e1: { in: [...G_IN, ...ring(180, 450), [242, 660]], out: [[242, 660], ...ring(90, 180), ...G_OUT] },
-  strip: { in: [...G_IN, ...ring(180, 450), ...NORTH], out: [...NORTH.slice().reverse(), ...ring(90, 180), ...G_OUT] },
-  e8: { in: [...G_IN, ...ring(180, 450), ...NORTH, [249, 488]], out: [[249, 488], ...NORTH.slice().reverse(), ...ring(90, 180), ...G_OUT] },
-  e9: { in: [...G_IN, ...ring(180, 360), ...EASTR, [640, 684]], out: [[640, 684], ...EASTR.slice().reverse(), ...ring(0, 180), ...G_OUT] },
-  e10: { in: [...G_IN, ...ring(180, 360), ...EASTR, [563, 684]], out: [[563, 684], ...EASTR.slice().reverse(), ...ring(0, 180), ...G_OUT] }
+  e2e1: { in: [...G_IN, ...ring(210, 450), [242, 660]], out: [[242, 660], ...ring(90, 210), ...G_OUT] },
+  strip: { in: [...G_IN, ...ring(210, 450), ...NORTH], out: [...NORTH.slice().reverse(), ...ring(90, 210), ...G_OUT] },
+  e8: { in: [...G_IN, ...ring(210, 450), ...NORTH, [249, 488]], out: [[249, 488], ...NORTH.slice().reverse(), ...ring(90, 210), ...G_OUT] },
+  e9: { in: [...G_IN, ...ring(210, 360), ...EASTR, [640, 684]], out: [[640, 684], ...EASTR.slice().reverse(), ...ring(0, 210), ...G_OUT] },
+  e10: { in: [...G_IN, ...ring(210, 360), ...EASTR, [563, 684]], out: [[563, 684], ...EASTR.slice().reverse(), ...ring(0, 210), ...G_OUT] }
 };
 for (const k in ROUTES) { ROUTES[k].in = pxs(ROUTES[k].in); ROUTES[k].out = pxs(ROUTES[k].out); }
 const NAVES = [
   { id: 'e7', code: 'E7', name: 'Moda Sur', rubro: 'Moda · e-commerce', r: [75, 228, 232, 315], h: 13, face: 'E', lane: 249, rt: 'strip', s: -1, extra: [['Pedidos web hoy', '1.284']] },
   { id: 'e6', code: 'E6', name: 'A confirmar', rubro: 'Inquilino sin confirmar', r: [75, 228, 315, 407], h: 13, face: 'E', lane: 249, rt: 'strip', s: -1, free: true },
-  { id: 'e5', code: 'E5', name: 'Lácteos del Este', rubro: 'Lácteos · cadena de frío', r: [75, 228, 407, 464], h: 13, face: 'E', lane: 249, rt: 'strip', s: -1, extra: [['Cámara de frío', '3,6 °C · estable']] },
+  { id: 'e5', code: 'E5', name: 'Lácteos del Este', rubro: 'Lácteos · cadena de frío', r: [75, 228, 407, 464], h: 13, face: 'E', lane: 249, rt: 'strip', s: -1, extra: [['Pallets en frío', '1.150']] },
   { id: 'e4', code: 'E4', name: 'Operador 3PL', rubro: 'Depósito y distribución', r: [75, 228, 464, 562], h: 13, face: 'E', lane: 249, rt: 'strip', s: -1, extra: [['Stock en pallets', '2.140']] },
   { id: 'e2', code: 'E2', name: 'Cristalería', rubro: 'Vidrios', r: [68, 210, 562, 677], h: 13, face: 'E', lane: 240, rt: 'e2e1', s: -1, extra: [['Paquetes de vidrio', '312']] },
   { id: 'e8', code: 'E8', name: 'Consumo Norte', rubro: 'Consumo masivo', r: [270, 410, 297, 462], h: 14, face: 'S', lane: 488, rt: 'e8', s: 1, extra: [['Stock en pallets', '3.020']] },
   { id: 'e1', code: 'E1', name: 'Deportes y TV', rubro: 'Retail deportivo y TV satelital', r: [270, 390, 547, 670], h: 12, face: 'W', lane: 240, rt: 'e2e1', s: -1, solar: [292, 370, 552, 600], extra: [['Mezzanine', 'Sí · oficinas y depósito'], ['Stock en pallets', '1.860']] },
   { id: 'e9', code: 'E9', name: 'Bebidas Andes', rubro: 'Alimentos y bebidas', r: [442, 615, 260, 355], h: 14, face: 'E', lane: 640, rt: 'e9', s: -1, extra: [['Stock en pallets', '2.410']] },
-  { id: 'e10', code: 'E10', name: 'Lácteos del Este', rubro: 'Lácteos · cadena de frío', r: [597, 765, 693, 997], h: 15, face: 'W', lane: 563, rt: 'e10', s: 1, skip: [94, 148], extra: [['Cámara de frío', '2,9 °C · estable']] }
+  { id: 'e10', code: 'E10', name: 'Lácteos del Este', rubro: 'Lácteos · cadena de frío', r: [597, 765, 693, 997], h: 15, face: 'W', lane: 563, rt: 'e10', s: 1, skip: [94, 148], extra: [['Pallets en frío', '2.380']] }
 ];
 const NP = (N, u, v) => [N.o[0] + N.t[0] * u + N.n[0] * v, N.o[1] + N.t[1] * u + N.n[1] * v];
 const DOCKS = [];
@@ -578,7 +549,7 @@ for (const N of NAVES) N.f = { p0: N.o, a: N.t, o: N.n, L: N.L, D: N.D };
 const fp = (f, t, d) => [f.p0[0] + f.a[0] * t + f.o[0] * d, f.p0[1] + f.a[1] * t + f.o[1] * d];
 function fbox(g, f, t0, t1, d0, d1, y0, y1, col, o) { const A = fp(f, t0, d0), B = fp(f, t1, d1); g.box(Math.min(A[0], B[0]), y0, Math.min(A[1], B[1]), Math.max(A[0], B[0]), y1, Math.max(A[1], B[1]), col, o); }
 const naveById = id => NAVES.find(n => n.id === id);
-const GATE_POS = [...px(84, 703)], ADMIN_POS = px(274, 525);
+const GATE_POS = [...px(62, 727)], ADMIN_POS = px(274, 525), BAL_POS = [...px(160, 720)], ESPERA_POS = [...px(58, 800)];
 const ZONAS = [
   { id: 'sr', name: 'Playa de autos 0 km', ey: 'Playa de autos', s: 'Autos 0 km a la espera de entrega', pos: [...px(330, 120)] },
   { id: 'dy', name: 'Fábrica vecina', ey: 'Fábrica', s: 'Al sur de E10', pos: [...px(673, 1041)], opp: true },
@@ -591,57 +562,23 @@ let SR_CARS = 0;
 
 const pad = n => String(n).padStart(2, '0');
 const yawOf = (fx, fz) => Math.atan2(-fz, fx);
-const DEV = [];
-const addDev = d => { if (d.p) { [d.x, d.z] = px(d.p[0], d.p[1]); delete d.p; } DEV.push(Object.assign({ status: 'ok', y: 0 }, d)); return d; };
-// portería
-addDev({ id: 'C-01', type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'canopy', p: [93, 708], y: 6.1, yaw: Math.PI, loc: 'Portería · carril de entrada' });
-addDev({ id: 'C-02', type: 'cam', kind: 'Domo PTZ 25x', mount: 'dome', p: [67, 719], y: 4.9, yaw: 0.8, loc: 'Portería · techo de la caseta' });
-[[330, 697, 0, 'Avenida principal · columna 1'], [500, 674, Math.PI, 'Avenida principal · columna 2'], [258, 420, -Math.PI / 2, 'Calle de las naves E2 a E7'],
- [649, 470, Math.PI / 2, 'Calle de E9'], [553, 900, -Math.PI / 2, 'Calle de E10'], [440, 380, Math.PI / 2, 'Calle este de E8']].forEach(([x, y, yaw, loc], i) =>
-  addDev({ id: 'C-' + pad(3 + i), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'pole', p: [x, y], yaw, loc }));
-let cn = 9;
-for (const N of NAVES) { if (N.free) continue;
-  const [nx, nz] = N.n, [tx, tz] = N.t, ends = N.n[0] ? ['norte', 'sur'] : ['oeste', 'este'], ca = Math.cos(0.45), sa = Math.sin(0.45);
-  let [x, z] = NP(N, 13.5, 0.5);
-  addDev({ id: 'C-' + pad(cn++), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'wall', x, y: N.h - 1.6, z, yaw: yawOf(tx * ca + nx * sa, tz * ca + nz * sa), nave: N.id, loc: N.full + ' · andenes (' + ends[0] + ')' });
-  [x, z] = NP(N, N.L - 0.6, 0.5);
-  addDev({ id: 'C-' + pad(cn++), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'wall', x, y: N.h - 1.6, z, yaw: yawOf(-tx * ca + nx * sa, -tz * ca + nz * sa), nave: N.id, loc: N.full + ' · andenes (' + ends[1] + ')' });
-  [x, z] = NP(N, N.L / 2, -N.D - 0.5);
-  addDev({ id: 'C-' + pad(cn++), type: 'cam', kind: 'Domo 4 MP', mount: 'wall', x, y: N.h - 1.6, z, yaw: yawOf(-nx, -nz), nave: N.id, loc: N.full + ' · fondo de la nave' });
-}
-addDev({ id: 'C-' + pad(cn++), type: 'cam', kind: 'Bullet 8 MP con IR', mount: 'pole', ph: 9, p: [66, 32], yaw: -0.6, loc: 'Playa de autos · oeste', zona: 'sr' });
-addDev({ id: 'C-' + pad(cn++), type: 'cam', kind: 'Domo PTZ 25x', mount: 'pole', ph: 9, p: [594, 214], yaw: 2.6, loc: 'Playa de autos · este', zona: 'sr' });
-const camOff = DEV.find(d => d.nave === 'e7' && d.loc.includes('(sur)')); camOff.status = 'crit';
-let an = 1;
-for (const N of NAVES) { if (N.free) continue;
-  for (const f of [0.33, 0.72]) { const [x, z] = NP(N, lerp(14, N.L, f), 0.35);
-    addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', x, y: 7.2, z, yaw: Math.atan2(N.n[0], N.n[1]), nave: N.id, loc: N.full + ' · fachada de andenes', cli: 18 + ((an * 7) % 23) }); } }
-addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', p: [87, 703], y: 6.2, yaw: 0, loc: 'Portería · bajo el techo', cli: 6, gate: true });
-addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Outdoor', p: [330, 218.5], y: 6.4, yaw: Math.PI, loc: 'Playa de autos · centro', cli: 9, mount: 'pole', zona: 'sr' });
-addDev({ id: 'AP-' + pad(an++), type: 'ap', kind: 'UniFi U7 Pro', p: [292.7, 518], y: 6.8, yaw: Math.PI / 2, loc: 'Oficinas del polo · planta alta', cli: 31, admin: true });
-const apWarn = DEV.find(d => d.nave === 'e9' && d.type === 'ap'); apWarn.status = 'warn';
-addDev({ id: 'R-01', type: 'rd', kind: 'Lector de tarjeta y matrícula', p: [80, 703.8], yaw: 0, loc: 'Portería · entrada', hoy: 132 });
-addDev({ id: 'R-02', type: 'rd', kind: 'Lector de tarjeta', p: [90, 702.2], yaw: 0, loc: 'Portería · salida', hoy: 118 });
-addDev({ id: 'R-03', type: 'rd', kind: 'Molinete con tarjeta y PIN', p: [274, 543.6], yaw: 0, loc: 'Oficinas del polo · acceso de personal', hoy: 64, admin: true });
-let rn = 4;
-for (const N of NAVES) { if (N.free) continue; const [x, z] = NP(N, 6, 3.2); addDev({ id: 'R-' + pad(rn++), type: 'rd', kind: 'Lector de tarjeta', x, y: 0, z, yaw: 0, nave: N.id, loc: N.full + ' · puerta de oficinas', hoy: 20 + rn * 7 }); }
-addDev({ id: 'RK-01', type: 'rack', kind: 'Rack core · fibra 12 hilos', p: [293.4, 530], yaw: 0, loc: 'Sala técnica · Oficinas del polo', admin: true });
-
-const C0 = [293.4, 532], TW = [256, 532], TE = [[293.4, 532], [293.4, 495], [437, 495]];
-const FIBER = { core: px(...C0) };
-FIBER.routes = [
-  [C0, [320, 532], [320, 462]],
-  [C0, [320, 532], [320, 547]],
-  [C0, TW, [256, 273], [228, 273]],
-  [C0, TW, [256, 435], [228, 435]],
-  [C0, TW, [256, 513], [228, 513]],
-  [C0, TW, [256, 620], [252, 640], [210, 640]],
-  [C0, TW, [256, 664], [224, 697], [92, 697], [74, 714]],
-  [C0, TW, [256, 228], [256, 216]],
-  [...TE, [437, 300], [442, 300]],
-  [...TE, [437, 677], [600, 677], [600, 693]]
-].map(pxs);
-FIBER.segs = FIBER.routes;
+// balanza de salida y playa de espera de camiones sin turno o adelantados
+const BAL = { hoy: 41, last: '' }, ESPERA = { n: 6, max: 48 };
+// alertas de operación (datos de ejemplo): se resuelven desde la ficha
+const hm = m => { const d = new Date(Date.now() + m * 60000); d.setMinutes(Math.round(d.getMinutes() / 10) * 10, 0, 0); return d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false }); };
+const SHIFT = (() => { const h = new Date().getHours(); return h >= 6 && h < 14 ? ['06:00', '14:00'] : h >= 14 && h < 22 ? ['14:00', '22:00'] : ['22:00', '06:00']; })();
+const ALERTS = [
+  { id: 'al-1', lvl: 'crit', ref: 'e7', t: 'Pedidos atrasados', txt: `42 pedidos web no llegan al corte de las ${hm(120)}. Faltan 3 operarios en picking: conviene pasar gente de recepción.`, feed: `42 pedidos atrasados para el corte de las ${hm(120)}` },
+  { id: 'al-2', lvl: 'warn', ref: 'espera', t: 'Camión esperando', txt: `Hay un camión hace 48 min en la playa de espera. Llegó sin turno: hay un andén libre en E4 a las ${hm(30)}.`, feed: 'camión 48 min en la playa de espera' },
+  { id: 'al-3', lvl: 'warn', ref: 'e9', t: 'Andén sin liberar', txt: `El andén 7 terminó de descargar hace 25 min y el camión sigue ahí. El turno de las ${hm(10)} ya está en portería.`, feed: 'andén 7 sin liberar hace 25 min' },
+  { id: 'al-4', lvl: 'warn', ref: 'fl-3', t: 'Batería baja', txt: 'El autoelevador AE-03 está en 22 % y le quedan unos 40 min de uso. Mandarlo al cargador antes del próximo camión.', feed: 'AE-03 con 22 % de batería' }
+];
+const openAlerts = () => ALERTS.filter(a => !a.done);
+const alertsOf = id => ALERTS.filter(a => !a.done && a.ref === id);
+// turnos del día por nave (datos de ejemplo)
+function turnosOf(N) { if (N.tur) return N.tur; const r = seeded(N.code.charCodeAt(1) * 13 + N.docks.length), tot = 8 + Math.floor(N.docks.length * (0.9 + r() * 0.6)), done = Math.floor(tot * (0.45 + r() * 0.2));
+  const next = []; let m = 20 + Math.floor(r() * 3) * 10; for (let i = 0; i < 3; i++) { next.push({ h: hm(m), c: CARRIERS[Math.floor(r() * CARRIERS.length)], tipo: r() < 0.5 ? 'Descarga' : 'Carga' }); m += 20 + Math.floor(r() * 3) * 10; }
+  return N.tur = { tot, done, next, puntual: 82 + Math.floor(r() * 14), anden: 34 + Math.floor(r() * 30) }; }
 
 /* ---------- objetos de la escena ---------- */
 const OBJ = []; const OBJID = new Map();
@@ -670,21 +607,28 @@ function buildBase() {
   for (const o of [-9, 9]) { const p = hw.map(([x, y]) => [x + hn[0] * o, y + hn[1] * o]); road(p, 12); dash(p, 12, 5); }
   // calles internas
   const RD = [
-    [[31, 703], [110, 703], [170, 701], [215, 692]],
+    [[31, 727], [110, 726.5], [170, 724], [200, 716], [218, 702], [230, 694]],
     [[256, 688], [420, 688], [560, 684], [640, 684], [772, 680]],
     [[242, 671], [240, 620], [249, 545], [249, 216]],
     [[249, 488], [430, 488]], [[430, 488], [430, 250]], [[249, 264], [430, 264]],
     [[75, 222], [395, 222], [430, 250], [640, 252]], [[640, 252], [640, 684]],
     [[563, 684], [563, 1110]], [[242, 705], [262, 740], [272, 910]], [[563, 1005], [630, 1005]]
   ];
-  road(RD[0], 16, 0.021); RD.slice(1).forEach(p => { road(p, 10); dash(p); });
+  road(RD[0], 18, 0.021); pflat(gg, [40, 118, 714, 737], 0.019, P.road); pflat(gg, [120, 200, 711, 720], 0.019, P.road);
+  pflat(gg, [47, 112, 738, 824], 0.014, P.apron); road([[96, 736], [104, 760], [106, 792]], 9, 0.018); RD.slice(1).forEach(p => { road(p, 10); dash(p); });
   const [rx, rz] = px(...RB); gg.disc(rx, rz, 20, 0.022, P.road, 0, 28); g.prism(rx, 0, rz, 9, 0.35, 24, P.parapet); g.disc(rx, rz, 8.6, 0.36, P.grass, 0, 24);
-  g.box(...[60, 0.0, 702].map((v, i) => i === 0 ? v - OX : i === 2 ? v - OZ : v), 112 - OX, 0.3, 704 - OZ, P.parapet);
-  { const [a, b] = px(84.7, 706.3), [c, d] = px(85.3, 710.5); gg.flat(a, b, c, d, 0.045, P.mark); const [e, f] = px(85.3, 696), [h2, i2] = px(85.9, 700.3); gg.flat(e, f, h2, i2, 0.045, P.mark); }
+  { const [a, b] = px(64.6, 727.6), [c, d] = px(65.2, 735); gg.flat(a, b, c, d, 0.045, P.mark); const [e, f] = px(70.4, 718.2), [h2, i2] = px(71, 725.6); gg.flat(e, f, h2, i2, 0.045, P.mark); }
+  // balanza de camiones: plataforma en el carril de salida y casilla del balancero
+  { const [a, b, c, d] = R(146, 166, 718.2, 721.8); g.box(a, 0, b, c, 0.18, d, P.parapet, { top: mulc(C(P.road), 1.35) }); for (let x = 146; x <= 166.1; x += 4) { const [e, f, h2, i2] = R(x - 0.08, x + 0.08, 718.2, 721.8); gg.flat(e, f, h2, i2, 0.2, P.markY); }
+    const [k0, k1, k2, k3] = R(145.6, 166.4, 717.8, 718.2); g.box(k0, 0, k1, k2, 0.22, k3, P.markY); const [m0, m1, m2, m3] = R(145.6, 166.4, 721.8, 722.2); g.box(m0, 0, m1, m2, 0.22, m3, P.markY); }
+  { const [a, b, c, d] = pbox(157.5, 166, 722.5, 725.9, 3, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); g.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet); }
+  // playa de espera: camiones sin turno o adelantados, al sur de la entrada
+  for (let i = 0; i < 7; i++) { const z0 = 790 + i * 3.7; if (i === 3) continue; const [a, b, c, d] = R(51, 64.5, z0, z0 + 2.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); g.box(a, 0, b + 0.3, a + 1.2, 1.1, d - 0.3, P.tire); g.box(c - 4.5, 0, b + 0.3, c - 1.5, 1.1, d - 0.3, P.tire); }
+  for (let i = 0; i < 3; i++) { const x0 = 84 + i * 4.2; const [a, b, c, d] = R(x0, x0 + 2.5, 770, 783.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); }
   // playas de maniobra, estacionamientos y patios
   [[228, 244, 232, 562], [210, 235, 562, 677], [245, 270, 547, 670], [270, 410, 462, 483], [615, 635, 260, 355], [630, 712, 240, 315], [568, 597, 693, 997], [296, 372, 498, 532], [270, 410, 270, 297]].forEach(rr => pflat(gg, rr, 0.015, P.apron));
   const lrect = (N, u0, u1, v0, v1, y, col) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); gg.flat(Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz), y, col); };
-  for (const N of NAVES) { for (const d of N.docks) lrect(N, d.u - 2.6, d.u - 2.42, 0, 16, 0.04, P.markY); const lu = N.docks[N.docks.length - 1].u + 2.42; lrect(N, lu, lu + 0.18, 0, 16, 0.04, P.markY); }
+  for (const N of NAVES) { if (!N.docks.length) continue; for (const d of N.docks) lrect(N, d.u - 2.6, d.u - 2.42, 0, 16, 0.04, P.markY); const lu = N.docks[N.docks.length - 1].u + 2.42; lrect(N, lu, lu + 0.18, 0, 16, 0.04, P.markY); }
   for (let x = 298; x <= 368; x += 3.2) { pflat(gg, [x, x + 0.15, 498, 504], 0.04, P.mark); pflat(gg, [x, x + 0.15, 526, 532], 0.04, P.mark); }
   // autos
   const car = (x, z, c, alongZ, full) => { const a = alongZ ? [0.9, 2.1] : [2.1, 0.9];
@@ -703,12 +647,16 @@ function buildBase() {
     for (let k = 0; k <= n; k++) { const x = lerp(x0, x1, k / n), z = lerp(z0, z1, k / n); if (!gap(x, z)) g.box(x - 0.12, 0, z - 0.12, x + 0.12, 2.6, z + 0.12, P.fence); }
     for (let k = 0; k < n; k++) { const xa = lerp(x0, x1, k / n), za = lerp(z0, z1, k / n), xb = lerp(x0, x1, (k + 1) / n), zb = lerp(z0, z1, (k + 1) / n); if (gap((xa + xb) / 2, (za + zb) / 2)) continue;
       for (const y of [1.2, 2.45]) { if (Math.abs(xb - xa) < 1e-6 || Math.abs(zb - za) < 1e-6) g.box(Math.min(xa, xb) - 0.05, y, Math.min(za, zb) - 0.05, Math.max(xa, xb) + 0.05, y + 0.1, Math.max(za, zb) + 0.05, P.fence); else g.strip([[xa, za], [xb, zb]], 0.12, y + 0.1, P.fence); } } } };
-  const gz0 = 694 - OZ, gz1 = 713 - OZ;
+  const gz0 = 714 - OZ, gz1 = 739 - OZ;
   fence(pxs([[45, 18], [258, 18], [608, 148], [648, 238], [648, 676], [772, 676], [772, 1100], [45, 1100], [45, 18]]), (x, z) => x < 45 - OX + 2 && z > gz0 && z < gz1);
   // árboles
   const tree = (x, z, s = 1) => { g.prism(x, 0, z, 0.32 * s, 2 * s, 5, P.trunk); g.blob(x, 3.9 * s, z, 2.5 * s, r() > 0.5 ? P.tree : P.tree2, { rings: 4, seg: 7, sy: 0.92, rot: r() * 3 }); };
   const ptree = (x, y, s) => { const [a, b] = px(x, y); tree(a, b, s); };
-  for (let y = 240; y <= 1090; y += 11) if (y < 680 || y > 730) ptree(52 + (r() - 0.5) * 4, y, 1 + r() * 0.4);
+  const palm = (x, y, s = 1) => { const [a, b] = px(x, y), H = 7.2 * s, top = [a, H, b]; g.prism(a, 0, b, 0.24 * s, H, 6, '#8E7C63', { top: '#6F6250' });
+    const n = 9, rot = r() * 6; for (let i = 0; i < n; i++) { const an = rot + i / n * Math.PI * 2, L = (2.9 + r() * 0.8) * s, w = 0.55 * s, cx = Math.cos(an), cz = Math.sin(an);
+      const tip = [a + cx * L, H - (1.2 + r() * 0.7) * s, b + cz * L], mid = [a + cx * L * 0.48, H + 0.45 * s, b + cz * L * 0.48], l = [mid[0] - cz * w, mid[1], mid[2] + cx * w], q = [mid[0] + cz * w, mid[1], mid[2] - cx * w], col = C(i % 2 ? P.tree : P.tree2), ctr = [a, H - 6, b];
+      g.tri(top, l, tip, col, 0, ctr); g.tri(top, tip, q, col, 0, ctr); } };
+  for (let y = 240; y <= 1090; y += 11) if (y < 708 || y > 750) ptree(52 + (r() - 0.5) * 4, y, 1 + r() * 0.4);
   for (let y = 30; y <= 210; y += 12) ptree(52, y, 0.9 + r() * 0.3);
   for (let x = 60; x <= 760; x += 12) ptree(x + (r() - 0.5) * 3, 1108 + (r() - 0.5) * 3, 0.95 + r() * 0.3);
   for (let x = 830; x <= 1070; x += 8) { ptree(x, 462 + (r() - 0.5) * 4, 1.3 + r() * 0.3); ptree(x - 50, 880 + (r() - 0.5) * 4, 1.25 + r() * 0.3); }
@@ -720,7 +668,8 @@ function buildBase() {
     const lx = X0 + dx * 2, lz = Z0 + dz * 2, hx = dz ? 0.45 : 0.6, hz = dz ? 0.6 : 0.45; g.box(lx - hx, 9.85, lz - hz, lx + hx, 10.15, lz + hz, P.lamp, { e: P.lampE, ao: false });
     if (P.pool) g.disc(X0 + dx * 3, Z0 + dz * 3, 5.5, 0.05, P.pool, 1, 14); };
   for (let x = 290; x <= 760; x += 38) lpole(x, 696, 0, -1);
-  for (let x = 120; x <= 200; x += 40) lpole(x, 713, 0, -1);
+  for (let x = 100; x <= 200; x += 40) lpole(x, 713.5, 0, 1);
+  for (let x = 46; x <= 200; x += 7.5) palm(x + (r() - 0.5) * 1.5, 708.5 + (r() - 0.5) * 1.5, 0.9 + r() * 0.25);
   for (let y = 360; y <= 540; y += 45) lpole(258, y, -1, 0);
   for (let y = 290; y <= 660; y += 46) lpole(649, y, -1, 0);
   for (let y = 720; y <= 1080; y += 45) lpole(553, y, 1, 0);
@@ -734,11 +683,23 @@ function buildBase() {
     for (const y of [1.6, 5.6]) g.win(a, b, c, d, y, 2.4, P.glass, P.glassE);
     g.box(a - 0.1, 9.4, b - 0.1, c + 0.1, 10, d + 0.1, P.parapet); pbox(268, 280, 540, 543, 3.6, P.parapet);
     const [h1, h2] = px(262, 516), [h3, h4] = px(280, 527); g.box(h1, 10, h2, h1 + 5, 11.4, h2 + 4, P.hvac); g.box(h3, 10, h4, h3 + 4, 11.2, h4 + 4, P.hvac); }
-  // portería: caseta y techo sobre los dos carriles
-  { const [a, b, c, d] = pbox(62, 72, 714, 723, 3.4, P.wall, { top: P.roof }); g.box(a - 0.1, 1.4, b - 0.1, c + 0.1, 2.8, d + 0.1, P.glass, { e: P.glassE }); g.box(a - 0.5, 3.4, b - 0.5, c + 0.5, 3.8, d + 0.5, P.parapet); }
-  for (const [x, y] of [[78, 694.5], [78, 711.5], [96, 694.5], [96, 711.5]]) { const [a, b] = px(x, y); g.box(a - 0.25, 0, b - 0.25, a + 0.25, 6.6, b + 0.25, P.pole); }
-  { const [a, b, c, d] = R(77.4, 96.6, 694, 712); g.box(a, 6.6, b, c, 7.2, d, P.wall, { top: P.roof }); g.box(a - 0.1, 6.6, b - 0.1, c + 0.1, 6.85, d + 0.1, P.acc, { e: 0.55 }); }
-  for (const y of [713, 692.6]) { const [a, b] = px(85, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
+  // portería: techo blanco sobre los dos carriles, isla, caseta vidriada y molinete para el ingreso a pie
+  { const dk = isDark(), WH = dk ? '#9AA6B0' : '#F2F4F5', RED = '#C8352E', YEL = '#E3B436', GRY = dk ? '#6D7881' : '#858E95';
+    for (const x of [58.4, 64.6]) for (const y of [716.6, 726.6, 736.6]) { const [a, b] = px(x, y); g.box(a - 0.32, 0, b - 0.32, a + 0.32, 6.1, b + 0.32, WH, { ao: 0.95 }); }
+    { const [a, b, c, d] = R(57.4, 65.6, 715.6, 737.6); g.box(a, 6.1, b, c, 6.9, d, WH, { top: WH, ao: 1 }); g.box(a - 0.06, 6.1, b - 0.06, c + 0.06, 6.42, d + 0.06, RED, { ao: 1 }); }
+    { const [a, b, c, d] = R(52.5, 71.5, 725.9, 727.3); g.box(a, 0, b, c, 0.25, d, YEL, { top: YEL }); }
+    { const [a, b, c, d] = R(55.6, 65.4, 737.4, 742.4); g.box(a, 0, b, c, 3, d, GRY, { top: P.roof, ao: 0.9 }); g.box(a - 0.04, 1.05, b - 0.04, c + 0.04, 2.55, d + 0.04, P.glass, { e: P.glassE * 0.7 }); g.box(a - 0.2, 3, b - 0.2, c + 0.2, 3.25, d + 0.2, P.parapet); }
+    for (const [x0, x1, y0, y1] of [[54.5, 66, 743.2, 743.35], [54.5, 54.65, 743.2, 748.6], [65.85, 66, 743.2, 748.6], [54.5, 59, 748.45, 748.6]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 2.1, d, GRY, { ao: 1 }); }
+    for (const x of [60.5, 62, 63.5]) { const [a, b, c, d] = R(x - 0.25, x + 0.25, 748.2, 748.9); g.box(a, 0, b, c, 1.1, d, '#B8C0C6', { ao: 1 }); }
+    for (let x = 72; x < 95; x += 2.2) { const [a, b, c, d] = R(x, x + 1.9, 737, 737.6); g.box(a, 0, b, c, 0.85, d, YEL, { ao: 1 }); }
+    { const [a, b, c, d] = R(96, 102.1, 738.6, 741.2); g.box(a, 0, b, c, 2.6, d, dk ? '#7E8A93' : '#D3D9DD', { top: dk ? '#66727C' : '#BFC6CB', ao: 0.9 }); g.box(a - 0.03, 1.9, b - 0.03, c + 0.03, 2.3, d + 0.03, '#0F7A55', { e: 0.2 }); g.win(a, b, c, d, 0.9, 1, P.glass, P.glassE * 0.6); }
+    for (const [x0, x1, y0, y1] of [[94.6, 103.5, 737.6, 737.75], [103.4, 103.55, 737.6, 742.5]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 1.6, d, YEL, { ao: 1 }); }
+    for (const [x0, x1, y0, y1] of [[38, 53, 713.6, 714.2], [38, 53, 736.9, 737.5], [44, 52, 748.5, 749.1]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 0.22, d, YEL, { top: YEL }); }
+    for (let i = 0; i < 6; i++) { const y = 750 + i * 2.6; const [a, b, c, d] = R(52, 57.5, y, y + 0.14); gg.flat(a, b, c, d, 0.045, P.mark); }
+    { const [a, b, c, d] = R(52, 52.14, 750, 763); gg.flat(a, b, c, d, 0.045, P.mark); }
+    { const [a, b] = px(54.7, 752.6); g.box(a - 0.9, 0, b - 2, a + 0.9, 1.4, b + 2, '#C9473E', { top: '#D9615A' }); }
+    for (const [x, y] of [[44, 716], [44, 735], [76, 714.4]]) { const [a, b] = px(x, y); g.box(a - 0.12, 0, b - 0.12, a + 0.12, 9, b + 0.12, P.pole); g.box(a - 0.12, 8.8, b - 0.12, a + 1.6, 9, b + 0.12, P.pole); g.box(a + 1.1, 8.65, b - 0.2, a + 1.7, 8.8, b + 0.2, P.lamp, { e: P.lampE }); } }
+  for (const [x, y] of [[66, 736.2], [68, 716.8]]) { const [a, b] = px(x, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
   // detalles junto a las naves
   pbox(255, 270, 245, 345, 8, P.wall, { top: P.roof }); pbox(345, 390, 280, 292, 5, P.wall, { top: P.roof }); pbox(395, 407, 550, 575, 5, P.wall, { top: P.roof });
   pbox(570, 597, 790, 837, 8, P.wall, { top: P.roof }); pbox(425, 440, 510, 528, 4, P.wall, { top: P.roof }); pbox(595, 615, 352, 380, 3, P.hvac);
@@ -784,35 +745,6 @@ function buildNave(N, cut) {
   obj(N.id, { geo: g, layer: 'base', pick: true, kind: 'nave' });
 }
 
-function devGeo(d) {
-  const g = new Geo(), st = d.status === 'crit' ? P.crit : d.status === 'warn' ? P.warn : P.ok;
-  if (d.type === 'cam') {
-    let H = d.y;
-    if (d.mount === 'pole') { H = d.ph || 8.2; g.box(-0.4, 0, -0.4, 0.4, 0.4, 0.4, P.pole); g.prism(0, 0.4, 0, 0.16, H - 0.4, 6, P.pole); }
-    if (d.mount === 'wall') g.box(-0.9, -0.15, -0.12, 0, 0.15, 0.12, P.devD);
-    if (d.mount === 'canopy') g.box(-0.1, 0, -0.1, 0.1, 0.9, 0.1, P.devD);
-    const y = d.mount === 'pole' ? H : 0;
-    if (d.kind.includes('Domo')) { g.prism(0, y - 0.3, 0, 0.7, 0.3, 10, P.dev); g.blob(0, y - 0.35, 0, 0.55, P.devD, { rings: 3, seg: 8, sy: 0.8 }); g.box(-0.2, y, -0.2, 0.2, y + 0.4, 0.2, P.dev); }
-    else { g.box(-0.35, y - 0.32, -0.3, 1.25, y + 0.32, 0.3, P.dev); g.box(-0.4, y + 0.32, -0.38, 1.45, y + 0.42, 0.38, P.dev, { ao: 1 }); g.box(1.25, y - 0.22, -0.2, 1.3, y + 0.22, 0.2, P.devD); }
-    g.box(-0.42, y + 0.05, -0.12, -0.36, y + 0.25, 0.12, st, { e: 1, ao: 1 });
-    g.box(-0.2, y + 0.44, -0.1, 0.2, y + 0.56, 0.1, st, { e: 1, ao: 1 });
-  } else if (d.type === 'ap') {
-    if (d.mount === 'pole') g.prism(0, -6.4, 0, 0.16, 6.4, 6, P.pole);
-    g.box(-0.6, -0.8, -0.1, 0.6, 0.8, 0.45, P.dev); g.box(-0.45, -0.65, 0.45, 0.45, 0.65, 0.5, st, { e: 0.9, ao: 1 });
-  } else if (d.type === 'rd') {
-    g.box(-0.2, 0, -0.2, 0.2, 1.3, 0.2, P.devD); g.box(-0.3, 1.3, -0.3, 0.3, 1.9, 0.3, P.devD); g.box(-0.22, 1.42, 0.3, 0.22, 1.8, 0.34, P.acc, { e: 0.9, ao: 1 }); g.box(-0.22, 1.42, -0.34, 0.22, 1.8, -0.3, P.acc, { e: 0.9, ao: 1 });
-  } else if (d.type === 'rack') {
-    g.box(-0.8, 0, -1.1, 0.8, 2.6, 1.1, P.devD); for (let y = 0.5; y < 2.3; y += 0.32) g.box(0.8, y, -0.8, 0.84, y + 0.08, -0.4, y > 1.6 ? P.ok : P.acc, { e: 1, ao: 1 });
-    g.box(-0.85, 2.6, -1.15, 0.85, 2.75, 1.15, P.fence);
-  }
-  return g;
-}
-function buildDevices() {
-  for (const d of DEV) { const layer = d.type === 'cam' ? 'cam' : d.type === 'ap' || d.type === 'rack' ? 'red' : 'acc';
-    const y = d.type === 'cam' && d.mount !== 'pole' ? d.y : d.type === 'ap' ? d.y : 0;
-    obj(d.id, { geo: devGeo(d), layer, pick: true, kind: d.type, model: M.trs(d.x, y, d.z, d.yaw), inflate: 1.4 }); }
-}
-function buildFiber() { const g = new Geo(); for (const s of FIBER.segs) g.strip(s, 0.75, 0.075, P.fiber, 0.95); obj('fiber', { geo: g, layer: 'red', noShadow: true }); }
 
 /* ---------- vehículos ---------- */
 const CARRIERS = ['Fletes Arazá', 'Transportes Ceibo', 'Logística Tacuarí', 'Frío Yerbal', 'Cargas Olimar', 'Transportes Quebracho'];
@@ -842,15 +774,13 @@ function forkGeo(loaded) {
   return g;
 }
 function armGeo() { const g = new Geo(); for (let i = 0; i < 8; i++) g.box(i * 0.8, -0.13, -0.09, i * 0.8 + 0.8, 0.13, 0.09, i % 2 ? P.mark : P.barrier, { ao: 1 }); return g; }
-function packetGeo() { const g = new Geo(); g.box(-0.7, 0, -0.32, 0.7, 0.32, 0.32, P.fiber, { e: 1, ao: 1 }); return g; }
 
-const TRUCKS = [], FORKS = [], PACKETS = [];
+const TRUCKS = [], FORKS = [];
 // barreras de la portería (entrada por la ruta del oeste)
-const ARMS = [{ id: 'arm-in', x: 85 - OX, z: 713 - OZ, yaw: Math.PI / 2, lane: 708 - OZ, open: 0 }, { id: 'arm-out', x: 85 - OX, z: 692.6 - OZ, yaw: -Math.PI / 2, lane: 698 - OZ, open: 0 }];
+const ARMS = [{ id: 'arm-in', x: 66 - OX, z: 735.6 - OZ, yaw: Math.PI / 2, lane: 731 - OZ, open: 0 }, { id: 'arm-out', x: 68 - OX, z: 717.4 - OZ, yaw: -Math.PI / 2, lane: 722 - OZ, open: 0 }];
 function buildDynamicGeos() {
   TRUCKS.forEach(t => obj(t.id, { geo: truckGeo(t.v), layer: 'log', pick: true, kind: 'truck', inflate: 0.4 }));
   FORKS.forEach(f => { f.geoA = forkGeo(false); f.geoB = forkGeo(true); obj(f.id, { geo: f.loaded ? f.geoB : f.geoA, layer: 'log', pick: true, kind: 'fork', inflate: 0.8 }); });
-  PACKETS.forEach(p => obj(p.id, { geo: packetGeo(), layer: 'red', noShadow: true }));
   ARMS.forEach(a => obj(a.id, { geo: armGeo(), layer: 'base' }));
 }
 
@@ -873,8 +803,8 @@ const P2 = (x, y, sp, o) => Object.assign({ x: x - OX, z: y - OZ, sp }, o || {})
 function arrivePath(d, fromN) {
   const N = d.nave, s = N.s, dir = [N.t[0] * s, N.t[1] * s], rt = [-dir[1], dir[0]];
   const A = NP(N, d.u + 15 * s, N.Dl), B = NP(N, d.u + 4 * s, Math.min(20, N.Dl - 4));
-  const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(688) - 2, 688, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(722) + 2, 722, 8)];
-  pts.push(P2(48, 708, 7), P2(76, 708, 6, { wait: 1.8, ev: 'gate' }), P2(96, 708, 8, { ev: 'route' }));
+  const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(714) - 2, 714, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(746) + 2, 746, 8)];
+  pts.push(P2(46, 731, 7), P2(60, 731, 6, { wait: 1.8, ev: 'gate' }), P2(82, 731, 8, { ev: 'route' }));
   offsetPath(ROUTES[N.rt].in, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
   pts.push({ x: A[0] + rt[0] * 1.9, z: A[1] + rt[1] * 1.9, sp: 9 }, { x: B[0], z: B[1], sp: 3, rev: true }, { x: d.x, z: d.z, sp: 2.4, rev: true, ev: 'dock' });
   return pts;
@@ -884,7 +814,7 @@ function leavePath(d) {
   const F = NP(N, d.u, Math.min(16, N.Dl - 4)), E = NP(N, d.u - 7 * s, N.Dl);
   const pts = [{ x: F[0], z: F[1], sp: 3 }, { x: E[0] + rt[0] * 1.9, z: E[1] + rt[1] * 1.9, sp: 5 }];
   offsetPath(ROUTES[N.rt].out, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
-  pts.push(P2(94.2, 698, 4), P2(94, 698, 2, { wait: 1.2, ev: 'exit' }), P2(55, 698, 7), P2(camX(684) + 2, 684, 8), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
+  pts.push(P2(170, 720, 4), P2(156, 720, 2, { wait: 1.1, ev: 'scale' }), P2(84, 722, 7), P2(72, 722, 2, { wait: 1.2, ev: 'exit' }), P2(48, 722, 6), P2(camX(708) + 2, 708, 8), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
   return pts;
 }
 function startArrival(t) {
@@ -903,9 +833,7 @@ function initSim() {
     t.dwell = 15 + i * 6 + Math.random() * 8; t.tIn = Date.now() - (12 + i * 5) * 60000 / 20; d.nave.lastIn = fmt(new Date(Date.now() - (14 + i * 4) * 60000)) + ' · ' + t.plate; });
   for (let i = pre.length; i < TRUCKS.length; i++) TRUCKS[i].idle = 1 + (i - pre.length) * 3.5;
   const forkDef = [['z', 690, 262, 310], ['x', 282, 280, 335], ['z', 782, 720, 960], ['x', 1079, 640, 700], ['z', 400, 578, 610]];
-  forkDef.forEach(([ax, c, a0, b0], i) => { const [a, b] = ax === 'x' ? [a0 - OX, b0 - OX] : [a0 - OZ, b0 - OZ], cc = ax === 'x' ? c - OZ : c - OX; FORKS.push({ id: 'fl-' + (i + 1), ax, x: ax === 'x' ? a : cc, z: ax === 'x' ? cc : a, a, b, dir: 1, pause: i * 0.7, loaded: i % 2 === 0, bat: 38 + (i * 17) % 55, moves: 40 + i * 11, head: 0 }); });
-  FIBER.routes.forEach((r, ri) => { const L = []; let acc = 0; for (let i = 0; i < r.length - 1; i++) { const l = Math.hypot(r[i + 1][0] - r[i][0], r[i + 1][1] - r[i][1]); L.push(l); acc += l; }
-    for (let k = 0; k < 2; k++) PACKETS.push({ id: 'pk-' + ri + '-' + k, route: r, lens: L, total: acc, s: (k * 0.5 + ri * 0.13) * acc, sp: 26 + ri * 2 }); });
+  forkDef.forEach(([ax, c, a0, b0], i) => { const [a, b] = ax === 'x' ? [a0 - OX, b0 - OX] : [a0 - OZ, b0 - OZ], cc = ax === 'x' ? c - OZ : c - OX; FORKS.push({ id: 'fl-' + (i + 1), ax, x: ax === 'x' ? a : cc, z: ax === 'x' ? cc : a, a, b, dir: 1, pause: i * 0.7, loaded: i % 2 === 0, bat: i === 2 ? 22 : 38 + (i * 17) % 55, moves: 40 + i * 11, head: 0 }); });
 }
 function stepTruck(t, dt) {
   if (t.state === 'idle') { t.idle -= dt; if (t.idle <= 0) startArrival(t); return; }
@@ -927,10 +855,12 @@ function blocked(t) { const fx = Math.cos(t.head), fz = -Math.sin(t.head);
   return false; }
 function truckEvent(t, ev) {
   const d = t.dock, N = d && d.nave;
-  if (ev === 'gate') { INGRESOS++; DEV.find(x => x.id === 'R-01').hoy++; log('info', `Cámara de matrículas leyó ${t.plate} en portería · va a ${N.full}`, t.id); }
+  if (ev === 'gate') { INGRESOS++; t.turno = fmt(new Date(Date.now() - Math.floor(Math.random() * 12) * 60000)); log('info', `${t.plate} entró con turno de las ${t.turno} · va a ${N.full}`, t.id); }
+  if (ev === 'scale') { const kg = (14 + Math.random() * 16).toFixed(1).replace('.', ','); t.peso = kg; BAL.hoy++; BAL.last = t.plate + ' · ' + kg + ' t'; if (Math.random() < 0.5) log('info', `Balanza: ${t.plate} pesó ${kg} t al salir · coincide con el remito`, 'bal'); }
   if (ev === 'route') t.stage = 1;
+  if (ev === 'dock' && t.tIn) t.wt = 6 + Math.floor(Math.random() * 14);
   if (ev === 'dock') { t.state = 'docked'; t.stage = 2; t.dwell = 70 + Math.random() * 60; N.lastIn = fmt(new Date()) + ' · ' + t.plate; log('ok', `${t.plate} quedó en el andén ${d.k} de ${N.full}`, t.id); }
-  if (ev === 'exit') { if (d) d.occ = null; log('info', `${t.plate} salió del predio · ${simMinSince(t.tIn)} min adentro`, t.id); t.dock = null; }
+  if (ev === 'exit') { t.peso = null; if (d) d.occ = null; log('info', `${t.plate} salió del predio · ${simMinSince(t.tIn)} min adentro`, t.id); t.dock = null; }
   if (ev === 'gone') { t.state = 'idle'; t.idle = 2 + Math.random() * 6; t.x = -500; t.z = -900; if (SEL === t.id) closePanel(); }
 }
 function stepFork(f, dt) {
@@ -940,8 +870,6 @@ function stepFork(f, dt) {
   if (Math.abs(dd) <= st) { f[k] = target; f.dir *= -1; f.pause = 1.6; f.loaded = !f.loaded; f.moves++; const o = OBJID.get(f.id); if (o) { o.geo = f.loaded ? f.geoB : f.geoA; o.version++; } }
   else f[k] += Math.sign(dd) * st;
 }
-function stepPacket(p, dt) { p.s = (p.s + p.sp * dt) % p.total; let s = p.s;
-  for (let i = 0; i < p.lens.length; i++) { if (s <= p.lens[i]) { const a = p.route[i], b = p.route[i + 1], t = s / p.lens[i]; p.x = lerp(a[0], b[0], t); p.z = lerp(a[1], b[1], t); p.head = Math.atan2(-(b[1] - a[1]), b[0] - a[0]); return; } s -= p.lens[i]; } }
 function stepArms(dt) {
   for (const a of ARMS) { const open = TRUCKS.some(t => t.state !== 'idle' && Math.abs(t.z - a.lane) < 2.6 && Math.abs(t.x - a.x) < 13 && !(t.wait > 0.7));
     a.open += ((open ? 1 : 0) - a.open) * Math.min(1, dt * 3); }
@@ -949,7 +877,6 @@ function stepArms(dt) {
 function syncModels() {
   for (const t of TRUCKS) { const o = OBJID.get(t.id); o.model = M.trs(t.x, 0, t.z, t.head); o.on = t.state !== 'idle' && LAYERS.log; }
   for (const f of FORKS) { const o = OBJID.get(f.id); o.model = M.trs(f.x, 0, f.z, f.head); o.on = LAYERS.log; }
-  for (const p of PACKETS) { const o = OBJID.get(p.id); o.model = M.trs(p.x || 0, 0.08, p.z || 0, p.head || 0); o.on = LAYERS.red; }
   for (const a of ARMS) { const o = OBJID.get(a.id); o.model = M.trs(a.x, 1.15, a.z, a.yaw, a.open * 1.4); }
   if (INSIDE) for (const w of INSIDE.actors) { const o = OBJID.get(w.id); if (o) { const p = fp(INSIDE.N.f, w.t, -w.d); o.model = M.trs(p[0], w.y || 0, p[1], w.head, 0, w.s); o.on = true; } }
 }
@@ -1022,7 +949,7 @@ function stepInside(dt) {
     a.head = yawOf(f.a[0] * a.dir, f.a[1] * a.dir); }
 }
 
-/* ---------- cámara de la vista ---------- */
+/* ---------- vista 3D ---------- */
 const HOME = () => ({ tx: narrow() ? -75 : -40, tz: narrow() ? 10 : 14, yaw: 0.3, pitch: 0.72, zoom: narrow() ? 760 : 515 });
 const cam = Object.assign({}, HOME());
 let tween = null;
@@ -1039,8 +966,8 @@ function ray(V, px, py, w, h) { const nx = px / w * 2 - 1, ny = 1 - py / h * 2;
 function groundAt(px, py) { const r = ray(view(W, H), px, py, W, H), t = -r.o[1] / r.d[1]; return [r.o[0] + r.d[0] * t, r.o[2] + r.d[2] * t]; }
 
 /* ---------- estado e interfaz ---------- */
-const LAYERS = { cli: true, red: true, cam: true, acc: true, log: true, foto: false };
-let SEL = null, HOVER = null, W = 1, H = 1, main, camR = null, CAMDEV = null;
+const LAYERS = { cli: true, alr: true, log: true, foto: false };
+let SEL = null, HOVER = null, W = 1, H = 1, main;
 const canvas = $('#scene');
 
 function env() {
@@ -1048,116 +975,108 @@ function env() {
   return { ld, lvp: M.mul(M.ortho(-640, 640, -640, 640, 10, 2900), M.look(lp, [0, 0, 0], [0, 1, 0])), sunC: P.sunC, sun: P.sun, sky: P.sky3, gnd: P.gnd3, amb: P.amb, clear: C(P.clear), tint: C(P.tint) };
 }
 function isDark() { const t = document.documentElement.getAttribute('data-theme'); if (t === 'dark') return true; if (t === 'light') return false; return matchMedia('(prefers-color-scheme: dark)').matches; }
-function buildAll() { P = isDark() ? PAL.dark : PAL.light; buildBase(); NAVES.forEach(N => buildNave(N, false)); buildDevices(); buildFiber(); buildDynamicGeos(); if (INSIDE) { const N = INSIDE.N; INSIDE = null; enterInside(N); } applyLayers(); }
-function applyLayers() { for (const o of OBJ) { if (['cam', 'red', 'acc'].includes(o.layer)) o.on = LAYERS[o.layer]; if (o.layer === 'photo') o.on = LAYERS.foto && !!PHOTO.img; if (o.layer === 'ground') o.on = !(LAYERS.foto && PHOTO.img); } }
+function buildAll() { P = isDark() ? PAL.dark : PAL.light; buildBase(); NAVES.forEach(N => buildNave(N, false)); buildDynamicGeos(); if (INSIDE) { const N = INSIDE.N; INSIDE = null; enterInside(N); } applyLayers(); }
+function applyLayers() { for (const o of OBJ) { if (o.layer === 'photo') o.on = LAYERS.foto && !!PHOTO.img; if (o.layer === 'ground') o.on = !(LAYERS.foto && PHOTO.img); } }
 
 function entity(id) {
   if (!id) return null; const N = naveById(id); if (N) return { t: 'nave', N };
-  const d = DEV.find(x => x.id === id); if (d) return { t: d.type, d };
   const tr = TRUCKS.find(x => x.id === id); if (tr) return { t: 'truck', tr };
   const f = FORKS.find(x => x.id === id); if (f) return { t: 'fork', f };
   if (INSIDE) { const a = INSIDE.actors.find(x => x.id === id); if (a) return { t: a.kind === 'fork' ? 'ifork' : 'worker', a, N: INSIDE.N };
     if (id.startsWith('st-')) { const st = INSIDE.stations.find(x => 'st-' + x.id === id); if (st) return { t: 'station', s: st, N: INSIDE.N }; } }
   const Z = zonaById(id); if (Z) return { t: 'zona', Z };
-  if (id === 'gate') return { t: 'gate' }; if (id === 'admin') return { t: 'admin' }; return null;
+  if (id === 'gate') return { t: 'gate' }; if (id === 'admin') return { t: 'admin' }; if (id === 'bal') return { t: 'bal' }; if (id === 'espera') return { t: 'espera' }; return null;
 }
 function entPos(id) { const e = entity(id); if (!e) return null;
   if (e.t === 'worker' || e.t === 'ifork') { const p = fp(e.N.f, e.a.t, -e.a.d); return [p[0], e.t === 'ifork' ? 4.2 : 3.2, p[1]]; }
   if (e.t === 'station') { const p = fp(e.N.f, e.s.t, -7.2); return [p[0], 3.4, p[1]]; }
   if (e.t === 'nave') return [e.N.cx, e.N.h, e.N.cz]; if (e.t === 'truck') return [e.tr.x, 5, e.tr.z]; if (e.t === 'fork') return [e.f.x, 3, e.f.z];
   if (e.t === 'gate') return [GATE_POS[0], 7, GATE_POS[1]]; if (e.t === 'admin') return [ADMIN_POS[0], 10, ADMIN_POS[1]]; if (e.t === 'zona') return e.Z.pos;
-  const d = e.d; const y = d.type === 'cam' ? (d.mount === 'pole' ? 9 : d.y) : d.type === 'ap' ? d.y : 2; return [d.x, y, d.z]; }
+  if (e.t === 'bal') return [BAL_POS[0], 4, BAL_POS[1]]; if (e.t === 'espera') return [ESPERA_POS[0], 5, ESPERA_POS[1]]; return null; }
 
 const ICON = {
   nave: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-7h10v7M7 17h10"/></svg>',
-  cam: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h12l4-3v14l-4-3H3z"/></svg>',
-  ap: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg>',
   truck: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>',
   fork: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18V8h6l2 5v5M15 4v14h6"/><circle cx="6" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/></svg>',
-  rd: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
-  rack: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 7h8M8 11h8M8 15h8"/></svg>'
+  rd: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V4M4 7h16l-3 3 3 3H4"/></svg>',
+  bal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16M5 20h14M5 8h14M5 8l-3 7a3.5 3.5 0 0 0 6 0zM19 8l-3 7a3.5 3.5 0 0 0 6 0z"/></svg>',
 };
-ICON.gate = ICON.rd; ICON.admin = ICON.nave; ICON.zona = ICON.nave; ICON.ifork = ICON.fork;
+ICON.gate = ICON.rd; ICON.espera = ICON.truck; ICON.admin = ICON.nave; ICON.zona = ICON.nave; ICON.ifork = ICON.fork;
 ICON.worker = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.6-4 3.4-6.5 7-6.5s6.4 2.5 7 6.5"/></svg>';
 ICON.station = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1.5"/><path d="M8 20h8M12 15v5"/></svg>';
 const row = (k, v, cls = '') => `<div class="row ${cls}"><dt>${k}</dt><dd>${v}</dd></div>`;
 const bar = (p, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.round(p * 100)}%"></i></div>`;
 function naveStats(N) {
-  const occ = N.docks.filter(d => d.occ && d.occ.state === 'docked').length, cams = DEV.filter(d => d.nave === N.id && d.type === 'cam'), aps = DEV.filter(d => d.nave === N.id && d.type === 'ap');
-  const camOn = cams.filter(c => c.status !== 'crit').length, alerts = DEV.filter(d => d.nave === N.id && d.status !== 'ok');
-  return { occ, cams, aps, camOn, alerts, cli: aps.reduce((s, a) => s + a.cli, 0) };
+  const occ = N.docks.filter(d => d.occ && d.occ.state === 'docked').length, alerts = alertsOf(N.id);
+  return { occ, alerts };
 }
+const alertBox = id => alertsOf(id).map(a => `<div class="diag ${a.lvl === 'warn' ? 'warn' : ''}"><b>${a.t}</b>${a.txt}</div>`).join('');
+const alertBtn = id => alertsOf(id).length ? `<button class="btn" data-act="solve">Marcar resuelta</button>` : '';
 function panelContent(id) {
   const e = entity(id); if (!e) return null; let ey = '', t = '', s = '', pill = '', body = '', acts = '';
   if (e.t === 'nave') { const N = e.N, S = naveStats(N);
     ey = N.code + (N.free ? ' · sin confirmar' : ' · cliente'); t = N.free ? 'Inquilino a confirmar' : N.name; s = N.rubro + ' · ' + N.docks.length + ' andenes';
     if (N.free) { pill = '<span class="pill info">Falta el dato</span>';
-      body = `<dl class="rows">${row('Andenes', N.docks.length)}${row('Red y cámaras', 'Sin instalar')}${row('Fibra hasta la nave', 'Troncal en la calle de las naves')}</dl>
-      <div class="diag warn"><b>Oportunidad</b>Falta confirmar quién ocupa E6. Cuando se sepa, se le ofrece el paquete completo: fibra, Wi-Fi, cámaras, control de acceso y monitoreo con Ondi.</div>`;
-      acts = '<button class="btn pri" data-act="quote">Cotizar instalación</button>'; }
-    else { pill = S.alerts.length ? `<span class="pill ${S.alerts.some(a => a.status === 'crit') ? 'crit' : 'warn'}">${S.alerts.length} alerta${S.alerts.length > 1 ? 's' : ''}</span>` : '<span class="pill ok">Todo en orden</span>';
-      const O = opsOf(N);
+      body = `<dl class="rows">${row('Andenes', N.docks.length)}${row('Superficie', (Math.round(N.L * N.D / 100) * 100).toLocaleString('es-UY') + ' m²')}${row('Uso de andenes', 'Libres para el parque')}</dl>
+      <div class="diag info"><b>Nave disponible</b>Cuando entre el inquilino, sus andenes, turnos y operarios se suman a Estiba el mismo día. Mientras tanto el parque puede usar los andenes para picos de otras empresas.</div>`;
+      acts = '<button class="btn pri" data-act="quote">Cotizar Estiba</button>'; }
+    else { pill = S.alerts.length ? `<span class="pill ${S.alerts.some(a => a.lvl === 'crit') ? 'crit' : 'warn'}">${S.alerts.length} alerta${S.alerts.length > 1 ? 's' : ''}</span>` : '<span class="pill ok">Todo en orden</span>';
+      const O = opsOf(N), T = turnosOf(N);
       body = `<dl class="rows">${row('Andenes ocupados', S.occ + ' de ' + N.docks.length)}${bar(S.occ / N.docks.length)}
         ${(N.extra || []).map(([k, v]) => row(k, v)).join('')}${row('Último ingreso', N.lastIn || '—')}</dl>
         <div class="sec">Operación ahora</div>
         <dl class="rows">${row('Operarios en turno', O.workers)}${row('Terminales de picking', O.terminalsOn + ' de ' + O.terminals + ' en línea')}${row('Puestos de trabajo', O.stationsOn + ' de ' + O.stations + ' activos')}${row('Autoelevadores', O.forks + ' · ' + O.forksCharging + ' cargando')}${row('Pedidos preparados hoy', O.orders)}</dl>
-        <div class="sec">Red y cámaras · con Ondi</div>
-        <dl class="rows">${row('Cámaras', S.camOn + ' de ' + S.cams.length + ' en línea')}${row('Wi-Fi', S.aps.length + ' AP · ' + S.cli + ' dispositivos')}</dl>`;
-      const al = S.alerts[0]; if (al) body += `<div class="diag ${al.status === 'warn' ? 'warn' : ''}"><b>${al.id} · ${al.status === 'crit' ? 'sin señal' : 'atención'}</b>${al.type === 'cam' ? 'Cámara de ' + al.loc.split(' · ')[1] + ' sin imagen.' : 'Interferencia alta en 2,4 GHz.'} Tocá el pin para ver el diagnóstico.</div>`;
-      acts = `<button class="btn pri" data-act="inside">${INSIDE && INSIDE.N === N ? 'Ver techo' : 'Ver adentro'}</button><button class="btn" data-act="cams" data-id="${S.cams[0].id}">Ver cámaras</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>`; } }
+        <div class="sec">Turnos de andén · hoy</div>
+        <dl class="rows">${row('Turnos cumplidos', T.done + ' de ' + T.tot)}${bar(T.done / T.tot)}${row('Llegaron en hora', T.puntual + ' %')}${row('Tiempo medio en andén', T.anden + ' min')}${T.next.map(x => row(x.h + ' · ' + x.tipo, x.c)).join('')}</dl>`;
+      body = alertBox(N.id) + body;
+      acts = `<button class="btn pri" data-act="inside">${INSIDE && INSIDE.N === N ? 'Ver techo' : 'Ver adentro'}</button>${alertBtn(N.id)}`; } }
   else if (e.t === 'worker') { const a = e.a; ey = 'Operario · ' + a.role.toLowerCase(); t = 'Operario ' + pad(a.num); s = e.N.code + ' · ' + e.N.name;
     pill = a.mode === 'station' ? '<span class="pill ok">En su puesto</span>' : a.pause > 0 ? '<span class="pill info">Tomando mercadería</span>' : '<span class="pill ok">Recorriendo pasillo</span>';
-    body = `<dl class="rows">${a.term ? row('Terminal de picking', a.term + ' · ' + a.bat + ' %') + bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok') : ''}${row(a.mode === 'station' ? 'Pedidos embalados hoy' : 'Ítems pickeados hoy', a.picks)}${row('Turno', '22:00 a 06:00')}${row('Ubicación', 'Credencial BLE · ±1 m')}</dl>`; }
+    body = `<dl class="rows">${a.term ? row('Terminal de picking', a.term + ' · ' + a.bat + ' %') + bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok') : ''}${row(a.mode === 'station' ? 'Pedidos embalados hoy' : 'Ítems pickeados hoy', a.picks)}${row('Turno', SHIFT.join(' a '))}${row('Zona', a.mode === 'station' ? 'Embalaje y despacho' : 'Pasillo ' + (1 + Math.floor(a.base / 6.2)))}</dl>`; }
   else if (e.t === 'station') { const st = e.s; ey = 'Puesto de trabajo · ' + st.id; t = st.on ? 'Puesto de embalaje' : 'Puesto libre'; s = e.N.code + ' · ' + e.N.name;
     pill = st.on ? '<span class="pill ok">Activo</span>' : '<span class="pill info">Sin operario</span>';
-    body = `<dl class="rows">${row('Operario', st.op || '—')}${row('Pedidos por hora', st.on ? st.pph : '—')}${row('Impresora de etiquetas', 'En línea')}${row('Balanza', 'Calibrada')}</dl>`; }
+    body = `<dl class="rows">${row('Operario', st.op || '—')}${row('Pedidos por hora', st.on ? st.pph : '—')}${row('Etiquetas impresas hoy', st.on ? st.pph * 5 : 0)}${row('Insumos', 'Cajas y film al 70 %')}</dl>`; }
   else if (e.t === 'ifork') { const a = e.a; ey = a.type; t = (a.type === 'Autoelevador' ? 'AE-' : 'AP-') + pad(a.num); s = e.N.code + ' · ' + e.N.name;
     pill = a.mode === 'charge' ? '<span class="pill warn">Cargando batería</span>' : '<span class="pill ok">Operando</span>';
-    body = `<dl class="rows">${row('Estado', a.mode === 'charge' ? 'En el cargador' : a.pause > 0 ? 'Levantando pallet' : a.loaded ? 'Llevando pallet' : 'Volviendo vacío')}${row('Batería', a.bat + ' %')}${bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok')}${row('Movimientos hoy', a.moves)}${row('Checklist de seguridad', 'Hecho a las 22:04')}${row('Próximo service', a.num % 2 ? 'en 38 h de uso' : 'en 112 h de uso')}</dl>`; }
-  else if (e.t === 'cam') { const d = e.d; ey = 'Cámara · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || d.loc;
-    pill = d.status === 'crit' ? `<span class="pill crit">Sin señal desde ${fmt(new Date(NOW0 - 14 * 60000))}</span>` : '<span class="pill ok">Grabando</span>';
-    body = `<dl class="rows">${row('Tipo', d.kind)}${row('Grabación', 'NVR · 30 días')}${row('Disponibilidad 30 días', d.status === 'crit' ? '97,1 %' : '99,9 %')}${row('Último movimiento', d.status === 'crit' ? '—' : fmt(new Date(Date.now() - 60000 * (2 + (d.x | 0) % 9))))}</dl>`;
-    if (d.status === 'crit') body += `<div class="diag"><b>Diagnóstico de Ondi</b>El switch de la nave responde, pero el puerto 7 dejó de entregar PoE. Revisar el cable o el inyector antes de cambiar la cámara.</div>`;
-    acts = `<button class="btn pri" data-act="live" data-id="${d.id}">Ver en vivo</button><button class="btn" data-act="ticket">Crear ticket en Olumi</button>`; }
-  else if (e.t === 'ap') { const d = e.d; ey = 'Access point · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
-    pill = d.status === 'warn' ? '<span class="pill warn">Interferencia alta</span>' : '<span class="pill ok">En línea</span>';
-    body = `<dl class="rows">${row('Modelo', d.kind)}${row('Dispositivos conectados', d.cli)}${row('Canal 2,4 GHz', d.status === 'warn' ? '6 · 71 % ocupado' : '11 · 18 % ocupado')}${row('Canal 5 GHz', '36 · 80 MHz')}${row('Enlace', d.nave ? 'Fibra → switch de la nave' : 'Fibra → rack core')}</dl>`;
-    if (d.status === 'warn') body += `<div class="diag warn"><b>Recomendación de Ondi</b>Pasar el 2,4 GHz al canal 1 y bajar la potencia a media. Los lectores de mano de los operarios se conectan en esa banda.</div>`;
-    acts = '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
-  else if (e.t === 'rd') { const d = e.d; ey = 'Control de acceso · ' + d.id; t = d.loc.split(' · ')[0]; s = d.loc.split(' · ')[1] || '';
-    pill = '<span class="pill ok">En servicio</span>'; body = `<dl class="rows">${row('Tipo', d.kind)}${row('Accesos hoy', d.hoy)}${row('Último acceso', fmt(new Date(Date.now() - 180000)))}${row('Rechazados hoy', d.id === 'R-01' ? '2' : '0')}</dl>`; }
-  else if (e.t === 'rack') { ey = 'Sala técnica · RK-01'; t = 'Rack core del parque'; s = 'Oficinas del polo';
-    pill = '<span class="pill ok">En línea</span>'; body = `<dl class="rows">${row('Fibra', '12 hilos a 8 naves, portería y playa de autos')}${row('Switch core', '10 Gb/s · 24 puertos SFP+')}${row('UPS', 'Autonomía 48 min')}${row('Temperatura', '24 °C')}${row('Tráfico ahora', (380 + Math.round(Math.random() * 60)) + ' Mb/s')}</dl>`; }
+    body = `<dl class="rows">${row('Estado', a.mode === 'charge' ? 'En el cargador' : a.pause > 0 ? 'Levantando pallet' : a.loaded ? 'Llevando pallet' : 'Volviendo vacío')}${row('Batería', a.bat + ' %')}${bar(a.bat / 100, a.bat < 30 ? 'warn' : 'ok')}${row('Movimientos hoy', a.moves)}${row('Checklist de seguridad', 'Hecho a las ' + SHIFT[0].slice(0, 3) + '04')}${row('Próximo service', a.num % 2 ? 'en 38 h de uso' : 'en 112 h de uso')}</dl>`; }
   else if (e.t === 'truck') { const tr = e.tr, d = tr.dock; ey = 'Camión'; t = tr.plate; s = tr.carrier;
-    const stages = ['Portería', 'Recorrido', 'Andén', 'Salida'], st = tr.stage;
+    const stages = ['Portería', 'Recorrido', 'Andén', 'Balanza y salida'], st = tr.stage;
     pill = `<span class="pill info">${['Llegando a portería', 'Camino al andén', 'Descargando en andén', 'Saliendo del predio'][st]}</span>`;
     body = `<div class="steps">${stages.map((n, i) => `<div class="${i < st ? 'done' : i === st ? 'now' : ''}">${n}</div>`).join('')}</div>
-      <dl class="rows">${row('Destino', d ? d.nave.full + ' · andén ' + d.k : '—')}${row('Ingreso', st > 0 ? fmt(new Date(Date.now() - simMinSince(tr.tIn) * 60000)) : '—')}${row('Tiempo en el predio', st > 0 ? simMinSince(tr.tIn) + ' min' : '—')}${row('Lectura de matrícula', st > 0 ? 'C-01 · portería' : 'Pendiente')}</dl>`;
+      <dl class="rows">${row('Destino', d ? d.nave.full + ' · andén ' + d.k : '—')}${row('Ingreso', st > 0 ? fmt(new Date(Date.now() - simMinSince(tr.tIn) * 60000)) : '—')}${row('Tiempo en el predio', st > 0 ? simMinSince(tr.tIn) + ' min' : '—')}${row('Turno', tr.turno ? tr.turno + ' · en hora' : 'Reservado · llegando')}${tr.peso ? row('Peso de salida', tr.peso + ' t') : ''}</dl>`;
     acts = '<button class="btn" data-act="follow">Seguir camión</button>'; }
   else if (e.t === 'fork') { const f = e.f; ey = 'Autoelevador'; t = 'AE-' + f.id.split('-')[1].padStart(2, '0'); s = 'Patio de pallets';
     pill = f.bat < 30 ? '<span class="pill warn">Batería baja</span>' : '<span class="pill ok">Operando</span>';
-    body = `<dl class="rows">${row('Estado', f.pause > 0 ? 'Cargando pallet' : f.loaded ? 'Llevando pallet' : 'Volviendo vacío')}${row('Batería', f.bat + ' %')}${bar(f.bat / 100, f.bat < 30 ? 'warn' : 'ok')}${row('Movimientos hoy', f.moves)}${row('Ubicación', 'Etiqueta BLE · ±1 m')}</dl>`; }
+    body = `<dl class="rows">${row('Estado', f.pause > 0 ? 'Cargando pallet' : f.loaded ? 'Llevando pallet' : 'Volviendo vacío')}${row('Batería', f.bat + ' %')}${bar(f.bat / 100, f.bat < 30 ? 'warn' : 'ok')}${row('Movimientos hoy', f.moves)}${row('Zona', 'Patio de pallets')}</dl>`;
+    body = alertBox(f.id) + body; acts = alertBtn(f.id); }
   else if (e.t === 'gate') { ey = 'Acceso al parque'; t = 'Portería'; s = 'Entrada por la ruta';
     pill = '<span class="pill ok">Barreras en servicio</span>';
-    body = `<dl class="rows">${row('Ingresos hoy', INGRESOS)}${row('Carriles', 'Entrada y salida con barrera')}${row('Lectura de matrículas', 'C-01')}${row('Equipos', 'C-01, C-02, ' + DEV.find(d => d.gate).id + ', R-01, R-02')}</dl>`;
-    acts = '<button class="btn pri" data-act="live" data-id="C-01">Ver cámara de matrículas</button>'; }
-  else if (e.t === 'admin') { const ap = DEV.find(d => d.admin && d.type === 'ap'), mo = DEV.find(d => d.id === 'R-03'); ey = 'Parque de ejemplo'; t = 'Oficinas del polo'; s = 'Entre E1 y E8 · administración y sala técnica';
+    body = `<dl class="rows">${row('Ingresos hoy', INGRESOS)}${row('Espera promedio', waitAvg() + ' min')}${bar(Math.min(1, waitAvg() / 30), waitAvg() > 20 ? 'warn' : 'ok')}${row('Turnos de la próxima hora', 11)}${row('En la playa de espera', ESPERA.n + ' camiones')}${row('Carriles', 'Entrada y salida con barrera')}</dl>`;
+    acts = '<button class="btn pri" data-act="call">Llamar al próximo</button>'; }
+  else if (e.t === 'espera') { ey = 'Playa de espera'; t = 'Camiones sin turno'; s = 'Al sur de la portería';
+    pill = alertsOf('espera').length ? '<span class="pill warn">1 alerta</span>' : '<span class="pill ok">En orden</span>';
+    body = alertBox('espera') + `<dl class="rows">${row('Camiones esperando', ESPERA.n)}${row('El que más espera', ESPERA.max + ' min')}${row('Llegaron sin turno', Math.max(0, ESPERA.n - 2))}${row('Adelantados', Math.min(2, ESPERA.n))}</dl>`;
+    acts = '<button class="btn pri" data-act="call">Llamar al próximo</button>' + alertBtn('espera'); }
+  else if (e.t === 'bal') { ey = 'Control de peso'; t = 'Balanza de salida'; s = 'Carril de salida · 20 m';
+    pill = '<span class="pill ok">Calibrada</span>';
+    body = `<dl class="rows">${row('Pesadas hoy', BAL.hoy)}${row('Última pesada', BAL.last || '—')}${row('Diferencia con el remito', 'Menos de 0,5 %')}${row('Capacidad', '80 t')}</dl>`; }
+  else if (e.t === 'admin') { ey = 'Parque de ejemplo'; t = 'Oficinas del polo'; s = 'Entre E1 y E8 · administración del parque';
     pill = '<span class="pill ok">Todo en orden</span>';
-    body = `<dl class="rows">${row('Wi-Fi', ap.id + ' · ' + ap.cli + ' dispositivos')}${row('Molinete de personal', mo.hoy + ' accesos hoy')}${row('Sala técnica', 'Rack core RK-01')}${row('Estacionamiento', '44 lugares')}</dl>`;
-    acts = '<button class="btn" data-act="ticket">Crear ticket en Olumi</button>'; }
+    body = `<dl class="rows">${row('Turnos agendados hoy', NAVES.filter(n => !n.free).reduce((a, N) => a + turnosOf(N).tot, 0))}${row('Empresas operando', NAVES.filter(n => !n.free).length)}${row('Espera promedio en portería', waitAvg() + ' min')}${row('Estacionamiento', '44 lugares')}</dl>`;
+    acts = ''; }
   else if (e.t === 'zona') { const Z = e.Z; ey = Z.ey; t = Z.name; s = Z.s;
-    if (Z.id === 'sr') { const cams = DEV.filter(d => d.zona === 'sr' && d.type === 'cam'), ap = DEV.find(d => d.zona === 'sr' && d.type === 'ap');
-      pill = '<span class="pill ok">Cámaras grabando</span>';
-      body = `<dl class="rows">${row('Autos en la playa', SR_CARS.toLocaleString('es-UY'))}${row('Cámaras', cams.map(c => c.id).join(', '))}${row('Wi-Fi', ap.id + ' · ' + ap.cli + ' dispositivos')}${row('Acceso', 'Por la calle norte del parque')}</dl>`;
-      acts = `<button class="btn pri" data-act="live" data-id="${cams[1].id}">Ver en vivo</button>`; }
-    else if (Z.id === 'dy') { pill = '<span class="pill info">Sin equipos de Ondi</span>';
-      body = `<dl class="rows">${row('Monitoreo', 'No instalado')}${row('Fibra', 'Pasa por la calle de E10')}</dl><div class="diag warn"><b>Oportunidad</b>La fábrica está pegada a E10. Se le puede ofrecer cámaras perimetrales y Wi-Fi del patio con el mismo tablero.</div>`;
-      acts = '<button class="btn pri" data-act="quote" data-id="la fábrica vecina">Cotizar instalación</button>'; }
+    if (Z.id === 'sr') {
+      pill = '<span class="pill ok">Operando</span>';
+      body = `<dl class="rows">${row('Autos en la playa', SR_CARS.toLocaleString('es-UY'))}${row('Despachados hoy', 86)}${row('Madrineras esperando carga', 2)}${row('Acceso', 'Por la calle norte del parque')}</dl>`;
+      acts = ''; }
+    else if (Z.id === 'dy') { pill = '<span class="pill info">No usa Estiba todavía</span>';
+      body = `<dl class="rows">${row('Ubicación', 'Pegada a E10')}${row('Camiones por día', 'Unos 25')}</dl><div class="diag info"><b>Oportunidad</b>Comparte calles con E10. Con turnos de andén en Estiba sus camiones dejan de cruzarse con los de E10 en la calle.</div>`;
+      acts = '<button class="btn pri" data-act="quote" data-id="la fábrica vecina">Cotizar Estiba</button>'; }
     else if (Z.id === 'ec') { pill = '<span class="pill info">No es cliente todavía</span>';
-      body = `<dl class="rows">${row('Ubicación', 'Junto a la rotonda, al sur de la avenida')}${row('Monitoreo', 'No instalado')}</dl><div class="diag warn"><b>Oportunidad</b>Está a metros de la portería y de la fibra del parque. Mismo paquete: cámaras, Wi-Fi y control de temperatura en cámaras de frío.</div>`;
-      acts = '<button class="btn pri" data-act="quote" data-id="el frigorífico vecino">Cotizar instalación</button>'; }
+      body = `<dl class="rows">${row('Ubicación', 'Junto a la rotonda, al sur de la avenida')}${row('Rubro', 'Frío · alto movimiento de camiones')}</dl><div class="diag info"><b>Oportunidad</b>Usa la misma portería. Con turnos y andén asignado al llegar, sus camiones no esperan en la playa con la carga refrigerada.</div>`;
+      acts = '<button class="btn pri" data-act="quote" data-id="el frigorífico vecino">Cotizar Estiba</button>'; }
     else { pill = '<span class="pill info">Sin construir</span>';
-      body = `<dl class="rows">${row('Estado', 'Terreno libre')}${row('Fibra', 'El troncal pasa por la calle este de E8')}</dl><div class="diag warn"><b>Oportunidad</b>Si se construye una nave nueva, la red y las cámaras se pueden dejar previstas desde la obra.</div>`; } }
+      body = `<dl class="rows">${row('Estado', 'Terreno libre')}</dl><div class="diag info"><b>A futuro</b>Si se construye una nave, sus andenes se suman al tablero y a la agenda de turnos del parque desde el primer día.</div>`; } }
   return { ey, t, s, pill, body, acts, icon: ICON[e.t] || ICON.nave };
 }
 const panel = $('#panel');
@@ -1172,7 +1091,7 @@ function select(id, focus = true) {
   SEL = id; FOLLOW = false; panel.hidden = !id; if (!id) return;
   const e = entity(id); if (INSIDE && e && e.t === 'nave' && e.N !== INSIDE.N) exitInside(true);
   renderPanel(true); const p = entPos(id);
-  if (focus && p) { const z = ['worker', 'ifork', 'station'].includes(e.t) ? (narrow() ? 22 : 15) : e.t === 'nave' ? Math.max(60, e.N.sz * (narrow() ? 1.0 : 0.62)) : e.t === 'zona' ? (e.Z.id === 'sr' ? (narrow() ? 300 : 190) : (narrow() ? 150 : 100)) : e.t === 'admin' || e.t === 'gate' ? (narrow() ? 110 : 70) : e.t === 'truck' ? (narrow() ? 46 : 34) : (narrow() ? 34 : 26); flyTo(Object.assign(focusTarget(p, z), { zoom: z })); }
+  if (focus && p) { const z = ['worker', 'ifork', 'station'].includes(e.t) ? (narrow() ? 22 : 15) : e.t === 'nave' ? Math.max(60, e.N.sz * (narrow() ? 1.0 : 0.62)) : e.t === 'zona' ? (e.Z.id === 'sr' ? (narrow() ? 300 : 190) : (narrow() ? 150 : 100)) : ['admin', 'gate', 'bal', 'espera'].includes(e.t) ? (narrow() ? 110 : 70) : e.t === 'truck' ? (narrow() ? 46 : 34) : (narrow() ? 34 : 26); flyTo(Object.assign(focusTarget(p, z), { zoom: z })); }
   if (e.t === 'truck') FOLLOW = true;
   updateChips();
 }
@@ -1187,9 +1106,9 @@ function closePanel() { SEL = null; FOLLOW = false; panel.hidden = true; updateC
 $('#pX').onclick = () => { if (INSIDE) exitInside(true); closePanel(); };
 $('#insideX').onclick = () => { const N = INSIDE && INSIDE.N; exitInside(); if (N && SEL === N.id) renderPanel(true); };
 $('#pActs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.act;
-  if (a === 'ticket') { const n = 2300 + Math.floor(Math.random() * 600); toast('Ticket OL-' + n + ' creado en Olumi (demo)'); const c = panelContent(SEL); log('info', `Ticket OL-${n} creado · ${c.t}`, SEL); }
-  if (a === 'quote') toast('Cotización armada para ' + (b.dataset.id || 'E6') + ' (demo)');
-  if (a === 'live' || a === 'cams') openCam(b.dataset.id);
+  if (a === 'solve') { const al = ALERTS.find(x => !x.done && x.ref === SEL); if (al) { al.done = true; if (al.pin) al.pin.el.remove(); toast('Alerta resuelta: ' + al.t.toLowerCase()); log('ok', 'Resuelta: ' + al.feed, al.ref); } renderPanel(true); updateChips(); $('#bellN').textContent = openAlerts().length; $('#bellN').hidden = !openAlerts().length; }
+  if (a === 'call') { if (ESPERA.n > 0) { ESPERA.n--; ESPERA.max = Math.max(9, ESPERA.max - 11); const p = plate(); toast('Mensaje enviado a ' + p + ': puede pasar a portería'); log('info', `Se llamó a ${p} de la playa de espera`, 'espera'); } renderPanel(true); }
+  if (a === 'quote') toast('Propuesta de Estiba armada para ' + (b.dataset.id || 'E6') + ' (demo)');
   if (a === 'follow') { FOLLOW = true; }
   if (a === 'inside') { const e = entity(SEL); if (INSIDE && INSIDE.N === e.N) exitInside(); else { enterInside(e.N); const z = clamp(Math.max(e.N.f.L, e.N.f.D) * 0.5, 40, 150) * (narrow() ? 1.4 : 1); flyTo(Object.assign(focusTarget([e.N.cx, 0, e.N.cz], z), { zoom: z, pitch: 0.82 })); } renderPanel(true); } });
 let toastT; function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
@@ -1210,20 +1129,23 @@ function makeLabels() {
   addLabel('<span class="poi">Portería</span>', () => [GATE_POS[0], 8.5, GATE_POS[1]], 'cli', 'gate');
   addLabel('<span class="poi">Oficinas del polo</span>', () => [ADMIN_POS[0], 11.5, ADMIN_POS[1]], 'cli', 'admin');
   for (const Z of ZONAS) addLabel(`<span class="poi">${Z.name}</span>`, () => Z.pos, 'cli', Z.id);
-  for (const d of DEV.filter(d => d.status !== 'ok')) addLabel(`<button class="pin ${d.status}" aria-label="Alerta ${d.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`, () => { const p = entPos(d.id); return [p[0], p[1] + 2.2, p[2]]; }, d.type === 'cam' ? 'cam' : 'red', d.id, 'pin');
+  addLabel('<span class="poi">Balanza</span>', () => [BAL_POS[0], 5, BAL_POS[1]], 'cli', 'bal', 'near');
+  addLabel('<span class="poi">Playa de espera</span>', () => [ESPERA_POS[0], 4.5, ESPERA_POS[1]], 'cli', 'espera', 'near');
+  for (const a of ALERTS) a.pin = addLabel(`<button class="pin ${a.lvl}" aria-label="Alerta: ${a.t}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`, () => { const N = naveById(a.ref); if (N) { const q = NP(N, N.L * 0.5, 5); return [q[0], 7, q[1]]; } const p = entPos(a.ref) || [0, -999, 0]; return [p[0], p[1] + (a.ref === 'espera' ? 9 : 2.2), p[2]]; }, 'alr', a.ref, 'pin');
   window.SELTAG = addLabel('<span class="tag"></span>', () => entPos(SEL) || [0, -999, 0], 'sel', null);
 }
 function updateChips() {
   for (const N of NAVES) { const el = N.chip.el.querySelector('.chip'); el.classList.toggle('sel', SEL === N.id); if (N.free) continue; const S = naveStats(N);
-    el.querySelector('span').textContent = `${N.code} · ${S.occ}/${N.docks.length} andenes · ${opsOf(N).workers} operarios`; const dot = el.querySelector('i'); dot.className = S.alerts.some(a => a.status === 'crit') ? 'crit' : S.alerts.length ? 'warn' : ''; }
+    el.querySelector('span').textContent = `${N.code} · ${S.occ}/${N.docks.length} andenes · ${opsOf(N).workers} operarios`; const dot = el.querySelector('i'); dot.className = S.alerts.some(a => a.lvl === 'crit') ? 'crit' : S.alerts.length ? 'warn' : ''; }
 }
 function placeLabels(V) {
   labels.classList.toggle('far', cam.zoom > 260);
-  for (const L of LBL) { let show = L.layer === 'sel' ? !!SEL && !['nave', 'gate', 'admin', 'zona'].includes((entity(SEL) || {}).t) : LAYERS[L.layer];
+  for (const L of LBL) { let show = L.layer === 'sel' ? !!SEL && !['nave', 'gate', 'admin', 'zona', 'bal', 'espera'].includes((entity(SEL) || {}).t) : LAYERS[L.layer];
     if (INSIDE && L.id === INSIDE.N.id) show = false;
     if (L.layer === 'sel' && show) { const c = panelContent(SEL); L.el.firstChild.textContent = c ? (c.t.length < 14 ? c.t : c.ey) : ''; }
     const p = L.pos(), c = M.clip(V.vp, p); const x = (c[0] / c[3] * 0.5 + 0.5) * W, y = (1 - (c[1] / c[3] * 0.5 + 0.5)) * H;
     if (x < -80 || x > W + 80 || y < -40 || y > H + 40) show = false;
+    if (L.cls === 'near' && cam.zoom > 260) show = false;
     L.el.classList.toggle('off', !show);
     L.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%, calc(-100% - ${L.cls === 'pin' ? 4 : 8}px))`; }
 }
@@ -1233,10 +1155,12 @@ function index() {
   const out = [];
   NAVES.forEach(N => out.push({ id: N.id, b: N.free ? N.code + ' · a confirmar' : N.name, s: N.code + ' · ' + N.rubro, ic: 'nave', k: (N.name + ' nave ' + N.code + ' ' + N.rubro).toLowerCase() }));
   ZONAS.forEach(Z => out.push({ id: Z.id, b: Z.name, s: Z.ey + ' · ' + Z.s, ic: 'nave', k: (Z.name + ' ' + Z.ey + ' ' + Z.s).toLowerCase() }));
-  out.push({ id: 'admin', b: 'Oficinas del polo', s: 'Administración y sala técnica', ic: 'nave', k: 'oficinas polo administracion administración sala tecnica' });
-  DEV.forEach(d => out.push({ id: d.id, b: d.id + ' · ' + d.loc.split(' · ')[0], s: d.kind + ' · ' + (d.loc.split(' · ')[1] || ''), ic: d.type, k: (d.id + ' ' + d.loc + ' ' + d.kind + (d.type === 'cam' ? ' camara cámara' : d.type === 'ap' ? ' wifi ap' : ' acceso')).toLowerCase() }));
+  out.push({ id: 'admin', b: 'Oficinas del polo', s: 'Administración del parque', ic: 'nave', k: 'oficinas polo administracion administración' });
   TRUCKS.filter(t => t.state !== 'idle').forEach(t => out.push({ id: t.id, b: t.plate, s: t.carrier + (t.dock ? ' → ' + t.dock.nave.full : ''), ic: 'truck', k: (t.plate + ' ' + t.plate.replace(' ', '') + ' ' + t.carrier + ' camion camión').toLowerCase() }));
-  out.push({ id: 'gate', b: 'Portería', s: 'Barreras, lectores y cámara de matrículas', ic: 'rd', k: 'porteria portería entrada barrera' });
+  out.push({ id: 'gate', b: 'Portería', s: 'Ingreso con turno y barreras', ic: 'rd', k: 'porteria portería entrada barrera turno' });
+  out.push({ id: 'espera', b: 'Playa de espera', s: 'Camiones sin turno o adelantados', ic: 'truck', k: 'playa espera camiones turno' });
+  out.push({ id: 'bal', b: 'Balanza de salida', s: 'Pesadas y control contra remito', ic: 'bal', k: 'balanza peso pesada remito' });
+  FORKS.forEach(f => out.push({ id: f.id, b: 'AE-' + f.id.split('-')[1].padStart(2, '0'), s: 'Autoelevador · patio de pallets · ' + f.bat + ' %', ic: 'fork', k: 'autoelevador montacargas ae ' + f.id }));
   return out;
 }
 const q = $('#q'), res = $('#results'); let hits = [], hi = 0;
@@ -1257,28 +1181,8 @@ $('#zout').onclick = () => flyTo({ zoom: clamp(cam.zoom / 0.72, 14, 900) }, 0.45
 $('#rl').onclick = () => flyTo({ yaw: cam.yaw - Math.PI / 2 }, 0.8);
 $('#rr').onclick = () => flyTo({ yaw: cam.yaw + Math.PI / 2 }, 0.8);
 $('#home').onclick = () => { if (INSIDE) exitInside(true); closePanel(); flyTo(HOME(), 1); };
-let alertIdx = 0; $('#bell').onclick = () => { const al = DEV.filter(d => d.status !== 'ok'); if (!al.length) return; select(al[alertIdx++ % al.length].id); };
+let alertIdx = 0; $('#bell').onclick = () => { const al = openAlerts(); if (!al.length) { toast('Sin alertas abiertas'); return; } select(al[alertIdx++ % al.length].ref); };
 
-/* ---------- vista de cámara en vivo ---------- */
-const cv = $('#camview'), camCanvas = $('#camcanvas'), noise = $('#noise');
-function openCam(id) {
-  const d = DEV.find(x => x.id === id); if (!d) return; CAMDEV = d; cv.hidden = false;
-  $('#cvT').textContent = d.id; $('#cvS').textContent = d.loc; $('#osdL').textContent = d.id + ' · ' + d.loc.toUpperCase(); $('#osd2').textContent = d.kind;
-  const off = d.status === 'crit'; $('#nosig').hidden = !off; noise.hidden = !off; camCanvas.style.visibility = off ? 'hidden' : 'visible';
-  if (!off && !camR) { try { camR = new Renderer(camCanvas, 1024); } catch (e) { camR = null; } }
-}
-function closeCam() { cv.hidden = true; CAMDEV = null; }
-$('#cvX').onclick = closeCam;
-function camViewMatrix(d, w, h) {
-  const H0 = d.type === 'cam' && d.mount === 'pole' ? (d.ph || 8.2) : d.y;
-  const pitch = d.kind.includes('LPR') ? -0.32 : d.kind.includes('PTZ') ? -0.38 : -0.3;
-  const yaw = d.yaw + (d.kind.includes('PTZ') ? Math.sin(performance.now() / 6000) * 0.7 : 0);
-  const f = [Math.cos(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.sin(yaw) * Math.cos(pitch)];
-  const e = [d.x + f[0] * 1.8, H0 + 0.3, d.z + f[2] * 1.8], t = [e[0] + f[0], e[1] + f[1], e[2] + f[2]];
-  return M.mul(M.persp(1.05, w / h, 0.3, 1400), M.look(e, t, [0, 1, 0]));
-}
-function drawNoise() { const r = noise.getBoundingClientRect(), w = Math.max(80, (r.width / 3) | 0), h = Math.max(45, (r.height / 3) | 0); if (noise.width !== w) { noise.width = w; noise.height = h; }
-  const x = noise.getContext('2d'), im = x.createImageData(w, h); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 120 | 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } x.putImageData(im, 0, 0); }
 
 /* ---------- interacción ---------- */
 const ptrs = new Map(); let dragMoved = 0, last = null, pinch = null;
@@ -1302,7 +1206,7 @@ canvas.addEventListener('keydown', e => { const k = e.key, s = cam.zoom * 0.08, 
   const mv = (fx, fz) => { cam.tx += fx * Math.cos(yw) + fz * Math.sin(yw); cam.tz += -fx * Math.sin(yw) + fz * Math.cos(yw); clampCam(); };
   if (k === 'ArrowLeft') mv(-s, 0); if (k === 'ArrowRight') mv(s, 0); if (k === 'ArrowUp') mv(0, -s); if (k === 'ArrowDown') mv(0, s);
   if (k === '+' || k === '=') $('#zin').click(); if (k === '-') $('#zout').click(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!cv.hidden) closeCam(); else if (SEL) { if (INSIDE) exitInside(true); closePanel(); } } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (SEL) { if (INSIDE) exitInside(true); closePanel(); } } });
 function pinchState() { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, a: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
 function clampCam() { cam.tx = clamp(cam.tx, -560, 560); cam.tz = clamp(cam.tz, -600, 600); }
 function aabb(o) { const mn = o.geo.mn, mx = o.geo.mx, inf = o.inflate || 0; if (!o.model) return [mn.map(v => v - inf), mx.map(v => v + inf)];
@@ -1318,36 +1222,31 @@ let hvT = 0; function hoverPick(x, y) { const n = performance.now(); if (n - hvT
 canvas.addEventListener('pointerleave', () => { if (!ptrs.size) { HOVER = null; canvas.classList.remove('hot'); } });
 
 /* ---------- bucle ---------- */
-function resize() { const dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-  if (camR) { const r = camCanvas.getBoundingClientRect(); camCanvas.width = Math.max(2, Math.round(r.width * dpr)); camCanvas.height = Math.max(2, Math.round(r.height * dpr)); } }
+function resize() { const dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); }
 addEventListener('resize', resize);
 let prev = performance.now(), acc1 = 0, ENV;
 function frame(now) {
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
-  if (!RM) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepInside(dt); }
-  else if (!PACKETS[0].x) PACKETS.forEach(p => stepPacket(p, 0));
+  if (!RM) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); stepInside(dt); }
   stepArms(dt); syncModels();
   if (tween) { tween.t += dt / tween.dur; const k = ease(Math.min(1, tween.t)); for (const key of ['tx', 'tz', 'yaw', 'pitch', 'zoom']) cam[key] = lerp(tween.from[key], tween.to[key], k); if (tween.t >= 1) tween = null; }
   if (FOLLOW && SEL && !tween) { const e = entity(SEL); if (e && e.t === 'truck' && e.tr.state !== 'idle') { const f = focusTarget([e.tr.x, 3, e.tr.z], cam.zoom); cam.tx = lerp(cam.tx, f.tx, Math.min(1, dt * 2.5)); cam.tz = lerp(cam.tz, f.tz, Math.min(1, dt * 2.5)); } }
   for (const o of OBJ) o.tintA = o.id === SEL ? 0.2 : o.id === HOVER ? 0.09 : 0;
   const V = view(W, H); main.render(V.vp, OBJ, ENV, [820, 1400]); placeLabels(V);
-  if (CAMDEV && camR && CAMDEV.status !== 'crit') { const r = camCanvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
-    if (camCanvas.width !== cw || camCanvas.height !== ch) { camCanvas.width = Math.max(2, cw); camCanvas.height = Math.max(2, ch); }
-    camR.render(camViewMatrix(CAMDEV, camCanvas.width, camCanvas.height), OBJ.filter(o => o.id !== CAMDEV.id), ENV, [9000, 9001], true); }
-  if (CAMDEV && CAMDEV.status === 'crit') drawNoise();
   acc1 += dt; if (acc1 > 1) { acc1 = 0; tick(); }
   requestAnimationFrame(frame);
 }
+const waitAvg = () => Math.max(6, Math.round(8 + ESPERA.n * 1.1 + (openAlerts().some(a => a.ref === 'espera') ? 2 : 0)));
 function tick() {
-  const now = new Date(); $('#clock').textContent = fmt(now); $('#osdT').textContent = now.toLocaleTimeString('es-UY', { hour12: false });
+  const now = new Date(); $('#clock').textContent = fmt(now);
   const inside = TRUCKS.filter(t => t.state !== 'idle' && t.x > 45 - OX && t.x < 772 - OX && t.z > 18 - OZ && t.z < 1100 - OZ).length;
   $('#kTr').innerHTML = inside + ' <em>en tránsito ' + TRUCKS.filter(t => t.state === 'arriving' || t.state === 'leaving').length + '</em>';
   $('#kDk').innerHTML = DOCKS.filter(d => d.occ && d.occ.state === 'docked').length + ' <em>de ' + DOCKS.length + '</em>';
   $('#kOp').innerHTML = NAVES.filter(n => !n.free).reduce((a, N) => a + opsOf(N).workers, 0) + ' <em>en ' + NAVES.filter(n => !n.free).length + ' naves</em>';
-  $('#kIn').innerHTML = INGRESOS + ' <em class="up">+9 %</em>';
-  $('#bellN').textContent = DEV.filter(d => d.status !== 'ok').length;
+  $('#kWt').innerHTML = waitAvg() + ' <em>min promedio</em>';
+  $('#bellN').textContent = openAlerts().length; $('#bellN').hidden = !openAlerts().length;
   updateChips(); if (SEL) renderPanel(false);
-  if (Math.random() < 0.12) { const msgs = [['ok', 'Cámara de frío E5: 3,6 °C, dentro del rango', 'e5'], ['ok', 'Cámara de frío E10: 2,9 °C, dentro del rango', 'e10'], ['info', 'Tarjeta de personal aceptada en el molinete de las oficinas del polo', 'R-03'], ['ok', 'Respaldo nocturno del NVR verificado', 'RK-01'], ['info', 'Pico de 46 dispositivos Wi-Fi en E7', DEV.find(d => d.nave === 'e7' && d.type === 'ap').id], ['info', 'Playa de autos: 12 autos despachados en la última hora', 'sr']];
+  if (Math.random() < 0.12) { const msgs = [['ok', `Moda Sur E7 cerró la ola de picking de las ${hm(-20)} · 312 pedidos`, 'e7'], ['ok', 'Lácteos del Este E5: carga refrigerada despachada en hora', 'e5'], ['info', `Turno de las ${hm(40)} confirmado por Transportes Ceibo para Bebidas Andes E9`, 'e9'], ['ok', 'Operador 3PL E4 terminó el inventario cíclico del pasillo 6 sin diferencias', 'e4'], ['info', 'Consumo Norte E8 liberó 2 andenes para la tarde', 'e8'], ['info', 'Playa de autos: 12 autos despachados en la última hora', 'sr']];
     const m = msgs[Math.floor(Math.random() * msgs.length)]; log(m[0], m[1], m[2]); }
 }
 
@@ -1356,16 +1255,16 @@ try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fal
 initSim(); buildAll(); makeLabels(); ENV = env(); resize();
 
 const mins = m => new Date(Date.now() - m * 60000);
-log('crit', `${camOff.id} sin señal · andenes de E7`, camOff.id, mins(14));
-log('warn', `${apWarn.id} con interferencia alta en 2,4 GHz · E9`, apWarn.id, mins(9));
-log('ok', 'Cámara de frío E5: 3,6 °C, dentro del rango', 'e5', mins(6));
-log('info', `Cámara de matrículas leyó ${TRUCKS[6].plate} · va a ${TRUCKS[6].dock ? TRUCKS[6].dock.nave.full : 'E9'}`, TRUCKS[6].id, mins(3));
+log('crit', 'Moda Sur E7: ' + ALERTS[0].feed, 'e7', mins(14));
+log('warn', 'Bebidas Andes E9: ' + ALERTS[2].feed, 'e9', mins(9));
+log('warn', 'Playa de espera: ' + ALERTS[1].feed, 'espera', mins(6));
+log('ok', `${TRUCKS[6].plate} entró con turno · va a ${TRUCKS[6].dock ? TRUCKS[6].dock.nave.full : 'Bebidas Andes E9'}`, TRUCKS[6].id, mins(3));
 const reTheme = () => { buildAll(); ENV = env(); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reTheme);
 new MutationObserver(reTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 if (!RM) { const h = HOME(); Object.assign(cam, h, { zoom: h.zoom * 1.55, yaw: h.yaw - 0.5, pitch: 0.8 }); flyTo(h, 2.2); }
 tick(); requestAnimationFrame(frame);
-window.__dbg = { enter: id => enterInside(naveById(id)), sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
+window.__dbg = { enter: id => enterInside(naveById(id)), sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); stepArms(dt); } }, ARMS, ALERTS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>
 </body>

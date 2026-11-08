@@ -19,5 +19,5 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 
 ## Estiba (vista previa)
 - `estiba/`: página de Estiba (software de logística: andenes y patio, depósito, personal, autoelevadores y parque logístico), con calculadora de ahorro. Nombre provisorio.
-- `estiba/maqueta/`: maqueta 3D de un parque de ejemplo, copiada de la maqueta del parque de Ondi (escala real) con marca Estiba y vista "Ver adentro" (racks, puestos, operarios con terminal de picking, autoelevadores). Sin nombres reales ni foto aérea: la versión con nombres reales queda privada. Se genera con un script desde la maqueta de Ondi; no editarla a mano.
+- `estiba/maqueta/`: maqueta 3D de un parque de ejemplo (escala real, portería con balanza y playa de espera), solo operación logística: camiones con turno, andenes, alertas de operación (pedidos atrasados, camión esperando, andén sin liberar, batería de autoelevador) y "Ver adentro" (racks, puestos, operarios con terminal de picking, autoelevadores). Sin cámaras, red ni nada informático: eso es de Ondi. Empresas y cifras de ejemplo, sin nombres reales ni foto aérea.
 - Está en vista previa: franja "Vista previa", `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
