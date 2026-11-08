@@ -495,6 +495,7 @@ html:not(.blank) .blankonly{display:none!important}
   <button class="lay" data-l="red" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg><span>Fibra y Wi-Fi</span><i class="sw"></i></button>
   <button class="lay" data-l="cam" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h12l4-3v14l-4-3H3z"/></svg><span>Cámaras</span><i class="sw"></i></button>
   <button class="lay" data-l="acc" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Accesos</span><i class="sw"></i></button>
+  <button class="lay" data-l="real" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Vista realista</span><i class="sw"></i></button>
   <button class="lay" data-l="foto" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg><span>Foto aérea</span><i class="sw"></i></button>
   <button class="lay" data-l="log" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/></svg><span>Camiones</span><i class="sw"></i></button>
   <div class="note">Escala real sobre la vista aérea y las calles de Google Maps. Equipos, camiones y cifras son de ejemplo.</div>
@@ -654,19 +655,51 @@ in vec3 vN; in vec4 vC; in vec4 vL; in vec3 vW; in vec2 vT;
 uniform sampler2D uTex; uniform float uTexOn;
 uniform sampler2DShadow uS; uniform vec3 uLd; uniform vec3 uSunC; uniform float uSun; uniform vec3 uSky; uniform vec3 uGnd; uniform float uAmb;
 uniform vec3 uTint; uniform float uTintA; uniform vec3 uClear; uniform float uTexel; uniform vec2 uFade;
+uniform float uReal; uniform vec3 uEye; uniform vec3 uVd; uniform float uPersp; uniform vec3 uHz; uniform vec3 uZen; uniform vec3 uGlass; uniform vec3 uSolar; uniform vec3 uWall; uniform vec3 uRoof;
 out vec4 o;
+float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }
+float fbm(vec2 p){ float s=0.0,a=0.5; for(int i=0;i<3;i++){ s+=a*vn(p); p*=2.03; a*=0.5; } return s; }
+vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
 float sh(float d){ vec3 p=vL.xyz/vL.w*0.5+0.5; if(p.x<0.0||p.x>1.0||p.y<0.0||p.y>1.0||p.z>1.0) return 1.0;
   float b=0.0006+0.0018*(1.0-d); float s=0.0;
-  for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) s+=texture(uS, vec3(p.xy+vec2(float(x),float(y))*uTexel*1.25, p.z-b));
+  float k=uReal>0.5?1.9:1.25; for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) s+=texture(uS, vec3(p.xy+vec2(float(x),float(y))*uTexel*k, p.z-b));
   return s/9.0; }
 void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh(d):1.0;
   vec3 hemi=mix(uGnd,uSky,n.y*0.5+0.5);
   vec3 base=uTexOn>0.5 ? texture(uTex,vT).rgb*vC.rgb : vC.rgb;
-  vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s));
-  vec3 col=mix(lit, base*mix(0.72,1.0,s), vC.a);
+  vec3 col;
+  if(uReal>0.5){
+    float hor=smoothstep(0.55,0.9,n.y);
+    if(uTexOn<0.5 && vC.a<0.5){ float n1=fbm(vW.xz*0.16), n2=vn(vW.xz*2.7+vec2(vW.y*1.7));
+      base*=mix(1.0,0.8+0.4*n1,0.62*hor)*(0.95+0.1*n2);
+      base*=mix(1.0,0.7+0.3*smoothstep(0.0,1.5,vW.y),(1.0-hor)*0.65);
+      float wl=1.0-smoothstep(0.02,0.06,distance(vC.rgb,uWall)), rf=1.0-smoothstep(0.02,0.06,distance(vC.rgb,uRoof));
+      if(wl>0.0 && abs(n.y)<0.3){ float t=vW.x*n.z-vW.z*n.x, aa=1.0-smoothstep(0.08,0.25,fwidth(t)); float rib=smoothstep(0.3,0.5,abs(fract(t/0.32)-0.5)); base*=1.0-0.09*wl*rib*aa;
+        float pj=1.0-smoothstep(0.0,0.03,abs(fract(vW.y/2.4)-0.5)-0.47); base*=1.0-0.05*wl*pj*aa; }
+      if(rf>0.0 && n.y>0.8){ float aa=1.0-smoothstep(0.08,0.25,fwidth(vW.x)); float rib=smoothstep(0.3,0.5,abs(fract(vW.x/0.38)-0.5)); base*=1.0-0.08*rf*rib*aa; } }
+    vec3 V=uPersp>0.5?normalize(uEye-vW):normalize(uVd);
+    float glass=1.0-smoothstep(0.015,0.05,distance(vC.rgb,uGlass)), sol=1.0-smoothstep(0.015,0.05,distance(vC.rgb,uSolar)); glass=max(glass,sol*0.8);
+    vec3 Hh=normalize(uLd+V); float sp=pow(max(dot(n,Hh),0.0),mix(36.0,260.0,glass))*mix(0.10,1.6,glass)*s*step(0.001,d);
+    float fr=pow(1.0-max(dot(n,V),0.0),4.0); vec3 R=reflect(-V,n); vec3 sky=mix(uHz,uZen,pow(clamp(R.y,0.0,1.0),0.55));
+    vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.06,1.0,s));
+    lit=mix(lit, sky*mix(0.55,1.0,s)*0.9, glass*(0.45+0.5*fr)) + sky*fr*0.07*(1.0-glass) + uSunC*sp;
+    lit=mix(lit, base*1.15, vC.a);
+    col=aces(lit*1.04);
+  } else { vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s)); col=mix(lit, base*mix(0.72,1.0,s), vC.a); }
   col=mix(col,uTint,uTintA);
-  float f=smoothstep(uFade.x,uFade.y,length(vW.xz)); col=mix(col,uClear,f);
+  if(uReal>0.5 && uPersp>0.5){ float dist=length(uEye-vW); col=mix(col,uHz,(1.0-exp(-dist*0.0021))*0.92); }
+  else { float f=smoothstep(uFade.x,uFade.y,length(vW.xz)); col=mix(col,uReal>0.5?uHz:uClear,f); }
   o=vec4(col,1.0); }`;
+const VSK = `#version 300 es
+out vec2 vU; void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2)); vU=p*2.0-1.0; gl_Position=vec4(vU,0.9999,1.0); }`;
+const FSK = `#version 300 es
+precision highp float; in vec2 vU; uniform vec3 uVd; uniform vec3 uX; uniform vec3 uY; uniform vec2 uHH; uniform vec3 uHz; uniform vec3 uZen; uniform vec3 uLd; uniform vec3 uSunC; out vec4 o;
+vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
+void main(){ vec3 d=normalize(-uVd+uX*vU.x*uHH.x+uY*vU.y*uHH.y); float t=clamp(d.y,0.0,1.0);
+  vec3 c=mix(uHz,uZen,pow(t,0.42)); float sd=max(dot(d,normalize(uLd)),0.0); c+=uSunC*(pow(sd,900.0)*3.0+pow(sd,10.0)*0.22);
+  float cl=smoothstep(0.55,0.85,sin(d.x*7.0+d.z*3.0)*0.5+0.5)*smoothstep(0.03,0.25,t)*(1.0-smoothstep(0.35,0.7,t)); c=mix(c,vec3(1.0)*0.97,cl*0.18);
+  if(d.y<0.0) c=mix(uHz,uHz*0.92,clamp(-d.y*4.0,0.0,1.0)); o=vec4(c,1.0); }`;
 const VSD = `#version 300 es
 layout(location=0) in vec3 aP; uniform mat4 uL; uniform mat4 uM; void main(){ gl_Position=uL*uM*vec4(aP,1.0); }`;
 const FSD = `#version 300 es
@@ -683,9 +716,9 @@ class Renderer {
     const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' });
     if (!gl) throw new Error('sin webgl2');
     this.gl = gl; this.canvas = canvas; this.cache = new Map(); this.ss = shadowSize;
-    this.p = compile(gl, VS, FS); this.pd = compile(gl, VSD, FSD);
+    this.p = compile(gl, VS, FS); this.pd = compile(gl, VSD, FSD); this.pk = compile(gl, VSK, FSK);
     const U = (p, names) => Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)]));
-    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
+    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn', 'uReal', 'uEye', 'uVd', 'uPersp', 'uHz', 'uZen', 'uGlass', 'uSolar', 'uWall', 'uRoof']); this.uk = U(this.pk, ['uVd', 'uX', 'uY', 'uHH', 'uHz', 'uZen', 'uLd', 'uSunC']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
     this.ud = U(this.pd, ['uL', 'uM']);
     this.st = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.st);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, shadowSize, shadowSize);
@@ -715,7 +748,7 @@ class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); this.tcache.set(img, t); return t; }
   overlay(vp, objs) { const gl = this.gl, u = this.u; gl.clear(gl.DEPTH_BUFFER_BIT); gl.useProgram(this.p); gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uTexOn, 0); gl.uniform1f(u.uTintA, 0); gl.uniform2fv(u.uFade, [1e5, 2e5]);
     for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); } gl.bindVertexArray(null); }
-  render(vp, objs, env, fade, noTint) {
+  render(vp, objs, env, fade, noTint, V) {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb); gl.viewport(0, 0, this.ss, this.ss); gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.pd); gl.uniformMatrix4fv(this.ud.uL, false, env.lvp);
@@ -723,8 +756,13 @@ class Renderer {
     for (const o of objs) { if (!o.on || o.noShadow) continue; const m = this.mesh(o); gl.uniformMatrix4fv(this.ud.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
     gl.disable(gl.POLYGON_OFFSET_FILL); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.clearColor(env.clear[0], env.clear[1], env.clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const real = !!env.real, persp = !!(V && V.persp), cc = real ? env.hz : env.clear;
+    gl.clearColor(cc[0], cc[1], cc[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (real && persp) { const k = this.uk; gl.useProgram(this.pk); gl.depthMask(false); gl.disable(gl.DEPTH_TEST); gl.uniform3fv(k.uVd, V.d); gl.uniform3fv(k.uX, V.x); gl.uniform3fv(k.uY, V.y); gl.uniform2fv(k.uHH, [V.hw, V.hh]);
+      gl.uniform3fv(k.uHz, env.hz); gl.uniform3fv(k.uZen, env.zen); gl.uniform3fv(k.uLd, env.ld); gl.uniform3fv(k.uSunC, env.sunC); gl.bindVertexArray(null); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
     gl.useProgram(this.p); const u = this.u;
+    gl.uniform1f(u.uReal, real ? 1 : 0); gl.uniform1f(u.uPersp, persp ? 1 : 0); gl.uniform3fv(u.uEye, V ? V.e : [0, 1000, 0]); gl.uniform3fv(u.uVd, V ? V.d : [0, 1, 0]);
+    gl.uniform3fv(u.uHz, env.hz || env.clear); gl.uniform3fv(u.uZen, env.zen || env.clear); gl.uniform3fv(u.uGlass, env.glass || [9, 9, 9]); gl.uniform3fv(u.uSolar, env.solar || [9, 9, 9]); gl.uniform3fv(u.uWall, env.wall || [9, 9, 9]); gl.uniform3fv(u.uRoof, env.roof || [9, 9, 9]);
     gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniformMatrix4fv(u.uL, false, env.lvp);
     gl.uniform3fv(u.uLd, env.ld); gl.uniform3fv(u.uSunC, env.sunC); gl.uniform1f(u.uSun, env.sun); gl.uniform3fv(u.uSky, env.sky); gl.uniform3fv(u.uGnd, env.gnd);
     gl.uniform1f(u.uAmb, env.amb); gl.uniform3fv(u.uClear, env.clear); gl.uniform1f(u.uTexel, 1 / this.ss); gl.uniform2fv(u.uFade, fade); gl.uniform3fv(u.uTint, env.tint);
@@ -755,6 +793,13 @@ const PAL = {
     fiber: '#36E2F5', dev: '#BCC6CE', devD: '#27303A', ok: '#3BD08E', warn: '#F2B23A', crit: '#FF5A60', acc: '#2FD3E8', barrier: '#E5484D',
     sunC: [.72, .78, .9], sun: .44, sky3: [.52, .6, .72], gnd3: [.34, .36, .38], amb: .76, tint: '#2FD3E8' }
 };
+PAL.real = Object.assign({}, PAL.light, { clear: '#BFD0DE', ground: '#8DA174', grass: '#7F9965', site: '#B9B6AD', apron: '#ADAAA2', road: '#63676B', mark: '#EDEDE8', markY: '#D9AE3A', walk: '#C3C0B7',
+  wall: '#E4E1DA', base: '#9F9C95', roof: '#AEB4B9', parapet: '#C9C6BE', door: '#7D868D', frame: '#3B4147', glass: '#5F7E92', glassE: 0, sky: '#8FB1C4',
+  solar: '#1F2F3E', hvac: '#B3B8BB', tree: '#5B7D43', tree2: '#4B6A37', trunk: '#66513D', fence: '#878F95', pole: '#959CA1', lamp: '#F4F1E6', lampE: 0, pool: null, dirt: '#A3957A',
+  cont: ['#2F5B7A', '#7B8F99', '#A9533C', '#D3D6D8', '#4E7A5D', '#8B969E'], pallet: '#A98458', pbase: '#866948', trailer: '#EEEEEA', tire: '#1D2022', car: ['#8796A2', '#D4D7D9', '#3F474E', '#9E3B33', '#ECEDEE'],
+  sunC: [1.0, 0.93, 0.82], sun: 1.0, sky3: [0.6, 0.71, 0.84], gnd3: [0.46, 0.44, 0.39], amb: 0.52, hz: [0.76, 0.83, 0.9], zen: [0.32, 0.52, 0.8] });
+PAL.darkReal = Object.assign({}, PAL.dark, { ground: '#1A231C', grass: '#1D2A21', site: '#2A2E31', apron: '#2E3236', road: '#202428', sun: 0.32, amb: 0.62, hz: [0.1, 0.13, 0.19], zen: [0.02, 0.04, 0.09] });
+let REAL = (() => { try { return localStorage.getItem('ondi.real') !== '0'; } catch (e) { return true; } })();
 let P = PAL.light;
 
 /* ---------- datos del parque: escala real (1 unidad = 1 m) sobre la foto aérea · equipos y cifras de ejemplo ---------- */
@@ -1181,7 +1226,10 @@ function arrivePath(d, fromN) {
   const A = NP(N, d.u + 15 * s, N.Dl), B = NP(N, d.u + 4 * s, Math.min(20, N.Dl - 4));
   const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(714) - 2, 714, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(746) + 2, 746, 8)];
   pts.push(P2w(GPT(46, 731), 7, { hold: 1 }), P2w(GPT(60, 731), 6, { wait: 1.8, ev: 'gate', rel: 1 }), P2w(GPT(82, 731), 8, { ev: 'route' }));
-  offsetPath(ROUTES[N.rt].in, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
+  const rin = offsetPath(ROUTES[N.rt].in, 1.9);
+  if (d.k !== undefined) { pts.push(P2w(GPT(116, 730.6), 7, { hold: 'bal' }), P2w(BPT(138, 720), 4), P2w(BPT(156, 720), 2, { wait: 2.2, ev: 'scaleIn' }), P2w(BPT(174, 720), 4));
+    let i0 = 0; while (i0 < rin.length - 1 && rin[i0][0] + OX < 196) i0++; rin.slice(i0).forEach(([x, z], i) => pts.push(Object.assign({ x, z, sp: 12 }, i === 0 ? { rel: 'bal' } : {}))); }
+  else rin.forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
   pts.push({ x: A[0] + rt[0] * 1.9, z: A[1] + rt[1] * 1.9, sp: 9 }, { x: B[0], z: B[1], sp: 3, rev: true }, { x: d.x, z: d.z, sp: 2.4, rev: true, ev: 'dock' });
   return pts;
 }
@@ -1189,12 +1237,13 @@ function leavePath(d) {
   const N = d.nave, s = N.s, dir = [-N.t[0] * s, -N.t[1] * s], rt = [-dir[1], dir[0]];
   const F = NP(N, d.u, Math.min(16, N.Dl - 4)), E = NP(N, d.u - 7 * s, N.Dl);
   const pts = [{ x: F[0], z: F[1], sp: 3 }, { x: E[0] + rt[0] * 1.9, z: E[1] + rt[1] * 1.9, sp: 5 }];
-  offsetPath(ROUTES[N.rt].out, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
-  pts.push(P2w(BPT(170, 720), 4), P2w(BPT(156, 720), 2, { wait: 1.1, ev: 'scale' }), P2w(GPT(84, 722), 7), P2w(GPT(72, 722), 2, { wait: 1.2, ev: 'exit' }), P2w(GPT(48, 722), 6, { hold: 1 }), P2(camX(708) + 2, 708, 8, { rel: 1 }), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
+  const rout = offsetPath(ROUTES[N.rt].out, 1.9), rb = px(RB[0], RB[1]); let ih = rout.findIndex(([x, z]) => Math.hypot(x - rb[0], z - rb[1]) < RR + 3); if (ih < 0) ih = 0; // espera la balanza antes de entrar a la rotonda
+  const pesa = d.k !== undefined; rout.forEach(([x, z], i) => pts.push(Object.assign({ x, z, sp: 12 }, i === ih ? { hold: 'bal' } : {})));
+  pts.push(P2w(BPT(170, 720), 4), P2w(BPT(156, 720), 2, { wait: pesa ? 2.2 : 0.01, ev: pesa ? 'scale' : undefined }), P2w(BPT(136, 720), 5, { rel: 'bal' }), P2w(GPT(84, 722), 7), P2w(GPT(72, 722), 2, { wait: 1.2, ev: 'exit' }), P2w(GPT(48, 722), 6, { hold: 1 }), P2(camX(708) + 2, 708, 8, { rel: 1 }), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
   return pts;
 }
 function startArrival(t) {
-  if (TRUCKS.filter(o => o.state === 'arriving').length >= 7) { t.idle = 3 + Math.random() * 5; return; }
+  if (TRUCKS.filter(o => o.state === 'arriving').length >= 9) { t.idle = 3 + Math.random() * 5; return; }
   const d = freeDock(); if (!d) { t.idle = 6; return; }
   const fromN = Math.random() < 0.5, [sx, sz] = fromN ? px(camX(-150) - 2, -150) : px(camX(1300) + 2, 1300);
   if (TRUCKS.concat(VEH).some(o => o !== t && o.state !== 'idle' && Math.hypot(o.x - sx, o.z - sz) < 30)) { t.idle = 2; return; }
@@ -1203,12 +1252,12 @@ function startArrival(t) {
   t.path = arrivePath(d, fromN); t.idx = 0; t.state = 'arriving'; t.stage = 0; t.tIn = Date.now();
 }
 function initSim() { if (BLANK) return;
-  for (let i = 0; i < 34; i++) TRUCKS.push(newTruck(i));
-  // algunos ya en andén
-  const stp = Math.floor(DOCKS.length / 18), pre = Array.from({ length: 18 }, (_, i) => DOCKS[3 + i * stp]).filter(Boolean);
+  for (let i = 0; i < 84; i++) TRUCKS.push(newTruck(i));
+  // la mayoría ya está en los andenes: cargar y descargar lleva entre 15 minutos y una hora
+  const NPRE = Math.min(66, Math.floor(DOCKS.length * 0.42)), pre = [...new Set(Array.from({ length: NPRE }, (_, i) => DOCKS[Math.floor(2 + i * (DOCKS.length - 3) / NPRE)]))].filter(Boolean);
   pre.forEach((d, i) => { const t = TRUCKS[i]; d.occ = t; t.dock = d; t.x = d.x; t.z = d.z; t.head = d.head; t.state = 'docked'; t.stage = 2;
-    t.dwell = 15 + i * 6 + Math.random() * 8; t.tIn = Date.now() - (12 + i * 5) * 60000 / 20; d.nave.lastIn = fmt(new Date(Date.now() - (14 + i * 4) * 60000)) + ' · ' + t.plate; });
-  for (let i = pre.length; i < TRUCKS.length; i++) TRUCKS[i].idle = 1 + (i - pre.length) * 3.5;
+    t.dwell = 240 + Math.random() * 3000; t.tIn = Date.now() - (12 + i * 5) * 60000 / 20; d.nave.lastIn = fmt(new Date(Date.now() - (14 + i * 4) * 60000)) + ' · ' + t.plate; });
+  for (let i = pre.length; i < TRUCKS.length; i++) TRUCKS[i].idle = 2 + (i - pre.length) * 9;
   const forkDef = [['z', 690, 262, 310], ['x', 282, 280, 335], ['z', 782, 720, 960], ['x', 1079, 640, 700], ['z', 400, 578, 610]];
   forkDef.forEach(([ax, c, a0, b0], i) => { const [a, b] = ax === 'x' ? [a0 - OX, b0 - OX] : [a0 - OZ, b0 - OZ], cc = ax === 'x' ? c - OZ : c - OX; FORKS.push({ id: 'fl-' + (i + 1), ax, x: ax === 'x' ? a : cc, z: ax === 'x' ? cc : a, a, b, dir: 1, pause: i * 0.7, loaded: i % 2 === 0, bat: 38 + (i * 17) % 55, moves: 40 + i * 11, head: 0 }); });
   FIBER.routes.forEach((r, ri) => { const L = []; let acc = 0; for (let i = 0; i < r.length - 1; i++) { const l = Math.hypot(r[i + 1][0] - r[i][0], r[i + 1][1] - r[i][1]); L.push(l); acc += l; }
@@ -1236,8 +1285,9 @@ function truckEvent(t, ev) {
   const d = t.dock, N = d && d.nave;
   if (ev === 'gate') { INGRESOS++; DEV.find(x => x.id === 'R-01').hoy++; log('info', `Cámara de matrículas leyó ${t.plate} en portería · va a ${N.full}`, t.id); }
   if (ev === 'route') t.stage = 1;
+  if (ev === 'scaleIn') { const kg = (16 + Math.random() * 18).toFixed(1).replace('.', ','); BAL.hoy++; BAL.last = t.plate + ' · ' + kg + ' t (entrada)'; if (Math.random() < 0.5) log('info', `Balanza: ${t.plate} pesó ${kg} t al entrar`, 'RK-BAL'); }
   if (ev === 'scale') { const kg = (14 + Math.random() * 16).toFixed(1).replace('.', ','); BAL.hoy++; BAL.last = t.plate + ' · ' + kg + ' t'; if (Math.random() < 0.5) log('info', `Balanza: ${t.plate} pesó ${kg} t al salir`, 'RK-BAL'); }
-  if (ev === 'dock') { t.state = 'docked'; t.stage = 2; t.dwell = 70 + Math.random() * 60; N.lastIn = fmt(new Date()) + ' · ' + t.plate; log('ok', `${t.plate} quedó en el andén ${d.k} de ${N.full}`, t.id); }
+  if (ev === 'dock') { t.state = 'docked'; t.stage = 2; t.dwell = 1500 + Math.random() * 3000; N.lastIn = fmt(new Date()) + ' · ' + t.plate; log('ok', `${t.plate} quedó en el andén ${d.k} de ${N.full}`, t.id); }
   if (ev === 'exit') { if (d) d.occ = null; log('info', `${t.plate} salió del predio · ${simMinSince(t.tIn)} min adentro`, t.id); t.dock = null; }
   if (ev === 'gone') { t.state = 'idle'; t.idle = 2 + Math.random() * 6; t.x = -500; t.z = -900; if (SEL === t.id) closePanel(); }
 }
@@ -1280,16 +1330,17 @@ function ray(V, px, py, w, h) { const nx = px / w * 2 - 1, ny = 1 - py / h * 2;
 function groundAt(px, py) { const r = ray(view(W, H), px, py, W, H), t = r.d[1] < -1e-4 ? -r.o[1] / r.d[1] : 120; return [r.o[0] + r.d[0] * t, r.o[2] + r.d[2] * t]; }
 
 /* ---------- estado e interfaz ---------- */
-const LAYERS = { cli: true, red: true, cam: true, acc: true, log: true, foto: false };
+const LAYERS = { cli: true, red: true, cam: true, acc: true, log: true, foto: false, real: REAL };
 let SEL = null, HOVER = null, W = 1, H = 1, main, camR = null, CAMDEV = null;
 const canvas = $('#scene');
 
 function env() {
-  const ld = nrm([-0.9, 1.05, 0.38]), lp = [ld[0] * 1400, ld[1] * 1400, ld[2] * 1400];
-  return { ld, lvp: M.mul(M.ortho(-640, 640, -640, 640, 10, 2900), M.look(lp, [0, 0, 0], [0, 1, 0])), sunC: P.sunC, sun: P.sun, sky: P.sky3, gnd: P.gnd3, amb: P.amb, clear: C(P.clear), tint: C(P.tint) };
+  const ld = REAL ? nrm([-0.86, 0.82, 0.46]) : nrm([-0.9, 1.05, 0.38]), lp = [ld[0] * 1400, ld[1] * 1400, ld[2] * 1400];
+  return { ld, lvp: M.mul(M.ortho(-640, 640, -640, 640, 10, 2900), M.look(lp, [0, 0, 0], [0, 1, 0])), sunC: P.sunC, sun: P.sun, sky: P.sky3, gnd: P.gnd3, amb: P.amb, clear: C(P.clear), tint: C(P.tint),
+    real: REAL, hz: P.hz || C(P.clear), zen: P.zen || C(P.clear), glass: C(P.glass), solar: C(P.solar), wall: C(P.wall), roof: C(P.roof) };
 }
 function isDark() { const t = document.documentElement.getAttribute('data-theme'); if (t === 'dark') return true; if (t === 'light') return false; return matchMedia('(prefers-color-scheme: dark)').matches; }
-function buildAll() { P = isDark() ? PAL.dark : PAL.light; buildBase(); NAVES.forEach(buildNave); buildDevices(); buildFiber(); buildDynamicGeos(); buildProps(); applyLayers(); }
+function buildAll() { P = isDark() ? (REAL ? PAL.darkReal : PAL.dark) : (REAL ? PAL.real : PAL.light); buildBase(); NAVES.forEach(buildNave); buildDevices(); buildFiber(); buildDynamicGeos(); buildProps(); applyLayers(); }
 function applyLayers() { for (const o of OBJ) { if (['cam', 'red', 'acc', 'sens'].includes(o.layer)) o.on = LAYERS[o.layer]; if (o.layer === 'photo') o.on = LAYERS.foto && !!PHOTO.img; if (o.layer === 'ground') o.on = !(LAYERS.foto && PHOTO.img); } }
 
 function entity(id) {
@@ -1523,7 +1574,8 @@ function pick(id) { res.hidden = true; q.value = ''; q.blur(); select(id); }
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) res.hidden = true; });
 
 /* capas, controles, alertas */
-document.querySelectorAll('.lay').forEach(b => b.addEventListener('click', () => { const l = b.dataset.l; LAYERS[l] = !LAYERS[l]; b.setAttribute('aria-pressed', LAYERS[l]); applyLayers(); }));
+document.querySelectorAll('.lay').forEach(b => b.addEventListener('click', () => { const l = b.dataset.l; LAYERS[l] = !LAYERS[l]; b.setAttribute('aria-pressed', LAYERS[l]); applyLayers();
+  if (l === 'real') { REAL = LAYERS.real; try { localStorage.setItem('ondi.real', REAL ? '1' : '0'); } catch (e) {} buildAll(); ENV = env(); } }));
 $('#zin').onclick = () => flyTo({ zoom: clamp(cam.zoom * 0.72, 5, 900) }, 0.45);
 $('#zout').onclick = () => flyTo({ zoom: clamp(cam.zoom / 0.72, 5, 900) }, 0.45);
 $('#rl').onclick = () => flyTo({ yaw: cam.yaw - Math.PI / 2 }, 0.8);
@@ -1609,7 +1661,7 @@ function frame(now) {
   if (tween) { tween.t += dt / tween.dur; const k = ease(Math.min(1, tween.t)); for (const key of ['tx', 'tz', 'yaw', 'pitch', 'zoom']) cam[key] = lerp(tween.from[key], tween.to[key], k); if (tween.t >= 1) tween = null; }
   if (FOLLOW && SEL && !tween) { const e = entity(SEL); if (e && e.t === 'truck' && e.tr.state !== 'idle') { const f = focusTarget([e.tr.x, 3, e.tr.z], cam.zoom); cam.tx = lerp(cam.tx, f.tx, Math.min(1, dt * 2.5)); cam.tz = lerp(cam.tz, f.tz, Math.min(1, dt * 2.5)); } }
   for (const o of OBJ) o.tintA = o.ghost ? 0.42 : o.id === SEL ? 0.2 : o.id === HOVER ? 0.09 : 0;
-  const V = view(W, H); VLAST = V; main.render(V.vp, sceneList(), ENV, [820, 1400]); e3Overlay(V); placeLabels(V); placeKnob(V);
+  const V = view(W, H); VLAST = V; main.render(V.vp, sceneList(), ENV, [820, 1400], false, V); e3Overlay(V); placeLabels(V); placeKnob(V);
   if (CAMDEV && camR && CAMDEV.status !== 'crit') { const r = camCanvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
     if (camCanvas.width !== cw || camCanvas.height !== ch) { camCanvas.width = Math.max(2, cw); camCanvas.height = Math.max(2, ch); }
     camRender(CAMDEV); }
@@ -2974,7 +3026,7 @@ const ROADL = [];
 function spawnCar() { if (!ROADL.length) ROADL.push(...roadLines()); if (!ROADL.length) return; const line = ROADL[Math.floor(Math.random() * ROADL.length)], rev = Math.random() < 0.5, base = rev ? line.slice().reverse() : line;
   const pts = offsetPath(base, BLANK ? 1.6 : 2.0), sp = 11 + Math.random() * 6, s = pts[0];
   if (TRUCKS.concat(VEH).some(o => o.state !== 'idle' && Math.hypot(o.x - s[0], o.z - s[1]) < 22)) return;
-  let v = VEH.find(o => o.kind === 'car' && o.state === 'idle'); if (!v) { if (VEH.filter(o => o.kind === 'car').length >= 12) return; v = { id: 'car-' + VEH.length, kind: 'car', n: VEH.length, hl: 2.3, hw: 0.95, state: 'idle' }; VEH.push(v); }
+  let v = VEH.find(o => o.kind === 'car' && o.state === 'idle'); if (!v) { if (VEH.filter(o => o.kind === 'car').length >= 24) return; v = { id: 'car-' + VEH.length, kind: 'car', n: VEH.length, hl: 2.3, hw: 0.95, state: 'idle' }; VEH.push(v); }
   const pick = Math.random() < 0.25, col = pick ? ['#E4E8EB', '#3B4650', '#B8584E'][Math.floor(Math.random() * 3)] : P.car[Math.floor(Math.random() * P.car.length)];
   obj(v.id, { geo: carGeo(col, pick), layer: 'log', on: false, kind: 'veh' });
   v.path = pts.map(([x, z]) => ({ x, z, sp })); v.path.push({ x: pts.at(-1)[0], z: pts.at(-1)[1], sp, ev: 'gone' }); v.x = s[0]; v.z = s[1]; const b = pts[1]; v.head = Math.atan2(-(b[1] - s[1]), b[0] - s[0]); v.idx = 1; v.state = 'driving'; v.wait = 0; }
@@ -3022,7 +3074,7 @@ function techArrive(p) { const v = p.van;
   if (p.state === 'working') { p.state = 'back'; return; }
   rmObj(p.id + 'a'); rmObj(p.id + 'b'); PEOPLE.splice(PEOPLE.indexOf(p), 1); v.state = 'leaving'; v.path = leavePath(v.dock); v.idx = 0; log('ok', `Ticket OL-${v.ticket} resuelto · ${v.target} revisado por ${INST} (demo)`, v.target); }
 let carT = 2, vanT = 8;
-function stepTraffic(dt) { if (RM) return; carT -= dt; if (carT <= 0) { carT = 2.5 + Math.random() * 4; spawnCar(); }
+function stepTraffic(dt) { if (RM) return; carT -= dt; if (carT <= 0) { carT = 1.1 + Math.random() * 2.2; spawnCar(); }
   if (!BLANK) { vanT -= dt; if (vanT <= 0) { vanT = 28 + Math.random() * 30; if (VEH.filter(v => v.kind === 'van').length < 2) { const R = routeNaves(); spawnVan('van', R[Math.floor(Math.random() * R.length)]); } } }
   for (const v of VEH.slice()) stepVeh(v, dt);
   for (const p of PEOPLE.slice()) { const vis = p.N ? openNave(p.N) || camOpenN() === p.N : true; if (p.van || vis) stepPerson(p, dt); } }
@@ -3814,22 +3866,33 @@ panelContent = (o => function (id) { const r = o(id); const d = DEV.find(x => x.
       r.body += `<div class="edbox" style="border-style:solid"><b>Dónde está conectado</b>${rutaTxt(cid, ru)}<button class="btn" data-cabgo="${cid}|${iid}|${pid}">Ver en el rack</button></div>`; return r; } }
   if (canEdit() && ED.on) r.body += `<p class="ehelp">Todavía no figura en ningún rack. Abrí el rack, tocá el puerto y elegí este equipo.</p>`;
   return r; })(panelContent);
-/* ---------- boca de la portería: un vehículo por vez cruza la entrada (así no se traban ni se encimen) ---------- */
-const ENT = { by: null };
-function entGate(t) { if (t.state === 'idle' || t.state === 'docked' || t.state === 'parked' || t.wait > 0) return true;
-  const w = t.path && t.path[t.idx], mine = w && (w.hold || w.rel);
-  if (!mine) { if (ENT.by === t) ENT.by = null; return true; }
-  const b = ENT.by; if (b && b !== t) { const bw = b.path && b.path[b.idx]; if (b.state === 'idle' || !bw || !(bw.hold || bw.rel)) ENT.by = null;
-    else if ((b.blkN || 0) > 200 && b.blkBy === t) ENT.by = null; }
-  if (!ENT.by) ENT.by = t; return ENT.by === t; }
-stepTruck = (o => function (t, dt) { if (entGate(t)) o(t, dt); })(stepTruck);
+spawnCar = (o => function () { const before = new Set(VEH.filter(q => q.kind === 'car' && q.state === 'driving')); o();
+  const v = VEH.find(q => q.kind === 'car' && q.state === 'driving' && !before.has(q)); const ob = v && OBJID.get(v.id); if (!ob) return;
+  if (!BLANK && Math.random() < 0.14) { ob.geo = phPickGeo(); ob.version++; ob.texImg = carTex(); ob.tex = true; v.ph = 1; } else { ob.texImg = null; ob.tex = false; v.ph = 0; } })(spawnCar);
+/* ---------- pasos de a uno: la boca de la portería y la balanza (así no se traban ni se enciman) ---------- */
+const TOK = { ent: null, bal: null }, ENT = TOK;
+const tkey = v => v === 1 || v === true ? 'ent' : v;
+function tokFree(K) { const b = TOK[K]; if (!b) return true; if (b.state === 'idle' || b.state === 'docked' || b.state === 'parked' || !b.tk || !b.tk[K]) { TOK[K] = null; return true; } return false; }
+function entGate(t) { if (t.state === 'idle' || t.state === 'docked' || t.state === 'parked') { if (t.tk) for (const K in t.tk) if (TOK[K] === t) TOK[K] = null; t.tk = null; return true; }
+  if (t.wait > 0) return true; const w = t.path && t.path[t.idx]; if (!w || !w.hold) return true; const K = tkey(w.hold);
+  if (TOK[K] === t) return true; if (!tokFree(K)) { const b = TOK[K]; if ((b.blkN || 0) > 240 && b.blkBy === t) { b.tk && delete b.tk[K]; TOK[K] = null; } else return false; }
+  TOK[K] = t; (t.tk = t.tk || {})[K] = 1; return true; }
+function tokRel(t, i0) { if (!t.tk || !t.path) return; for (let i = i0; i < t.idx; i++) { const q = t.path[i]; if (q && q.rel) { const K = tkey(q.rel); if (TOK[K] === t) TOK[K] = null; delete t.tk[K]; } } }
+stepTruck = (o => function (t, dt) { if (!entGate(t)) return; const i0 = t.idx, p0 = t.path; o(t, dt); if (t.path === p0) tokRel(t, i0); else if (t.tk) { for (const K in t.tk) if (TOK[K] === t) TOK[K] = null; t.tk = null; } })(stepTruck);
 // para destrabar un cruce se elige uno que no tenga adelante otro yendo para el mismo lado (así no se enciman)
 const aheadSame = t => { const h = t.head, fx = Math.cos(h), fz = -Math.sin(h);
   for (const o of TRUCKS.concat(VEH)) { if (o === t || o.state === 'idle' || o.state === 'docked' || o.state === 'parked') continue; const dx = o.x - t.x, dz = o.z - t.z, a = dx * fx + dz * fz;
     if (a <= 0 || a > 13) continue; if (Math.abs(-dx * fz + dz * fx) > 2.4) continue; if (Math.cos(o.head - h) > 0.6) return true; }
   return false; };
-stepVeh = (o => function (v, dt) { if (entGate(v)) o(v, dt); })(stepVeh);
+// los camiones quietos en su andén no frenan al que pasa por la calle (solo al que entra marcha atrás a un andén)
+blocked = (o => function (t, w) { const r = o(t, w); if (r && t.blkBy && (t.blkBy.state === 'docked' || t.blkBy.state === 'parked') && !(w && w.rev)) { const b = t.blkBy, dx = b.x - t.x, dz = b.z - t.z, fx = Math.cos(t.head), fz = -Math.sin(t.head);
+    if (Math.abs(-dx * fz + dz * fx) > 1.6 || dx * fx + dz * fz < 0) { t.blkN = 0; t.blkBy = null; return false; } }
+  // si quedó trabado mucho tiempo por alguien que se le cruza (no por la fila de adelante), pasa despacio
+  if (r && (t.blkN || 0) > 700 && !aheadSame(t)) { t.ghostN = 70; t.blkN = 0; t.blkBy = null; return false; }
+  return r; })(blocked);
+stepVeh = (o => function (v, dt) { if (!entGate(v)) return; const i0 = v.idx, p0 = v.path; o(v, dt); if (v.path === p0) tokRel(v, i0); else if (v.tk) { for (const K in v.tk) if (TOK[K] === v) TOK[K] = null; v.tk = null; } })(stepVeh);
 
+{ const b = document.querySelector('.lay[data-l="real"]'); if (b) b.setAttribute('aria-pressed', REAL); }
 /* ---------- predio editable: calles, alambrado, columnas de luz, árboles, edificios, balanza, casillas y portería ---------- */
 // marco local de una pieza (para girar y mover cosas con ella)
 const L2W = (p, lx, lz) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0); return [p.x + a[0] * lx + b[0] * lz, p.z + a[1] * lx + b[1] * lz]; };
@@ -3891,7 +3954,7 @@ propGeo = (o => p => { const k = p.k, g = new Geo(), r = seeded((p.seed || 7) * 
     for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { if (r() < 0.2) continue; const x = i * dx, z = j * dz, n = 1 + (r() < 0.45 ? 1 : 0);
       for (let q = 0; q < n; q++) { g.box(x, q * 1.6, z, x + 1.5, q * 1.6 + 0.22, z + 1.3, P.pbase); g.box(x + 0.08, q * 1.6 + 0.22, z + 0.06, x + 1.42, q * 1.6 + 1.5, z + 1.24, P.pallet, { ao: 0.9 }); } }
     return g; }
-  if (k === 'arboleda') { const n = Math.round(pv(p, 'n')), sp = pv(p, 'sp'); for (let i = 0; i < n; i++) treeAt(g, (i - (n - 1) / 2) * sp + (r() - 0.5) * sp * 0.3, (r() - 0.5) * 3, 0.95 + r() * 0.35, r); return g; }
+  if (k === 'arboleda') { const n = Math.round(pv(p, 'n')), sp = pv(p, 'sp'); for (let i = 0; i < n; i++) treeRich(g, (i - (n - 1) / 2) * sp + (r() - 0.5) * sp * 0.3, (r() - 0.5) * 3, 0.95 + r() * 0.35, r); return g; }
   if (k === 'balanza') { const L = pv(p, 'L') / 2; g.box(-L, 0, -1.8, L, 0.18, 1.8, P.parapet, { top: mulc(C(P.road), 1.35) });
     for (let x = -L; x <= L + 0.05; x += 4) g.box(x - 0.08, 0.18, -1.8, x + 0.08, 0.2, 1.8, P.markY, { ao: 1 });
     g.box(-L - 0.4, 0, -2.2, L + 0.4, 0.22, -1.8, P.markY); g.box(-L - 0.4, 0, 1.8, L + 0.4, 0.22, 2.2, P.markY);
@@ -3904,6 +3967,40 @@ propGeo = (o => p => { const k = p.k, g = new Geo(), r = seeded((p.seed || 7) * 
     g.box(-0.1, H + 0.05, -0.1, 2.4, H + 0.22, 0.1, P.pole); g.box(1.5, H - 0.12, -0.45, 2.7, H + 0.12, 0.45, P.pole); g.box(1.6, H - 0.16, -0.38, 2.6, H - 0.1, 0.38, P.lamp, { e: P.lampE || 0.4, ao: 1 });
     if (P.pool) g.disc(2.6, 0, 6, 0.05, P.pool, 1, 16); return g; }
   return o(p); })(propGeo);
+// árboles y palmeras con más detalle
+function treeRich(g, x, z, s, r) { const H = (4.6 + r() * 2.2) * s, cols = [P.tree, P.tree2]; g.prism(x, 0, z, 0.17 * s, H * 0.58, 8, P.trunk);
+  for (let i = 0; i < 3; i++) { const a = r() * 6.28, L = (0.9 + r() * 0.6) * s; g.prism(x + Math.cos(a) * L * 0.5, H * (0.42 + i * 0.07), z + Math.sin(a) * L * 0.5, 0.07 * s, 0.9 * s, 5, P.trunk); }
+  const n = 7 + Math.floor(r() * 3); for (let i = 0; i < n; i++) { const a = r() * 6.28, rr = (0.5 + r() * 1.0) * s, y = H * (0.6 + r() * 0.32); g.blob(x + Math.cos(a) * rr, y, z + Math.sin(a) * rr, (0.95 + r() * 0.75) * s, cols[i % 2], { rings: 4, seg: 9, sy: 0.85, rot: r() * 3 }); }
+  g.blob(x, H * 0.97, z, 1.25 * s, P.tree, { rings: 4, seg: 9, sy: 0.8 }); }
+function palmRich(g, r) { const H = 6.4 + r() * 1.6, lx = (r() - 0.5) * 0.9, lz = (r() - 0.5) * 0.9, segs = 8, dk = mulc(C(P.trunk), 0.8);
+  for (let i = 0; i < segs; i++) { const t = i / segs, y0 = t * H, x = lx * t * t, z = lz * t * t; g.prism(x, y0, z, 0.26 - 0.07 * t, H / segs + 0.04, 9, '#8A7860', { top: '#6E604C' }); g.prism(x, y0 + H / segs - 0.06, z, 0.28 - 0.07 * t, 0.06, 9, '#6E604C'); }
+  const T = [lx, H, lz], ctr = [lx, H - 5, lz], n = 12;
+  for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2 + r() * 0.35, L = 3.0 + r() * 0.9, cx = Math.cos(an), cz = Math.sin(an), up = 0.55 + r() * 0.3, col = C(i % 2 ? P.tree : P.tree2), K = 5; let pc = null, pl = null, pr = null;
+    for (let j = 0; j <= K; j++) { const t = j / K, c = [T[0] + cx * L * t, T[1] + up * t * 1.4 - 2.2 * t * t, T[2] + cz * L * t], w = 0.62 * Math.sin(Math.PI * Math.min(1, t * 1.05)) + 0.04, dr = 0.25 * t, l = [c[0] - cz * w, c[1] - dr, c[2] + cx * w], rr = [c[0] + cz * w, c[1] - dr, c[2] - cx * w];
+      if (pc) { g.tri(pc, pl, c, col, 0, ctr); g.tri(pl, l, c, col, 0, ctr); g.tri(pc, c, pr, col, 0, ctr); g.tri(pr, c, rr, col, 0, ctr); } pc = c; pl = l; pr = rr; } }
+  for (let i = 0; i < 4; i++) { const a = i * 1.6 + r(); g.blob(T[0] + Math.cos(a) * 0.3, H - 0.35, T[2] + Math.sin(a) * 0.3, 0.17, '#6F5A3A', { rings: 3, seg: 6 }); } }
+propGeo = (o => p => { if (p.k === 'tree' || p.k === 'palm') { const g = new Geo(), r = seeded((p.seed || 7) * 131 + 17); if (p.k === 'tree') treeRich(g, 0, 0, 1, r); else palmRich(g, r); return g; } return o(p); })(propGeo);
+// estacionamiento: lugares pintados y autos estacionados (cuántos, según la ocupación)
+Object.assign(PK, { parking: { n: 'Estacionamiento', tags: 'autos cocheras lugares', out: true }, pickphitel: { n: 'Camioneta de ' + INST, tags: 'phitel pickup negra empresa instaladora', out: true } }); Object.assign(PRE3, { parking: 'ES-', pickphitel: 'CP-' });
+PRM.parking = [['cols', 'Lugares por fila', 1, 1, 60, 10], ['rows', 'Filas', 1, 1, 2, 1], ['occ', 'Ocupación (0 a 1)', 0.05, 0, 1, 0.8]];
+function parkCar(g, x, z, col, r) { const pick = r() < 0.18; g.box(x - 0.9, 0.32, z - 2.25, x + 0.9, 0.88, z + 2.25, col, { top: mulc(C(col), 1.06), ao: 0.9 });
+  if (pick) { g.box(x - 0.84, 0.88, z - 0.3, x + 0.84, 1.6, z + 1.45, col, { ao: 0.92 }); g.box(x - 0.8, 0.95, z + 1.45, x + 0.8, 1.5, z + 1.5, P.glass, { e: P.glassE * 0.4, ao: 1 }); }
+  else { g.box(x - 0.8, 0.88, z - 1.25, x + 0.8, 1.42, z + 1.05, P.glass, { e: P.glassE * 0.4, top: col, ao: 1 }); g.box(x - 0.78, 1.38, z - 1.2, x + 0.78, 1.46, z + 0.98, col); }
+  for (const zz of [-1.45, 1.4]) for (const xx of [-0.9, 0.72]) g.box(xx, 0, z + zz - 0.34, xx + 0.18, 0.64, z + zz + 0.34, P.tire); }
+function carTex() { if (window.__phTex) return window.__phTex; const cv2 = document.createElement('canvas'); cv2.width = 1024; cv2.height = 320; const x = cv2.getContext('2d');
+  x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, 1024, 320); x.fillStyle = '#16191C'; x.fillRect(10, 10, 1004, 300); x.fillStyle = '#F28C28'; x.fillRect(60, 214, 904, 12);
+  x.fillStyle = '#FFFFFF'; x.font = '800 150px "Onest", system-ui, sans-serif'; x.textBaseline = 'alphabetic'; x.fillText(INST.toUpperCase(), 60, 186); x.font = '600 42px "Onest", system-ui, sans-serif'; x.fillStyle = '#C9D1D7'; x.fillText('Fibra · CCTV · Redes · Acceso', 62, 282);
+  return (window.__phTex = cv2); }
+function phPickGeo() { const g = carGeo('#16191C', true), c = [1, 1, 1];
+  const tq = (pts, n) => { const uvs = [[0.03, 0.96], [0.97, 0.96], [0.97, 0.05], [0.03, 0.05]], V = i => { g.uv = uvs[i]; g.v(pts[i], n, c, 0.05); }; V(0); V(1); V(2); V(0); V(2); V(3); g.uv = null; };
+  tq([[-1.95, 0.4, 0.892], [0.0, 0.4, 0.892], [0.0, 0.86, 0.892], [-1.95, 0.86, 0.892]], [0, 0, 1]); tq([[0.0, 0.4, -0.892], [-1.95, 0.4, -0.892], [-1.95, 0.86, -0.892], [0.0, 0.86, -0.892]], [0, 0, -1]);
+  g.box(0.35, 1.6, -0.6, 1.1, 1.68, 0.6, '#F28C28', { e: 0.6, ao: 1 }); return g; }
+propGeo = (o => p => { if (p.k === 'pickphitel') return phPickGeo(); if (p.k !== 'parking') return o(p); const g = new Geo(), r = seeded((p.seed || 7) * 77 + 5), cols = Math.round(pv(p, 'cols')), rows = Math.round(pv(p, 'rows')), occ = pv(p, 'occ'), W0 = 2.6, D0 = 5.2, AI = 6.5;
+  const L = cols * W0, Z = rows === 2 ? D0 * 2 + AI : D0, x0 = -L / 2, z0 = -Z / 2; g.box(x0, 0.004, z0, x0 + L, 0.018, z0 + Z, P.road, { top: P.road, ao: 1 });
+  for (let row = 0; row < rows; row++) { const zr = row === 0 ? z0 : z0 + D0 + AI; for (let i = 0; i <= cols; i++) g.box(x0 + i * W0 - 0.06, 0.018, zr + 0.2, x0 + i * W0 + 0.06, 0.022, zr + D0 - 0.1, P.mark, { ao: 1 });
+    for (let i = 0; i < cols; i++) { if (r() > occ) continue; const col = r() < 0.55 ? P.car[r() < 0.5 ? 1 : 4] : P.car[Math.floor(r() * P.car.length)]; parkCar(g, x0 + (i + 0.5) * W0 + (r() - 0.5) * 0.2, zr + D0 / 2 + (r() - 0.5) * 0.3, col, r); } }
+  return g; })(propGeo);
+propObj = (o => function (p) { o(p); if (p.k === 'pickphitel') { const ob = OBJID.get(p.id); if (ob) { ob.texImg = carTex(); ob.tex = true; } } })(propObj);
 // la caseta de la portería va aparte (se esconde cuando entrás)
 function porCasObj(p) { obj(p.id + '~c', { geo: porGeo(new Geo(), true), layer: 'cli', pick: false, kind: 'prop', model: propModel(p) }); }
 rmAnyRaw = (o => function (id) { const r = o(id); rmObj(id + '~c'); return r; })(rmAnyRaw);
@@ -3933,9 +4030,9 @@ function pickBoxes(p) { const k = p.k, S = solids(p) || [];
   if (k === 'casilla') { if (WALK.on && WALK.C && WALK.C.pid === p.id) return []; const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2; return [{ mn: [-w, 0, -d], mx: [w, 3.3, d] }]; }
   if (k === 'porteria') { const B = S.slice(); if (!(WALK.on && WALK.C && WALK.C.pid === p.id)) B.push({ mn: [-5.9, 0, 10.8], mx: [3.9, 3.25, 15.8] }); B.push({ mn: [-9, 0, -0.7], mx: [10, 0.6, 0.7] }); return B; }
   if (k === 'arboleda') { const n = Math.round(pv(p, 'n')), sp = pv(p, 'sp'), B = []; for (let i = 0; i < n; i++) { const x = (i - (n - 1) / 2) * sp; B.push({ mn: [x - 2.6, 0, -2.8], mx: [x + 2.6, 6.8, 2.8] }); } return B; }
-  if (k === 'palletz') { const ob = OBJID.get(p.id); return ob && ob.geo && ob.geo.mn ? [{ mn: ob.geo.mn.slice(), mx: ob.geo.mx.slice() }] : []; }
+  if (k === 'palletz' || k === 'parking') { const ob = OBJID.get(p.id); return ob && ob.geo && ob.geo.mn ? [{ mn: ob.geo.mn.slice(), mx: [ob.geo.mx[0], Math.max(0.5, ob.geo.mx[1]), ob.geo.mx[2]] }] : []; }
   return S; }
-const PBIG = { edif: 1, tanque: 1, porteria: 1, casilla: 1, balanza: 1, arboleda: 1, palletz: 1 };
+const PBIG = { edif: 1, tanque: 1, porteria: 1, casilla: 1, balanza: 1, arboleda: 1, palletz: 1, parking: 1 };
 const lray = (p, r) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0), [ox, oz] = W2L(p, r.o[0], r.o[2]); return { o: [ox, r.o[1] - (p.y || 0), oz], d: [r.d[0] * a[0] + r.d[2] * a[1], r.d[1], r.d[0] * b[0] + r.d[2] * b[1]] }; };
 function propRayT(p, r) { const l = lray(p, r); let bt = null; for (const b of pickBoxes(p)) { const t = rayBox(l.o, l.d, b.mn, b.mx); if (t !== null && t > 0 && (bt === null || t < bt)) bt = t; } return bt; }
 function bigOff(fn) { const off = []; for (const q of PROPS) if (PBIG[q.k]) { const ob = OBJID.get(q.id); if (ob && ob.pick) { ob.pick = false; off.push(ob); } } try { return fn(); } finally { off.forEach(ob => ob.pick = true); } }
@@ -4033,11 +4130,12 @@ const ARM0 = { 'arm-in': [66, 735.6, 731], 'arm-out': [68, 717.4, 722] };
 stepArms = (o => function (dt) { const p = porP(); for (const a of ARMS) { const q = ARM0[a.id]; if (!q) continue; if (a.yaw0 === undefined) a.yaw0 = a.yaw; [a.x, a.z] = GPT(q[0], q[1]); a.lane = GPT(q[0], q[2])[1]; a.yaw = a.yaw0 + (p ? p.yaw || 0 : 0); } o(dt); })(stepArms);
 
 // todo lo del predio que antes era fijo, como piezas (una sola vez por maqueta)
-const SEEDV = 1;
-function pzSeed() { if (BLANK || (ED.seed || 0) >= SEEDV) return; ED.seed = SEEDV; const R = seeded(4242), cnt = {}, has = new Set(PROPS.map(q => q.id));
+const SEEDV = 2;
+function pzSeed() { if (BLANK || (ED.seed || 0) >= SEEDV) return; const s0 = ED.seed || 0; ED.seed = SEEDV; const R = seeded(4242), cnt = {}, has = new Set(PROPS.map(q => q.id));
   const nid = k => { const pre = PRE3[k] || 'DE-'; let id; do { cnt[pre] = (cnt[pre] || 0) + 1; id = pre + pad(cnt[pre]); } while (has.has(id)); has.add(id); return id; };
   const add = (k, X, Y, o) => { const [x, z] = px(X, Y), p = Object.assign({ id: nid(k), type: 'prop', k, seed: Math.floor(R() * 97), x, y: 0, z, yaw: 0 }, o || {}); PROPS.push(p); return p; };
   const rd = (name, pts, w, o) => ED.roads.push(Object.assign({ id: nextId('CL-', ED.roads.map(r => r.id)), name, w, pts: pxs(pts) }, o || {}));
+  if (s0 < 1) {
   // calles: ruta, camino y calles internas
   const hw = [[-600, -63 - 0.269 * 600], [1700, -63 + 0.269 * 1700]], hn = [0.259, -0.966];
   rd('la ruta · hacia el este', hw.map(([x, y]) => [x + hn[0] * -9, y + hn[1] * -9]), 12, { pub: 1, nolbl: 1, ds: 12, dl: 5 });
@@ -4071,6 +4169,10 @@ function pzSeed() { if (BLANK || (ED.seed || 0) >= SEEDV) return; ED.seed = SEED
   ed(132, 212, 745, 897, 12, { techo: 'sky' }); ed(82, 132, 862, 897, 8, { techo: 'sky' }); ed(300, 388, 727, 900, 12, { techo: 'solar' }); ed(400, 537, 705, 905, 13, { techo: 'solar' });
   ed(178, 265, 917, 1097, 11, { techo: 'sky', name: 'Fábrica vecina' }); ed(57, 170, 947, 1000, 8, { techo: 'sky' }); ed(637, 710, 1010, 1072, 10, { techo: 'sky' });
   add('tanque', 410, 625, { r: 10, h: 12 }); add('tanque', 411, 647, { r: 10, h: 12 }); }
+  if (s0 < 2) { // más autos: estacionamientos y camionetas de la instaladora
+    add('parking', 257.5, 204.6, { cols: 13, rows: 1, occ: 0.8, name: 'Estacionamiento de las oficinas' }); add('parking', 298.2, 525, { cols: 11, rows: 1, occ: 0.85, yaw: Math.PI / 2, name: 'Estacionamiento de visitas' });
+    add('parking', 54.75, 756.5, { cols: 5, rows: 1, occ: 0.7, yaw: Math.PI / 2, name: 'Estacionamiento de la portería' });
+    add('pickphitel', 300.6, 506.5, { yaw: Math.PI / 2 }); add('pickphitel', 136, 760, { yaw: 0.2 }); } }
 edLoad = (o => function () { o(); let s = null; try { s = HOST ? HOST.state : JSON.parse(localStorage.getItem('po3d-edit') || 'null'); } catch (e) {} ED.seed = s && s.v === 1 ? s.seed || 0 : 0; pzSeed(); })(edLoad);
 edState = (o => function () { const st = o(); st.seed = ED.seed || 0; return st; })(edState);
 edReset = (o => function () { return o(); })(edReset);
@@ -4172,6 +4274,112 @@ propGeo = (o => p => { const k = p.k; if (!['barrera', 'molinete', 'cartel', 'bo
 { const ex = CAT3.find(c => c[0] === 'Exterior y decoración'); if (ex) { const add = ['barrera', 'molinete', 'cartel', 'bolardo'].map(k => ['prop:' + k, PK[k].n, 'tree', PK[k].tags]); ex[1].push(...add); add.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c: 'Exterior y decoración' })); } }
 
 aimText = (o => function () { if (WALK.on && AIM() && ED.on && canEdit() && !LOCK.carry && (ED.tool === 'sel' || ED.tool === 'del')) { const id = pickAt(CX(), CY()); if (isRH(id)) { const e = entity(id); return aimShow(ED.tool === 'del' ? 'Clic para sacar este punto' : (e.mid ? 'Mantené y arrastrá para agregar un punto' : 'Punto de ' + escH(e.R.name || 'la calle') + ' · mantené para moverlo'), ED.tool === 'del' ? 'del' : ''); } } return o(); })(aimText);
+
+const MUEL = [["desk","Escritorio","Oficina","mesa pc trabajo",{"top":1},[1.469,0.769,0.785]],["deskCorner","Escritorio en L","Oficina","mesa esquina",{"top":1},[1.949,0.769,1.949]],["chairDesk","Silla de escritorio","Oficina","silla ruedas",{},[0.67,1.215,0.629]],["computerScreen","Monitor","Oficina","pantalla pc",{"on":1},[0.785,0.589,0.208]],["computerKeyboard","Teclado","Oficina","pc",{"on":1},[0.564,0.055,0.236]],["computerMouse","Mouse","Oficina","pc",{"on":1},[0.099,0.047,0.17]],["laptop","Notebook","Oficina","laptop pc",{"on":1},[0.528,0.324,0.48]],["bookcaseClosedDoors","Armario con puertas","Oficina","placard archivo",{},[0.8,1.7,0.5]],["bookcaseClosedWide","Archivo ancho","Oficina","biblioteca carpetas",{},[1.6,1.58,0.5]],["bookcaseOpen","Estantería abierta","Oficina","biblioteca libros",{},[0.8,1.76,0.5]],["bookcaseOpenLow","Estantería baja","Oficina","biblioteca",{"top":1},[0.8,0.8,0.5]],["sideTableDrawers","Cajonera","Oficina","cajones",{"top":1},[1.069,0.769,0.445]],["books","Libros","Oficina","carpetas",{"on":1},[0.301,0.208,0.189]],["cardboardBoxClosed","Caja de cartón","Oficina","caja embalaje",{"top":1},[0.425,0.562,0.425]],["cardboardBoxOpen","Caja abierta","Oficina","caja",{},[0.744,0.562,0.425]],["trashcan","Papelera","Oficina","basura tacho",{},[0.415,0.856,0.468]],["coatRackStanding","Perchero","Oficina","abrigos",{},[0.546,1.54,0.546]],["speaker","Parlante","Oficina","audio",{},[0.296,1.273,0.296]],["lampSquareFloor","Lámpara de pie","Oficina","luz",{},[0.24,1.72,0.24]],["lampSquareTable","Lámpara de escritorio","Oficina","luz",{"on":1},[0.24,0.58,0.24]],["lampSquareCeiling","Luz colgante","Oficina","techo luz",{"ceil":1},[0.24,0.46,0.24]],["ceilingFan","Ventilador de techo","Oficina","techo aire",{"ceil":1},[0.909,0.267,1.05]],["lampWall","Aplique de pared","Oficina","luz pared",{"wall":1.9},[0.453,0.186,0.301]],["table","Mesa","Reuniones y recepción","mesa",{"top":1},[1.683,0.653,0.895]],["tableGlass","Mesa de vidrio","Reuniones y recepción","mesa",{"top":1},[1.683,0.653,0.895]],["tableCross","Mesa de reunión grande","Reuniones y recepción","sala reuniones",{"top":1},[1.704,0.695,0.895]],["tableRound","Mesa redonda","Reuniones y recepción","mesa",{"top":1},[1.386,0.733,1.6]],["chair","Silla","Reuniones y recepción","silla madera",{},[0.4,0.94,0.4]],["chairCushion","Silla tapizada","Reuniones y recepción","silla",{},[0.4,0.92,0.4]],["chairModernCushion","Silla moderna","Reuniones y recepción","silla",{},[0.4,0.92,0.4]],["chairRounded","Silla redonda","Reuniones y recepción","silla",{},[0.4,0.91,0.4]],["televisionModern","Televisor","Reuniones y recepción","tv pantalla",{"on":1},[1.37,0.91,0.257]],["cabinetTelevision","Mueble de TV","Reuniones y recepción","rack tv",{"top":1},[1.6,0.62,0.5]],["rugRectangle","Alfombra","Reuniones y recepción","alfombra",{},[3.14,0.02,1.84]],["rugRound","Alfombra redonda","Reuniones y recepción","alfombra",{},[1.84,0.02,1.84]],["rugDoormat","Felpudo","Reuniones y recepción","entrada",{},[0.859,0.02,0.474]],["pottedPlant","Planta grande","Reuniones y recepción","maceta verde",{},[0.424,1.308,0.483]],["plantSmall1","Planta chica","Reuniones y recepción","maceta",{"on":1},[0.189,0.28,0.189]],["plantSmall2","Planta chica 2","Reuniones y recepción","maceta",{"on":1},[0.189,0.28,0.189]],["plantSmall3","Planta chica 3","Reuniones y recepción","maceta",{"on":1},[0.196,0.29,0.17]],["loungeSofa","Sofá","Descanso y espera","sillon living",{},[1.96,0.92,0.82]],["loungeSofaLong","Sofá largo","Descanso y espera","sillon",{},[1.96,0.92,1.64]],["loungeSofaCorner","Sofá esquinero","Descanso y espera","sillon",{},[1.96,0.92,1.96]],["loungeChair","Sillón","Descanso y espera","butaca",{},[0.98,0.92,0.82]],["loungeDesignChair","Sillón de diseño","Descanso y espera","butaca",{},[1.459,0.8,0.82]],["loungeDesignSofa","Sofá de diseño","Descanso y espera","sillon",{},[2.24,0.8,0.82]],["loungeSofaOttoman","Puf","Descanso y espera","banqueta",{},[0.88,0.46,0.9]],["tableCoffee","Mesa ratona","Descanso y espera","mesa baja",{"top":1},[1.322,0.46,0.8]],["tableCoffeeGlass","Mesa ratona de vidrio","Descanso y espera","mesa baja",{"top":1},[1.322,0.46,0.8]],["benchCushion","Banco tapizado","Descanso y espera","asiento",{},[0.8,0.92,0.4]],["bench","Banco","Descanso y espera","asiento",{},[0.8,0.94,0.4]],["kitchenCabinet","Bajo mesada","Cocina","mueble mesada",{"top":1},[0.86,0.9,0.9]],["kitchenCabinetDrawer","Bajo mesada con cajones","Cocina","mesada",{"top":1},[0.86,0.9,0.9]],["kitchenSink","Pileta de cocina","Cocina","bacha mesada",{"top":1},[0.86,0.98,0.9]],["kitchenStoveElectric","Cocina eléctrica","Cocina","anafe horno",{"top":1},[0.86,0.9,0.9]],["kitchenCabinetUpper","Alacena","Cocina","mueble alto",{"wall":1.45},[0.86,0.78,0.44]],["kitchenCabinetUpperDouble","Alacena doble","Cocina","mueble alto",{"wall":1.45},[0.86,0.78,0.44]],["hoodModern","Campana","Cocina","extractor",{"wall":1.55},[0.86,0.799,0.57]],["kitchenFridge","Heladera","Cocina","refrigerador",{},[0.86,1.84,0.584]],["kitchenFridgeLarge","Heladera grande","Cocina","refrigerador doble",{},[1.04,1.84,0.811]],["kitchenMicrowave","Microondas","Cocina","horno",{"on":1},[0.58,0.36,0.46]],["kitchenCoffeeMachine","Cafetera","Cocina","cafe",{"on":1},[0.379,0.355,0.48]],["toaster","Tostadora","Cocina","pan",{"on":1},[0.376,0.26,0.2]],["kitchenBlender","Licuadora","Cocina","",{"on":1},[0.272,0.455,0.218]],["kitchenBar","Barra","Cocina","desayunador",{"top":1},[0.86,0.84,0.42]],["stoolBar","Banqueta alta","Cocina","taburete",{},[0.531,0.87,0.46]],["toiletSquare","Inodoro","Baño","wc water",{},[0.607,0.902,0.774]],["bathroomSinkSquare","Lavatorio con mueble","Baño","pileta bacha",{"top":1},[0.86,1.16,0.6]],["bathroomMirror","Espejo","Baño","espejo",{"wall":1.15},[0.603,0.869,0.289]],["bathroomCabinet","Botiquín","Baño","mueble pared",{"wall":1.45},[0.46,0.78,0.26]],["shower","Ducha","Baño","ducha box",{},[1.124,2.188,1.164]],["washer","Lavarropas","Baño","lavadero",{},[0.78,0.94,0.78]],["paneling","Revestimiento","Baño","zocalo pared",{"wall":0},[1,1.19,0.06]]];
+/* ---------- muebles 3D (Furniture Kit de Kenney, CC0) y habitaciones estilo Sims ---------- */
+// el catálogo está acá; las formas se bajan aparte (muebles.json) y hasta entonces se ve una caja del tamaño real
+const MUE = { st: 'idle', pal: null, raw: null, geo: new Map(), data: null };
+const MUEK = {}; MUEL.forEach(([k, n, c, t, o, b]) => { MUEK[k] = { n, c, t, o: o || {}, b }; PK['km:' + k] = { n, tags: t + ' ' + c.toLowerCase(), out: false, km: k }; PRE3['km:' + k] = 'MU-'; });
+{ const IC = { Oficina: 'chair', 'Reuniones y recepción': 'chair', 'Descanso y espera': 'sofa', Cocina: 'box', 'Baño': 'box' }, cats = [...new Set(MUEL.map(x => x[2]))];
+  const i0 = CAT3.findIndex(c => c[0] === 'Muebles y oficina'); const groups = cats.map(c => ['Muebles · ' + c, MUEL.filter(x => x[2] === c).map(([k, n, , t]) => ['prop:km:' + k, n, /plant|Planta/.test(k + n) ? 'plant' : /tele|Monitor|Notebook/.test(k + n) ? 'tv' : /book|Estant|Archivo|Armario/.test(n) ? 'shelf' : IC[c] || 'box', t])]);
+  CAT3.splice(i0 >= 0 ? i0 + 1 : CAT3.length, 0, ...groups); groups.forEach(([c, items]) => items.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c }))); }
+function mueLoad() { if (MUE.st !== 'idle') return; MUE.st = 'cargando';
+  const url = (HOST && HOST.muebles) || window.ONDI_MUEBLES || 'muebles.json';
+  fetch(url).then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))).then(j => { MUE.data = j.m; MUE.pal = j.pal.map(c => c.map(v => v / 255)); MUE.st = 'ok'; MUE.geo.clear();
+      for (const p of PROPS) if (String(p.k).startsWith('km:')) propObj(p); if (GHOST && GHOST.d && String(GHOST.d.k || '').startsWith('km:')) { GHOST.key = ''; } })
+    .catch(e => { MUE.st = 'error'; console.warn('muebles', e); }); }
+const b64u8 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+function mueGeo(k) { if (MUE.geo.has(k)) return MUE.geo.get(k); const m = MUE.data && MUE.data[k]; if (!m) return null;
+  const P = new Int16Array(b64u8(m.p).buffer), Nn = new Int8Array(b64u8(m.q).buffer), K = b64u8(m.k), g = new Geo();
+  for (let i = 0; i < K.length; i++) { const c = MUE.pal[K[i]] || [0.8, 0.8, 0.8]; g.v([P[i * 3] / 1000, P[i * 3 + 1] / 1000, P[i * 3 + 2] / 1000], [Nn[i * 3] / 127, Nn[i * 3 + 1] / 127, Nn[i * 3 + 2] / 127], c, 0); }
+  MUE.geo.set(k, g); return g; }
+propGeo = (o => p => { const k = String(p.k); if (!k.startsWith('km:')) return o(p); const M0 = MUEK[k.slice(3)]; if (!M0) return o(p);
+  const g = mueGeo(k.slice(3)); if (g) return g; if (MUE.st === 'idle') mueLoad();
+  const [w, h, d] = M0.b, gb = new Geo(); gb.box(-w / 2, 0, -d / 2, w / 2, Math.max(0.02, h), d / 2, '#C9CED2', { ao: 1 }); return gb; })(propGeo);
+// colgar en la pared, del techo o apoyar
+const mueOf = p => String(p.k).startsWith('km:') ? MUEK[String(p.k).slice(3)] : null;
+placeProp = (o => function (p, x, y) { const M0 = mueOf(p); if (!M0) return o(p, x, y); const fresh = !PROPS.includes(p), r = rayNow(x, y); HITSKIP = p.id; const h = surfHit(r); HITSKIP = null;
+  if (M0.o.wall !== undefined && h && Math.abs(h.n[1]) < 0.4) { const n = h.n, dd = M0.b[2] / 2 + 0.01; p.x = h.p[0] + n[0] * dd; p.z = h.p[2] + n[2] * dd; p.yaw = Math.atan2(-YS * n[0], n[2]); p.y = (naveAt(p.x, p.z, 1) ? 0.06 : 0) + (M0.o.wall || Math.max(0, h.p[1] - M0.b[1] / 2)); return; }
+  if (M0.o.ceil) { const g = h ? [h.p[0], h.p[2]] : groundAt(x, y), N = naveAt(g[0], g[1], 1); p.x = g[0]; p.z = g[1]; const top = h && h.n[1] < -0.5 ? h.p[1] : (N ? 2.76 : 2.7); p.y = top - M0.b[1]; if (fresh) p.yaw = viewYaw(p.x, p.z); return; }
+  o(p, x, y); if (fresh) p.yaw = viewYaw(p.x, p.z) + Math.PI; gridSnap(p, M0.o.on ? 0.05 : 0.1); })(placeProp);
+// las mesas, mesadas y muebles altos sirven de apoyo y frenan al caminar
+bpBox = (o => function (Q) { const M0 = mueOf(Q); if (!M0) return o(Q); if (M0.o.on || M0.o.wall !== undefined || M0.o.ceil || /rug/.test(Q.k)) return null; const [w, h, d] = M0.b; return [[-w / 2, 0, -d / 2], [w / 2, h, d / 2]]; })(bpBox);
+
+// habitación: piso con material y paredes alrededor, todo junto
+const PISOS = { ceramica: ['Cerámica', '#D9D4CB', 0.6, '#BDB6AA'], porcelanato: ['Porcelanato', '#C9C6C0', 1.2, '#B2AEA7'], madera: ['Madera', '#B8875A', 0, '#9C6F46'], alfombra: ['Alfombra', '#6F7A86', 0, null],
+  cemento: ['Cemento alisado', '#A9A9A4', 0, null], vinilico: ['Vinílico', '#9AA5A8', 0.5, '#8C979A'], azulejo: ['Azulejo de baño', '#E8EEF0', 0.3, '#C8D2D6'] };
+const COLP = { '#ECE9E2': 'Blanco roto', '#FFFFFF': 'Blanco', '#D9DCDE': 'Gris claro', '#B9BEC2': 'Gris', '#E7DCC8': 'Beige', '#CFE0EA': 'Celeste', '#D5E4D3': 'Verde suave', '#F2E2A8': 'Amarillo', '#C9876A': 'Ladrillo', '#2F3B46': 'Gris oscuro' };
+Object.assign(PK, { habit: { n: 'Habitación', tags: 'cuarto oficina sala ambiente piso', out: false } }); PRE3.habit = 'HB-';
+propGeo = (o => p => { if (p.k !== 'habit') return o(p); const g = new Geo(), w = (p.w || 4) / 2, d = (p.d || 4) / 2, M0 = PISOS[p.mat] || PISOS.ceramica, r = seeded((p.seed || 7) * 31 + 3);
+  g.box(-w, 0.002, -d, w, 0.014, d, M0[1], { top: M0[1], ao: 1 });
+  if (p.mat === 'madera') { for (let z = -d; z < d - 0.01; z += 0.2) { const c = mulc(C(M0[1]), 0.9 + r() * 0.2); g.box(-w, 0.014, z + 0.005, w, 0.016, Math.min(d, z + 0.195), c, { ao: 1 }); } }
+  else if (M0[2]) { const st = M0[2]; for (let x = -w + st; x < w - 0.01; x += st) g.box(x - 0.006, 0.014, -d, x + 0.006, 0.016, d, M0[3], { ao: 1 }); for (let z = -d + st; z < d - 0.01; z += st) g.box(-w, 0.014, z - 0.006, w, 0.016, z + 0.006, M0[3], { ao: 1 }); }
+  return g; })(propGeo);
+PCARRY.habit = p => { const w = (p.w || 4) / 2 + 0.45, d = (p.d || 4) / 2 + 0.45; return [-w, w, -d, d]; };
+TOOLS.room = { n: 'Habitación', hint: 'Arrastrá un rectángulo sobre el piso: se arman las paredes y el piso. Después, en su ficha, elegís puertas, ventanas, piso y color.' };
+{ const cons = CAT3.find(c => c[0] === 'Construcción'); if (cons) { cons[1].unshift(['room', 'Habitación (arrastrar)', 'nave', 'cuarto oficina sala ambiente baño cocina']); ALL3.unshift({ k: 'room', n: 'Habitación (arrastrar)', ic: 'nave', tags: 'cuarto oficina sala ambiente baño cocina', c: 'Construcción' }); } }
+// marco de la grilla: el del galpón si estás adentro, si no el del terreno
+function roomFrame(x, z) { const N = naveAt(x, z, 1); if (N) { const o = NP(N, 0, 0); return { x: o[0], z: o[1], yaw: baseYaw(x, z), N, y: 0.06 }; } return { x: 0, z: 0, yaw: 0, N: null, y: 0 }; }
+const RMD = { a: null, b: null, F: null };
+function roomSnap(F, x, z) { const [u, v] = W2L(F, x, z); return [Math.round(u), Math.round(v)]; }
+function roomPrev() { if (!RMD.a || !RMD.b) { clearPrev(); return; } const F = RMD.F, u0 = Math.min(RMD.a[0], RMD.b[0]), u1 = Math.max(RMD.a[0], RMD.b[0]), v0 = Math.min(RMD.a[1], RMD.b[1]), v1 = Math.max(RMD.a[1], RMD.b[1]), g = new Geo();
+  const P4 = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => L2W(F, u, v)); for (let i = 0; i < 4; i++) { const a = P4[i], b = P4[(i + 1) % 4]; g.strip([a, b], 0.16, F.y + 0.05, P.acc, 0.6); }
+  g.disc(P4[0][0], P4[0][1], 0.25, F.y + 0.06, P.acc, 1, 10); g.disc(P4[2][0], P4[2][1], 0.25, F.y + 0.06, P.acc, 1, 10); showPrev(g);
+  const W0 = u1 - u0, D0 = v1 - v0; hotName ? hotName('Habitación ' + W0 + ' × ' + D0 + ' m') : 0; $('#ehint').textContent = 'Habitación de ' + W0 + ' × ' + D0 + ' m · soltá para armarla'; }
+function roomMake(F, u0, u1, v0, v1) { if (u1 - u0 < 1 || v1 - v0 < 1) { toast('La habitación tiene que medir al menos 1 × 1 m'); return null; }
+  const nRooms = PROPS.filter(q => q.k === 'habit').length, [cx, cz] = L2W(F, (u0 + u1) / 2, (v0 + v1) / 2);
+  const R0 = Object.assign(mkProp('habit'), { x: cx, z: cz, y: F.y, yaw: F.yaw, w: u1 - u0, d: v1 - v0, mat: 'ceramica', wcol: '#ECE9E2', name: 'Habitación ' + (nRooms + 1) }); const made = [R0];
+  const side = (s, a0, a1, fixed, alongU) => { const E = a1 - a0; let pos = a0; const n2 = Math.floor(E / 2), list = []; for (let i = 0; i < n2; i++) list.push(2); if (E - n2 * 2 >= 1) list.push(1);
+    const mid = list.length ? Math.floor((list.length - 1) / 2) : -1;
+    list.forEach((L, i) => { const c = pos + L / 2; pos += L; const k = L === 2 ? (s === 'f' && i === mid && list[i] === 2 ? 'wdoor' : 'wpan') : 'wpan1';
+      const [x, z] = alongU ? L2W(F, c, fixed) : L2W(F, fixed, c); const q = Object.assign(mkProp(k), { x, z, y: F.y, yaw: alongU ? F.yaw : F.yaw + Math.PI / 2, col: R0.wcol, room: R0.id, side: s });
+      PROPS.push(q); made.push(q); }); };
+  PROPS.push(R0); side('f', u0, u1, v1, true); side('b', u0, u1, v0, true); side('l', v0, v1, u0, false); side('r', v0, v1, u1, false);
+  PROPS.splice(PROPS.indexOf(R0), 1); made.slice(1).forEach(q => PROPS.splice(PROPS.indexOf(q), 1));
+  made.forEach(q => addAnyRaw(q)); const snaps = made.map(snapD);
+  histPush({ label: R0.name + ' armada', undo: () => snaps.forEach(s => rmAnyRaw(s.id)), redo: () => snaps.forEach(s => addAnyRaw(JSON.parse(JSON.stringify(s)))) });
+  edSave(); toast(R0.name + ' armada · ' + R0.w + ' × ' + R0.d + ' m'); select(R0.id, false); return R0; }
+function roomAt(x, z, w, dd) { const F = roomFrame(x, z), [u, v] = roomSnap(F, x, z), u0 = u - Math.floor(w / 2), v0 = v - Math.floor(dd / 2); return roomMake(F, u0, u0 + w, v0, v0 + dd); }
+function roomEnd() { const a = RMD.a, b = RMD.b, F = RMD.F; RMD.a = RMD.b = RMD.F = null; clearPrev(); if (!a || !b) return; roomMake(F, Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[1], b[1])); }
+// vista de arriba: arrastrar
+edDown = (o => function (e) { if (ED.on && canEdit() && ED.tool === 'room' && e.button === 0 && !WALK.on) { const g = groundAt(e.clientX, e.clientY); RMD.F = roomFrame(g[0], g[1]); RMD.a = roomSnap(RMD.F, g[0], g[1]); RMD.b = RMD.a.slice(); roomPrev(); return true; } return o(e); })(edDown);
+edMove = (o => function (e) { if (RMD.a && RMD.F && !WALK.on) { const g = groundAt(e.clientX, e.clientY); RMD.b = roomSnap(RMD.F, g[0], g[1]); roomPrev(); return true; } return o(e); })(edMove);
+edUp = (o => function (e, w) { if (RMD.a && !WALK.on) { roomEnd(); return true; } if (ED.on && ED.tool === 'room' && !WALK.on) return true; return o(e, w); })(edUp);
+// caminando: un clic en cada esquina
+aimDown = (o => function (b) { if (b === 0 && ED.on && canEdit() && ED.tool === 'room') { const r = rayNow(CX(), CY()), q = planeAt(r, naveAt(WALK.x, WALK.z) ? 0.06 : 0); if (!q || q[3] > 80) { hotName('Apuntá al piso'); return; }
+    if (!RMD.a) { RMD.F = roomFrame(q[0], q[2]); RMD.a = roomSnap(RMD.F, q[0], q[2]); RMD.b = RMD.a.slice(); roomPrev(); hotName('Ahora apuntá a la esquina opuesta y hacé clic'); return; }
+    RMD.b = roomSnap(RMD.F, q[0], q[2]); roomEnd(); return; } return o(b); })(aimDown);
+(function roomTick() { requestAnimationFrame(roomTick); if (!(WALK.on && RMD.a && RMD.F && ED.tool === 'room')) return; const r = rayNow(CX(), CY()), q = planeAt(r, RMD.F.y); if (!q || q[3] > 80) return; const b2 = roomSnap(RMD.F, q[0], q[2]); if (!RMD.b || b2[0] !== RMD.b[0] || b2[1] !== RMD.b[1]) { RMD.b = b2; roomPrev(); } })();
+setTool = (o => function (t) { if (t !== 'room' && RMD.a) { RMD.a = RMD.b = RMD.F = null; clearPrev(); } o(t); })(setTool);
+// una puerta o ventana puesta sobre una pared la reemplaza
+const parallel = (a, b) => Math.abs(Math.sin((a || 0) - (b || 0))) < 0.08;
+addAnyRaw = (o => function (d) { if (isProp(d) && BK[d.k] && BK[d.k].wall) { for (const Q of PROPS.slice()) { if (Q === d || Q.id === d.id || !BK[Q.k] || !BK[Q.k].wall || Q.k === d.k) continue; if (Math.hypot(Q.x - d.x, Q.z - d.z) < 0.35 && parallel(Q.yaw, d.yaw) && BK[Q.k].L === BK[d.k].L) { if (Q.room && !d.room) { d.room = Q.room; d.side = Q.side; d.col = d.col || Q.col; } rmAnyRaw(Q.id); } } } return o(d); })(addAnyRaw);
+// ficha de la habitación
+const roomParts = R => PROPS.filter(q => q.room === R.id);
+e3Edit = (o => function (e, fld) { let h = o(e, fld); if (!h || e.t !== 'prop' || e.P.k !== 'habit') return h; const R = e.P, parts = roomParts(R);
+  const sel = (k, opts, v) => `<select data-ed="${k}">${opts.map(([val, n]) => `<option value="${val}" ${val === v ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+  const sideKind = s => { const L = parts.filter(q => q.side === s); if (!L.length) return 'none'; const sp = L.find(q => q.k !== 'wpan' && q.k !== 'wpan1'); return sp ? sp.k : 'wpan'; };
+  let add = fld('Medidas', `<span class="ehelp">${String(R.w).replace('.', ',')} × ${String(R.d).replace('.', ',')} m</span>`) + fld('Piso', sel('rm_mat', Object.entries(PISOS).map(([k, v]) => [k, v[0]]), R.mat || 'ceramica')) + fld('Paredes', sel('rm_col', Object.entries(COLP), R.wcol || '#ECE9E2'));
+  const SN = { f: 'Lado de adelante', b: 'Lado de atrás', l: 'Lado izquierdo', r: 'Lado derecho' }, KO = [['wpan', 'Pared'], ['wdoor', 'Con puerta'], ['wwin', 'Con ventana'], ['wglass', 'Vidriado'], ['none', 'Abierto (sin pared)']];
+  for (const s of ['f', 'b', 'l', 'r']) add += fld(SN[s], sel('rm_side_' + s, KO, sideKind(s)));
+  add += '<p class="ehelp">Al moverla se lleva sus paredes y lo que tiene adentro. También podés poner una puerta o ventana del catálogo sobre cualquier pared y la reemplaza.</p><button class="btn danger" data-ed="rm_delall">Borrar la habitación entera</button>';
+  const i = h.indexOf('<button class="btn danger" data-ed="del">'); return i < 0 ? h + add : h.slice(0, i) + add + h.slice(i); })(e3Edit);
+function roomSide(R, s, kind) { const F = { x: R.x, z: R.z, yaw: R.yaw || 0 }, w = R.w / 2, d = R.d / 2, alongU = s === 'f' || s === 'b';
+  roomParts(R).filter(q => q.side === s).forEach(q => rmAnyRaw(q.id)); if (kind === 'none') return;
+  const E = alongU ? R.w : R.d, list = []; for (let i = 0; i < Math.floor(E / 2); i++) list.push(2); if (E - list.length * 2 >= 1) list.push(1); const mid = Math.floor((list.length - 1) / 2); let pos = -E / 2;
+  const fixed = s === 'f' ? d : s === 'b' ? -d : s === 'l' ? -w : w;
+  list.forEach((L, i) => { const c = pos + L / 2; pos += L; let k = L === 2 ? 'wpan' : 'wpan1'; if (L === 2 && kind !== 'wpan' && (kind === 'wglass' || i === mid)) k = kind;
+    const [x, z] = alongU ? L2W(F, c, fixed) : L2W(F, fixed, c); addAnyRaw(Object.assign(mkProp(k), { x, z, y: R.y || 0, yaw: alongU ? R.yaw || 0 : (R.yaw || 0) + Math.PI / 2, col: R.wcol, room: R.id, side: s })); }); }
+e3Action = (o => function (a, val) { if (!String(a).startsWith('rm_')) return o(a, val); const e = SEL && entity(SEL); if (!e || e.t !== 'prop' || e.P.k !== 'habit') return false; const R = e.P;
+  if (a === 'rm_mat') { R.mat = val; refreshAny(R); }
+  if (a === 'rm_col') { R.wcol = val; for (const q of roomParts(R)) { q.col = val; refreshAny(q); } }
+  if (a.startsWith('rm_side_')) roomSide(R, a.slice(8), val);
+  if (a === 'rm_delall') { const all = [R, ...roomParts(R)], snaps = all.map(snapD); all.forEach(q => rmAnyRaw(q.id)); histPush({ label: (R.name || 'Habitación') + ' borrada', undo: () => snaps.forEach(s => addAnyRaw(JSON.parse(JSON.stringify(s)))), redo: () => snaps.forEach(s => rmAnyRaw(s.id)) }); edSave(); toast((R.name || 'Habitación') + ' borrada · Ctrl+Z para deshacer'); return true; }
+  edSave(); renderPanel(true); return true; })(e3Action);
+e3Panel = (o => function (e) { const c = o(e); if (c && e.t === 'prop') { if (e.P.k === 'habit') { c.ey = 'Habitación · ' + e.P.id; c.s = (PISOS[e.P.mat] || PISOS.ceramica)[0] + ' · ' + roomParts(e.P).length + ' tramos de pared'; } else if (mueOf(e.P)) { c.ey = 'Mueble · ' + e.P.id; c.s = mueOf(e.P).c; } } return c; })(e3Panel);
+// cargar las formas apenas se abre el catálogo o si la maqueta ya tiene muebles
+renderCat = (o => function (k) { if (MUE.st === 'idle' && ED.on) mueLoad(); return o(k); })(renderCat);
+setTimeout(() => { if (PROPS.some(p => String(p.k).startsWith('km:'))) mueLoad(); }, 300);
 
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
@@ -4277,7 +4485,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { PROPS, refreshAny, propObj, entity, edState, pickAt, pickRoad, removeId, e3Action, getSEL: () => SEL, roadsBuild, casList, casAt, irA, outPlace, RH, VD, selRoad, vdStart, vdMove, vdEnd, GPT, BPT, pzSeed, PRM, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
+  if (window.__e3) Object.assign(window.__e3, { TOK, roomAt, placePropAt, L2W, W2L, MUE, MUEK, mueLoad, roomMake, roomFrame, roomSide, RMD, PISOS, PROPS, refreshAny, propObj, entity, edState, pickAt, pickRoad, removeId, e3Action, getSEL: () => SEL, roadsBuild, casList, casAt, irA, outPlace, RH, VD, selRoad, vdStart, vdMove, vdEnd, GPT, BPT, pzSeed, PRM, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
   hotRender(); requestAnimationFrame(gameTick); extInit(); cabInit2(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */
