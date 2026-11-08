@@ -150,20 +150,27 @@ async function leerEquipos(db: Db, org: string, s: any, marca: string, cache: Ma
 const sinAcento = (t: string) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 function proponer(devs: any[], sitios: any[]) {
   const red = (ip: string) => { const m = /^(\d+)\.(\d+)\.(\d+)\.\d+$/.exec(String(ip || '')); return m ? `${m[1]}.${m[2]}.${m[3]}` : ''; };
-  const S2 = sitios.map((x: any) => ({ id: x.siteId, n: sinAcento(siteOut(x).nombre), gw: macN(x.meta && x.meta.gatewayMac || ''), cap: siteOut(x).equipos ?? 0 }));
-  const out = new Map<string, { site: string, motivo: string }>();
-  for (const d of devs) { const nm = sinAcento(d.nombre); const s1 = S2.find(x => x.n.length >= 4 && nm.includes(x.n)); if (s1) out.set(macN(d.mac), { site: s1.id, motivo: 'nombre' });
-    const s2 = S2.find(x => x.gw && x.gw === macN(d.mac)); if (s2) out.set(macN(d.mac), { site: s2.id, motivo: 'gateway' }); }
-  // redes: cada red va al sitio que más votos tiene adentro; las que no tienen votos, por cantidad de equipos
-  const grupos = new Map<string, any[]>(); for (const d of devs) { const r = red(d.ip); if (!r) continue; if (!grupos.has(r)) grupos.set(r, []); grupos.get(r)!.push(d); }
-  const usado = new Map<string, number>(); const suma = (id: string, n: number) => usado.set(id, (usado.get(id) || 0) + n);
-  const sinVoto: [string, any[]][] = [];
-  for (const [r, L] of grupos) { const votos = new Map<string, number>(); L.forEach(d => { const o = out.get(macN(d.mac)); if (o) votos.set(o.site, (votos.get(o.site) || 0) + 1); });
-    const best = [...votos.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (best) { L.forEach(d => { if (!out.has(macN(d.mac))) out.set(macN(d.mac), { site: best[0], motivo: 'red' }); }); suma(best[0], L.length); } else sinVoto.push([r, L]); }
-  sinVoto.sort((a, b) => b[1].length - a[1].length);
-  for (const [, L] of sinVoto) { const libre = S2.map(x => ({ x, f: x.cap - (usado.get(x.id) || 0) })).filter(o => o.f > 0).sort((a, b) => Math.abs(a.f - L.length) - Math.abs(b.f - L.length));
-    const t = libre[0]; if (!t) continue; L.forEach(d => out.set(macN(d.mac), { site: t.x.id, motivo: 'cantidad' })); suma(t.x.id, L.length); }
+  const on = (d: any) => d.estado === 'online';
+  // lo que UniFi dice de cada sitio: cuántos equipos en línea y cuántos caídos le faltan por asignar
+  const S2 = sitios.map((x: any) => { const o = siteOut(x), tot = o.equipos ?? 0, off = Math.min(tot, o.caidos ?? 0); return { id: x.siteId, n: sinAcento(o.nombre), gw: macN(x.meta && x.meta.gatewayMac || ''), on: tot - off, off }; }).filter(x => x.on + x.off > 0);
+  const out = new Map<string, { site: string | null, motivo: string }>();
+  const need = (s: any, d: any) => on(d) ? s.on : s.off, take = (s: any, d: any, motivo: string) => { out.set(macN(d.mac), { site: s.id, motivo }); if (on(d)) s.on--; else s.off--; };
+  for (const d of devs) if (d.consola) out.set(macN(d.mac), { site: null, motivo: 'consola' });
+  // 1) señales fuertes: el gateway del sitio y el nombre del sitio dentro del nombre del equipo
+  for (const d of devs) { if (out.has(macN(d.mac))) continue; const s2 = S2.find(x => x.gw && x.gw === macN(d.mac)); if (s2) { take(s2, d, 'gateway'); continue; }
+    const nm = sinAcento(d.nombre), s1 = S2.find(x => x.n.length >= 4 && nm.includes(x.n) && need(x, d) > 0); if (s1) take(s1, d, 'nombre'); }
+  // 2) por red: cada red va primero al sitio que tiene votos adentro, hasta lo que ese sitio necesita (en línea / caídos);
+  //    lo que sobra va a los sitios a los que les faltan equipos en ese mismo estado. Los renombrados van primero al sitio principal.
+  const grupos = new Map<string, any[]>(); for (const d of devs) { if (out.has(macN(d.mac))) continue; const r = red(d.ip) || 'sin-ip'; if (!grupos.has(r)) grupos.set(r, []); grupos.get(r)!.push(d); }
+  const votosDe = (r: string) => { const v = new Map<string, number>(); for (const d of devs) { if (red(d.ip) !== r) continue; const o = out.get(macN(d.mac)); if (o && o.site) v.set(o.site, (v.get(o.site) || 0) + 1); } return v; };
+  const renombrado = (d: any) => sinAcento(d.nombre) !== sinAcento(d.modelo) ? 1 : 0;
+  const orden = [...grupos.entries()].sort((a, b) => (votosDe(b[0]).size ? 1 : 0) - (votosDe(a[0]).size ? 1 : 0) || b[1].length - a[1].length);
+  for (const [r, L] of orden) { const v = votosDe(r), pri = [...v.entries()].sort((a, b) => b[1] - a[1]).map(x => S2.find(s => s.id === x[0])).filter(Boolean) as any[];
+    if (!pri.length) { // sin votos: el sitio cuyo faltante se parece más al tamaño de la red
+      const nOn = L.filter(on).length, nOff = L.length - nOn; const best = [...S2].sort((a, b) => (Math.abs(a.on - nOn) + Math.abs(a.off - nOff)) - (Math.abs(b.on - nOn) + Math.abs(b.off - nOff)))[0]; if (best) pri.push(best); }
+    const Ls = [...L].sort((a, b) => renombrado(b) - renombrado(a));
+    for (const d of Ls) { const p = pri.find(s => need(s, d) > 0); if (p) { take(p, d, pri.length && v.size ? 'red' : 'cantidad'); continue; }
+      const o = [...S2].filter(s => need(s, d) > 0).sort((a, b) => need(b, d) - need(a, d))[0]; if (o) take(o, d, 'estado'); } }
   return out; }
 
 const tipoDe = (d: any) => { const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
