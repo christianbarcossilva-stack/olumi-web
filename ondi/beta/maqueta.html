@@ -949,9 +949,7 @@ function buildBase() { if (BLANK) return buildBaseBlank();
   const dash = (pts, step = 8, len = 4, y = 0.04) => { const q = pxs(pts); for (let i = 0; i < q.length - 1; i++) { const [ax, az] = q[i], [bx, bz] = q[i + 1], L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
     for (let s = 2; s + len < L; s += step) gg.strip([[ax + dx * s, az + dz * s], [ax + dx * (s + len), az + dz * (s + len)]], 0.28, y, P.mark); } };
   const camino = [[44, -500], [38, 0], [33, 600], [25, 1144], [20, 1600]];
-  road(camino, 9); dash(camino, 9, 4.5);
   const hw = [[-600, -63 - 0.269 * 600], [1700, -63 + 0.269 * 1700]], hn = [0.259, -0.966];
-  for (const o of [-9, 9]) { const p = hw.map(([x, y]) => [x + hn[0] * o, y + hn[1] * o]); road(p, 12); dash(p, 12, 5); }
   // calles internas
   const RD = [
     [[31, 727], [110, 726.5], [170, 724], [200, 716], [218, 702], [230, 694]],
@@ -961,20 +959,10 @@ function buildBase() { if (BLANK) return buildBaseBlank();
     [[75, 222], [395, 222], [430, 250], [640, 252]], [[640, 252], [640, 684]],
     [[563, 684], [563, 1110]], [[242, 705], [262, 740], [272, 910]], [[563, 1005], [630, 1005]]
   ];
-  road(RD[0], 18, 0.021); pflat(gg, [40, 118, 714, 737], 0.019, P.road); pflat(gg, [120, 200, 711, 720], 0.019, P.road);
-  pflat(gg, [47, 112, 738, 824], 0.014, P.apron); road([[96, 736], [104, 760], [106, 792]], 9, 0.018); RD.slice(1).forEach(p => { road(p, 10); dash(p); });
+  pflat(gg, [47, 112, 738, 824], 0.014, P.apron);
   const [rx, rz] = px(...RB); gg.disc(rx, rz, 20, 0.022, P.road, 0, 28); g.prism(rx, 0, rz, 9, 0.35, 24, P.parapet); g.disc(rx, rz, 8.6, 0.36, P.grass, 0, 24);
   { const [a, b] = px(64.6, 727.6), [c, d] = px(65.2, 735); gg.flat(a, b, c, d, 0.045, P.mark); const [e, f] = px(70.4, 718.2), [h2, i2] = px(71, 725.6); gg.flat(e, f, h2, i2, 0.045, P.mark); }
   // balanza de camiones: plataforma en el carril de salida y casilla de control con el rack
-  { const [a, b, c, d] = R(146, 166, 718.2, 721.8); g.box(a, 0, b, c, 0.18, d, P.parapet, { top: mulc(C(P.road), 1.35) }); for (let x = 146; x <= 166.1; x += 4) { const [e, f, h2, i2] = R(x - 0.08, x + 0.08, 718.2, 721.8); gg.flat(e, f, h2, i2, 0.2, P.markY); }
-    const [k0, k1, k2, k3] = R(145.6, 166.4, 717.8, 718.2); g.box(k0, 0, k1, k2, 0.22, k3, P.markY); const [m0, m1, m2, m3] = R(145.6, 166.4, 721.8, 722.2); g.box(m0, 0, m1, m2, 0.22, m3, P.markY); }
-  // la casilla va aparte: al entrar caminando se esconde por fuera y se ve por dentro
-  { const gb = new Geo(), [a, b, c, d] = R(157.5, 166, 722.5, 725.9); gb.box(a, 0, b, c, 3, d, P.wall, { top: P.roof }); gb.win(a, b, c, d, 1.1, 1.3, P.glass, P.glassE); gb.box(a - 0.3, 3, b - 0.3, c + 0.3, 3.3, d + 0.3, P.parapet);
-    const [e0, , e1] = R(164.5, 165.5, 0, 0); gb.box(e0, 0, b - 0.07, e1, 2.1, b, P.door, { ao: 0.95 }); gb.box(e0 - 0.06, 2.1, b - 0.08, e1 + 0.06, 2.18, b, P.frame);
-    obj('cas-bal', { geo: gb, layer: 'base' }); }
-  // camiones estacionados esperando turno, al sur de la entrada
-  for (let i = 0; i < 7; i++) { const z0 = 790 + i * 3.7; if (i === 3) continue; const [a, b, c, d] = R(51, 64.5, z0, z0 + 2.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); g.box(a, 0, b + 0.3, a + 1.2, 1.1, d - 0.3, P.tire); g.box(c - 4.5, 0, b + 0.3, c - 1.5, 1.1, d - 0.3, P.tire); }
-  for (let i = 0; i < 3; i++) { const x0 = 84 + i * 4.2; const [a, b, c, d] = R(x0, x0 + 2.5, 770, 783.5); g.box(a, 1.1, b, c, 4.1, d, P.trailer, { ao: 0.9 }); }
   // playas de maniobra, estacionamientos y patios
   [[228, 244, 232, 562], [210, 235, 562, 677], [245, 270, 547, 670], [270, 410, 462, 483], [615, 635, 260, 355], [630, 712, 240, 315], [568, 597, 693, 997], [296, 372, 498, 532], [270, 410, 270, 297]].forEach(rr => pflat(gg, rr, 0.015, P.apron));
   const lrect = (N, u0, u1, v0, v1, y, col) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); gg.flat(Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz), y, col); };
@@ -991,14 +979,12 @@ function buildBase() { if (BLANK) return buildBaseBlank();
   for (let by = 28; by < 219; by += 24) for (let bx = 63; bx < 597; bx += 34) { if (r() < 0.28) continue; if (bx > 228 && bx < 285 && by > 165) continue;
     for (let y = by; y < by + 24 - 9; y += 11) for (let x = bx; x < bx + 34 - 2; x += 2.5) { if (!inYard(x, y) || !inYard(x, y + 10)) continue;
       for (const dz of [2.3, 6.9]) { if (r() < 0.12) continue; SR_CARS++; const c = r() < 0.6 ? P.car[r() < 0.5 ? 1 : 4] : P.car[Math.floor(r() * P.car.length)]; const [wx, wz] = px(x + 1, y + dz); car(wx, wz, c, true, false); } } }
-  { const [a, b, c, d] = pbox(240, 275, 175, 200, 6, P.wall, { top: P.roof }); g.win(a, b, c, d, 1.6, 2.4, P.glass, P.glassE); g.box(a - 0.2, 6, b - 0.2, c + 0.2, 6.5, d + 0.2, P.parapet); }
   // alambrado perimetral
   const fence = (pts, gap) => { for (let i = 0; i < pts.length - 1; i++) { const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / 8));
     for (let k = 0; k <= n; k++) { const x = lerp(x0, x1, k / n), z = lerp(z0, z1, k / n); if (!gap(x, z)) g.box(x - 0.12, 0, z - 0.12, x + 0.12, 2.6, z + 0.12, P.fence); }
     for (let k = 0; k < n; k++) { const xa = lerp(x0, x1, k / n), za = lerp(z0, z1, k / n), xb = lerp(x0, x1, (k + 1) / n), zb = lerp(z0, z1, (k + 1) / n); if (gap((xa + xb) / 2, (za + zb) / 2)) continue;
       for (const y of [1.2, 2.45]) { if (Math.abs(xb - xa) < 1e-6 || Math.abs(zb - za) < 1e-6) g.box(Math.min(xa, xb) - 0.05, y, Math.min(za, zb) - 0.05, Math.max(xa, xb) + 0.05, y + 0.1, Math.max(za, zb) + 0.05, P.fence); else g.strip([[xa, za], [xb, zb]], 0.12, y + 0.1, P.fence); } } } };
   const gz0 = 714 - OZ, gz1 = 739 - OZ;
-  fence(pxs([[45, 18], [258, 18], [608, 148], [648, 238], [648, 676], [772, 676], [772, 1100], [45, 1100], [45, 18]]), (x, z) => x < 45 - OX + 2 && z > gz0 && z < gz1);
   // árboles
   const tree = (x, z, s = 1) => { g.prism(x, 0, z, 0.32 * s, 2 * s, 5, P.trunk); g.blob(x, 3.9 * s, z, 2.5 * s, r() > 0.5 ? P.tree : P.tree2, { rings: 4, seg: 7, sy: 0.92, rot: r() * 3 }); };
   const ptree = (x, y, s) => { const [a, b] = px(x, y); tree(a, b, s); };
@@ -1006,47 +992,16 @@ function buildBase() { if (BLANK) return buildBaseBlank();
     const n = 9, rot = r() * 6; for (let i = 0; i < n; i++) { const an = rot + i / n * Math.PI * 2, L = (2.9 + r() * 0.8) * s, w = 0.55 * s, cx = Math.cos(an), cz = Math.sin(an);
       const tip = [a + cx * L, H - (1.2 + r() * 0.7) * s, b + cz * L], mid = [a + cx * L * 0.48, H + 0.45 * s, b + cz * L * 0.48], l = [mid[0] - cz * w, mid[1], mid[2] + cx * w], q = [mid[0] + cz * w, mid[1], mid[2] - cx * w], col = C(i % 2 ? P.tree : P.tree2), ctr = [a, H - 6, b];
       g.tri(top, l, tip, col, 0, ctr); g.tri(top, tip, q, col, 0, ctr); } };
-  for (let y = 240; y <= 1090; y += 11) if (y < 708 || y > 750) ptree(52 + (r() - 0.5) * 4, y, 1 + r() * 0.4);
-  for (let y = 30; y <= 210; y += 12) ptree(52, y, 0.9 + r() * 0.3);
-  for (let x = 60; x <= 760; x += 12) ptree(x + (r() - 0.5) * 3, 1108 + (r() - 0.5) * 3, 0.95 + r() * 0.3);
-  for (let x = 830; x <= 1070; x += 8) { ptree(x, 462 + (r() - 0.5) * 4, 1.3 + r() * 0.3); ptree(x - 50, 880 + (r() - 0.5) * 4, 1.25 + r() * 0.3); }
-  for (let y = 745; y <= 895; y += 9) { ptree(232 + (r() - 0.5) * 6, y, 1 + r() * 0.3); ptree(250 + (r() - 0.5) * 6, y + 4, 0.9 + r() * 0.3); }
-  for (let y = 300; y <= 670; y += 14) ptree(655, y, 0.9 + r() * 0.3);
   // columnas de iluminación
   const lpole = (x, y, dx, dz) => { const [px0, pz0] = px(x, y); const X0 = px0, Z0 = pz0; g.box(X0 - 0.45, 0, Z0 - 0.45, X0 + 0.45, 0.5, Z0 + 0.45, P.pole); g.prism(X0, 0.5, Z0, 0.2, 10, 6, P.pole);
     const ex = X0 + dx * 2.4, ez = Z0 + dz * 2.4; g.box(Math.min(X0, ex) - 0.1, 10.1, Math.min(Z0, ez) - 0.1, Math.max(X0, ex) + 0.1, 10.3, Math.max(Z0, ez) + 0.1, P.pole);
     const lx = X0 + dx * 2, lz = Z0 + dz * 2, hx = dz ? 0.45 : 0.6, hz = dz ? 0.6 : 0.45; g.box(lx - hx, 9.85, lz - hz, lx + hx, 10.15, lz + hz, P.lamp, { e: P.lampE, ao: false });
     if (P.pool) g.disc(X0 + dx * 3, Z0 + dz * 3, 5.5, 0.05, P.pool, 1, 14); };
-  for (let x = 290; x <= 760; x += 38) lpole(x, 696, 0, -1);
-  for (let x = 100; x <= 200; x += 40) lpole(x, 713.5, 0, 1);
-  for (let x = 46; x <= 200; x += 7.5) palm(x + (r() - 0.5) * 1.5, 708.5 + (r() - 0.5) * 1.5, 0.9 + r() * 0.25);
-  for (let y = 360; y <= 540; y += 45) lpole(258, y, -1, 0);
-  for (let y = 290; y <= 660; y += 46) lpole(649, y, -1, 0);
-  for (let y = 720; y <= 1080; y += 45) lpole(553, y, 1, 0);
-  for (let x = 270; x <= 400; x += 44) lpole(x, 229, 0, -1);
   // pallets junto a los recorridos de los autoelevadores
   const pallets = (x0, y0, cols, rows, dx, dz) => { for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { if (r() < 0.2) continue; const [x, z] = px(x0 + i * dx, y0 + j * dz), n = 1 + (r() < 0.45 ? 1 : 0);
     for (let k = 0; k < n; k++) { g.box(x, k * 1.6, z, x + 1.5, k * 1.6 + 0.22, z + 1.3, P.pbase); g.box(x + 0.08, k * 1.6 + 0.22, z + 0.06, x + 1.42, k * 1.6 + 1.5, z + 1.24, P.pallet, { ao: 0.9 }); } } };
-  pallets(694, 262, 2, 11, 2.2, 4.4); pallets(280, 286, 13, 2, 4.4, 2.2); pallets(786, 720, 2, 54, 2.2, 4.4); pallets(640, 1083, 14, 2, 4.4, 2.2); pallets(395, 590, 1, 5, 2.2, 4.4);
-  // oficinas principales del polo (entre E1 y E8)
-  { const [a, b, c, d] = pbox(256, 292, 510, 540, 9.4, P.wall, { top: P.roof });
-    for (const y of [1.6, 5.6]) g.win(a, b, c, d, y, 2.4, P.glass, P.glassE);
-    g.box(a - 0.1, 9.4, b - 0.1, c + 0.1, 10, d + 0.1, P.parapet); pbox(268, 280, 540, 543, 3.6, P.parapet);
-    const [h1, h2] = px(262, 516), [h3, h4] = px(280, 527); g.box(h1, 10, h2, h1 + 5, 11.4, h2 + 4, P.hvac); g.box(h3, 10, h4, h3 + 4, 11.2, h4 + 4, P.hvac); }
   // portería: caseta y techo sobre los dos carriles
   { const dk = isDark(), WH = dk ? '#9AA6B0' : '#F2F4F5', RED = '#C8352E', YEL = '#E3B436', GRY = dk ? '#6D7881' : '#858E95';
-    // techo blanco con borde rojo sobre columnas blancas, por encima de los dos carriles
-    for (const x of [58.4, 64.6]) for (const y of [716.6, 726.6, 736.6]) { const [a, b] = px(x, y); g.box(a - 0.32, 0, b - 0.32, a + 0.32, 6.1, b + 0.32, WH, { ao: 0.95 }); }
-    { const [a, b, c, d] = R(57.4, 65.6, 715.6, 737.6); g.box(a, 6.1, b, c, 6.9, d, WH, { top: WH, ao: 1 }); g.box(a - 0.06, 6.1, b - 0.06, c + 0.06, 6.42, d + 0.06, RED, { ao: 1 }); }
-    // isla amarilla entre carriles
-    { const [a, b, c, d] = R(52.5, 71.5, 725.9, 727.3); g.box(a, 0, b, c, 0.25, d, YEL, { top: YEL }); }
-    // caseta gris vidriada en la punta sur
-    { const gp = new Geo(), [a, b, c, d] = R(55.6, 65.4, 737.4, 742.4); gp.box(a, 0, b, c, 3, d, GRY, { top: P.roof, ao: 0.9 }); gp.box(a - 0.04, 1.05, b - 0.04, c + 0.04, 2.55, d + 0.04, P.glass, { e: P.glassE * 0.7 }); gp.box(a - 0.2, 3, b - 0.2, c + 0.2, 3.25, d + 0.2, P.parapet);
-      const [e0, , e1] = R(57.1, 58.1, 0, 0); gp.box(e0, 0, d + 0.04, e1, 2.1, d + 0.11, P.door, { ao: 0.95 }); gp.box(e0 - 0.06, 2.1, d + 0.04, e1 + 0.06, 2.18, d + 0.12, P.frame);
-      obj('cas-por', { geo: gp, layer: 'base' }); }
-    // molinete y reja para el ingreso a pie
-    for (const [x0, x1, y0, y1] of [[54.5, 56.9, 743.2, 743.35], [58.3, 66, 743.2, 743.35], [54.5, 54.65, 743.2, 748.6], [65.85, 66, 743.2, 748.6], [54.5, 59, 748.45, 748.6]]) { const [a, b, c, d] = R(x0, x1, y0, y1); g.box(a, 0, b, c, 2.1, d, GRY, { ao: 1 }); }
-    for (const x of [60.5, 62, 63.5]) { const [a, b, c, d] = R(x - 0.25, x + 0.25, 748.2, 748.9); g.box(a, 0, b, c, 1.1, d, '#B8C0C6', { ao: 1 }); }
     // vallas amarillas del patio de camiones y contenedor "Ingreso transportistas"
     for (let x = 72; x < 95; x += 2.2) { const [a, b, c, d] = R(x, x + 1.9, 737, 737.6); g.box(a, 0, b, c, 0.85, d, YEL, { ao: 1 }); }
     { const [a, b, c, d] = R(96, 102.1, 738.6, 741.2); g.box(a, 0, b, c, 2.6, d, dk ? '#7E8A93' : '#D3D9DD', { top: dk ? '#66727C' : '#BFC6CB', ao: 0.9 }); g.box(a - 0.03, 1.9, b - 0.03, c + 0.03, 2.3, d + 0.03, '#2E9E5B', { e: 0.2 }); g.win(a, b, c, d, 0.9, 1, P.glass, P.glassE * 0.6); }
@@ -1057,19 +1012,13 @@ function buildBase() { if (BLANK) return buildBaseBlank();
     { const [a, b, c, d] = R(52, 52.14, 750, 763); gg.flat(a, b, c, d, 0.045, P.mark); }
     { const [a, b] = px(54.7, 752.6); g.box(a - 0.9, 0, b - 2, a + 0.9, 1.4, b + 2, '#C9473E', { top: '#D9615A' }); }
     for (const [x, y] of [[44, 716], [44, 735], [76, 714.4]]) { const [a, b] = px(x, y); g.box(a - 0.12, 0, b - 0.12, a + 0.12, 9, b + 0.12, P.pole); g.box(a - 0.12, 8.8, b - 0.12, a + 1.6, 9, b + 0.12, P.pole); g.box(a + 1.1, 8.65, b - 0.2, a + 1.7, 8.8, b + 0.2, P.lamp, { e: P.lampE }); } }
-  for (const [x, y] of [[66, 736.2], [68, 716.8]]) { const [a, b] = px(x, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
   // detalles junto a las naves
-  pbox(255, 270, 245, 345, 8, P.wall, { top: P.roof }); pbox(345, 390, 280, 292, 5, P.wall, { top: P.roof }); pbox(395, 407, 550, 575, 5, P.wall, { top: P.roof });
-  pbox(570, 597, 790, 837, 8, P.wall, { top: P.roof }); pbox(425, 440, 510, 528, 4, P.wall, { top: P.roof }); pbox(595, 615, 352, 380, 3, P.hvac);
-  for (const [x, y] of [[410, 625], [411, 647]]) { const [a, b] = px(x, y); g.prism(a, 0, b, 10, 12, 18, P.hvac, { top: mulc(C(P.hvac), 1.08) }); }
   // otras empresas del parque y Fábrica vecina
   const other = (rr, h, solar) => { const [x0, z0, x1, z1] = R(...rr); g.box(x0, 0, z0, x1, h, z1, P.wall, { top: P.roof, ao: 0.84 });
     g.box(x0 - 0.05, h, z0 - 0.05, x1 + 0.05, h + 0.6, z0 + 0.4, P.parapet); g.box(x0 - 0.05, h, z1 - 0.4, x1 + 0.05, h + 0.6, z1 + 0.05, P.parapet);
     g.box(x0 - 0.05, h, z0, x0 + 0.4, h + 0.6, z1, P.parapet); g.box(x1 - 0.4, h, z0, x1 + 0.05, h + 0.6, z1, P.parapet);
     if (solar) { for (let x = x0 + 4; x < x1 - 8; x += 7.4) for (let z = z0 + 4; z < z1 - 6; z += 5.4) g.box(x, h + 0.25, z, x + 7, h + 0.55, z + 5, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 }); }
     else for (let z = z0 + 6; z < z1 - 4; z += 9) g.box(x0 + 4, h + 0.02, z, x1 - 4, h + 0.28, z + 1.4, P.sky, { ao: 1 }); };
-  other([132, 212, 745, 897], 12); other([82, 132, 862, 897], 8); other([300, 388, 727, 900], 12, true); other([400, 537, 705, 905], 13, true);
-  other([178, 265, 917, 1097], 11); other([57, 170, 947, 1000], 8); other([637, 710, 1010, 1072], 10);
   { const [a, b] = px(590, 1022); g.prism(a, 0, b, 9, 5, 18, P.hvac); const [c, d] = px(700, 1016); g.prism(c, 10, d, 1.3, 14, 10, P.parapet); }
   obj('ground', { geo: gg, layer: 'ground' });
   obj('base', { geo: g, layer: 'base' });
@@ -1231,7 +1180,7 @@ function arrivePath(d, fromN) {
   const N = d.nave, s = N.s, dir = [N.t[0] * s, N.t[1] * s], rt = [-dir[1], dir[0]];
   const A = NP(N, d.u + 15 * s, N.Dl), B = NP(N, d.u + 4 * s, Math.min(20, N.Dl - 4));
   const pts = fromN ? [P2(camX(560) - 2, 560, 22), P2(camX(714) - 2, 714, 8)] : [P2(camX(860) + 2, 860, 22), P2(camX(746) + 2, 746, 8)];
-  pts.push(P2(46, 731, 7), P2(60, 731, 6, { wait: 1.8, ev: 'gate' }), P2(82, 731, 8, { ev: 'route' }));
+  pts.push(P2w(GPT(46, 731), 7, { hold: 1 }), P2w(GPT(60, 731), 6, { wait: 1.8, ev: 'gate', rel: 1 }), P2w(GPT(82, 731), 8, { ev: 'route' }));
   offsetPath(ROUTES[N.rt].in, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
   pts.push({ x: A[0] + rt[0] * 1.9, z: A[1] + rt[1] * 1.9, sp: 9 }, { x: B[0], z: B[1], sp: 3, rev: true }, { x: d.x, z: d.z, sp: 2.4, rev: true, ev: 'dock' });
   return pts;
@@ -1241,7 +1190,7 @@ function leavePath(d) {
   const F = NP(N, d.u, Math.min(16, N.Dl - 4)), E = NP(N, d.u - 7 * s, N.Dl);
   const pts = [{ x: F[0], z: F[1], sp: 3 }, { x: E[0] + rt[0] * 1.9, z: E[1] + rt[1] * 1.9, sp: 5 }];
   offsetPath(ROUTES[N.rt].out, 1.9).forEach(([x, z]) => pts.push({ x, z, sp: 12 }));
-  pts.push(P2(170, 720, 4), P2(156, 720, 2, { wait: 1.1, ev: 'scale' }), P2(84, 722, 7), P2(72, 722, 2, { wait: 1.2, ev: 'exit' }), P2(48, 722, 6), P2(camX(708) + 2, 708, 8), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
+  pts.push(P2w(BPT(170, 720), 4), P2w(BPT(156, 720), 2, { wait: 1.1, ev: 'scale' }), P2w(GPT(84, 722), 7), P2w(GPT(72, 722), 2, { wait: 1.2, ev: 'exit' }), P2w(GPT(48, 722), 6, { hold: 1 }), P2(camX(708) + 2, 708, 8, { rel: 1 }), P2(camX(-150) + 2, -150, 22, { ev: 'gone' }));
   return pts;
 }
 function startArrival(t) {
@@ -1879,7 +1828,7 @@ function edUp(e, wasDrag) { if (!ED.on) return false; if (GZD.drag) return gzUp(
   if (wasDrag) return false;
   const t = ED.tool; if (t === 'fib') { fibClick(e.clientX, e.clientY); return true; }
   if (t === 'calle') { roadClick(e.clientX, e.clientY); return true; } if (t === 'escala') { scaleClick(e.clientX, e.clientY); return true; } if (t === 'plano') return true;
-  if (t === 'del') { const id = pick3(e.clientX, e.clientY); if (id) removeId(id); else if (BLANK) { const R = pickRoad(e.clientX, e.clientY); if (R) { ED.roads.splice(ED.roads.indexOf(R), 1); rebuildBlank(); edSave(); toast(R.name + ' borrada'); } } return true; }
+  if (t === 'del') { const id = pick3(e.clientX, e.clientY); if (id) removeId(id); else { const R = pickRoad(e.clientX, e.clientY); if (R) removeId('road:' + R.id); } return true; }
   if (e3Tool(t, e)) return true;
   if (TOOLS[t] && t !== 'sel' && t !== 'nave') { newDev(t, e.clientX, e.clientY); return true; }
   return false; }
@@ -2412,7 +2361,7 @@ function applyScale(real) { const S = ED.scale, pl = ED.plano; if (!S || S.lengt
   const k = real / d, mid = [(S[0][0] + S[1][0]) / 2, (S[0][1] + S[1][1]) / 2];
   pl.w = +(pl.w * k).toFixed(2); pl.h = +(pl.h * k).toFixed(2); pl.cx = +(mid[0] + (pl.cx - mid[0]) * k).toFixed(2); pl.cz = +(mid[1] + (pl.cz - mid[1]) * k).toFixed(2);
   ED.scale = null; clearPrev(); rebuildBlank(); edSave(); setTool('sel'); renderPlano(); toast(`Escala lista: el plano mide ${Math.round(pl.w)} × ${Math.round(pl.h)} m`); flyTo(HOME(), 1); }
-function renderPlano() { const el = $('#planopanel'); if (!el) return; el.hidden = !(BLANK && ED.on && (ED.tool === 'plano' || ED.tool === 'escala' || ED.tool === 'calle'));
+function renderPlano() { const el = $('#planopanel'); if (!el) return; el.hidden = !(ED.on && (ED.tool === 'calle' || (BLANK && (ED.tool === 'plano' || ED.tool === 'escala'))));
   if (el.hidden) return; const pl = ED.plano;
   let h = '<div class="pph"><b>Base de la maqueta</b><button class="x" data-pp="close" aria-label="Cerrar">×</button></div>';
   if (ED.tool === 'calle') h += `<p class="ehelp">Tocá el recorrido de la calle punto por punto. Se une sola a las otras calles.</p><label class="ef"><span>Ancho</span><select data-pp="roadw">${[6, 9, 12, 18].map(w => `<option value="${w}" ${ED.roadW === w ? 'selected' : ''}>${w} m${w === 6 ? ' · interna' : w === 9 ? ' · calle' : w === 12 ? ' · avenida' : ' · ruta'}</option>`).join('')}</select></label>`;
@@ -2979,7 +2928,7 @@ function blocked(t, w) { if (t.ghostN > 0) { t.ghostN--; return false; } const p
   if (hit) { t.blkN = (t.blkN || 0) + 1; t.blkBy = hit;
     // solo se destraba si es un bloqueo cruzado de verdad (A espera a B y B espera a A); una fila normal se respeta
     if (t.blkN > 160 && t.blkN % 40 === 0) { const cyc = [t]; let c = hit; while (c && !cyc.includes(c) && cyc.length < 8) { cyc.push(c); c = c.blkN > 0 ? c.blkBy : null; }
-      if (c === t && cyc.every(v => prio(t) <= prio(v))) { t.ghostN = 110; t.blkN = 0; } }
+      if (c === t) { const ok = cyc.filter(v => !aheadSame(v)), pick = (ok.length ? ok : cyc).reduce((a, v) => prio(v) < prio(a) ? v : a); if (pick === t) { t.ghostN = 110; t.blkN = 0; } } }
     return true; }
   t.blkN = 0; t.blkBy = null; return false; }
 // geometrías: auto, camioneta, furgón de reparto y el furgón de la instaladora con su marca
@@ -3326,7 +3275,7 @@ function armItem(k) { const it = ALL3.find(x => x.k === k); if (!it) return; if 
 function fillHere() { const e = SEL && entity(SEL); let N = e && e.t === 'nave' ? e.N : e && e.t === 'item' ? e.N : NAVES.find(n => n.cut) || (WALK.on && WALK.N); if (!N) { toast('Tocá primero un galpón'); return; }
   const before = snapInner(N), n = fillRows(N, innerOf(N).items); buildNave(N); edSave(); recInner(N, before, 'Filas agregadas en ' + N.code); toast(n ? n + (n > 1 ? ' filas agregadas en ' : ' fila agregada en ') + N.full : 'No entran más filas en ' + N.full); }
 function renderCat(keepScroll) { const el = $('#e3cat'); if (!el) return; const list = el.querySelector('.e3list'), sc = list ? list.scrollTop : 0, q = CATQ.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const vis = it => (!BLANK && ['calle', 'plano', 'escala'].includes(it.k)) ? false : true;
+  const vis = it => (!BLANK && ['plano', 'escala'].includes(it.k)) ? false : true;
   const tile = it => `<button class="e3tile ${CATK === it.k ? 'on' : ''}" data-ck3="${it.k}" title="${escH(it.n)}">${(CIC[it.ic] || CIC.box).replace(/width="\d+" height="\d+"/, 'width="20" height="20"')}<span>${escH(it.n)}</span></button>`;
   let h = '';
   if (q) { const res = ALL3.filter(vis).filter(it => (it.n + ' ' + it.tags + ' ' + it.c).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q)); h = res.length ? `<div class="e3cg"><div class="e3ch">Resultados</div><div class="e3tiles">${res.map(tile).join('')}</div></div>` : '<p class="e3none">No encontré nada con ese nombre.</p>'; }
@@ -3865,88 +3814,353 @@ panelContent = (o => function (id) { const r = o(id); const d = DEV.find(x => x.
       r.body += `<div class="edbox" style="border-style:solid"><b>Dónde está conectado</b>${rutaTxt(cid, ru)}<button class="btn" data-cabgo="${cid}|${iid}|${pid}">Ver en el rack</button></div>`; return r; } }
   if (canEdit() && ED.on) r.body += `<p class="ehelp">Todavía no figura en ningún rack. Abrí el rack, tocá el puerto y elegí este equipo.</p>`;
   return r; })(panelContent);
-/* ---------- casillas del predio (balanza, portería): se entra caminando, se ven por dentro y se editan como un lugar más ---------- */
+/* ---------- boca de la portería: un vehículo por vez cruza la entrada (así no se traban ni se encimen) ---------- */
+const ENT = { by: null };
+function entGate(t) { if (t.state === 'idle' || t.state === 'docked' || t.state === 'parked' || t.wait > 0) return true;
+  const w = t.path && t.path[t.idx], mine = w && (w.hold || w.rel);
+  if (!mine) { if (ENT.by === t) ENT.by = null; return true; }
+  const b = ENT.by; if (b && b !== t) { const bw = b.path && b.path[b.idx]; if (b.state === 'idle' || !bw || !(bw.hold || bw.rel)) ENT.by = null;
+    else if ((b.blkN || 0) > 200 && b.blkBy === t) ENT.by = null; }
+  if (!ENT.by) ENT.by = t; return ENT.by === t; }
+stepTruck = (o => function (t, dt) { if (entGate(t)) o(t, dt); })(stepTruck);
+// para destrabar un cruce se elige uno que no tenga adelante otro yendo para el mismo lado (así no se enciman)
+const aheadSame = t => { const h = t.head, fx = Math.cos(h), fz = -Math.sin(h);
+  for (const o of TRUCKS.concat(VEH)) { if (o === t || o.state === 'idle' || o.state === 'docked' || o.state === 'parked') continue; const dx = o.x - t.x, dz = o.z - t.z, a = dx * fx + dz * fz;
+    if (a <= 0 || a > 13) continue; if (Math.abs(-dx * fz + dz * fx) > 2.4) continue; if (Math.cos(o.head - h) > 0.6) return true; }
+  return false; };
+stepVeh = (o => function (v, dt) { if (entGate(v)) o(v, dt); })(stepVeh);
+
+/* ---------- predio editable: calles, alambrado, columnas de luz, árboles, edificios, balanza, casillas y portería ---------- */
+// marco local de una pieza (para girar y mover cosas con ella)
+const L2W = (p, lx, lz) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0); return [p.x + a[0] * lx + b[0] * lz, p.z + a[1] * lx + b[1] * lz]; };
+const W2L = (p, x, z) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0), dx = x - p.x, dz = z - p.z; return [dx * a[0] + dz * a[1], dx * b[0] + dz * b[1]]; };
+const D2W = (p, lx, lz) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0); return [a[0] * lx + b[0] * lz, a[1] * lx + b[1] * lz]; };
+const D2L = (p, x, z) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0); return [x * a[0] + z * a[1], x * b[0] + z * b[1]]; };
+const POR0 = BLANK ? [0, 0] : px(61.5, 726.6), BAL0 = BLANK ? [0, 0] : px(156, 720);
+// piezas nuevas del catálogo
+Object.assign(PK, {
+  edif: { n: 'Edificio', tags: 'oficina deposito construccion empresa', out: true }, tanque: { n: 'Tanque', tags: 'agua silo deposito', out: true },
+  palletz: { n: 'Pallets en el patio', tags: 'tarimas estiba', out: true }, balanza: { n: 'Balanza de camiones', tags: 'bascula pesaje', out: true },
+  casilla: { n: 'Casilla', tags: 'garita caseta control', out: true }, porteria: { n: 'Portería', tags: 'acceso entrada garita barrera', out: true },
+  arboleda: { n: 'Fila de árboles', tags: 'cortina arboles', out: true } });
+Object.assign(PRE3, { edif: 'EDI-', tanque: 'TQ-', palletz: 'PZ-', balanza: 'BZ-', casilla: 'CS-', porteria: 'PO-', arboleda: 'FA-' });
+{ const items = [['calle', 'Calle o alambrado', 'road', 'camino ruta cerco alambrado'], ['prop:edif', 'Edificio', 'nave', PK.edif.tags], ['prop:balanza', 'Balanza de camiones', 'zone', PK.balanza.tags], ['prop:casilla', 'Casilla', 'nave', PK.casilla.tags],
+    ['prop:porteria', 'Portería', 'nave', PK.porteria.tags], ['prop:tanque', 'Tanque', 'zone', PK.tanque.tags], ['prop:arboleda', 'Fila de árboles', 'tree', PK.arboleda.tags], ['prop:palletz', 'Pallets en el patio', 'box', PK.palletz.tags]];
+  CAT3.splice(Math.max(0, CAT3.findIndex(c => c[0] === 'Exterior y decoración')), 0, ['Predio', items]); items.forEach(([k, n, ic, tags]) => { if (!ALL3.some(x => x.k === k)) ALL3.push({ k, n, ic, tags, c: 'Predio' }); }); }
+// medidas que se cambian desde la ficha: [clave, nombre, paso, mín, máx, por defecto]
+const PRM = { edif: [['w', 'Ancho', 1, 3, 400, 30], ['d', 'Largo', 1, 3, 400, 20], ['h', 'Alto', 0.5, 2.5, 40, 8], ['pisos', 'Filas de ventanas', 1, 0, 8, 1]],
+  tanque: [['r', 'Radio', 0.5, 1, 25, 6], ['h', 'Alto', 0.5, 1, 40, 10]], palletz: [['cols', 'Columnas', 1, 1, 40, 4], ['rows', 'Filas', 1, 1, 80, 6]],
+  balanza: [['L', 'Largo', 1, 8, 36, 20]], casilla: [['w', 'Ancho', 0.5, 2.5, 20, 8.5], ['d', 'Fondo', 0.5, 2, 12, 3.4], ['door', 'Puerta (corrida desde el centro)', 0.5, -9, 9, 3.25]],
+  arboleda: [['n', 'Árboles', 1, 1, 150, 10], ['sp', 'Separación', 0.5, 2, 40, 8]], lamp: [['h', 'Altura', 0.5, 4, 25, 10]] };
+const pv = (p, k) => { const f = (PRM[p.k] || []).find(q => q[0] === k); return p[k] !== undefined && p[k] !== null ? p[k] : f ? f[5] : undefined; };
+
+// geometría de cada pieza, en su marco local
+function treeAt(g, x, z, s, r) { g.prism(x, 0, z, 0.3 * s, 2 * s, 6, P.trunk); g.blob(x, 3.9 * s, z, 2.4 * s, r() > 0.5 ? P.tree : P.tree2, { rings: 4, seg: 7, sy: 0.92, rot: r() * 3 }); g.blob(x + 0.8 * s, 4.6 * s, z + 0.3 * s, 1.5 * s, r() > 0.5 ? P.tree2 : P.tree, { rings: 3, seg: 7 }); }
+function porGeo(g, cas) { const dk = isDark(), WH = dk ? '#9AA6B0' : '#F2F4F5', RED = '#C8352E', YEL = '#E3B436', GRY = dk ? '#6D7881' : '#858E95', L = (X, Y) => [X - 61.5, Y - 726.6];
+  const RB = (x0, x1, y0, y1) => { const [a, b] = L(x0, y0), [c, d] = L(x1, y1); return [a, b, c, d]; };
+  if (cas) { const [a, b, c, d] = RB(55.6, 65.4, 737.4, 742.4); g.box(a, 0, b, c, 3, d, GRY, { top: P.roof, ao: 0.9 }); g.box(a - 0.04, 1.05, b - 0.04, c + 0.04, 2.55, d + 0.04, P.glass, { e: P.glassE * 0.7 }); g.box(a - 0.2, 3, b - 0.2, c + 0.2, 3.25, d + 0.2, P.parapet);
+    const [e0] = L(57.1, 0), [e1] = L(58.1, 0); g.box(e0, 0, d + 0.04, e1, 2.1, d + 0.11, P.door, { ao: 0.95 }); g.box(e0 - 0.06, 2.1, d + 0.04, e1 + 0.06, 2.18, d + 0.12, P.frame);
+    g.box(c - 1.6, 2.2, d + 0.04, c - 0.6, 2.75, d + 0.6, '#D9DEE2', { ao: 1 }); return g; }
+  for (const x of [58.4, 64.6]) for (const y of [716.6, 726.6, 736.6]) { const [a, b] = L(x, y); g.box(a - 0.32, 0, b - 0.32, a + 0.32, 6.1, b + 0.32, WH, { ao: 0.95 }); }
+  { const [a, b, c, d] = RB(57.4, 65.6, 715.6, 737.6); g.box(a, 6.1, b, c, 6.9, d, WH, { top: WH, ao: 1 }); g.box(a - 0.06, 6.1, b - 0.06, c + 0.06, 6.42, d + 0.06, RED, { ao: 1 });
+    // carteles de ingreso y salida colgando del techo
+    for (const [y, col, e] of [[731, '#2E9E5B', 0.6], [722, '#C8352E', 0.6]]) { const [, z] = L(0, y); g.box(c - 0.1, 5.3, z - 1.2, c + 0.05, 5.95, z + 1.2, '#20282F'); g.box(c + 0.05, 5.4, z - 1.05, c + 0.07, 5.85, z + 1.05, col, { e }); } }
+  { const [a, b, c, d] = RB(52.5, 71.5, 725.9, 727.3); g.box(a, 0, b, c, 0.25, d, YEL, { top: YEL }); }
+  // sendas peatonales y líneas de pare
+  for (const y0 of [729, 718.6]) for (let i = 0; i < 6; i++) { const [a, b, c, d] = RB(74.5, 76.5, y0 + i * 0.75, y0 + i * 0.75 + 0.4); g.box(a, 0.03, b, c, 0.05, d, P.mark, { ao: 1 }); }
+  for (const [y0, y1] of [[727.6, 734], [718.6, 725.6]]) { const [a, b, c, d] = RB(57.6, 57.9, y0, y1); g.box(a, 0.03, b, c, 0.05, d, P.mark, { ao: 1 }); }
+  for (const [x0, x1, y0, y1] of [[54.5, 56.9, 743.2, 743.35], [58.3, 66, 743.2, 743.35], [54.5, 54.65, 743.2, 748.6], [65.85, 66, 743.2, 748.6], [54.5, 59, 748.45, 748.6]]) { const [a, b, c, d] = RB(x0, x1, y0, y1); g.box(a, 0, b, c, 2.1, d, GRY, { ao: 1 }); }
+  for (const x of [60.5, 62, 63.5]) { const [a, b, c, d] = RB(x - 0.25, x + 0.25, 748.2, 748.9); g.box(a, 0, b, c, 1.1, d, '#B8C0C6', { ao: 1 }); }
+  for (const [x, y] of [[66, 736.2], [68, 716.8]]) { const [a, b] = L(x, y); g.box(a - 0.4, 0, b - 0.4, a + 0.4, 1.2, b + 0.4, P.devD); }
+  return g; }
+function casExtGeo(g, p) { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, dc = clamp(pv(p, 'door'), -w + 0.7, w - 0.7);
+  g.box(-w, 0, -d, w, 3, d, P.wall, { top: P.roof }); g.win(-w, -d, w, d, 1.1, 1.3, P.glass, P.glassE); g.box(-w - 0.3, 3, -d - 0.3, w + 0.3, 3.3, d + 0.3, P.parapet);
+  g.box(dc - 0.5, 0, -d - 0.07, dc + 0.5, 2.1, -d, P.door, { ao: 0.95 }); g.box(dc - 0.56, 2.1, -d - 0.08, dc + 0.56, 2.18, -d, P.frame); g.box(dc - 0.7, 0, -d - 0.9, dc + 0.7, 0.15, -d, P.parapet);
+  g.box(-w + 0.6, 2.2, d, -w + 1.5, 2.75, d + 0.45, '#D9DEE2', { ao: 1 }); return g; }
+propGeo = (o => p => { const k = p.k, g = new Geo(), r = seeded((p.seed || 7) * 131 + 17);
+  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, h = pv(p, 'h'), col = p.col === 'hvac' ? P.hvac : P.wall; g.box(-w, 0, -d, w, h, d, col, { top: P.roof, ao: 0.86 });
+    for (let i = 0; i < pv(p, 'pisos'); i++) { const y = 1.6 + i * 4; if (y + 2.4 > h - 0.3) break; g.win(-w, -d, w, d, y, 2.4, P.glass, P.glassE); }
+    g.box(-w - 0.05, h, -d - 0.05, w + 0.05, h + 0.6, -d + 0.4, P.parapet); g.box(-w - 0.05, h, d - 0.4, w + 0.05, h + 0.6, d + 0.05, P.parapet); g.box(-w - 0.05, h, -d, -w + 0.4, h + 0.6, d, P.parapet); g.box(w - 0.4, h, -d, w + 0.05, h + 0.6, d, P.parapet);
+    if (p.techo === 'solar') { for (let x = -w + 4; x < w - 8; x += 7.4) for (let z = -d + 4; z < d - 6; z += 5.4) g.box(x, h + 0.25, z, x + 7, h + 0.55, z + 5, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 }); }
+    else if (p.techo === 'sky') { for (let z = -d + 6; z < d - 4; z += 9) g.box(-w + 4, h + 0.02, z, w - 4, h + 0.28, z + 1.4, P.sky, { ao: 1 }); }
+    for (let i = 0; i < (p.hvac || 0); i++) g.box(-w + 5 + i * 9, h, -d + 4, -w + 10 + i * 9, h + 1.3, -d + 8, P.hvac);
+    if (p.marq) g.box(-6, 0, d, 6, 3.6, d + 3, P.parapet);
+    return g; }
+  if (k === 'tanque') { const R = pv(p, 'r'), h = pv(p, 'h'); g.prism(0, 0, 0, R, h, 18, P.hvac, { top: mulc(C(P.hvac), 1.08) }); g.box(R - 0.1, 0, -0.3, R + 0.15, h + 0.9, 0.3, P.pole); g.prism(0, h, 0, R * 0.25, 0.6, 10, P.parapet); return g; }
+  if (k === 'palletz') { const cols = pv(p, 'cols'), rows = pv(p, 'rows'), dx = p.dx || 2.2, dz = p.dz || 4.4;
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { if (r() < 0.2) continue; const x = i * dx, z = j * dz, n = 1 + (r() < 0.45 ? 1 : 0);
+      for (let q = 0; q < n; q++) { g.box(x, q * 1.6, z, x + 1.5, q * 1.6 + 0.22, z + 1.3, P.pbase); g.box(x + 0.08, q * 1.6 + 0.22, z + 0.06, x + 1.42, q * 1.6 + 1.5, z + 1.24, P.pallet, { ao: 0.9 }); } }
+    return g; }
+  if (k === 'arboleda') { const n = Math.round(pv(p, 'n')), sp = pv(p, 'sp'); for (let i = 0; i < n; i++) treeAt(g, (i - (n - 1) / 2) * sp + (r() - 0.5) * sp * 0.3, (r() - 0.5) * 3, 0.95 + r() * 0.35, r); return g; }
+  if (k === 'balanza') { const L = pv(p, 'L') / 2; g.box(-L, 0, -1.8, L, 0.18, 1.8, P.parapet, { top: mulc(C(P.road), 1.35) });
+    for (let x = -L; x <= L + 0.05; x += 4) g.box(x - 0.08, 0.18, -1.8, x + 0.08, 0.2, 1.8, P.markY, { ao: 1 });
+    g.box(-L - 0.4, 0, -2.2, L + 0.4, 0.22, -1.8, P.markY); g.box(-L - 0.4, 0, 1.8, L + 0.4, 0.22, 2.2, P.markY);
+    // visor del peso y semáforo a la salida
+    g.box(-L - 1.3, 0, -2.75, -L - 1.15, 2.6, -2.6, P.pole); g.box(-L - 1.5, 2.0, -3.1, -L - 0.95, 2.7, -2.75, '#20282F'); g.box(-L - 1.45, 2.1, -2.76, -L - 1.0, 2.6, -2.74, '#3FD07A', { e: 0.9 });
+    g.box(L + 1.15, 0, -2.75, L + 1.3, 3.2, -2.6, P.pole); g.box(L + 1.0, 2.4, -2.95, L + 1.45, 3.4, -2.75, '#20282F'); g.box(L + 1.1, 3.0, -2.97, L + 1.35, 3.25, -2.95, '#E2483D', { e: 0.8 }); g.box(L + 1.1, 2.55, -2.97, L + 1.35, 2.8, -2.95, '#2FB36B', { e: 0.8 }); return g; }
+  if (k === 'casilla') return casExtGeo(g, p);
+  if (k === 'porteria') return porGeo(g, false);
+  if (k === 'lamp') { const H = pv(p, 'h'); g.box(-0.45, 0, -0.45, 0.45, 0.5, 0.45, P.pole); g.prism(0, 0.5, 0, 0.2, H - 0.5, 8, P.pole); g.prism(0, H - 1.2, 0, 0.14, 1.3, 8, P.pole);
+    g.box(-0.1, H + 0.05, -0.1, 2.4, H + 0.22, 0.1, P.pole); g.box(1.5, H - 0.12, -0.45, 2.7, H + 0.12, 0.45, P.pole); g.box(1.6, H - 0.16, -0.38, 2.6, H - 0.1, 0.38, P.lamp, { e: P.lampE || 0.4, ao: 1 });
+    if (P.pool) g.disc(2.6, 0, 6, 0.05, P.pool, 1, 16); return g; }
+  return o(p); })(propGeo);
+// la caseta de la portería va aparte (se esconde cuando entrás)
+function porCasObj(p) { obj(p.id + '~c', { geo: porGeo(new Geo(), true), layer: 'cli', pick: false, kind: 'prop', model: propModel(p) }); }
+rmAnyRaw = (o => function (id) { const r = o(id); rmObj(id + '~c'); return r; })(rmAnyRaw);
+
+// al mover la balanza, la casilla o la portería, se llevan sus equipos y lo que tienen adentro
+const PCARRY = { casilla: p => { const w = pv(p, 'w') / 2 + 0.6, d = pv(p, 'd') / 2 + 0.6; return [-w, w, -d, d]; }, balanza: p => { const L = pv(p, 'L') / 2 + 1.6; return [-L, L, -3.2, 3.2]; }, porteria: () => [-10.5, 6, -12, 23] };
+function carryAlong(p, ps, fp) { const old = { x: ps[0], z: ps[1], yaw: ps[2] }, dy = (p.yaw || 0) - ps[2];
+  const mv = q => { const [lx, lz] = W2L(old, q.x, q.z); if (lx < fp[0] || lx > fp[1] || lz < fp[2] || lz > fp[3]) return false; const [x, z] = L2W(p, lx, lz); q.x = x; q.z = z; if (typeof q.yaw === 'number') q.yaw += dy; return true; };
+  for (const d of DEV) { if (!mv(d)) continue; if (d.wn) { const a = D2L(old, d.wn[0], d.wn[1]); d.wn = D2W(p, a[0], a[1]); } markMoved(d); devObj(d); devTag(d); }
+  for (const q of PROPS) { if (q === p || PCARRY[q.k]) continue; if (mv(q)) { q._skip = true; propObj(q); delete q._skip; } }
+  let fb = false; for (const F of FIBS) F.pts.forEach((v, i) => { const [lx, lz] = W2L(old, v[0], v[1]); if (lx < fp[0] || lx > fp[1] || lz < fp[2] || lz > fp[3]) return; F.pts[i] = L2W(p, lx, lz); fb = true; }); if (fb) buildFiber(); }
+// la ficha de las piezas del predio dice qué son
+e3Panel = (o => function (e) { const c = o(e); if (c && e.t === 'prop' && (PBIG[e.P.k] || e.P.k === 'lamp')) { c.ey = PK[e.P.k].n + ' · ' + e.P.id; c.s = 'Pieza del predio'; } return c; })(e3Panel);
+propObj = (o => function (p) { const f = PCARRY[p.k]; if (f && !p._skip) { const ps = p._pose; if (ps && (ps[0] !== p.x || ps[1] !== p.z || ps[2] !== (p.yaw || 0))) carryAlong(p, ps, f(p)); p._pose = [p.x, p.z, p.yaw || 0]; }
+  o(p); if (p.k === 'porteria') porCasObj(p); })(propObj);
+
+// lo que se elige con precisión (no por la caja entera) y lo que frena al caminar
+function solids(p) { const k = p.k;
+  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2; return [{ mn: [-w, 0, -d], mx: [w, pv(p, 'h') + 0.6, d] }]; }
+  if (k === 'tanque') { const R = pv(p, 'r') * 0.92; return [{ mn: [-R, 0, -R], mx: [R, pv(p, 'h'), R] }]; }
+  if (k === 'lamp') return [{ mn: [-0.25, 0, -0.25], mx: [0.25, pv(p, 'h'), 0.25] }];
+  if (k === 'porteria') { const B = []; for (const x of [58.4, 64.6]) for (const y of [716.6, 726.6, 736.6]) { const lx = x - 61.5, lz = y - 726.6; B.push({ mn: [lx - 0.32, 0, lz - 0.32], mx: [lx + 0.32, 6.1, lz + 0.32] }); } B.push({ mn: [-4.1, 6.1, -11], mx: [4.1, 6.9, 11], roof: 1 }); return B; }
+  if (k === 'truck' || k === 'cont') { const ob = OBJID.get(p.id); if (ob && ob.geo && ob.geo.mn) return [{ mn: ob.geo.mn.slice(), mx: ob.geo.mx.slice() }]; }
+  return null; }
+function pickBoxes(p) { const k = p.k, S = solids(p) || [];
+  if (k === 'balanza') { const L = pv(p, 'L') / 2; return [{ mn: [-L, 0, -2.2], mx: [L, 0.8, 2.2] }]; }
+  if (k === 'casilla') { if (WALK.on && WALK.C && WALK.C.pid === p.id) return []; const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2; return [{ mn: [-w, 0, -d], mx: [w, 3.3, d] }]; }
+  if (k === 'porteria') { const B = S.slice(); if (!(WALK.on && WALK.C && WALK.C.pid === p.id)) B.push({ mn: [-5.9, 0, 10.8], mx: [3.9, 3.25, 15.8] }); B.push({ mn: [-9, 0, -0.7], mx: [10, 0.6, 0.7] }); return B; }
+  if (k === 'arboleda') { const n = Math.round(pv(p, 'n')), sp = pv(p, 'sp'), B = []; for (let i = 0; i < n; i++) { const x = (i - (n - 1) / 2) * sp; B.push({ mn: [x - 2.6, 0, -2.8], mx: [x + 2.6, 6.8, 2.8] }); } return B; }
+  if (k === 'palletz') { const ob = OBJID.get(p.id); return ob && ob.geo && ob.geo.mn ? [{ mn: ob.geo.mn.slice(), mx: ob.geo.mx.slice() }] : []; }
+  return S; }
+const PBIG = { edif: 1, tanque: 1, porteria: 1, casilla: 1, balanza: 1, arboleda: 1, palletz: 1 };
+const lray = (p, r) => { const a = axX(p.yaw || 0), b = axZ(p.yaw || 0), [ox, oz] = W2L(p, r.o[0], r.o[2]); return { o: [ox, r.o[1] - (p.y || 0), oz], d: [r.d[0] * a[0] + r.d[2] * a[1], r.d[1], r.d[0] * b[0] + r.d[2] * b[1]] }; };
+function propRayT(p, r) { const l = lray(p, r); let bt = null; for (const b of pickBoxes(p)) { const t = rayBox(l.o, l.d, b.mn, b.mx); if (t !== null && t > 0 && (bt === null || t < bt)) bt = t; } return bt; }
+function bigOff(fn) { const off = []; for (const q of PROPS) if (PBIG[q.k]) { const ob = OBJID.get(q.id); if (ob && ob.pick) { ob.pick = false; off.push(ob); } } try { return fn(); } finally { off.forEach(ob => ob.pick = true); } }
+pickAt = (o => function (x, y) { const id = bigOff(() => o(x, y)), r = ray(view(W, H), x, y, W, H); let bt = Infinity, best = id;
+  if (id) { const ob = OBJID.get(id); if (ob) { const [mn, mx] = aabb(ob), t = rayBox(r.o, r.d, mn, mx); if (t !== null) bt = t; } }
+  for (const q of PROPS) { if (!PBIG[q.k]) continue; const ob = OBJID.get(q.id); if (!ob || !ob.on) continue; const t = propRayT(q, r); if (t !== null && t < bt) { bt = t; best = q.id; } }
+  return best; })(pickAt);
+pickAim = (o => function (x, y) { return bigOff(() => o(x, y)) || (() => { const id = pickAt(x, y); return id && PROPS.some(q => q.id === id) ? id : null; })(); })(pickAim);
+
+// casillas (balanza, portería y las que se agreguen): se entra por la puerta y se ven por dentro
 const CT = 0.15;
-const CAS = BLANK ? [] : [
-  { id: 'bal', n: 'Casilla de la balanza', r: [157.5, 166, 722.5, 725.9], h: 3, door: { s: 'n', a: 164.5, b: 165.5 }, win: 'w', wy: [1.1, 2.4] },
-  { id: 'por', n: 'Portería', r: [55.6, 65.4, 737.4, 742.4], h: 3, door: { s: 's', a: 57.1, b: 58.1 }, win: 'band', wy: [1.05, 2.55] }
-].map(C => { const [x0, z0] = px(C.r[0], C.r[2]), [x1, z1] = px(C.r[1], C.r[3]), ns = C.door.s === 'n' || C.door.s === 's';
-  const a = ns ? px(C.door.a, 0)[0] : px(0, C.door.a)[1], b = ns ? px(C.door.b, 0)[0] : px(0, C.door.b)[1]; return { ...C, x0, x1, z0, z1, door: { s: C.door.s, a, b } }; });
-const casAt = (x, z, y = 1.7) => CAS.find(C => y < C.h && x > C.x0 && x < C.x1 && z > C.z0 && z < C.z1);
-// paredes por dentro, con los huecos de las ventanas y la puerta: sirven para dibujar y para apuntar
-function casWalls(C) { if (C._w) return C._w; const out = [], h = C.h - 0.12;
-  const sides = { n: [C.x0, C.x1], s: [C.x0, C.x1], w: [C.z0 + CT, C.z1 - CT], e: [C.z0 + CT, C.z1 - CT] };
-  for (const sd of ['n', 's', 'w', 'e']) { const [s0, s1] = sides[sd], ns = sd === 'n' || sd === 's', holes = [], D = C.door;
-    const full0 = ns ? C.x0 : C.z0, full1 = ns ? C.x1 : C.z1;
+const CASD = { casilla: { win: 'w', wy: [1.1, 2.4], h: 3, l: p => { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2; return [-w, w, -d, d]; }, door: p => { const w = pv(p, 'w') / 2, c = clamp(pv(p, 'door'), -w + 0.7, w - 0.7); return { s: 'n', a: c - 0.5, b: c + 0.5 }; }, furn: 'bal', ext: p => p.id },
+  porteria: { win: 'band', wy: [1.05, 2.55], h: 3, l: () => [-5.9, 3.9, 10.8, 15.8], door: () => ({ s: 's', a: -4.4, b: -3.4 }), furn: 'por', ext: p => p.id + '~c' } };
+const CASC = new Map();
+function casList() { const out = []; for (const p of PROPS) { const D = CASD[p.k]; if (!D) continue; const key = JSON.stringify([p.w, p.d, p.door, p.name]); let C = CASC.get(p.id);
+    if (!C || C.key !== key) { C = { pid: p.id, key, p, n: p.name || (p.k === 'porteria' ? 'Portería' : 'Casilla'), l: D.l(p), h: D.h, door: D.door(p), win: D.win, wy: D.wy, furn: p.furn || D.furn, ext: D.ext(p) }; CASC.set(p.id, C); }
+    C.p = p; out.push(C); } return out; }
+const casLoc = (C, x, z) => W2L(C.p, x, z);
+const casAt = (x, z, y = 1.7) => casList().find(C => { if (y >= C.h) return false; const [lx, lz] = casLoc(C, x, z), [x0, x1, z0, z1] = C.l; return lx > x0 && lx < x1 && lz > z0 && lz < z1; });
+function casWalls(C) { if (C._w) return C._w; const out = [], h = C.h - 0.12, [X0, X1, Z0, Z1] = C.l;
+  const sides = { n: [X0, X1], s: [X0, X1], w: [Z0 + CT, Z1 - CT], e: [Z0 + CT, Z1 - CT] };
+  for (const sd of ['n', 's', 'w', 'e']) { const [s0, s1] = sides[sd], ns = sd === 'n' || sd === 's', holes = [], D = C.door, full0 = ns ? X0 : Z0, full1 = ns ? X1 : Z1;
     if (D.s === sd) holes.push([D.a, D.b, 0, 2.1]);
     if (C.win === 'w') { for (let s = full0 + 0.5; s + 1.7 <= full1 - 0.3; s += 2.2) { if (D.s === sd && s < D.b + 0.05 && s + 1.7 > D.a - 0.05) continue; holes.push([s, s + 1.7, C.wy[0], C.wy[1]]); } }
-    else { const a = full0 + 0.3, b = full1 - 0.3; if (D.s === sd) { holes.push([a, D.a - 0.1, C.wy[0], C.wy[1]], [D.b + 0.1, b, C.wy[0], C.wy[1]]); } else holes.push([a, b, C.wy[0], C.wy[1]]); }
+    else { const a = full0 + 0.3, b = full1 - 0.3; if (D.s === sd) holes.push([a, D.a - 0.1, C.wy[0], C.wy[1]], [D.b + 0.1, b, C.wy[0], C.wy[1]]); else holes.push([a, b, C.wy[0], C.wy[1]]); }
     const bp = [...new Set([s0, s1, ...holes.flatMap(q => [q[0], q[1]])].filter(v => v >= s0 && v <= s1))].sort((u, v) => u - v);
     for (let i = 0; i < bp.length - 1; i++) { const p = bp[i], q = bp[i + 1]; if (q - p < 0.005) continue;
       const hy = holes.filter(o => o[0] <= p + 1e-6 && o[1] >= q - 1e-6).map(o => [o[2], o[3]]).sort((u, v) => u[0] - v[0]); let y = 0;
-      const put = (y0, y1) => { if (y1 - y0 < 0.01) return; const f = sd === 'n' ? [C.z0, C.z0 + CT] : sd === 's' ? [C.z1 - CT, C.z1] : sd === 'w' ? [C.x0, C.x0 + CT] : [C.x1 - CT, C.x1];
+      const put = (y0, y1) => { if (y1 - y0 < 0.01) return; const f = sd === 'n' ? [Z0, Z0 + CT] : sd === 's' ? [Z1 - CT, Z1] : sd === 'w' ? [X0, X0 + CT] : [X1 - CT, X1];
         out.push(ns ? { mn: [p, y0, f[0]], mx: [q, y1, f[1]], k: 'cwall', sill: !!hy.length } : { mn: [f[0], y0, p], mx: [f[1], y1, q], k: 'cwall', sill: !!hy.length }); };
       for (const [a, b] of hy) { put(y, a); y = Math.max(y, b); } put(y, h); } }
   return (C._w = out); }
-function casBoxes(C, inside) { if (!inside) return [{ mn: [C.x0, 0, C.z0], mx: [C.x1, C.h, C.z1], k: 'cwall' }];
-  return [{ mn: [C.x0, -1, C.z0], mx: [C.x1, 0.07, C.z1], k: 'cfloor' }, { mn: [C.x0, C.h - 0.12, C.z0], mx: [C.x1, C.h + 1, C.z1], k: 'cceil' }, ...casWalls(C)]; }
-function casGeo(C) { const g = new Geo(), dk = isDark(), WALLc = dk ? '#7D8892' : '#EEF0F1', FL = dk ? '#59626B' : '#C9CCC8', CE = dk ? '#6A757E' : '#F6F7F7', FR = '#59636C';
-  g.box(C.x0, 0, C.z0, C.x1, 0.07, C.z1, FL, { top: FL, ao: 1 });
-  for (let x = C.x0 + 0.6; x < C.x1; x += 0.6) g.box(x - 0.006, 0.07, C.z0 + CT, x + 0.006, 0.072, C.z1 - CT, mulc(C2(FL), 0.9), { ao: 1 });
-  g.box(C.x0, C.h - 0.12, C.z0, C.x1, C.h, C.z1, CE, { bottom: true, ao: 1 });
-  const cx = (C.x0 + C.x1) / 2, cz = (C.z0 + C.z1) / 2; g.box(cx - 0.6, C.h - 0.14, cz - 0.3, cx + 0.6, C.h - 0.12, cz + 0.3, '#FFFFFF', { e: 0.95, bottom: true, ao: 1 });
+function casBoxes(C, inside) { const [X0, X1, Z0, Z1] = C.l; if (!inside) return [{ mn: [X0, 0, Z0], mx: [X1, C.h, Z1], k: 'cwall' }];
+  return [{ mn: [X0, -1, Z0], mx: [X1, 0.07, Z1], k: 'cfloor' }, { mn: [X0, C.h - 0.12, Z0], mx: [X1, C.h + 1, Z1], k: 'cceil' }, ...casWalls(C)]; }
+function casGeo(C) { const g = new Geo(), dk = isDark(), WALLc = dk ? '#7D8892' : '#EEF0F1', FL = dk ? '#59626B' : '#C9CCC8', CE = dk ? '#6A757E' : '#F6F7F7', FR = '#59636C', [X0, X1, Z0, Z1] = C.l;
+  g.box(X0, 0, Z0, X1, 0.07, Z1, FL, { top: FL, ao: 1 });
+  for (let x = X0 + 0.6; x < X1; x += 0.6) g.box(x - 0.006, 0.07, Z0 + CT, x + 0.006, 0.072, Z1 - CT, mulc(C2(FL), 0.9), { ao: 1 });
+  g.box(X0, C.h - 0.12, Z0, X1, C.h, Z1, CE, { bottom: true, ao: 1 });
+  const cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2; g.box(cx - 0.6, C.h - 0.14, cz - 0.3, cx + 0.6, C.h - 0.12, cz + 0.3, '#FFFFFF', { e: 0.95, bottom: true, ao: 1 });
   for (const b of casWalls(C)) { g.box(b.mn[0], b.mn[1], b.mn[2], b.mx[0], b.mx[1], b.mx[2], WALLc, { top: b.sill ? '#D9D6CF' : WALLc, bottom: true, ao: 1 });
     if (b.mn[1] < 0.01) { const ns = b.mx[0] - b.mn[0] > b.mx[2] - b.mn[2]; if (ns) g.box(b.mn[0], 0.07, b.mn[2] - 0.012, b.mx[0], 0.17, b.mx[2] + 0.012, '#7E858C', { ao: 1 }); else g.box(b.mn[0] - 0.012, 0.07, b.mn[2], b.mx[0] + 0.012, 0.17, b.mx[2], '#7E858C', { ao: 1 }); } }
-  // marco de la puerta
-  const D = C.door, fz = D.s === 'n' ? C.z0 : C.z1; if (D.s === 'n' || D.s === 's') { g.box(D.a - 0.05, 0, fz - 0.02, D.a, 2.15, fz + (D.s === 'n' ? CT + 0.02 : -CT - 0.02), FR); g.box(D.b, 0, fz - 0.02, D.b + 0.05, 2.15, fz + (D.s === 'n' ? CT + 0.02 : -CT - 0.02), FR); }
-  // lo de adentro: puesto de trabajo con monitor y silla
-  if (C.id === 'bal') { const z1 = C.z1 - CT, x = C.x0 + 3.2; g.box(x - 1.5, 0.74, z1 - 0.7, x + 1.5, 0.78, z1, '#D9D2C3'); g.box(x - 1.45, 0.07, z1 - 0.65, x - 1.4, 0.74, z1 - 0.05, FR); g.box(x + 1.4, 0.07, z1 - 0.65, x + 1.45, 0.74, z1 - 0.05, FR);
-    g.box(x - 0.3, 0.78, z1 - 0.2, x + 0.3, 1.15, z1 - 0.16, '#20282F', { e: 0.25 }); g.box(x + 0.6, 0.78, z1 - 0.35, x + 1.0, 1.0, z1 - 0.15, '#2B333B'); g.box(x + 0.64, 0.86, z1 - 0.36, x + 0.96, 0.96, z1 - 0.355, '#3FD07A', { e: 0.9 });
-    chairAt(g, x, z1 - 1.05, -1); g.box(C.x0 + CT, 0.07, C.z0 + CT + 0.1, C.x0 + CT + 0.5, 1.9, C.z0 + CT + 1.1, '#9AA6AE', { top: '#B4BEC5' }); }
-  if (C.id === 'por') { const z0 = C.z0 + CT, x = (C.x0 + C.x1) / 2; g.box(x - 3, 0.07, z0, x + 3, 1.0, z0 + 0.6, '#6F7E8B', { top: '#D9D2C3' }); for (const dx of [-1.6, -0.5, 0.6, 1.7]) { g.box(x + dx - 0.4, 1.0, z0 + 0.12, x + dx + 0.4, 1.5, z0 + 0.16, '#20282F', { e: 0.3 }); g.box(x + dx - 0.37, 1.03, z0 + 0.16, x + dx + 0.37, 1.47, z0 + 0.165, '#2C4458', { e: 0.6 }); }
-    chairAt(g, x - 1, z0 + 1.1, 1); chairAt(g, x + 1.2, z0 + 1.1, 1); g.box(C.x1 - CT - 0.5, 0.07, C.z1 - CT - 1.2, C.x1 - CT, 1.85, C.z1 - CT - 0.2, '#9AA6AE', { top: '#B4BEC5' }); }
+  const D = C.door, fz = D.s === 'n' ? Z0 : Z1, sg = D.s === 'n' ? 1 : -1; g.box(D.a - 0.05, 0, fz - 0.02 * sg, D.a, 2.15, fz + (CT + 0.02) * sg, FR); g.box(D.b, 0, fz - 0.02 * sg, D.b + 0.05, 2.15, fz + (CT + 0.02) * sg, FR);
+  // puesto de trabajo contra la pared de enfrente de la puerta
+  const back = D.s === 'n' ? Z1 - CT : Z0 + CT, inw = D.s === 'n' ? -1 : 1, bz = v => back + inw * v, zz = (a, b) => [Math.min(bz(a), bz(b)), Math.max(bz(a), bz(b))];
+  if (C.furn === 'bal') { const x = Math.min(X0 + 3.2, cx); const [d0, d1] = zz(0, 0.7); g.box(x - 1.5, 0.74, d0, x + 1.5, 0.78, d1, '#D9D2C3'); g.box(x - 1.45, 0.07, d0, x - 1.4, 0.74, d1, FR); g.box(x + 1.4, 0.07, d0, x + 1.45, 0.74, d1, FR);
+    const [m0, m1] = zz(0.16, 0.2); g.box(x - 0.3, 0.78, m0, x + 0.3, 1.15, m1, '#20282F', { e: 0.25 }); const [i0, i1] = zz(0.15, 0.35); g.box(x + 0.6, 0.78, i0, x + 1.0, 1.0, i1, '#2B333B'); g.box(x + 0.64, 0.86, i0 - 0.005, x + 0.96, 0.96, i0, '#3FD07A', { e: 0.9 });
+    chairAt(g, x, bz(1.05), -inw); const [c0, c1] = zz(1.1, 2.1); g.box(X0 + CT, 0.07, c0, X0 + CT + 0.5, 1.9, c1, '#9AA6AE', { top: '#B4BEC5' }); }
+  if (C.furn === 'por') { const x = cx, [d0, d1] = zz(0, 0.6); g.box(x - 3, 0.07, d0, x + 3, 1.0, d1, '#6F7E8B', { top: '#D9D2C3' }); for (const dx of [-1.6, -0.5, 0.6, 1.7]) { const [m0, m1] = zz(0.12, 0.16), [n0, n1] = zz(0.16, 0.165); g.box(x + dx - 0.4, 1.0, m0, x + dx + 0.4, 1.5, m1, '#20282F', { e: 0.3 }); g.box(x + dx - 0.37, 1.03, n0, x + dx + 0.37, 1.47, n1, '#2C4458', { e: 0.6 }); }
+    chairAt(g, x - 1, bz(1.1), -inw); chairAt(g, x + 1.2, bz(1.1), -inw); const fr = D.s === 'n' ? Z0 + CT : Z1 - CT, [l0, l1] = [Math.min(fr, fr - inw * 1.0), Math.max(fr, fr - inw * 1.0)]; g.box(X1 - CT - 0.5, 0.07, l0, X1 - CT, 1.85, l1, '#9AA6AE', { top: '#B4BEC5' }); }
   return g; }
 const C2 = c => typeof c === 'string' ? (c => { const n = parseInt(c.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; })(c) : c;
 const CASO = new Map();
-function casIn(C) { const dk = isDark(); let o = CASO.get(C.id); if (!o || o.dk !== dk) { o = { id: 'cas-' + C.id + '-in', on: true, version: (o ? o.version : 0) + 1, layer: 'base', geo: casGeo(C), dk }; CASO.set(C.id, o); } return o; }
-sceneList = (o => function () { const L = o(); const C = WALK.on && !WALK.N && WALK.C; if (!C) return L; return L.filter(x => x.id !== 'cas-' + C.id).concat([casIn(C)]); })(sceneList);
+function casIn(C) { const dk = isDark(); let o = CASO.get(C.pid); if (!o || o.dk !== dk || o.key !== C.key) { o = { id: 'cin~' + C.pid, on: true, version: (o ? o.version : 0) + 1, layer: 'base', geo: casGeo(C), dk, key: C.key }; CASO.set(C.pid, o); }
+  o.model = M.trs(C.p.x, C.p.y || 0, C.p.z, C.p.yaw || 0); return o; }
+sceneList = (o => function () { const L = o(); const C = WALK.on && !WALK.N && WALK.C; if (!C) return L; return L.filter(x => x.id !== C.ext).concat([casIn(C)]); })(sceneList);
 function casUpd() { const C = (WALK.on && casAt(WALK.x, WALK.z, WALK.y)) || null; if (C !== (WALK.C || null)) { WALK.C = C; walkHud(); if (C) toast('Entraste a ' + C.n); } }
 walkMove = (o => function (dx, dz) { o(dx, dz); casUpd(); })(walkMove);
 enterWalk = (o => function (...a) { o(...a); casUpd(); })(enterWalk);
 exitWalk = (o => function () { o(); WALK.C = null; })(exitWalk);
 stepWalk = (o => function (dt) { o(dt); if (!WALK.on) return; if (WALK.C && WALK.y > WALK.C.h - 0.4) WALK.y = WALK.C.h - 0.4; casUpd(); })(stepWalk);
 walkHud = (o => function () { o(); if (WALK.on && WALK.C) { const b = HUD.querySelector('div > b'); if (b) b.textContent = WALK.C.n; } })(walkHud);
-// las paredes frenan; se entra y se sale por la puerta
-walkFree = (o => function (x, z) { if (!o(x, z)) return false; if (WALK.y > 3.4) return true; const r = 0.3, m = CT + r;
-  for (const C of CAS) { if (x < C.x0 - r || x > C.x1 + r || z < C.z0 - r || z > C.z1 + r) continue;
-    if (x > C.x0 + m && x < C.x1 - m && z > C.z0 + m && z < C.z1 - m) return true;
-    const D = C.door, along = D.s === 'n' || D.s === 's' ? x : z, perp = D.s === 'n' ? z - C.z0 : D.s === 's' ? C.z1 - z : D.s === 'w' ? x - C.x0 : C.x1 - x;
-    if (along > D.a + 0.06 && along < D.b - 0.06 && perp > -r - 0.02 && perp < m + 0.05) return true;
+// paredes de las casillas y piezas sólidas frenan; a la casilla se entra por la puerta
+walkFree = (o => function (x, z) { if (!o(x, z)) return false; if (WALK.y > 40) return true; const r = 0.3, m = CT + r;
+  if (WALK.y < 3.4) for (const C of casList()) { const [lx, lz] = casLoc(C, x, z), [X0, X1, Z0, Z1] = C.l; if (lx < X0 - r || lx > X1 + r || lz < Z0 - r || lz > Z1 + r) continue;
+    if (lx > X0 + m && lx < X1 - m && lz > Z0 + m && lz < Z1 - m) continue;
+    const D = C.door, perp = D.s === 'n' ? lz - Z0 : Z1 - lz; if (lx > D.a + 0.06 && lx < D.b - 0.06 && perp > -r - 0.02 && perp < m + 0.05) continue;
     return false; }
+  for (const p of PROPS) { if (Math.abs(p.x - x) > 260 || Math.abs(p.z - z) > 260) continue; const S = solids(p); if (!S) continue; const [lx, lz] = W2L(p, x, z);
+    for (const b of S) if (lx > b.mn[0] - r && lx < b.mx[0] + r && lz > b.mn[2] - r && lz < b.mx[2] + r && b.mn[1] < WALK.y && b.mx[1] > WALK.y - 1.6) return false; }
   return true; })(walkFree);
-// apuntar: paredes, piso y techo de la casilla (por dentro) o su fachada (por fuera)
-surfHit = (o => function (r) { let best = o(r); if (!WALK.on || !CAS.length) return best;
-  for (const C of CAS) for (const b of casBoxes(C, WALK.C === C)) { const h = rayAABBn(r.o, r.d, b.mn, b.mx); if (h && h.t > 0 && (!best || h.t < best.t)) best = { t: h.t, n: h.n, k: b.k, N: null, cas: C }; }
-  if (best && best.cas) best.p = [r.o[0] + r.d[0] * best.t, r.o[1] + r.d[1] * best.t, r.o[2] + r.d[2] * best.t]; return best; })(surfHit);
-// equipos sobre superficies que no son de un galpón (casillas, paredes armadas afuera)
-function outPlace(d, h) { const p = h.p, n = h.n, T = d.type, up = n[1] > 0.5, down = n[1] < -0.5, wall = !up && !down, inC = h.cas && WALK.C === h.cas, cy = inC ? h.cas.h - 0.12 : h.prop ? 2.7 : (h.cas ? h.cas.h : 3);
-  d.nave = undefined; d.wn = null; d.cas = h.cas ? h.cas.id : undefined;
+// apuntar: casillas por dentro o por fuera, y las caras de edificios, tanques, columnas y la portería
+surfHit = (o => function (r) { let best = o(r); const test = (p, boxes, extra) => { const l = lray(p, r), a = axX(p.yaw || 0), b = axZ(p.yaw || 0);
+    for (const bx of boxes) { const h = rayAABBn(l.o, l.d, bx.mn, bx.mx); if (!h || h.t <= 0 || (best && h.t >= best.t)) continue; const n = [a[0] * h.n[0] + b[0] * h.n[2], h.n[1], a[1] * h.n[0] + b[1] * h.n[2]]; best = Object.assign({ t: h.t, n, k: bx.k || 'cwall', N: null }, extra); } };
+  if (WALK.on) for (const C of casList()) test(C.p, casBoxes(C, WALK.C === C), { cas: C });
+  for (const p of PROPS) { if (p.id === HITSKIP) continue; const S = solids(p); if (S) test(p, S, { sol: p }); }
+  if (best && (best.cas || best.sol)) best.p = [r.o[0] + r.d[0] * best.t, r.o[1] + r.d[1] * best.t, r.o[2] + r.d[2] * best.t]; return best; })(surfHit);
+// equipos sobre superficies que no son de un galpón (casillas, edificios, columnas, paredes armadas afuera)
+function outPlace(d, h) { const p = h.p, n = h.n, T = d.type, up = n[1] > 0.5, down = n[1] < -0.5, wall = !up && !down, inC = h.cas && WALK.C === h.cas, cy = inC ? h.cas.h - 0.12 : h.prop && !h.sol ? 2.7 : 40;
+  d.nave = undefined; d.wn = null; d.cas = h.cas ? h.cas.pid : undefined;
   if (T === 'cam' || T === 'ap' || SENS[T]) {
-    if (wall) { d.mount = 'wall'; d.wn = [n[0], n[2]]; d.yaw = T === 'ap' ? Math.atan2(n[0], n[2]) : Math.atan2(-n[2], n[0]); anchorTo(d, [p[0], clamp(p[1], 0.6, inC ? cy - 0.3 : 12), p[2]]); }
+    if (wall) { d.mount = 'wall'; d.wn = [n[0], n[2]]; d.yaw = T === 'ap' ? Math.atan2(n[0], n[2]) : Math.atan2(-n[2], n[0]); anchorTo(d, [p[0], clamp(p[1], 0.6, cy - 0.3), p[2]]); }
     else { d.mount = 'ceiling'; if (d.yaw === undefined) d.yaw = T === 'cam' ? -WALK.yaw : 0; anchorTo(d, [p[0], (down || !inC ? p[1] : cy) - 0.02, p[2]]); } }
   else if (T === 'wr') { if (wall) { d.stand = false; d.yaw = Math.atan2(n[0], n[2]); d.y = clamp(p[1], 1.2, 2.4); d.x = p[0] + n[0] * 0.24; d.z = p[2] + n[2] * 0.24; } else { d.stand = true; d.y = 1.6; d.x = p[0]; d.z = p[2]; if (d.yaw === undefined) d.yaw = 0; } }
   else { const dep = T === 'gab' ? GAB_SIZE[d.size || 'M'].d / 2 + 0.06 : 0.35; if (wall) { d.yaw = Math.atan2(n[0], n[2]); d.x = p[0] + n[0] * dep; d.z = p[2] + n[2] * dep; } else { d.x = p[0]; d.z = p[2]; if (d.yaw === undefined) d.yaw = 0; } d.y = 0; } }
 smartPlace = (o => function (d, x, y) { const h = surfHit(rayNow(x, y)); if (!h || h.N) return o(d, x, y); outPlace(d, h); return null; })(smartPlace);
 // muebles y piezas sobre el piso de la casilla
-placeProp = (o => function (p, x, y) { o(p, x, y); if (casAt(p.x, p.z, 1) && (p.y || 0) < 0.07) p.y = 0.07; })(placeProp);
+placeProp = (o => function (p, x, y) { o(p, x, y); if (!PBIG[p.k] && casAt(p.x, p.z, 1) && (p.y || 0) < 0.07) p.y = 0.07; if (PBIG[p.k] || p.k === 'lamp') p.y = 0; })(placeProp);
+
+// los camiones siguen a la portería y a la balanza aunque las muevas
+const porP = () => PROPS.find(q => q.k === 'porteria'), balP = () => PROPS.find(q => q.k === 'balanza');
+function GPT(X, Y) { const p = porP(), w = px(X, Y); return p ? L2W(p, w[0] - POR0[0], w[1] - POR0[1]) : w; }
+function BPT(X, Y) { const p = balP(), w = px(X, Y); return p ? L2W(p, w[0] - BAL0[0], w[1] - BAL0[1]) : w; }
+const P2w = ([x, z], sp, o) => Object.assign({ x, z, sp }, o || {});
+const ARM0 = { 'arm-in': [66, 735.6, 731], 'arm-out': [68, 717.4, 722] };
+stepArms = (o => function (dt) { const p = porP(); for (const a of ARMS) { const q = ARM0[a.id]; if (!q) continue; if (a.yaw0 === undefined) a.yaw0 = a.yaw; [a.x, a.z] = GPT(q[0], q[1]); a.lane = GPT(q[0], q[2])[1]; a.yaw = a.yaw0 + (p ? p.yaw || 0 : 0); } o(dt); })(stepArms);
+
+// todo lo del predio que antes era fijo, como piezas (una sola vez por maqueta)
+const SEEDV = 1;
+function pzSeed() { if (BLANK || (ED.seed || 0) >= SEEDV) return; ED.seed = SEEDV; const R = seeded(4242), cnt = {}, has = new Set(PROPS.map(q => q.id));
+  const nid = k => { const pre = PRE3[k] || 'DE-'; let id; do { cnt[pre] = (cnt[pre] || 0) + 1; id = pre + pad(cnt[pre]); } while (has.has(id)); has.add(id); return id; };
+  const add = (k, X, Y, o) => { const [x, z] = px(X, Y), p = Object.assign({ id: nid(k), type: 'prop', k, seed: Math.floor(R() * 97), x, y: 0, z, yaw: 0 }, o || {}); PROPS.push(p); return p; };
+  const rd = (name, pts, w, o) => ED.roads.push(Object.assign({ id: nextId('CL-', ED.roads.map(r => r.id)), name, w, pts: pxs(pts) }, o || {}));
+  // calles: ruta, camino y calles internas
+  const hw = [[-600, -63 - 0.269 * 600], [1700, -63 + 0.269 * 1700]], hn = [0.259, -0.966];
+  rd('la ruta · hacia el este', hw.map(([x, y]) => [x + hn[0] * -9, y + hn[1] * -9]), 12, { pub: 1, nolbl: 1, ds: 12, dl: 5 });
+  rd('la ruta · hacia el oeste', hw.map(([x, y]) => [x + hn[0] * 9, y + hn[1] * 9]), 12, { pub: 1, nolbl: 1, ds: 12, dl: 5 });
+  rd('el camino principal', [[44, -500], [38, 0], [33, 600], [25, 1144], [20, 1600]], 9, { pub: 1, nolbl: 1, ds: 9, dl: 4.5 });
+  rd('Acceso', [[31, 727], [110, 726.5], [170, 724], [200, 716], [218, 702], [230, 694]], 18, { dash: false, nolbl: 1 });
+  rd('Playa de la portería', [[40, 725.5], [118, 725.5]], 23, { dash: false, sq: 1, nolbl: 1 }); rd('Carril de la balanza', [[120, 715.5], [200, 715.5]], 9, { dash: false, sq: 1, nolbl: 1 });
+  rd('Patio de camiones', [[96, 736], [104, 760], [106, 792]], 9, { dash: false, nolbl: 1 });
+  [[[256, 688], [420, 688], [560, 684], [640, 684], [772, 680]], [[242, 671], [240, 620], [249, 545], [249, 216]], [[249, 488], [430, 488]], [[430, 488], [430, 250]], [[249, 264], [430, 264]],
+    [[75, 222], [395, 222], [430, 250], [640, 252]], [[640, 252], [640, 684]], [[563, 684], [563, 1110]], [[242, 705], [262, 740], [272, 910]], [[563, 1005], [630, 1005]]].forEach((pts, i) => rd('Calle interna ' + (i + 1), pts, 10, { nolbl: 1 }));
+  rd('Alambrado perimetral', [[45, 739], [45, 1100], [772, 1100], [772, 676], [648, 676], [648, 238], [608, 148], [258, 18], [45, 18], [45, 714]], 0.3, { kind: 'alambrado', nolbl: 1 });
+  // portería, balanza y su casilla
+  add('porteria', 61.5, 726.6, { name: 'Portería' }); add('balanza', 156, 720, { name: 'Balanza de camiones', L: 20 }); add('casilla', 161.75, 724.2, { name: 'Casilla de la balanza', w: 8.5, d: 3.4, door: 3.25, furn: 'bal' });
+  // columnas de luz
+  const lp = (X, Y, dx, dz) => add('lamp', X, Y, { yaw: yawDir(dx, dz), h: 10 });
+  for (let x = 290; x <= 760; x += 38) lp(x, 696, 0, -1); for (let x = 100; x <= 200; x += 40) lp(x, 713.5, 0, 1); for (let y = 360; y <= 540; y += 45) lp(258, y, -1, 0);
+  for (let y = 290; y <= 660; y += 46) lp(649, y, -1, 0); for (let y = 720; y <= 1080; y += 45) lp(553, y, 1, 0); for (let x = 270; x <= 400; x += 44) lp(x, 229, 0, -1);
+  // árboles y palmeras del predio; filas de afuera
+  for (let y = 240; y <= 1090; y += 11) if (y < 708 || y > 750) add('tree', 52 + (R() - 0.5) * 4, y); for (let y = 30; y <= 210; y += 12) add('tree', 52, y);
+  for (let y = 745; y <= 895; y += 9) { add('tree', 232 + (R() - 0.5) * 6, y); add('tree', 250 + (R() - 0.5) * 6, y + 4); } for (let y = 300; y <= 670; y += 14) add('tree', 655, y);
+  for (let x = 46; x <= 200; x += 7.5) add('palm', x + (R() - 0.5) * 1.5, 708.5 + (R() - 0.5) * 1.5, { yaw: R() * 6 });
+  add('arboleda', 410, 1108, { n: 59, sp: 12, name: 'Cortina de árboles sur' }); add('arboleda', 950, 462, { n: 31, sp: 8, name: 'Cortina de árboles este' }); add('arboleda', 900, 880, { n: 31, sp: 8, name: 'Cortina de árboles sureste' });
+  // camiones estacionados esperando turno
+  for (let i = 0; i < 7; i++) { if (i === 3) continue; add('truck', 57.75, 790 + i * 3.7 + 1.25); } for (let i = 0; i < 3; i++) add('truck', 84 + i * 4.2 + 1.25, 776.75, { yaw: Math.PI / 2 });
+  // pallets en los patios
+  [[694, 262, 2, 11, 2.2, 4.4], [280, 286, 13, 2, 4.4, 2.2], [786, 720, 2, 54, 2.2, 4.4], [640, 1083, 14, 2, 4.4, 2.2], [395, 590, 1, 5, 2.2, 4.4]].forEach(([x, y, cols, rows, dx, dz]) => add('palletz', x, y, { cols, rows, dx, dz }));
+  // edificios: oficinas, construcciones chicas y las otras empresas del parque
+  const ed = (x0, x1, y0, y1, h, o) => add('edif', (x0 + x1) / 2, (y0 + y1) / 2, Object.assign({ w: x1 - x0, d: y1 - y0, h, pisos: 0 }, o || {}));
+  ed(256, 292, 510, 540, 9.4, { pisos: 2, hvac: 2, marq: 1, name: 'Oficinas del parque' }); ed(240, 275, 175, 200, 6, { pisos: 1, name: 'Oficinas' });
+  ed(255, 270, 245, 345, 8); ed(345, 390, 280, 292, 5); ed(395, 407, 550, 575, 5); ed(570, 597, 790, 837, 8); ed(425, 440, 510, 528, 4); ed(595, 615, 352, 380, 3, { col: 'hvac', name: 'Equipos de frío' });
+  ed(132, 212, 745, 897, 12, { techo: 'sky' }); ed(82, 132, 862, 897, 8, { techo: 'sky' }); ed(300, 388, 727, 900, 12, { techo: 'solar' }); ed(400, 537, 705, 905, 13, { techo: 'solar' });
+  ed(178, 265, 917, 1097, 11, { techo: 'sky', name: 'Fábrica vecina' }); ed(57, 170, 947, 1000, 8, { techo: 'sky' }); ed(637, 710, 1010, 1072, 10, { techo: 'sky' });
+  add('tanque', 410, 625, { r: 10, h: 12 }); add('tanque', 411, 647, { r: 10, h: 12 }); }
+edLoad = (o => function () { o(); let s = null; try { s = HOST ? HOST.state : JSON.parse(localStorage.getItem('po3d-edit') || 'null'); } catch (e) {} ED.seed = s && s.v === 1 ? s.seed || 0 : 0; pzSeed(); })(edLoad);
+edState = (o => function () { const st = o(); st.seed = ED.seed || 0; return st; })(edState);
+edReset = (o => function () { return o(); })(edReset);
+
+// calles y alambrados: se dibujan para todo el predio y se editan punto por punto
+function fenceGeo(R, g) { const pts = R.pts, H = R.h || 2.6;
+  for (let i = 0; i < pts.length - 1; i++) { const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / 8));
+    for (let k = 0; k <= n; k++) { const x = lerp(x0, x1, k / n), z = lerp(z0, z1, k / n); g.box(x - 0.1, 0, z - 0.1, x + 0.1, H, z + 0.1, P.fence); }
+    for (const y of [1.2, H - 0.15]) { if (Math.abs(x1 - x0) < 1e-6 || Math.abs(z1 - z0) < 1e-6) g.box(Math.min(x0, x1) - 0.04, y, Math.min(z0, z1) - 0.04, Math.max(x0, x1) + 0.04, y + 0.08, Math.max(z0, z1) + 0.04, P.fence); else g.strip([[x0, z0], [x1, z1]], 0.08, y, P.fence); } } }
+function roadGeo(R, g) { const y = R.pub ? 0.024 : 0.03, pts = R.pts; if (pts.length < 2) return; g.strip(pts, R.w, y, P.road);
+  pts.forEach(([x, z], i) => { if (R.sq && (i === 0 || i === pts.length - 1)) return; g.disc(x, z, R.w / 2, y + 0.001, P.road, 0, 18); });
+  if (R.dash !== false && R.w >= 8) { const st = R.ds || 9, len = R.dl || 4; for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
+      for (let s = 2; s + len < L; s += st) g.strip([[ax + dx * s, az + dz * s], [ax + dx * (s + len), az + dz * (s + len)]], 0.26, y + 0.012, P.mark); } }
+  // bordes blancos en la ruta y el camino
+  if (R.pub && pts.length > 1) for (const sg of [-1, 1]) { const q = offsetPath(pts, sg * (R.w / 2 - 0.5)); g.strip(q, 0.16, y + 0.012, P.mark); } }
+function roadsBuild() { if (BLANK) return; const g = new Geo(), gf = new Geo(); for (const R of ED.roads) { if (!R.pts || R.pts.length < 2) continue; if (R.kind === 'alambrado') fenceGeo(R, gf); else roadGeo(R, g); }
+  obj('roads', { geo: g, layer: 'ground', noShadow: true }); obj('fences', { geo: gf, layer: 'base' }); applyLayers(); }
+buildBase = (o => function () { o(); if (!BLANK) roadsBuild(); })(buildBase);
+rebuildBlank = (o => function () { if (BLANK) return o(); roadsBuild(); roadLabels(); })(rebuildBlank);
+roadLabels = (o => function () { if (BLANK) return o(); ROADLBL.forEach(rmLabel); ROADLBL = [];
+  for (const R of ED.roads) { if (!R.name || R.nolbl || R.kind === 'alambrado' || R.pts.length < 2) continue; const i = Math.floor((R.pts.length - 1) / 2), a = R.pts[i], b = R.pts[i + 1], p = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const L = addLabel(`<span class="street">${escH(R.name)}</span>`, () => [p[0], 0.4, p[1]], 'cli', null); L.maxZoom = 700; ROADLBL.push(L); } })(roadLabels);
+// postes para mover los puntos de la calle elegida (naranja: punto; azul: agregar uno en el medio)
+const RH = { sel: null, ids: [] }, VD = { R: null, i: -1, t: 0 };
+function rhBuild() { RH.ids.forEach(id => rmObj(id)); RH.ids = []; const R = RH.sel && ED.roads.find(r => r.id === RH.sel); if (!R || !ED.on || !canEdit()) return;
+  const post = (id, x, z, rad, h, col, top) => { const g = new Geo(); g.prism(0, 0, 0, rad, h, 10, col, { top, e: 0.35 }); obj(id, { geo: g, layer: 'base', pick: true, kind: 'rh', model: M.trs(x, 0, z, 0), inflate: 0.9, noShadow: true }); RH.ids.push(id); };
+  R.pts.forEach(([x, z], i) => post('rh|' + R.id + '|' + i, x, z, 0.9, 2.4, '#F2B23A', '#FFD27A'));
+  for (let i = 0; i < R.pts.length - 1; i++) { const a = R.pts[i], b = R.pts[i + 1]; if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 5) continue; post('rm|' + R.id + '|' + i, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.6, 1.4, '#3E7BFA', '#7FA8FF'); } }
+function roadsChanged() { rebuildBlank(); rhBuild(); edSave(); if (typeof renderPlano === 'function') renderPlano(); }
+function selRoad(R) { RH.sel = R ? R.id : null; rhBuild(); if (R) select('road:' + R.id, false); }
+const isRH = id => typeof id === 'string' && (id.startsWith('rh|') || id.startsWith('rm|'));
+function vdStart(id) { const e = entity(id); if (!e) return false; const R = e.R; let i = e.i; if (e.mid) { const a = R.pts[i], b = R.pts[i + 1]; R.pts.splice(i + 1, 0, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); i++; }
+  VD.R = R; VD.i = i; VD.t = 0; VD.moved = !!e.mid; return true; }
+function vdMove(p) { const R = VD.R; if (!R || !p) return; let q = [Math.round(p[0] * 2) / 2, Math.round(p[1] * 2) / 2], bd = 3;
+  for (const S of ED.roads) S.pts.forEach((v, j) => { if (S === R && Math.abs(j - VD.i) < 1) return; const d = Math.hypot(v[0] - p[0], v[1] - p[1]); if (d < bd) { bd = d; q = v.slice(); } });
+  R.pts[VD.i] = q; VD.moved = true; const n = performance.now(); if (n - VD.t > 50) { VD.t = n; rebuildBlank(); rhBuild(); } }
+function vdEnd() { const R = VD.R; VD.R = null; if (!R) return false; roadsChanged(); if (SEL === 'road:' + R.id) renderPanel(true); if (VD.moved) toast('Punto de ' + (R.name || 'la calle') + ' movido'); return true; }
+entity = (o => function (id) { if (typeof id === 'string') { if (id.startsWith('road:')) { const R = ED.roads.find(r => r.id === id.slice(5)); return R ? { t: 'road', R } : null; }
+    if (isRH(id)) { const [k, rid, i] = id.split('|'), R = ED.roads.find(r => r.id === rid); return R ? { t: 'rh', R, i: +i, mid: k === 'rm' } : null; } } return o(id); })(entity);
+entPos = (o => function (id) { const e = typeof id === 'string' && id.startsWith('road:') && entity(id); if (!e) return o(id); const P0 = e.R.pts, i = Math.floor((P0.length - 1) / 2), a = P0[i], b = P0[i + 1] || a; return [(a[0] + b[0]) / 2, 2, (a[1] + b[1]) / 2]; })(entPos);
+panelContent = (o => function (id) { const e = typeof id === 'string' && id.startsWith('road:') ? entity(id) : null; if (!e) return o(id); const R = e.R, fence = R.kind === 'alambrado', ed = ED.on && canEdit();
+  const f = (l, h) => `<label class="ef"><span>${l}</span>${h}</label>`, nm = fence ? 'el alambrado' : 'la calle';
+  let body = `<dl class="rows">${row('Largo', Math.round(segLen(R.pts)) + ' m')}${fence ? '' : row('Ancho', String(R.w).replace('.', ',') + ' m')}${row('Puntos', R.pts.length)}</dl>`;
+  if (ed) body += `<div class="edbox"><b>Edición</b>${f('Nombre', `<input data-ed="rname" value="${escH(R.name || '')}">`)}${f('Tipo', `<select data-ed="rkind"><option value="calle" ${!fence ? 'selected' : ''}>Calle</option><option value="alambrado" ${fence ? 'selected' : ''}>Alambrado</option></select>`)}`
+    + (fence ? '' : f('Ancho', `<select data-ed="rw">${[4, 6, 7, 9, 10, 12, 15, 18, 23].concat([R.w]).filter((v, i, A) => A.indexOf(v) === i).sort((a, b) => a - b).map(w => `<option value="${w}" ${R.w === w ? 'selected' : ''}>${String(w).replace('.', ',')} m</option>`).join('')}</select>`) + f('Línea del medio', `<select data-ed="rdash"><option value="1" ${R.dash !== false ? 'selected' : ''}>Sí</option><option value="0" ${R.dash === false ? 'selected' : ''}>No</option></select>`))
+    + `<p class="ehelp">Arrastrá los postes naranjas para mover los puntos; los azules agregan un punto en el medio. Con la herramienta Borrar sobre un poste naranja se saca ese punto.</p><div class="cact"><button class="btn" data-ed="radd">Sumar un punto al final</button><button class="btn danger" data-ed="del">Borrar ${nm}</button></div></div>`;
+  return { ey: (fence ? 'Alambrado' : 'Calle') + ' · ' + R.id, t: R.name || (fence ? 'Alambrado' : 'Calle'), s: fence ? 'Cerco del predio' : R.pub ? 'Calle pública' : 'Calle del predio', pill: '', body, acts: '', icon: CIC.road || CIC.zone }; })(panelContent);
+e3Action = (o => function (a, val) { const e = SEL && entity(SEL); if (!e || e.t !== 'road') return o(a, val); const R = e.R;
+  if (a === 'del') { removeId(SEL); return true; }
+  if (a === 'rname') R.name = String(val).trim() || R.name; if (a === 'rw') R.w = +val || R.w; if (a === 'rdash') R.dash = val === '1' ? undefined : false;
+  if (a === 'rkind') { R.kind = val === 'alambrado' ? 'alambrado' : undefined; if (R.kind) { R.w0 = R.w; R.w = 0.3; } else R.w = R.w0 || 9; }
+  if (a === 'radd') { const n = R.pts.length, a2 = R.pts[n - 2], b2 = R.pts[n - 1], dx = b2[0] - a2[0], dz = b2[1] - a2[1], l = Math.hypot(dx, dz) || 1; R.pts.push([b2[0] + dx / l * 20, b2[1] + dz / l * 20]); }
+  roadsChanged(); renderPanel(true); return true; })(e3Action);
+removeId = (o => function (id, noHist) { if (typeof id === 'string' && id.startsWith('road:')) { const i = ED.roads.findIndex(r => r.id === id.slice(5)); if (i < 0) return false; const R = ED.roads.splice(i, 1)[0]; RH.sel = null; if (SEL === id) closePanel(); roadsChanged(); toast((R.name || R.id) + ' borrada'); return true; }
+  if (isRH(id)) { const e = entity(id); if (!e || e.mid) return false; if (e.R.pts.length <= 2) return removeId('road:' + e.R.id); e.R.pts.splice(e.i, 1); roadsChanged(); if (SEL === 'road:' + e.R.id) renderPanel(true); toast('Punto sacado'); return true; }
+  return o(id, noHist); })(removeId);
+select = (o => function (id, focus) { if (isRH(id)) { const e = entity(id); if (e) { RH.sel = e.R.id; rhBuild(); id = 'road:' + e.R.id; } } else if (!(typeof id === 'string' && id.startsWith('road:')) && RH.sel) { RH.sel = null; rhBuild(); } return o(id, focus); })(select);
+closePanel = (o => function () { const r = o(); if (RH.sel && !VD.R) { RH.sel = null; rhBuild(); } return r; })(closePanel);
+setEdit = (o => function (on) { o(on); if (!on) { RH.sel = null; VD.R = null; } rhBuild(); })(setEdit);
+// vista de arriba: arrastrar postes, tocar una calle para elegirla
+edDown = (o => function (e) { if (ED.on && canEdit() && e.button === 0 && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && (ED.tool === 'sel' || ED.tool === 'del')) { const id = pickAt(e.clientX, e.clientY); if (isRH(id)) { if (ED.tool === 'del') { removeId(id); return true; } vdStart(id); return true; } } return o(e); })(edDown);
+edMove = (o => function (e) { if (VD.R) { vdMove(groundAt(e.clientX, e.clientY)); return true; } return o(e); })(edMove);
+edUp = (o => function (e, w) { if (VD.R) return vdEnd(); if (!w && ED.on && canEdit() && ED.tool === 'sel' && !GZD.drag && !ITDRAG && !ED.drag && !ED.box && !pick3(e.clientX, e.clientY)) { const R = pickRoad(e.clientX, e.clientY); if (R) { selRoad(R); return true; } } return o(e, w); })(edUp);
+// caminando: lo mismo apuntando con la mira
+aimDown = (o => function (b) { if (b === 0 && ED.on && canEdit() && (ED.tool === 'sel' || ED.tool === 'del')) { const id = pickAt(CX(), CY());
+    if (isRH(id)) { if (ED.tool === 'del') { removeId(id); return; } vdStart(id); LOCK.mv = 0; LOCK.carry = { k: 'rh', id, t0: performance.now(), moved: false }; return; }
+    if (ED.tool === 'sel' && !pickAim(CX(), CY())) { const R = pickRoad(CX(), CY()); if (R) { selRoad(R); return; } } }
+  return o(b); })(aimDown);
+carryStep = (o => function () { const C2 = LOCK.carry; if (C2 && C2.k === 'rh') { const p = planeAt(rayNow(CX(), CY()), 0); if (p) vdMove([p[0], p[2]]); C2.moved = true; return; } return o(); })(carryStep);
+carryEnd = (o => function (cancel) { const C2 = LOCK.carry; if (C2 && C2.k === 'rh') { LOCK.carry = null; vdEnd(); return; } return o(cancel); })(carryEnd);
+
+// ficha de las piezas: medidas y techo
+e3Edit = (o => function (e, fld) { let h = o(e, fld); if (!h || e.t !== 'prop') return h; const p = e.P, L = PRM[p.k]; if (!L && p.k !== 'edif') return h;
+  const num = (k, v, st) => `<span class="stp"><input class="e3num" type="number" step="${st}" data-ed="pp_${k}" value="${v}"><em>${k === 'n' || k === 'cols' || k === 'rows' || k === 'pisos' ? '' : 'm'}</em></span>`;
+  let add = (L || []).map(([k, n, st]) => fld(n, num(k, +(+pv(p, k)).toFixed(2), st))).join('');
+  if (p.k === 'edif') add += fld('Techo', `<select data-ed="pp_techo"><option value="" ${!p.techo ? 'selected' : ''}>Liso</option><option value="sky" ${p.techo === 'sky' ? 'selected' : ''}>Con claraboyas</option><option value="solar" ${p.techo === 'solar' ? 'selected' : ''}>Con paneles solares</option></select>`);
+  if (PCARRY[p.k]) add += '<p class="ehelp">Al moverla se lleva sus equipos y lo que tiene adentro.</p>';
+  const i = h.indexOf('<button class="btn danger" data-ed="del">'); return i < 0 ? h + add : h.slice(0, i) + add + h.slice(i); })(e3Edit);
+e3Action = (o => function (a, val) { if (!String(a).startsWith('pp_')) return o(a, val); const e = SEL && entity(SEL); if (!e || e.t !== 'prop') return false; const d = e.P, k = a.slice(3), before = snapD(d);
+  if (k === 'techo') d.techo = val || undefined; else { const f = (PRM[d.k] || []).find(q => q[0] === k); if (!f) return false; let v = +val; if (!isFinite(v)) return true; v = clamp(v, f[3], f[4]); if (f[2] >= 1) v = Math.round(v); d[k] = v; }
+  refreshAny(d); edSave(); recChange(d, before); renderPanel(true); gzBuild(true); return true; })(e3Action);
+
 // ir directo a un lugar desde la pausa
 function irA(v) { const [t, id] = v.split(':');
   if (t === 'n') { const N = naveById(id); if (N) enterWalk(N); }
-  if (t === 'c') { const C = CAS.find(c => c.id === id); if (!C) return; const D = C.door, m = (D.a + D.b) / 2, out = 2.4, p = D.s === 'n' ? [m, C.z0 - out] : D.s === 's' ? [m, C.z1 + out] : D.s === 'w' ? [C.x0 - out, m] : [C.x1 + out, m];
-    const ns = D.s === 'n' || D.s === 's', look = ns ? [m, 1.4, (C.z0 + C.z1) / 2] : [(C.x0 + C.x1) / 2, 1.4, m]; enterWalk(null, p, look); WALK.N = null; casUpd(); walkHud(); } }
+  if (t === 'c') { const C = casList().find(c => c.pid === id); if (!C) return; const D = C.door, m = (D.a + D.b) / 2, [, , Z0, Z1] = C.l, lz = D.s === 'n' ? Z0 - 2.4 : Z1 + 2.4;
+    const p = L2W(C.p, m, lz), c = L2W(C.p, m, (Z0 + Z1) / 2); enterWalk(null, p, [c[0], 1.4, c[1]]); WALK.N = null; casUpd(); walkHud(); } }
 function irHtml() { const b = (v, n) => `<button class="btn" data-go="${v}">${escH(n)}</button>`;
-  return `<b>Ir a un lugar</b><div class="e3go">${NAVES.map(N => b('n:' + N.id, N.full)).join('')}${CAS.map(C => b('c:' + C.id, C.n)).join('')}</div><button class="btn" data-pz="volver">← Volver</button>`; }
-// piezas de afuera
+  return `<b>Ir a un lugar</b><div class="e3go">${NAVES.map(N => b('n:' + N.id, N.full)).join('')}${casList().map(C => b('c:' + C.pid, C.n)).join('')}</div><button class="btn" data-pz="volver">← Volver</button>`; }
+// piezas chicas de afuera
 Object.assign(PK, { barrera: { n: 'Barrera vehicular', tags: 'porton acceso ingreso brazo', out: true }, molinete: { n: 'Molinete', tags: 'acceso peatonal torniquete', out: true }, cartel: { n: 'Cartel', tags: 'señal letrero', out: true }, bolardo: { n: 'Bolardo', tags: 'poste defensa', out: true } });
 Object.assign(PRE3, { barrera: 'BV-', molinete: 'MO-', cartel: 'CA-', bolardo: 'BO-' });
 propGeo = (o => p => { const k = p.k; if (!['barrera', 'molinete', 'cartel', 'bolardo'].includes(k)) return o(p); const g = new Geo();
@@ -3956,6 +4170,8 @@ propGeo = (o => p => { const k = p.k; if (!['barrera', 'molinete', 'cartel', 'bo
   else if (k === 'bolardo') { g.prism(0, 0, 0, 0.1, 0.9, 10, '#E3B436', { top: '#2B2B2B' }); g.prism(0, 0.6, 0, 0.102, 0.08, 10, '#2B2B2B'); }
   return g; })(propGeo);
 { const ex = CAT3.find(c => c[0] === 'Exterior y decoración'); if (ex) { const add = ['barrera', 'molinete', 'cartel', 'bolardo'].map(k => ['prop:' + k, PK[k].n, 'tree', PK[k].tags]); ex[1].push(...add); add.forEach(([k, n, ic, tags]) => ALL3.push({ k, n, ic, tags, c: 'Exterior y decoración' })); } }
+
+aimText = (o => function () { if (WALK.on && AIM() && ED.on && canEdit() && !LOCK.carry && (ED.tool === 'sel' || ED.tool === 'del')) { const id = pickAt(CX(), CY()); if (isRH(id)) { const e = entity(id); return aimShow(ED.tool === 'del' ? 'Clic para sacar este punto' : (e.mid ? 'Mantené y arrastrá para agregar un punto' : 'Punto de ' + escH(e.R.name || 'la calle') + ' · mantené para moverlo'), ED.tool === 'del' ? 'del' : ''); } } return o(); })(aimText);
 
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
@@ -4061,7 +4277,7 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { CAS, casAt, irA, outPlace, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
+  if (window.__e3) Object.assign(window.__e3, { PROPS, refreshAny, propObj, entity, edState, pickAt, pickRoad, removeId, e3Action, getSEL: () => SEL, roadsBuild, casList, casAt, irA, outPlace, RH, VD, selRoad, vdStart, vdMove, vdEnd, GPT, BPT, pzSeed, PRM, HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
   hotRender(); requestAnimationFrame(gameTick); extInit(); cabInit2(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */
