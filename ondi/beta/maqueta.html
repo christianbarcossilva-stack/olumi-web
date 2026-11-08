@@ -3795,6 +3795,70 @@ function genericStart() { if (!BLANK || !HOST || !HOST.generica || (HOST.state &
   for (let i = 0; i < 5; i++) P2('car', 14 + i * 3.2, 30, Math.PI / 2);
   for (const x of [-40, -28, 28, 40]) P2('tree', x, 56);
   edSave(); setTimeout(() => flyTo({ tx: 0, tz: 8, zoom: 150, pitch: 0.85 }, 1.4), 400); }
+/* racks: patcheras de cobre, switches con modelo/MAC/equipo real y la ruta completa de cada cable */
+Object.assign(CAT, { sw16: { n: 'Switch 16 puertos PoE', U: 1, rj: 16, sfp: 2 }, sw48: { n: 'Switch 48 puertos PoE', U: 1, rj: 48, sfp: 4 }, gw: { n: 'Router / gateway', U: 1, rj: 8, sfp: 2 },
+  pc24: { n: 'Patchera de cobre 24 bocas', U: 1, rj: 24, pp: true }, pc48: { n: 'Patchera de cobre 48 bocas', U: 2, rj: 48, pp: true } });
+const isPP = it => !!(it && CAT[it.type] && (CAT[it.type].pp || CAT[it.type].fo));
+const isSW = it => !!(it && CAT[it.type] && CAT[it.type].rj && !CAT[it.type].pp && it.type !== 'nvr');
+const itName = it => it ? (it.name || CAT[it.type].n) : '—';
+const pNum = (it, pid) => (pid[0] === 's' ? 'SFP ' : isPP(it) ? 'boca ' : 'puerto ') + pid.slice(1);
+const devNm = id => { const d = DEV.find(x => x.id === id); return d ? (d.name ? d.name + ' (' + d.id + ')' : d.id) : id; };
+// ruta de un puerto: switch → patch cord → patchera → cable → equipo
+function ruta(cid, iid, pid) { const c = CABS[cid]; if (!c) return null; const it = c.items.find(x => x.iid === iid); if (!it) return null; const inf = portInfo(cid, iid, pid);
+  const o = inf.other ? { it: c.items.find(x => x.iid === inf.other[0]), pid: inf.other[1], p: ((c.ports[inf.other[0]] || {})[inf.other[1]]) || {} } : null;
+  const me = { it, pid, p: inf.p };
+  const sw = isPP(it) ? o : me, pp = isPP(it) ? me : (o && isPP(o.it) ? o : null), cab = pp ? pp.p : me.p;
+  return { sw: sw && isSW(sw.it) ? sw : null, pp, dev: cab.dev || (sw && sw.p.dev) || null, txt: cab.txt || '', cable: cab.cab || '', m: cab.m || '', nota: cab.nota || '' }; }
+function rutaTxt(cid, r) { if (!r) return ''; const parts = [];
+  if (r.sw) parts.push(`<b>${escH(itName(r.sw.it))}</b> · ${pNum(r.sw.it, r.sw.pid)}`);
+  if (r.pp) parts.push(`${r.sw ? 'patch cord → ' : ''}<b>${escH(itName(r.pp.it))}</b> · ${pNum(r.pp.it, r.pp.pid)}`);
+  const dst = r.dev ? `<a href="#" data-goto="${r.dev}">${escH(devNm(r.dev))}</a>` : r.txt ? escH(r.txt) : '<span class="muted">sin destino</span>';
+  parts.push(`cable${r.cable ? ' <b>' + escH(r.cable) + '</b>' : ''}${r.m ? ' (' + escH(String(r.m)) + ' m)' : ''} → ${dst}`);
+  return `<div class="ruta"><small>${escH(cid)}</small>${parts.join('<i>→</i>')}</div>`; }
+const linkables = () => DEV.filter(x => !SENS[x.type] && !['gab', 'wr', 'rack'].includes(x.type));
+cabSide = (o => function (c) { let h = o(c); const ed = canEdit(), sel = CABV.sel;
+  // el selector de equipo conectado: todos los equipos de la maqueta, con su nombre
+  h = h.replace(/<select data-cab="dev">[\s\S]*?<\/select>/, () => { const inf = sel && sel[1] ? portInfo(CABV.cid, sel[0], sel[1]) : { p: {} };
+    return `<select data-cab="dev"><option value="">Ninguno</option>${linkables().map(x => `<option value="${x.id}" ${inf.p.dev === x.id ? 'selected' : ''}>${escH(x.name ? x.name + ' · ' + x.id : x.id)} · ${escH((x.loc || '').split(' · ')[0])}</option>`).join('')}</select>`; });
+  if (sel && sel[1]) { const it = c.items.find(x => x.iid === sel[0]), r = ruta(CABV.cid, sel[0], sel[1]), p = ((c.ports[sel[0]] || {})[sel[1]]) || {};
+    let x = `<div class="cside-h"><small>Recorrido</small></div>${rutaTxt(CABV.cid, r)}`;
+    if (ed && it && (isPP(it) || (isSW(it) && !(r && r.pp))) && sel[1][0] === 'p') x += `<div class="cact c2"><label class="ef"><span>Etiqueta del cable</span><input data-cab2="cab" value="${escH(p.cab || '')}" placeholder="Ej.: C-045" maxlength="30"></label>
+      <label class="ef"><span>Metros</span><input data-cab2="m" type="number" min="0" step="1" value="${escH(String(p.m || ''))}"></label>
+      <label class="ef"><span>Otro destino <small>(si no está en la maqueta)</small></span><input data-cab2="txt" value="${escH(p.txt || '')}" placeholder="Ej.: impresora de recepción" maxlength="80"></label>
+      <label class="ef"><span>Nota</span><input data-cab2="nota" value="${escH(p.nota || '')}" maxlength="120"></label></div>`;
+    else if (!ed && (p.cab || p.nota)) x += `<dl class="rows">${p.cab ? row('Cable', escH(p.cab) + (p.m ? ' · ' + p.m + ' m' : '')) : ''}${p.nota ? row('Nota', escH(p.nota)) : ''}</dl>`;
+    return h.replace('</dl>', '</dl>' + x); }
+  if (sel) { const it = c.items.find(x => x.iid === sel[0]); if (it && (isSW(it) || it.type === 'nvr')) { const ex = it.ext && typeof extOf === 'function' ? extOf(it.ext) : null;
+      const sws = (typeof EXT !== 'undefined' ? EXT.list : []).filter(x => extTool(x) === 'wr' || /usw|switch|udm|ucg|gateway/i.test(x.modelo || ''));
+      const live = ex ? `<dl class="rows">${row('Estado', `<span class="pill ${extSt(ex.estado) === 'ok' ? 'ok' : 'crit'}">${extTxt(ex.estado)}</span>`)}${ex.ip ? row('IP', escH(ex.ip)) : ''}${ex.version ? row('Firmware', escH(ex.version)) : ''}</dl>` : '';
+      const f = ed ? `<div class="cact c2"><label class="ef"><span>Modelo</span><input data-cab2="imod" value="${escH(it.modelo || '')}" placeholder="Ej.: USW Pro 24 PoE" maxlength="60"></label><label class="ef"><span>MAC</span><input data-cab2="imac" value="${escH(it.mac || '')}" placeholder="aa:bb:cc:dd:ee:ff" maxlength="17"></label>
+        ${sws.length ? `<label class="ef"><span>Equipo real${EXT.demo ? ' (demo)' : ''}</span><select data-cab2="iext"><option value="">Sin enlazar</option>${sws.map(x => `<option value="${escH(x.uid)}" ${it.ext === x.uid ? 'selected' : ''}>${escH(x.nombre)}${x.modelo ? ' · ' + escH(x.modelo) : ''}</option>`).join('')}</select></label>` : ''}</div>`
+        : (it.modelo || it.mac ? `<dl class="rows">${it.modelo ? row('Modelo', escH(it.modelo)) : ''}${it.mac ? row('MAC', `<span class="mono">${escH(it.mac)}</span>`) : ''}</dl>` : '');
+      return h.replace('</dl>', '</dl>' + live + f); } return h; }
+  // sin nada elegido: buscador de cables y equipos
+  const q = (CABV.q || '').trim().toLowerCase(); let res = '';
+  if (q) { const hits = []; for (const it of c.items) for (const pp of portList(it.type)) { const r = ruta(CABV.cid, it.iid, pp.id); const p = ((c.ports[it.iid] || {})[pp.id]) || {};
+      const hay = [itName(it), pNum(it, pp.id), p.cab, p.txt, p.nota, p.dev, p.dev && devNm(p.dev)].filter(Boolean).join(' ').toLowerCase(); if (hay.includes(q) && (p.dev || p.cab || p.txt || p.nota || q.length > 3)) hits.push([it, pp.id, r]); }
+    res = `<ul class="clist">${hits.slice(0, 30).map(([it, pid]) => `<li><a href="#" data-cabport="${it.iid}:${pid}">${escH(itName(it))} · ${pNum(it, pid)}</a></li>`).join('') || '<li class="muted">Nada con eso.</li>'}</ul>`; }
+  return `<div class="cbusca"><input data-cab2="q" type="search" placeholder="Buscar cámara, cable o puerto" value="${escH(CABV.q || '')}" aria-label="Buscar en el ${'rack'}">${res}</div>` + h; })(cabSide);
+// puertos de switch en rojo si el equipo del otro lado del patch cord está caído
+cabSvg = (o => function (c) { let s = o(c); for (const it of c.items) { if (!isSW(it)) continue; for (const pp of portList(it.type)) { const r = ruta(CABV.cid, it.iid, pp.id); if (!r || !r.dev) continue; const d = DEV.find(x => x.id === r.dev); if (!d || d.status === 'ok') continue;
+      s = s.replace(new RegExp(`(data-port="${it.iid}:${pp.id}" class="cp [a-z]+ )(use )?`), `$1${d.status} `); } } return s; })(cabSvg);
+function cabInit2() { const cv = $('#cabview'); if (!cv) return;
+  cv.addEventListener('change', e => { const b = e.target.closest('[data-cab2]'); if (!b || !canEdit()) return; const c = CABS[CABV.cid]; if (!c) return; const k = b.dataset.cab2, sel = CABV.sel || [];
+    if (['cab', 'm', 'txt', 'nota'].includes(k) && sel[1]) { const p = (c.ports[sel[0]] = c.ports[sel[0]] || {})[sel[1]] = c.ports[sel[0]][sel[1]] || {}; const v = b.value.trim(); if (v) p[k] = k === 'm' ? +v : v; else delete p[k]; }
+    if (['imod', 'imac', 'iext'].includes(k) && sel[0]) { const it = c.items.find(x => x.iid === sel[0]); if (it) { const f = { imod: 'modelo', imac: 'mac', iext: 'ext' }[k], v = b.value.trim(); if (v) it[f] = v; else delete it[f];
+        if (k === 'iext' && v) { const x = extOf(v); if (x && !it.name) it.name = x.nombre; if (x && x.mac && !it.mac) it.mac = x.mac; if (x && x.modelo && !it.modelo) it.modelo = x.modelo; } } }
+    if (k === 'q') return; edSave(); renderCab(); });
+  cv.addEventListener('input', e => { const b = e.target.closest('[data-cab2="q"]'); if (!b) return; CABV.q = b.value; const pos = b.selectionStart; renderCab(); const q = cv.querySelector('[data-cab2="q"]'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} } });
+  cv.addEventListener('click', e => { const a = e.target.closest('[data-cabport]'); if (!a) return; e.preventDefault(); CABV.sel = a.dataset.cabport.split(':'); renderCab(); }, true);
+  $('#panel').addEventListener('click', e => { const b = e.target.closest('[data-cabgo]'); if (!b) return; const [cid, iid, pid] = b.dataset.cabgo.split('|'); openCab(cid); CABV.sel = [iid, pid]; renderCab(); }); }
+// en la ficha de cada equipo: dónde está conectado
+panelContent = (o => function (id) { const r = o(id); const d = DEV.find(x => x.id === id); if (!r || !d || SENS[d.type] || ['gab', 'wr', 'rack'].includes(d.type)) return r;
+  for (const cid in CABS) { const c = CABS[cid]; for (const iid in c.ports) for (const pid in c.ports[iid]) if (c.ports[iid][pid].dev === id) { const ru = ruta(cid, iid, pid);
+      r.body += `<div class="edbox" style="border-style:solid"><b>Dónde está conectado</b>${rutaTxt(cid, ru)}<button class="btn" data-cabgo="${cid}|${iid}|${pid}">Ver en el rack</button></div>`; return r; } }
+  if (canEdit() && ED.on) r.body += `<p class="ehelp">Todavía no figura en ningún rack. Abrí el rack, tocá el puerto y elegí este equipo.</p>`;
+  return r; })(panelContent);
 function initGame() {
   const css = document.createElement('style'); css.textContent = `
 .e3hot{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--gb);z-index:14;display:flex;gap:4px;padding:5px;border-radius:14px;align-items:center}
@@ -3838,6 +3902,9 @@ html.walking .e3cat,html.walking .e3catmini{top:calc(var(--gt) + 58px)} html.wal
 html.walking .e3ext,html.editing .e3ext[data-k=ubicar]{display:none}
 .e3pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:31;display:grid;gap:8px;min-width:240px;padding:16px;border-radius:14px;color:var(--ink);font:13px var(--f-ui)} .e3pause b{font-size:16px;margin-bottom:2px} .e3pause .btn{justify-content:space-between;display:flex;align-items:center;gap:10px}
 html.walking canvas{cursor:default!important}
+.ruta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:8px 10px;margin:6px 0 8px;border-radius:9px;background:color-mix(in srgb,var(--accent) 10%,transparent);font:12.5px/1.5 var(--f-ui)} .ruta small{width:100%;color:var(--muted);font-size:11px} .ruta i{font-style:normal;color:var(--muted)}
+.cbusca{margin-bottom:10px} .cbusca input{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--glass-strong);color:var(--ink);font:13px var(--f-ui)}
+.cact.c2{display:grid;grid-template-columns:1fr 1fr;gap:8px} .cact.c2 .ef{min-width:0} .cact.c2 input{min-width:0;width:100%;box-sizing:border-box}
 kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:var(--glass-strong);font:600 11px ui-monospace,Menlo,monospace;color:var(--ink);text-align:center}
 .e3tile[draggable=true]{cursor:grab}
 .e3qb.e3hide{width:auto;padding:0 7px;gap:3px;display:inline-flex;align-items:center;font:600 11px var(--f-ui)}
@@ -3896,8 +3963,8 @@ kbd{display:inline-block;min-width:16px;padding:1px 5px;border:1px solid var(--l
   for (const ev of ['click', 'dblclick', 'contextmenu']) window.addEventListener(ev, e => { if (LOCK.on || (FREE.on && e.target === canvas)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('wheel', e => { if (e.target !== canvas || !WALK.on || !canHot()) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const now = performance.now(); if (now - (LOCK.wT || 0) < 90) return; LOCK.wT = now;
     let i = hotCur(); if (i < 0) i = 0; const dir = e.deltaY > 0 ? 1 : -1; for (let n = 0; n < 10; n++) { i = (i + dir + 10) % 10; if (HOT.slots[i]) break; } selectSlot(i); }, { capture: true, passive: false });
-  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel });
-  hotRender(); requestAnimationFrame(gameTick); extInit(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
+  if (window.__e3) Object.assign(window.__e3, { HOT, LOCK, ROT, PROPS, WALK, BK, FK, selectSlot, hotAssign, placePropAt, aimDown, carryEnd, setEdit, setRole: typeof setRole === 'function' ? setRole : null, surfHit, rayNow, pick3, DEV, ED, walkTo, naveById, entity, armItem, placeDevAt, sensPanel, autoCols, ticketPop, beamLines, innerOf, buildNave, NP, wallDrag, uiOpen, closePanel, EXT, extLoad, extCat, renderPanel, CABS, CABV, openCab, ruta });
+  hotRender(); requestAnimationFrame(gameTick); extInit(); cabInit2(); try { genericStart(); } catch (e) { console.warn('genérica', e); } }
 
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
