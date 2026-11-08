@@ -60,7 +60,8 @@ const mkDev = (d: any) => ({ id: d.serial, nombre: d.name || d.model || d.serial
 // Network de la consola, a través de la nube (necesita una clave con alcance "UniFi Applications" → Network)
 async function conn(key: string, hostId: string, path: string) {
   const r = await fetch(`${UI}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1/${path}`, { headers: { 'X-API-KEY': key, Accept: 'application/json' } }).catch(() => null);
-  if (!r) throw new Error('sin conexión'); if (!r.ok) throw new Error(String(r.status));
+  if (!r) throw new Error('sin conexión');
+  if (!r.ok) { let m = ''; try { const j = await r.json(); m = j && (j.message || j.error || j.code) || ''; } catch (e) {} throw new Error(String(r.status) + (m ? ' · ' + String(m).slice(0, 140) : '')); }
   return await r.json().catch(() => null);
 }
 const macN = (m: string) => String(m || '').toLowerCase().replace(/[^0-9a-f]/g, '');
@@ -135,7 +136,10 @@ async function leerEquipos(db: Db, org: string, s: any, marca: string, cache: Ma
       const dv = ((await conn(k, link.hostId, `sites/${hit.id}/devices?limit=500`)) || {}).data || [];
       const byMac = new Map(equipos.map((e: any) => [macN(e.mac), e]));
       equipos = dv.map((d: any) => byMac.get(macN(d.macAddress)) || intOut(d));
-    } catch (e) { aviso = `La consola tiene ${nSites} sitios y no pude separar los de este (${(e as Error).message}). Se ven todos los equipos de la consola: revisá que la clave tenga también el alcance "UniFi Applications → Network".`; }
+    } catch (e) {
+      // sin separar no se muestra nada: nunca se mezclan equipos de otros clientes de la misma consola
+      equipos = [];
+      aviso = `La consola tiene ${nSites} sitios y UniFi no me deja ver cuáles equipos son de este (${(e as Error).message}). Para no mezclar clientes no muestro equipos hasta arreglarlo: la clave de Site Manager tiene que tener también permiso de Network ("UniFi Applications → Network").`; }
   }
   return { consola: g.hostName || '', actualizado: g.updatedAt || null, sitio: st ? siteOut(st) : null, equipos, aviso };
 }
@@ -169,9 +173,9 @@ async function procesar(db: Db, org: string, sid: string, marca: string, equipos
   if (cerrar.length) await db.from('ondi_alertas').update({ estado: 'cerrada', cerrada: now, volvio: now, nota: 'Volvió solo', actualizado: now }).in('id', cerrar);
   if (volvio.length) await db.from('ondi_alertas').update({ volvio: now, actualizado: now }).in('id', volvio).is('volvio', null);
   // equipos que ya no son de este cliente (por ejemplo, al separar los sitios de una consola): se cierran sus alertas y se olvida su estado
-  if (equipos.length) { const vivos = new Set(equipos.map((d: any) => marca + ':' + (d.mac || d.id)));
+  if (equipos.length || aviso) { const vivos = new Set(equipos.map((d: any) => marca + ':' + (d.mac || d.id)));
     const fuera = (abiertas || []).filter((a: any) => a.uid.startsWith(marca + ':') && !vivos.has(a.uid)).map((a: any) => a.id);
-    if (fuera.length) await db.from('ondi_alertas').update({ estado: 'cerrada', cerrada: now, nota: 'El equipo ya no figura en este cliente', actualizado: now }).in('id', fuera);
+    if (fuera.length) await db.from('ondi_alertas').update({ estado: 'cerrada', cerrada: now, nota: equipos.length ? 'El equipo ya no figura en este cliente' : 'Se cerró porque no se pudo confirmar que el equipo sea de este cliente', actualizado: now }).in('id', fuera);
     const viejos = (prev || []).filter((p: any) => p.uid.startsWith(marca + ':') && !vivos.has(p.uid)).map((p: any) => p.uid);
     for (let i = 0; i < viejos.length; i += 100) await db.from('ondi_equipos_estado').delete().eq('org_id', org).eq('site_id', sid).in('uid', viejos.slice(i, i + 100)); }
   const res: any = { total: equipos.length, caidos: equipos.filter((d: any) => caido(d.estado)).length, at: now }; if (aviso) res.aviso = aviso;
