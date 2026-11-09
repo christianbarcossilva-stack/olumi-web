@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Ondi · Beta 2 · Plano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Beta 2 · Plano: la app es una lámina de arquitecto viva. Papel (claro) o cianotipo (oscuro); las alertas son nubes de revisión */
+:root{--paper:#f2efe6;--ink:#12171a;--mut:#5a625f;--dim:#8d928c;--line:#12171a;--hair:rgba(18,23,26,.16);--grid:rgba(18,23,26,.05);--fill:#e6e1d3;--acc:#0a6f8f;--alert:#e2540e;--ok:#2f7d4f;--warn:#a86a00;--hatch:rgba(18,23,26,.22);
+  --f:'Instrument Sans',system-ui,sans-serif;--s:'Instrument Serif',Georgia,serif;--m:'IBM Plex Mono',ui-monospace,monospace;--g:max(14px,env(safe-area-inset-left))}
+:root[data-theme=dark]{--paper:#0f2c4d;--ink:#e8f0f8;--mut:#a9bed3;--dim:#7895b2;--line:#e8f0f8;--hair:rgba(232,240,248,.2);--grid:rgba(232,240,248,.06);--fill:#143761;--acc:#8fd8f0;--alert:#ff8a3d;--ok:#7fe0a8;--warn:#ffc35a;--hatch:rgba(232,240,248,.26)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--paper);color:var(--ink);font:15px/1.45 var(--f);-webkit-font-smoothing:antialiased;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:8px 8px,8px 8px,40px 40px,40px 40px}
+button{font:inherit;color:inherit;cursor:pointer}
+.mono{font-family:var(--m);font-variant-numeric:tabular-nums}
+/* lámina con su marco y referencias */
+.sheet{position:relative;margin:var(--g);border:1.5px solid var(--line);min-height:calc(100vh - 2*var(--g));padding:28px;display:grid;grid-template-columns:290px minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr);gap:0 28px}
+.sheet::before{content:"";position:absolute;inset:6px;border:.5px solid var(--hair);pointer-events:none}
+.ref{position:absolute;display:flex;justify-content:space-around;font:500 10px var(--m);color:var(--dim);pointer-events:none}
+.ref.t{top:-1px;left:0;right:0;height:14px;transform:translateY(-100%)}.ref.b{bottom:-1px;left:0;right:0;transform:translateY(100%)}
+.ref.l{left:-1px;top:0;bottom:0;flex-direction:column;transform:translateX(-100%);width:14px;align-items:center}.ref.r{right:-1px;top:0;bottom:0;flex-direction:column;transform:translateX(100%);width:14px;align-items:center}
+/* encabezado */
+.head{grid-column:1/-1;display:grid;grid-template-columns:290px minmax(0,1fr) auto;gap:28px;align-items:end;padding-bottom:22px;border-bottom:1.5px solid var(--line);margin-bottom:24px}
+.wm{display:flex;align-items:baseline;gap:10px}
+.wm b{font-size:30px;font-weight:700;letter-spacing:-.05em}
+.wm span{font:500 10.5px var(--m);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{font:400 clamp(30px,3.2vw,50px)/1.02 var(--s);letter-spacing:-.015em;margin:0;text-wrap:balance}
+h1 em{color:var(--alert)}
+.f2{margin:8px 0 0;font-size:14px;color:var(--mut)}
+.ht{display:flex;gap:10px;align-items:center}
+.pill{height:34px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.pill.ink{background:var(--ink);color:var(--paper)}
+.date{font:500 11px var(--m);letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+/* índice */
+.cap{font:500 10.5px var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--mut);display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:4px}
+.idx{list-style:none;margin:0;padding:0}
+.idx button{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:2px 10px;text-align:left;border:0;border-bottom:1px solid var(--hair);background:none;padding:12px 0}
+.idx button:hover b{text-decoration:underline;text-underline-offset:3px}
+.idx .no{font:500 12px var(--m);color:var(--dim);padding-top:2px}
+.idx b{font-weight:600;font-size:15px}
+.idx small{grid-column:2;font-size:12.5px;color:var(--mut)}
+.idx .st{grid-row:span 2;font:italic 17px var(--s);align-self:center}
+.idx .st.crit{color:var(--alert)}.idx .st.warn{color:var(--warn)}.idx .st.off{color:var(--dim)}
+.idx button[aria-current=true]{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 12%,transparent),transparent)}
+.idx button[aria-current=true] .no{color:var(--acc)}
+.tot{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;border-top:1.5px solid var(--line)}
+.tot div{padding:12px 0;border-bottom:1px solid var(--hair)}
+.tot b{display:block;font:400 40px/1 var(--s);letter-spacing:-.02em}
+.tot span{font-size:12px;color:var(--mut)}
+/* plano */
+.plan{position:relative;min-height:560px;display:flex;flex-direction:column}
+.plan svg{flex:1;width:100%;height:100%;min-height:0;overflow:hidden}
+.ptop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ptop h2{font:400 34px/1 var(--s);margin:0;letter-spacing:-.01em}
+.ptop span{font-size:13px;color:var(--mut)}
+.leg{display:flex;gap:16px;font:11px var(--m);color:var(--mut);margin-top:8px;flex-wrap:wrap}
+.leg i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-right:5px}
+svg .ln{stroke:var(--line);fill:none}
+svg .bld{stroke:var(--line);stroke-width:1.4;fill:url(#h)}
+svg .bld2{stroke:var(--line);stroke-width:.9;fill:url(#h2)}
+svg .road{stroke:var(--line);stroke-width:.8;fill:none}
+svg .fence{stroke:var(--line);stroke-width:.9;fill:none;stroke-dasharray:6 3 1.5 3}
+svg .nm{font:500 11px var(--m);fill:var(--ink);text-anchor:middle;letter-spacing:.06em}
+svg .ap{fill:var(--paper);stroke:var(--acc);stroke-width:1.3}
+svg .cm{fill:var(--acc)}
+svg .dn{fill:var(--alert);stroke:var(--alert)}
+svg .cloud{fill:none;stroke:var(--alert);stroke-width:1.6}
+svg .lead{stroke:var(--alert);stroke-width:1;fill:none}
+svg .note{font:italic 19px var(--s);fill:var(--alert)}
+svg .note2{font:500 10.5px var(--m);fill:var(--alert);letter-spacing:.04em}
+svg .tri{fill:var(--paper);stroke:var(--alert);stroke-width:1.3}
+svg .trin{font:600 10px var(--m);fill:var(--alert);text-anchor:middle}
+svg .na{font:500 10px var(--m);fill:var(--mut)}
+svg .cloud{stroke-dasharray:400;stroke-dashoffset:400;animation:draw 1.4s ease forwards .3s}
+@keyframes draw{to{stroke-dashoffset:0}}
+/* notas de revisión */
+.side{display:flex;flex-direction:column;gap:22px;min-width:0}
+.rev{list-style:none;margin:0;padding:0}
+.rev li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:4px 10px;padding:14px 0;border-bottom:1px solid var(--hair)}
+.rev .tr{width:24px;height:22px;display:grid;place-items:center;font:600 10px var(--m);color:var(--alert);position:relative;grid-row:span 3}
+.rev .tr svg{position:absolute;inset:0;overflow:visible}.rev .tr span{position:relative;top:3px}
+.rev li>*:not(.tr){grid-column:2}
+.rev.done .tr{color:var(--acc)}
+.rev b{font-weight:600;font-size:15px}
+.rev small{font-size:12.5px;color:var(--mut)}
+.rev .q{font:italic 18px var(--s);color:var(--alert)}
+.rev .q.warn{color:var(--warn)}.rev .q.ok{color:var(--acc)}
+.rev .row{display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap}
+.lnk{border:0;background:none;padding:0;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.lnk.a{color:var(--alert)}
+.t{font:500 12px var(--m);color:var(--mut)}
+/* rótulo */
+.rot{margin-top:auto;border:1.5px solid var(--line);display:grid;grid-template-columns:1fr 1fr;font-size:12.5px}
+.rot div{padding:7px 10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rot div:nth-child(2n){border-right:0}
+.rot .w{grid-column:1/-1;border-right:0}
+.rot .last{border-bottom:0}
+.rot small{display:block;font:500 9.5px var(--m);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.rot b{font-weight:600}
+.rot .big{font:400 26px/1.1 var(--s)}
+.rot .wm2{font-weight:700;letter-spacing:-.04em;font-size:18px}
+/* 3D */
+.m3d{position:fixed;inset:var(--g);z-index:20;border:1.5px solid var(--line);background:var(--paper);display:none;flex-direction:column}
+.m3d.on{display:flex}
+.m3d header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1.5px solid var(--line)}
+.m3d header b{font:400 24px var(--s)}
+.m3d .box{flex:1;min-height:0}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1}
+.back{display:inline-block;margin-top:16px;font:500 11px var(--m);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+@media (max-width:1180px){.sheet{grid-template-columns:250px minmax(0,1fr)}.side{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:24px}.rot{margin-top:0}.head{grid-template-columns:1fr auto}.head .wm{grid-column:1/-1}}
+@media (max-width:760px){
+  .sheet{display:block;padding:18px 14px}.ref{display:none}
+  .head{display:block}.head .wm{margin-bottom:14px}.ht{margin-top:16px}
+  .plan{min-height:0;margin:8px 0 26px}.plan svg{height:auto;aspect-ratio:.82}
+  .side{display:block}.side>*+*{margin-top:24px}
+  .idxw{margin-top:8px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet">
+  <div class="ref t" id="rt"></div><div class="ref b" id="rb"></div><div class="ref l" id="rl"></div><div class="ref r" id="rr"></div>
+  <header class="head">
+    <div class="wm"><b>ondi</b><span id="inst"></span></div>
+    <div><div class="date mono" id="fecha"></div><h1 id="frase"></h1><p class="f2" id="frase2"></p></div>
+    <div class="ht"><button class="pill" id="tema"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg> <span id="tn">Cianotipo</span></button><button class="pill ink" id="ver3d">Ver en 3D</button></div>
+  </header>
+  <aside class="idxw"><div class="cap"><span>Índice de clientes</span><span id="ncli"></span></div><ol class="idx" id="idx"></ol>
+    <div class="tot" id="tot"></div><a class="back" href="./">← Las tres opciones</a></aside>
+  <main class="plan"><div class="ptop"><h2 id="pt"></h2><span id="ps"></span></div>
+    <div class="leg"><span><i style="border:1.3px solid var(--acc);border-radius:50%"></i>Wi-Fi</span><span><i style="background:var(--acc);clip-path:polygon(0 0,100% 50%,0 100%)"></i>Cámara</span><span><i style="border:1.3px solid var(--alert);border-radius:50%;background:var(--alert)"></i>Sin respuesta</span><span><i style="border:1.4px solid var(--line);background:repeating-linear-gradient(45deg,var(--hatch) 0 1px,transparent 1px 4px)"></i>Nave</span></div>
+    <svg id="svg" viewBox="0 0 800 640" role="img" aria-label="Plano del cliente"></svg></main>
+  <aside class="side"><div><div class="cap"><span>Notas de revisión</span><span id="nrev"></span></div><ol class="rev" id="rev"></ol></div>
+    <div class="rot" id="rot"></div></aside>
+</div>
+<div class="m3d" id="m3d"><header><b id="m3t"></b><button class="pill" id="m3x">Volver al plano</button></header><div class="box" id="m3b"></div></div>
+<div class="toast" id="toast"></div>
+<script src="datos.js"></script>
+<script>
+const $ = s => document.querySelector(s), E = D.esc;
+const flip = D.tema('ondi.d2.tema', 'light'), tn = () => $('#tn').textContent = document.documentElement.dataset.theme === 'dark' ? 'Papel' : 'Cianotipo';
+$('#tema').onclick = () => { flip(); tn(); }; tn();
+let sel = 'pln';
+$('#inst').textContent = D.inst; $('#fecha').textContent = D.fecha() + ' · ' + D.hora(false);
+$('#rt').innerHTML = $('#rb').innerHTML = 'ABCDEFGH'.split('').map(x => `<span>${x}</span>`).join('');
+$('#rl').innerHTML = $('#rr').innerHTML = [1, 2, 3, 4, 5, 6].map(x => `<span>${x}</span>`).join('');
+const NUM = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco'];
+function frase() { const ab = D.alertas.filter(a => !a.ticket), k = ab.length; const cl = [...new Set(ab.map(a => D.cli(a.cli).n))];
+  $('#frase').innerHTML = k ? `Todo en orden, salvo <em>${NUM[k] || k} ${k > 1 ? 'cosas' : 'cosa'}</em>.` : 'Todo en orden en todos los clientes.';
+  $('#frase2').textContent = k ? cl.join(' · ') : 'Ningún equipo caído sin atender.'; }
+function indice() { $('#ncli').textContent = String(D.clientes.length).padStart(2, '0');
+  const W = { ok: 'en orden', crit: 'con caídos', warn: 'a revisar', off: 'sin datos' };
+  $('#idx').innerHTML = D.clientes.map((c, i) => { const r = D.tot(c), e = D.estado(c);
+    return `<li><button data-c="${c.id}" aria-current="${c.id === sel}"><span class="no">${String(i + 1).padStart(2, '0')}</span><b>${E(c.n)}</b><span class="st ${e}">${W[e]}</span><small>${r ? `${r.t} equipos${r.k ? ` · ${r.k} sin respuesta` : ''}` : E(c.dir)}</small></button></li>`; }).join('');
+  const t = D.todo(); $('#tot').innerHTML = `<div><b>${t.t - t.k}</b><span>de ${t.t} equipos en línea</span></div><div><b>${D.alertas.length}</b><span>notas abiertas</span></div>`; }
+/* nube de revisión alrededor de un punto */
+const nube = (x, y, r) => { const n = 11; let d = ''; for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, px = x + r * Math.cos(a), py = y + r * .8 * Math.sin(a); d += i ? ` A${r * .32} ${r * .32} 0 0 1 ${px.toFixed(1)} ${py.toFixed(1)}` : `M${px.toFixed(1)} ${py.toFixed(1)}`; } return d; };
+const tri = (x, y, n) => `<polygon class="tri" points="${x},${y - 11} ${x + 11},${y + 8} ${x - 11},${y + 8}"/><text class="trin" x="${x}" y="${y + 5}">${n}</text>`;
+/* plano del parque (de ejemplo) y de un edificio genérico */
+const PARQUE = { box: [40, 210, 790, 1110], naves: [['Nave 7', 75, 228, 232, 315], ['Nave 6', 75, 228, 315, 407], ['Nave 5', 75, 228, 407, 464], ['Nave 4', 75, 228, 464, 562], ['Nave 2', 68, 210, 562, 677], ['Nave 8', 270, 410, 297, 462], ['Nave 1', 270, 390, 547, 670], ['Nave 9', 442, 615, 260, 355], ['Nave 10', 597, 765, 693, 997]],
+  otros: [[300, 388, 727, 900], [400, 537, 705, 905], [132, 212, 745, 897], [178, 265, 917, 1097], [256, 292, 510, 540]],
+  calles: ['M45 700 H772', 'M45 712 H772', 'M236 232 V682', 'M248 232 V682', 'M425 270 V700', 'M437 270 V700', 'M575 712 V1000', 'M587 712 V1000', 'M45 727 L230 702'],
+  cerco: 'M45 739 L45 1100 L772 1100 L772 676 L648 676 L648 238 L608 148 L258 18 L45 18 Z' };
+function planoParque(c) { const x0 = 40, x1 = 790, y0 = 10, y1 = 1110, s = Math.min(760 / (y1 - y0), 610 / (x1 - x0)), ox = (800 - (y1 - y0) * s) / 2, oy = (640 - (x1 - x0) * s) / 2 + 6,
+    P = (x, y) => [ox + (y - y0) * s, oy + (x1 - x) * s], ns = 'vector-effect="non-scaling-stroke"';
+  let g = `<g transform="matrix(0 ${-s} ${s} 0 ${ox - s * y0} ${oy + s * x1})">`;
+  g += `<path class="fence" d="${PARQUE.cerco}" ${ns}/>` + PARQUE.calles.map(d => `<path class="road" d="${d}" ${ns}/>`).join('') + `<circle class="road" cx="242" cy="688" r="14" ${ns}/>`;
+  g += PARQUE.otros.map(([a, b, c2, d]) => `<rect class="bld2" x="${a}" y="${c2}" width="${b - a}" height="${d - c2}" ${ns}/>`).join('');
+  g += PARQUE.naves.map(([n, a, b, c2, d]) => `<rect class="bld" x="${a}" y="${c2}" width="${b - a}" height="${d - c2}" ${ns}/>`).join('') + '</g>';
+  g += PARQUE.naves.map(([n, a, b, c2, d]) => { const [x, y] = P((a + b) / 2, (c2 + d) / 2); return `<text class="nm" x="${x}" y="${y + 4}">${n.toUpperCase()}</text>`; }).join('');
+  for (const [n, a, b, c2, d] of PARQUE.naves) for (let i = 0; i < 4; i++) { const [x, y] = P(a + (b - a) * (.2 + .6 * (i % 2)), c2 + (d - c2) * (.25 + .5 * (i > 1))); g += `<circle class="ap" cx="${x}" cy="${y}" r="3.4"/>`; }
+  for (const q of [[45, 300], [45, 450], [45, 600], [100, 1100], [400, 1100], [700, 1100], [772, 800], [648, 400], [430, 90], [150, 18]]) { const [x, y] = P(...q); g += `<path class="cm" d="M${x - 4} ${y - 4} l9 4 l-9 4z"/>`; }
+  const [ax, ay] = P(300, 585), tx = 150, ty = 92;
+  g += `<circle class="dn" cx="${ax}" cy="${ay}" r="4"/><path class="cloud" d="${nube(ax, ay, 26)}"/>${tri(ax + 26, ay - 26, 1)}
+    <path class="lead" d="M${ax - 22} ${ay - 18} L${tx + 250} ${ty + 34} H${tx}"/><text class="note" x="${tx + 4}" y="${ty}">AP Entrepiso Y-04 sin señal</text><text class="note2" x="${tx + 4}" y="${ty + 20}" id="n1t"></text>`;
+  g += `<g transform="translate(40 600)"><circle r="16" class="road"/><path d="M-13 0 L4 -5 L0 0 L4 5Z" fill="var(--ink)"/><text class="na" x="-30" y="4" text-anchor="middle">N</text></g>
+    <g transform="translate(600 618)"><path class="ln" d="M0 0 H${100 * s} M0 -4 V4 M${50 * s} -3 V3 M${100 * s} -4 V4" stroke-width="1"/><text class="na" y="-8">0</text><text class="na" x="${100 * s}" y="-8" text-anchor="middle">100 m</text></g>`;
+  return g; }
+function planoEdificio(c) { const r = D.tot(c), W = 600, H = 380, x0 = 100, y0 = 120; let g = `<rect class="bld2" x="${x0}" y="${y0}" width="${W}" height="${H}"/>`;
+  const cols = 5, rows = 3; for (let i = 1; i < cols; i++) g += `<path class="road" d="M${x0 + W / cols * i} ${y0} V${y0 + H}"/>`; for (let j = 1; j < rows; j++) g += `<path class="road" d="M${x0} ${y0 + H / rows * j} H${x0 + W}"/>`;
+  g += `<text class="nm" x="${x0 + W / 2}" y="${y0 - 16}">${E(c.dir.toUpperCase())}</text>`;
+  if (!r) return g + `<text class="note" x="${x0 + W / 2}" y="${y0 + H / 2}" text-anchor="middle" style="fill:var(--mut)">Sin equipos enlazados todavía</text>`;
+  const down = D.alertas.filter(a => a.cli === c.id); let n = 0, dn = 0;
+  for (const [k, v] of Object.entries(c.eq)) for (let i = 0; i < v[0]; i++, n++) { const px = x0 + 40 + (n * 97) % (W - 80), py = y0 + 40 + Math.floor(n * 97 / (W - 80)) * 52 % (H - 70);
+    const caido = i < v[1]; if (caido) { const a = down[dn++]; g += `<circle class="dn" cx="${px}" cy="${py}" r="4"/><path class="cloud" d="${nube(px, py, 24)}"/>${tri(px + 24, py - 24, dn)}`;
+      if (a) g += `<path class="lead" d="M${px + 30} ${py - 18} L${560} ${y0 + H + 40 + dn * 34 - 10} H760"/><text class="note" x="420" y="${y0 + H + 34 + dn * 34}" style="font-size:16px">${E(a.eqp)} · ${E(a.que.toLowerCase())}</text>`; }
+    else g += k === 'cam' ? `<path class="cm" d="M${px - 4} ${py - 4} l9 4 l-9 4z"/>` : `<circle class="ap" cx="${px}" cy="${py}" r="3.4"/>`; }
+  return g; }
+function plano() { const c = D.cli(sel), r = D.tot(c);
+  $('#pt').textContent = c.n; $('#ps').textContent = r ? `${r.ok} de ${r.t} equipos en línea` : c.dir;
+  $('#svg').innerHTML = `<defs><pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 V6" stroke="var(--hatch)" stroke-width="1.2"/></pattern><pattern id="h2" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".6" fill="var(--hatch)"/></pattern></defs>` + (c.base === 'polo' ? planoParque(c) : planoEdificio(c));
+  notas(); rotulo(); }
+function notas() { const lst = D.alertas.filter(a => a.cli === sel), all = lst.length ? lst : D.alertas; $('#nrev').textContent = lst.length ? 'de este cliente' : 'de todos';
+  $('#rev').innerHTML = all.map((a, i) => `<li class="${a.ticket ? 'done' : ''}"><span class="tr"><svg viewBox="0 0 24 22"><polygon points="12,1 23,21 1,21" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>${i + 1}</span></span><b>${E(a.eqp)}</b><span class="q ${a.ticket ? 'ok' : a.sev}">${a.ticket ? `${a.ticket} · ${a.tec} en camino` : E(a.que)}</span>
+    <small>${E(D.cli(a.cli).n)} · ${E(a.lugar)} · <span class="t" data-t="${a.id}">${D.dur(D.desde(a))}</span></small>
+    <div class="row">${a.ticket ? '<button class="lnk" data-do="seg">Seguir al técnico</button>' : `<button class="lnk a" data-do="ot" data-a="${a.id}">Emitir orden de trabajo</button>`}<button class="lnk" data-do="3d" data-a="${a.id}">Ver en 3D</button></div></li>`).join(''); }
+function rotulo() { const c = D.cli(sel), i = D.clientes.indexOf(c) + 1;
+  $('#rot').innerHTML = `<div class="w"><small>Proyecto</small><span class="big">${E(c.n)}</span></div><div><small>Instaladora</small><b>${E(D.inst)}</b></div><div><small>Hoja</small><b class="mono">${String(i).padStart(2, '0')} de ${String(D.clientes.length).padStart(2, '0')}</b></div>
+    <div><small>Fecha</small><b class="mono">${new Date().toLocaleDateString('es-UY')}</b></div><div><small>Escala</small><b class="mono">${c.base === 'polo' ? '1:2500' : '1:200'}</b></div><div class="last"><small>Revisión</small><b class="mono">${String.fromCharCode(65 + D.alertas.filter(a => a.cli === sel).length)}</b></div><div class="last"><span class="wm2">ondi</span> <small style="display:inline">by Unity Tech</small></div>`; }
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
+function abrir3d(c) { $('#m3t').textContent = c.n + ' · en 3D'; $('#m3d').classList.add('on'); D.maqueta($('#m3b'), c, { limpio: false }); }
+$('#ver3d').onclick = () => abrir3d(D.cli(sel)); $('#m3x').onclick = () => { $('#m3d').classList.remove('on'); $('#m3b').innerHTML = ''; };
+document.addEventListener('click', e => { const b = e.target.closest('[data-c],[data-do]'); if (!b) return;
+  if (b.dataset.c) { sel = b.dataset.c; indice(); plano(); return; }
+  const a = D.alertas.find(x => x.id === +b.dataset.a);
+  if (b.dataset.do === 'ot') { a.ticket = 'T-0' + (a.id + 1); a.tec = 'Martín'; frase(); indice(); notas(); toast(`Orden ${a.ticket} emitida · Martín recibió el aviso`); }
+  else if (b.dataset.do === '3d') abrir3d(D.cli(a.cli)); else toast('Martín está a 12 minutos'); });
+setInterval(() => { document.querySelectorAll('[data-t]').forEach(el => { const a = D.alertas.find(x => x.id === +el.dataset.t); el.textContent = D.dur(D.desde(a)); }); const n = $('#n1t'); if (n) n.textContent = `NAVE 1 · ENTREPISO Y · HACE ${D.dur(D.desde(D.alertas[0]))}`; }, 1000);
+frase(); indice(); plano();
+</script>
+</body>
+</html>

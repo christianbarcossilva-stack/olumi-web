@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Ondi · Beta 3 · Rack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Beta 3 · Rack: la app es el frente de un rack. Cada cliente es una unidad con un LED por equipo; las alertas salen impresas */
+:root{--bg:#111213;--rail:#1b1c1e;--hole:#070708;--face:#1e2022;--face2:#191a1c;--edge:rgba(255,255,255,.06);--shade:rgba(0,0,0,.55);--ink:#e6e7e8;--mut:#8b8f94;--silk:#a9adb2;--screw:#3a3d41;
+  --lcd:#07130b;--lcdi:#7dffa8;--amb:#ffb020;--grn:#36f08a;--red:#ff3b30;--off:#2b2e31;--acc:#3fc6ea;--paper:#f3f0e8;--pink:#111;
+  --f:'Instrument Sans',system-ui,sans-serif;--m:'IBM Plex Mono',ui-monospace,monospace;--d:'Doto','IBM Plex Mono',monospace}
+:root[data-theme=light]{--bg:#c7c9cc;--rail:#b5b8bc;--hole:#8c9095;--face:#e4e5e7;--face2:#d8dadd;--edge:rgba(255,255,255,.7);--shade:rgba(0,0,0,.18);--ink:#16181a;--mut:#5d6267;--silk:#4a4f54;--screw:#a4a8ad;--off:#bfc2c6}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 var(--f);-webkit-font-smoothing:antialiased;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+button{font:inherit;color:inherit;cursor:pointer}
+.d{font-family:var(--d);font-weight:700}
+.rack{max-width:1260px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-left)) 60px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start}
+.rack>*{min-width:0}
+.cab{position:relative;padding:0 30px;background:linear-gradient(90deg,var(--rail) 0 30px,transparent 30px calc(100% - 30px),var(--rail) calc(100% - 30px))}
+.cab::before,.cab::after{content:"";position:absolute;top:0;bottom:0;width:8px;background:repeating-linear-gradient(180deg,transparent 0 6px,var(--hole) 6px 12px,transparent 12px 22px);left:11px}
+.cab::after{left:auto;right:11px}
+/* unidad */
+.u{position:relative;margin:0 -24px 3px;padding:0 40px;background:linear-gradient(180deg,var(--face),var(--face2));border-top:1px solid var(--edge);box-shadow:0 2px 0 var(--shade),0 8px 18px -10px var(--shade);border-radius:3px}
+.u::before,.u::after{content:"";position:absolute;top:50%;left:13px;width:11px;height:11px;margin-top:-5.5px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#6a6e73,var(--screw) 60%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.u::after{left:auto;right:13px}
+.u .scr{position:absolute;top:50%;left:18.5px;width:1px;height:7px;margin-top:-3.5px;background:rgba(0,0,0,.5);transform:rotate(35deg);z-index:1}
+.u .scr.r{left:auto;right:18.5px}
+.silk{font:600 9px var(--m);letter-spacing:.18em;text-transform:uppercase;color:var(--silk)}
+/* cabecera 2U */
+.head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:center;min-height:132px;padding-top:16px;padding-bottom:16px}
+.logo b{display:block;font:700 30px var(--f);letter-spacing:.24em;color:var(--ink);opacity:.9}
+.logo span{display:block;margin-top:6px}
+.lcd{background:var(--lcd);border-radius:8px;padding:14px 18px;box-shadow:inset 0 2px 10px rgba(0,0,0,.8),0 0 0 3px #0c0d0e,0 1px 0 4px var(--edge);color:var(--lcdi);text-shadow:0 0 8px rgba(125,255,168,.55);overflow:hidden;position:relative}
+.lcd::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.18) 2px 3px);pointer-events:none}
+.lcd .big{font:900 54px/1 var(--d);letter-spacing:.02em;display:flex;align-items:baseline;gap:14px}
+.lcd .big small{font:700 15px var(--d);letter-spacing:.08em;opacity:.8}
+.lcd .tick{font:700 14px var(--d);white-space:nowrap;margin-top:8px;opacity:.85}
+.lcd .tick span{display:inline-block;padding-left:100%;animation:mq 26s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+.meters{display:grid;gap:8px}
+.mt{display:grid;grid-template-columns:44px auto 52px;gap:10px;align-items:center}
+.bar{display:flex;gap:2px}
+.bar i{width:5px;height:12px;border-radius:1px;background:var(--off)}
+.bar i.g{background:var(--grn);box-shadow:0 0 6px rgba(54,240,138,.6)}
+.bar i.r{background:var(--red);box-shadow:0 0 6px rgba(255,59,48,.7);animation:bl 1s steps(2) infinite}
+.mt b{font:700 15px var(--d);color:var(--amb);text-shadow:0 0 6px rgba(255,176,32,.5);text-align:right}
+.ctl{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.clock{font:900 30px var(--d);color:var(--amb);text-shadow:0 0 8px rgba(255,176,32,.6)}
+.sw{display:flex;align-items:center;gap:8px}
+.tog{width:44px;height:24px;border-radius:5px;border:0;background:#0b0c0d;box-shadow:inset 0 2px 4px rgba(0,0,0,.8);position:relative;padding:0}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:3px;background:linear-gradient(180deg,#d9dadc,#9a9da1);transition:transform .15s}
+:root[data-theme=light] .tog::after{transform:translateX(20px)}
+@keyframes bl{50%{opacity:.15}}
+/* unidad de cliente */
+.cli{display:grid;grid-template-columns:230px minmax(0,1fr) 120px 28px;gap:18px;align-items:center;min-height:74px;width:100%;text-align:left;border:0;background:none;padding:0}
+.dymo{display:inline-block;vertical-align:top;max-width:100%;font:700 13px var(--m);letter-spacing:.12em;text-transform:uppercase;color:#fff;background:#1d4fd6;padding:6px 10px 5px;border-radius:2px;box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 2px 3px rgba(0,0,0,.4);text-shadow:0 1px 0 rgba(0,0,0,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dymo.crit{background:#c8231a}.dymo.warn{background:#d18a00}.dymo.off{background:#3a3d41}
+.dsub{display:block;margin-top:6px;font:500 11px var(--m);color:var(--mut);letter-spacing:.04em}
+.ports{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.grp{display:grid;gap:5px}
+.leds{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,9px);gap:3px}
+.leds i{width:9px;height:9px;border-radius:2px;background:var(--off);box-shadow:inset 0 1px 1px rgba(0,0,0,.5)}
+.leds i.g{background:var(--grn);box-shadow:0 0 5px rgba(54,240,138,.55)}
+.leds i.g.a{animation:act .9s steps(2) infinite}
+.leds i.r{background:var(--red);box-shadow:0 0 7px rgba(255,59,48,.8);animation:bl 1s steps(2) infinite}
+.leds i.w{background:var(--amb);box-shadow:0 0 6px rgba(255,176,32,.7)}
+@keyframes act{50%{background:#1d7a47;box-shadow:none}}
+.cnt{font:900 26px var(--d);color:var(--amb);text-shadow:0 0 8px rgba(255,176,32,.45);text-align:right;line-height:1}
+.cnt small{display:block;font:600 9px var(--m);letter-spacing:.14em;color:var(--silk);text-shadow:none;margin-top:5px}
+.cnt.k{color:var(--red);text-shadow:0 0 8px rgba(255,59,48,.5)}
+.pull{width:22px;height:40px;border-radius:4px;background:linear-gradient(90deg,#2a2c2f,#3a3d41,#2a2c2f);box-shadow:0 1px 0 var(--edge) inset,0 2px 4px rgba(0,0,0,.4);display:grid;place-items:center;color:var(--silk);font-size:11px;transition:transform .2s}
+:root[data-theme=light] .pull{background:linear-gradient(90deg,#c7c9cc,#eef0f2,#c7c9cc)}
+.u.open .pull{transform:rotate(180deg)}
+/* cajón */
+.drawer{display:none;margin:-3px -24px 3px;padding:18px 40px 22px;background:linear-gradient(180deg,#0b0c0d,#131416);border-radius:0 0 4px 4px;box-shadow:inset 0 6px 14px rgba(0,0,0,.7)}
+:root[data-theme=light] .drawer{background:linear-gradient(180deg,#b9bcc0,#cfd1d4);box-shadow:inset 0 6px 14px rgba(0,0,0,.25)}
+.drawer.on{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:20px}
+.mon{border-radius:10px;padding:10px;background:#050505;box-shadow:0 0 0 1px #2a2c2f,0 10px 30px rgba(0,0,0,.5)}
+.mon .scr{aspect-ratio:16/10;border-radius:4px;overflow:hidden;background:#000}
+.mon .silk{display:flex;justify-content:space-between;padding:8px 2px 0}
+.tbl{font:12px var(--m);color:var(--ink)}
+.tbl .r{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(127,127,127,.25)}
+.tbl .r i{width:8px;height:8px;border-radius:2px;background:var(--grn)}
+.tbl .r i.r{background:var(--red);animation:bl 1s steps(2) infinite}.tbl .r i.w{background:var(--amb)}
+.tbl .r span{color:var(--mut)}
+.push{margin-top:14px;display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 18px 0 12px;border-radius:21px;border:0;background:linear-gradient(180deg,#2f3236,#212326);box-shadow:0 2px 0 #0a0b0c,0 4px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08);font:600 12px var(--m);letter-spacing:.12em;color:#e6e7e8}
+.push:active{transform:translateY(2px);box-shadow:0 0 0 #0a0b0c,inset 0 1px 0 rgba(255,255,255,.08)}
+.push i{width:18px;height:18px;border-radius:50%;background:var(--red);box-shadow:0 0 8px rgba(255,59,48,.8),inset 0 -2px 3px rgba(0,0,0,.4)}
+/* impresora */
+.printer{position:sticky;top:20px}
+.pr{height:70px;border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,#26282b,#1b1c1e);box-shadow:0 1px 0 var(--edge) inset,0 10px 24px rgba(0,0,0,.45);position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+:root[data-theme=light] .pr{background:linear-gradient(180deg,#eceef0,#d4d6d9)}
+.pr::after{content:"";position:absolute;left:18px;right:18px;bottom:10px;height:5px;border-radius:3px;background:#050505;box-shadow:inset 0 1px 3px #000}
+.pr .led{width:8px;height:8px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn)}
+.roll{margin:-14px 30px 0;position:relative;z-index:-1;display:flex;flex-direction:column;gap:0;max-height:calc(100vh - 140px);overflow:hidden}
+.tk{background:var(--paper);color:#151515;font:12px/1.5 var(--m);padding:22px 16px 18px;position:relative;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35));
+  -webkit-mask:linear-gradient(#000,#000) top/100% calc(100% - 8px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 8px repeat-x;
+  mask:linear-gradient(#000,#000) top/100% calc(100% - 8px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 8px repeat-x;padding-bottom:26px;margin-bottom:6px}
+.tk.new{animation:print 1.6s steps(24) both}
+@keyframes print{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+.tk h4{margin:0 0 6px;font:700 13px var(--m);letter-spacing:.06em;text-align:center}
+.tk hr{border:0;border-top:1px dashed #777;margin:8px 0}
+.tk .k{display:flex;justify-content:space-between;gap:10px}
+.tk b{font-weight:600}
+.tk .big{font:700 15px var(--m);text-transform:uppercase}
+.tk button{margin-top:10px;width:100%;height:34px;border:1.5px solid #151515;background:none;font:700 11px var(--m);letter-spacing:.14em;color:#151515}
+.tk button:hover{background:#151515;color:var(--paper)}
+.tk.ok h4{color:#1d4fd6}
+.back{display:inline-block;margin:18px 0 0 34px;font:600 10px var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+@media (max-width:1060px){.rack{grid-template-columns:1fr}.printer{position:static;order:-1}.roll{max-height:none;flex-direction:row;overflow-x:auto;gap:12px;margin:-14px 16px 0;scrollbar-width:none}.tk{flex:none;width:260px}}
+@media (max-width:760px){
+  .rack{padding-top:16px}
+  .cab{padding:0;background:none}.cab::before,.cab::after{display:none}
+  .u{margin:0 0 3px;padding:0 30px}.u::before{left:9px}.u::after{right:9px}.u .scr{left:14.5px}.u .scr.r{right:14.5px}
+  .head{grid-template-columns:minmax(0,1fr);gap:14px}.ctl{flex-direction:row;justify-content:space-between;align-items:center}.clock{font-size:24px}#meters{grid-column:1!important}.lcd .big{font-size:38px;flex-wrap:wrap;gap:4px 12px}.mt{grid-template-columns:40px minmax(0,1fr) 48px}.bar{overflow:hidden}
+  .cli{grid-template-columns:minmax(0,1fr) auto 22px;gap:10px 12px;padding:12px 0}
+  .ports{grid-column:1/-1;grid-row:2;gap:10px}
+  .drawer{margin:-3px 0 3px;padding:14px}.drawer.on{grid-template-columns:1fr}
+  .back{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="rack">
+  <main>
+    <div class="cab" id="cab">
+      <section class="u head"><i class="scr"></i><i class="scr r"></i>
+        <div class="logo"><b>ONDI</b><span class="silk" id="inst"></span></div>
+        <div class="lcd" aria-live="polite"><div class="big" id="tot"></div><div class="tick"><span id="mq"></span></div></div>
+        <div class="ctl"><span class="clock" id="clock"></span><span class="sw"><span class="silk">Oscuro</span><button class="tog" id="tema" aria-label="Cambiar a aluminio o grafito"></button><span class="silk">Aluminio</span></span></div>
+        <div class="meters" id="meters" style="grid-column:2/3"></div>
+      </section>
+      <div id="units"></div>
+    </div>
+    <a class="back" href="./">← Las tres opciones</a>
+  </main>
+  <aside class="printer" aria-label="Alertas impresas"><div class="pr"><span class="silk">Alertas · impresora</span><span class="led"></span></div><div class="roll" id="roll"></div></aside>
+</div>
+<script src="datos.js"></script>
+<script>
+const $ = s => document.querySelector(s), E = D.esc;
+const flip = D.tema('ondi.d3.tema', 'dark'); $('#tema').onclick = () => flip();
+$('#inst').textContent = D.inst; let open = null;
+const TIP = { wifi: 'WI-FI', cam: 'CAM', sw: 'SW', gw: 'GW' };
+function cabecera() { const t = D.todo(); $('#tot').innerHTML = `${t.t - t.k}/${t.t}<small>EQUIPOS EN LÍNEA · ${t.k} CAÍDOS</small>`;
+  $('#mq').textContent = D.hechos.map(([h, s, x, c]) => `${h} ${x.toUpperCase()} · ${D.cli(c).n.toUpperCase()}`).join('   ///   ');
+  const cat = {}; for (const c of D.clientes) if (c.eq) for (const [k, v] of Object.entries(c.eq)) { cat[k] = cat[k] || [0, 0]; cat[k][0] += v[0]; cat[k][1] += v[1]; }
+  $('#meters').innerHTML = Object.entries(cat).map(([k, [n, kk]]) => { const on = Math.round((n - kk) / n * 20); let b = ''; for (let i = 0; i < 20; i++) b += `<i class="${i < on ? 'g' : kk && i === on ? 'r' : ''}"></i>`; return `<div class="mt"><span class="silk">${TIP[k]}</span><span class="bar">${b}</span><b>${n - kk}/${n}</b></div>`; }).join(''); }
+function leds(c) { if (!c.eq) return '<span class="silk">Sin enlazar · conectá UniFi, Meraki o el agente</span>';
+  return Object.entries(c.eq).map(([k, v]) => { let s = ''; for (let i = 0; i < v[0]; i++) s += `<i class="${i < v[1] ? 'r' : i < v[1] + (v[2] || 0) ? 'w' : 'g' + (Math.random() < .3 ? ' a' : '')}" style="animation-delay:${(Math.random() * .9).toFixed(2)}s"></i>`; return `<div class="grp"><span class="silk">${TIP[k]}</span><div class="leds" style="grid-template-rows:repeat(${v[0] > 22 ? 3 : 2},9px)">${s}</div></div>`; }).join(''); }
+function unidades() { $('#units').innerHTML = D.clientes.map(c => { const r = D.tot(c), e = D.estado(c);
+  return `<section class="u ${open === c.id ? 'open' : ''}"><i class="scr"></i><i class="scr r"></i><button class="cli" data-c="${c.id}" aria-expanded="${open === c.id}">
+    <span><span class="dymo ${e === 'ok' ? '' : e}">${E(c.n)}</span><span class="dsub">${E(c.dir)}</span></span>
+    <span class="ports">${leds(c)}</span>
+    <span class="cnt ${r && r.k ? 'k' : ''}">${r ? `${r.ok}/${r.t}` : '--/--'}<small>${r ? (r.k ? r.k + ' caído' + (r.k > 1 ? 's' : '') : r.w ? '1 lento' : 'en línea') : 'sin datos'}</small></span>
+    <span class="pull">▾</span></button></section><div class="drawer ${open === c.id ? 'on' : ''}" id="dr-${c.id}"></div>`; }).join('');
+  if (open) cajon(D.cli(open)); }
+function cajon(c) { const el = $('#dr-' + c.id), al = D.alertas.filter(a => a.cli === c.id);
+  const filas = al.map(a => `<div class="r"><i class="${a.ticket ? 'w' : a.sev === 'crit' ? 'r' : 'w'}"></i><b>${E(a.eqp)}</b><span>${a.ticket ? a.ticket : E(a.que)}</span></div>`).join('')
+    + (c.eq ? Object.entries(c.eq).map(([k, v]) => `<div class="r"><i></i><b>${D.tipos[k]}</b><span>${v[0] - v[1]}/${v[0]} en línea</span></div>`).join('') : '');
+  el.innerHTML = `<div class="mon"><div class="scr" id="sc-${c.id}"></div><div class="silk"><span>${E(c.n)} · maqueta 3D</span><span>En vivo</span></div></div>
+    <div><div class="silk" style="margin-bottom:6px">Estado</div><div class="tbl">${filas || '<div class="r"><i></i><b>Sin equipos</b><span>—</span></div>'}</div>
+    ${al.some(a => !a.ticket) ? `<button class="push" data-tk="${c.id}"><i></i>MANDAR TÉCNICO</button>` : ''}</div>`;
+  if (c.eq) D.maqueta($('#sc-' + c.id), c, { orbita: true, cerca: .62 }); else $('#sc-' + c.id).innerHTML = '<div style="height:100%;display:grid;place-items:center;font:700 16px var(--d);color:#3a3d41">SIN SEÑAL</div>'; }
+function ticket(a, nuevo) { const c = D.cli(a.cli);
+  return `<article class="tk ${a.ticket ? 'ok' : ''} ${nuevo ? 'new' : ''}"><h4>${a.ticket ? 'ORDEN ' + a.ticket : 'ALERTA #' + a.id}</h4><div class="k"><span>${D.hora()}</span><span>${a.sev === 'crit' ? 'CAÍDO' : 'ATENCIÓN'}</span></div><hr>
+    <div class="big">${E(a.eqp)}</div><div>${E(c.n.toUpperCase())}</div><div>${E(a.lugar)}</div><div>${E(a.mod)} · ${E(a.que)}</div><hr>
+    <div class="k"><span>SIN RESPUESTA</span><b data-t="${a.id}">${D.dur(D.desde(a))}</b></div>${a.ticket ? `<div class="k"><span>TÉCNICO</span><b>${E(a.tec)} · EN CAMINO</b></div>` : `<button data-a="${a.id}">MANDAR TÉCNICO</button>`}</article>`; }
+function rollo() { $('#roll').innerHTML = D.alertas.map(a => ticket(a)).join(''); }
+function mandar(a) { a.ticket = 'T-0' + (a.id + 1); a.tec = 'Martín'; const r = $('#roll'); r.insertAdjacentHTML('afterbegin', ticket(a, true)); r.querySelectorAll(`[data-a="${a.id}"]`).forEach(b => b.closest('.tk').remove()); if (open) cajon(D.cli(open)); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-c],[data-a],[data-tk]'); if (!b) return;
+  if (b.dataset.c) { open = open === b.dataset.c ? null : b.dataset.c; unidades(); }
+  else if (b.dataset.a) mandar(D.alertas.find(x => x.id === +b.dataset.a));
+  else { const a = D.alertas.find(x => x.cli === b.dataset.tk && !x.ticket); if (a) mandar(a); } });
+setInterval(() => { $('#clock').textContent = D.hora(); document.querySelectorAll('[data-t]').forEach(el => { const a = D.alertas.find(x => x.id === +el.dataset.t); el.textContent = D.dur(D.desde(a)); }); }, 1000);
+$('#clock').textContent = D.hora(); cabecera(); unidades(); rollo();
+</script>
+</body>
+</html>
