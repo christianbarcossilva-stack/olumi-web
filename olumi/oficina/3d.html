@@ -474,7 +474,7 @@ function setTheme(){const d=DARK;HEMI.intensity=d?.16:.55;HEMI.color.set(d?'#415
   MAT.glass.opacity=d?.16:.26;MAT.glass.color.set(d?'#8fa6c4':'#c6dcec')}
 function sync3D(dt){
   syncDesks();const fk=LAYV+'|'+(ED.drag&&ED.drag.moved?ED.drag.it.id:'');if(fk!==FKEY){FKEY=fk;FURN.clear();FURN.add(furniture(ED.drag&&ED.drag.moved&&ED.drag.it))}edFrame(dt);doorsStep(dt);
-  const CIN=CINE.on&&!WALK.on,LOW=WALK.on||CIN&&FP.position.y<4.5;if((WALK.on||CIN)&&SKEY!==S.name){SKEY=S.name;SHELL.clear();SHELL.add(walkShell())}SHELL.visible=WALK.on||CIN;SHELL.children.forEach(c=>{if(c.userData.roof)c.visible=!CIN});WALL_HI.visible=LOW;WALL_LO.visible=!LOW;
+  const CIN=CINE.on&&!WALK.on,LOW=WALK.on||CIN&&FP.position.y<4.5;if((WALK.on||CIN)&&SKEY!==S.name){SKEY=S.name;SHELL.clear();SHELL.add(walkShell())}SHELL.visible=WALK.on||CIN;SHELL.traverse(c=>{if(c.userData.roof)c.visible=!CIN});WALL_HI.visible=LOW;WALL_LO.visible=!LOW;
   if(planImg&&(!PLAN||PLAN.userData.img!==planImg)){if(PLAN)BLD.remove(PLAN);const t=new THREE.Texture(planImg);t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;
     const geo=new THREE.PlaneGeometry(W,Hb).rotateX(-Math.PI/2);PLAN=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:t,transparent:true,opacity:.9,roughness:.8}));PLAN.position.set(W/2,.125,Hb/2);PLAN.receiveShadow=true;PLAN.userData.img=planImg;BLD.add(PLAN)}
   if(!planImg&&PLAN){BLD.remove(PLAN);PLAN=null}
@@ -909,7 +909,7 @@ function evPlan(){const p=byRole('tecnico')[0]||S.people[0];if(!p)return;const d
 const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
 function frame(now){T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
-  if(TAB!=='armar'&&S.built){if(!APP&&!CINE.on&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
+  if(TAB!=='armar'&&S.built){if(!APP&&(!CINE.on||CINE.orbit)&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
   const dk=themeNow();if(dk!==DARK||!frame.th){DARK=dk;frame.th=1;setTheme()}
   if(BUILD<1)BUILD=Math.min(1,BUILD+dt*.55);
   if(WALK.on)walkStep(dt);
@@ -922,22 +922,24 @@ const CK=[
   [0,   -16,44,30, 12,8,0, 34],     // desde el aire, de noche
   [.16,  3.5,34,6.5, 3.5,17,1.4, 42], // bajando a la entrada
   [.3,   3.5,21.2,1.7, 3,13,1.2, 50], // en la puerta
-  [.44,  4.6,16.6,1.75, 2.4,13,1.05, 48], // recepción: llega el WhatsApp
+  [.44,  3.4,17.2,1.7, 2.5,13.1,1.1, 46], // recepción: llega el WhatsApp
   [.58,  16.6,17.4,2.6, 13.8,12.4,.8, 46], // técnica: el técnico lo toma
   [.72,  15,32,5.5, 9,21.4,.4, 40],  // estacionamiento: sale la camioneta
   [.86,  36,34,20, 13,9,0, 36],     // la oficina entera, viva
   [1,    13,46,40, 13,9,0, 30]];
-const CMV={x:0,y:0,h:0,lx:0,ly:0,lh:0,f:50};
 const smo=u=>u*u*(3-2*u);
 function cineAt(t){let i=0;while(i<CK.length-2&&t>CK[i+1][0])i++;const a=CK[i],b=CK[i+1],u=smo(Math.max(0,Math.min(1,(t-a[0])/(b[0]-a[0]))));
   const m=k=>a[k]+(b[k]-a[k])*u;return[m(1),m(2),m(3),m(4),m(5),m(6),m(7)]}
-function cineCam(dt){CINE.k+=(CINE.t-CINE.k)*(1-Math.exp(-dt*4));const [x,y,h,lx,ly,lh,f]=cineAt(CINE.k),s=T*.18;
+function cineCam(dt){
+  // ?orbita=1: la cámara da vueltas despacio alrededor del edificio (portada de Unity Tech)
+  if(CINE.orbit){const a=T*.045+.6;FP.position.set(13+Math.cos(a)*30,17+Math.sin(T*.07)*2,9+Math.sin(a)*30);FP.lookAt(13,0,9);if(FP.fov!==34){FP.fov=34;FP.updateProjectionMatrix()}return}
+  CINE.k+=(CINE.t-CINE.k)*(1-Math.exp(-dt*4));const [x,y,h,lx,ly,lh,f]=cineAt(CINE.k),s=T*.18;
   // un respiro leve para que la toma nunca quede quieta
   FP.position.set(x+Math.sin(s)*.12,h+Math.sin(s*1.3)*.05,y+Math.cos(s*.9)*.12);FP.lookAt(lx,lh,ly);if(Math.abs(FP.fov-f)>.01){FP.fov=f;FP.updateProjectionMatrix()}}
 function cineVan(){const v=S.vans.find(v=>!v.out&&!v.anim&&!v.res);if(!v)return;v.out=true;const sx=v.x,sy=v.y;
   v.anim={t0:T,dur:2.6,x0:sx,y0:sy,x1:sx,y1:26.2,done:()=>{v.anim={t0:T,dur:3.5,x0:sx,y0:26.2,x1:W+10,y1:26.2,done:()=>{
     setTimeout(()=>{v.anim={t0:T,dur:3.5,x0:-8,y0:26.2,x1:sx,y1:26.2,done:()=>{v.anim={t0:T,dur:2.2,x0:sx,y0:26.2,x1:sx,y1:sy,done:()=>{v.out=false}}}}},12000)}}}}}
-if(CINE.on){document.documentElement.classList.add('cine');CAM=FP;
+if(CINE.on){document.documentElement.classList.add('cine');CAM=FP;CINE.orbit=/[?&]orbita=1/.test(location.search);
   addEventListener('message',e=>{const d=e.data||{};if(typeof d.cine==='number')CINE.t=Math.max(0,Math.min(1,d.cine));
     const ev={wa:evWa,mail:evMail,pres:evPres,plan:evPlan,van:cineVan}[d.cineEv];if(ev&&S.built)ev()})}
 // ---------- HUD y panel ----------
