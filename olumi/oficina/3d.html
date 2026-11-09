@@ -640,7 +640,7 @@ addEventListener('keydown',e=>{if(USO.open||/INPUT|TEXTAREA|SELECT/.test(e.targe
   else if(z){act(e.shiftKey?'redo':'undo');e.preventDefault()}
   else if(e.code==='Escape'){if(ED.cat)catToggle(false);else if(ED.ghost)ED.ghost=null;else if(ED.sel)ED.sel=null;else if(!WALK.on||!document.pointerLockElement)edSet(false);else return;edBar();e.stopImmediatePropagation()}},true);
 // puntero: elegir, arrastrar, ubicar (antes que mirar o abrir fichas)
-cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();PTR=[e.clientX-r.left,e.clientY-r.top];const D=ED.drag;if(D&&!D.moved&&Math.hypot(PTR[0]-D.x0,PTR[1]-D.y0)>5){D.moved=true;snapshot();LAYV++}
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();PTR=[e.clientX-r.left,e.clientY-r.top];ED.alt=e.altKey;const D=ED.drag;if(D&&!D.moved&&Math.hypot(PTR[0]-D.x0,PTR[1]-D.y0)>5){D.moved=true;snapshot();LAYV++}
   if(D){e.stopImmediatePropagation()}},true);
 cv.addEventListener('pointerdown',e=>{if(!ED.on||e.button>0||e.shiftKey&&!ED.ghost)return;const r=cv.getBoundingClientRect();PTR=[e.clientX-r.left,e.clientY-r.top];if(ED.ghost||ED.tool!=='mano'){e.stopImmediatePropagation();return}
   const [x,y]=aim(),it=pickAt(x,y);if(!it){if(!WALK.on||document.pointerLockElement)ED.sel=null;edBar();return}
