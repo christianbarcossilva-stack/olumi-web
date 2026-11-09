@@ -282,7 +282,7 @@ function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(innerWidth<700
   // encuadre de la maqueta: el punto del piso que queda en el centro de la pantalla es el que se mira; la vista se puede girar, acercar y desplazar
   const k=Math.SQRT2*COS*sc,a=(VW/2-ox)/(COS*sc),b=(VH/2-oy)/(SIN*sc);Object.assign(ISO,{left:-VW/2/k,right:VW/2/k,top:VH/2/k,bottom:-VH/2/k});ISO.updateProjectionMatrix();
   VIEW.home=[(a+b)/2,(b-a)/2];if(!VIEW.moved){VIEW.tx=VIEW.cx=VIEW.home[0];VIEW.ty=VIEW.cy=VIEW.home[1]}camIso(1);
-  FP.aspect=VW/VH;FP.updateProjectionMatrix();R3.setPixelRatio(dpr);R3.setSize(VW,VH,false)}
+  FP.aspect=VW/VH;FP.updateProjectionMatrix();R3.setPixelRatio(CINE.on?Math.min(dpr,1.25):dpr);R3.setSize(VW,VH,false)}   // de fondo en una web, menos píxeles: cuida la memoria (Safari)
 const VIEW={tx:13,ty:9,cx:13,cy:9,yaw:Math.PI/4,yawT:Math.PI/4,zoom:1,zoomT:1,moved:false,home:[13,9]};
 function camIso(k=1){VIEW.cx+=(VIEW.tx-VIEW.cx)*k;VIEW.cy+=(VIEW.ty-VIEW.cy)*k;VIEW.yaw+=(VIEW.yawT-VIEW.yaw)*k;VIEW.zoom+=(VIEW.zoomT-VIEW.zoom)*k;
   const c=Math.SQRT2/Math.sqrt(3),D=90;ISO.position.set(VIEW.cx+Math.cos(VIEW.yaw)*c*D,D/Math.sqrt(3),VIEW.cy+Math.sin(VIEW.yaw)*c*D);ISO.lookAt(VIEW.cx,0,VIEW.cy);
@@ -477,7 +477,7 @@ function furniture(skip){const g=new THREE.Group();for(const it of LAY)if(it!==s
 // luces
 const HEMI=new THREE.HemisphereLight('#eef4ff','#d9d0c2',.55),SUNL=new THREE.DirectionalLight('#fff1dc',3.4);
 SUNL.position.set(13-12,34,13-22);SUNL.target.position.set(13,0,13);SUNL.castShadow=true;Object.assign(SUNL.shadow.camera,{left:-26,right:26,top:26,bottom:-26,near:1,far:90});
-SUNL.shadow.mapSize.set(innerWidth<700?1024:2048,innerWidth<700?1024:2048);SUNL.shadow.bias=-.0004;SUNL.shadow.normalBias=.03;SC.add(HEMI,SUNL,SUNL.target);
+SUNL.shadow.mapSize.set(innerWidth<700||CINE.on?1024:2048,innerWidth<700||CINE.on?1024:2048);SUNL.shadow.bias=-.0004;SUNL.shadow.normalBias=.03;SC.add(HEMI,SUNL,SUNL.target);
 const NIGHT=new THREE.Group();SC.add(NIGHT);
 ROOMS.forEach(r=>{const l=new THREE.PointLight('#ffd9a8',r.w*r.h*.55,Math.max(r.w,r.h)*1.6,1.6);l.position.set(r.x+r.w/2,2.6,r.y+r.h/2);NIGHT.add(l)});
 LAMPS.forEach(([x,y])=>{const l=new THREE.SpotLight('#ffe2b0',70,14,.95,.7,1.6);l.position.set(x,3.5,y-.1);l.target.position.set(x,0,y-2.2);NIGHT.add(l,l.target)});
@@ -931,7 +931,7 @@ function evPres(){const g=byRole('gerencia')[0];if(!g)return;const d=deskOf(g);s
 function evPlan(){const p=byRole('tecnico')[0]||S.people[0];if(!p)return;const d=deskOf(p);shoot('plan',{x:d.x+.9,y:d.y+.4},()=>{say(p,'📐 plano',2.5);log('📐','#30b0c7',pick(CLI)+' mandó su plano','La maqueta 3D se armó sola · lista para presupuestar')})}
 const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
-function frame(now){T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
+function frame(now){if(CINE.pausa){frame.last=now;return requestAnimationFrame(frame)}T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
   if(TAB!=='armar'&&S.built){if(!APP&&(!CINE.on||CINE.orbit)&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
   const dk=themeNow();if(dk!==DARK||!frame.th){DARK=dk;frame.th=1;setTheme()}
   if(BUILD<1)BUILD=Math.min(1,BUILD+dt*.55);
@@ -963,7 +963,7 @@ function cineVan(){const v=S.vans.find(v=>!v.out&&!v.anim&&!v.res);if(!v)return;
   v.anim={t0:T,dur:2.6,x0:sx,y0:sy,x1:sx,y1:26.2,done:()=>{v.anim={t0:T,dur:3.5,x0:sx,y0:26.2,x1:W+10,y1:26.2,done:()=>{
     setTimeout(()=>{v.anim={t0:T,dur:3.5,x0:-8,y0:26.2,x1:sx,y1:26.2,done:()=>{v.anim={t0:T,dur:2.2,x0:sx,y0:26.2,x1:sx,y1:sy,done:()=>{v.out=false}}}}},12000)}}}}}
 if(CINE.on){document.documentElement.classList.add('cine');CAM=FP;CINE.orbit=/[?&]orbita=1/.test(location.search);
-  addEventListener('message',e=>{const d=e.data||{};if(typeof d.cine==='number')CINE.t=Math.max(0,Math.min(1,d.cine));
+  addEventListener('message',e=>{const d=e.data||{};if(typeof d.cine==='number')CINE.t=Math.max(0,Math.min(1,d.cine));if('cinePausa' in d)CINE.pausa=!!d.cinePausa;
     const ev={wa:evWa,mail:evMail,pres:evPres,plan:evPlan,van:cineVan}[d.cineEv];if(ev&&S.built)ev()})}
 
 // ---------- usar cosas al recorrer: la computadora de cada puesto y el depósito ----------

@@ -53,6 +53,7 @@
 .ch.hero h1 span{display:block;background:linear-gradient(90deg,#ffe08a,#ffc93c 45%,#ff8a1a);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ch.hero p{max-width:34em;margin:0 auto 30px;color:#d1d1d6}
 .ch.hero .txt{max-width:none}
+.ch.hero .kick{font-size:14px;letter-spacing:.12em;margin-bottom:24px}
 .ch.hero .cta{justify-content:center}
 .scrollcue{display:inline-flex;flex-direction:column;align-items:center;gap:8px;margin-top:38px;color:#8e8e93;font-size:13px;letter-spacing:.02em}
 .scrollcue i{width:22px;height:36px;border:1.5px solid #636366;border-radius:12px;position:relative}
@@ -182,7 +183,6 @@
 .ch.todo .wrap{display:block}
 .ch.todo .txt{max-width:900px}
 /* ---------- rubros ---------- */
-.ch .pill{display:inline-block;font:600 14px/1 var(--fb);letter-spacing:.01em;color:#fff;padding:9px 15px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);margin:0 0 22px}
 .rubros h2 span{color:#86868b}
 .rgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .rgrid article{position:relative;background:linear-gradient(160deg,#1c1c1e,#111113);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:26px 24px 24px}
@@ -237,7 +237,7 @@ main>section.alt{background:#0b0b0d}
   <div class="chs">
 
     <article class="ch hero" data-t="0"><div class="wrap"><div class="txt">
-      <p class="pill">Más que un CRM</p>
+      <p class="kick"><i></i>Más que un CRM</p>
       <h1>Tu empresa,<span>virtual y viva.</span></h1>
       <p>La oficina en 3D con tu equipo trabajando en vivo: los pedidos que entran por WhatsApp, la gente en la calle, el stock, los informes y los cobros. Nació para empresas de instalaciones y sirve para cualquier equipo que trabaja en la calle.</p>
       <div class="cta"><a class="btn pri lg" href="/olumi/app/">Probar 30 días gratis</a><a class="btn glass lg" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Olumi">Pedir una demo</a></div>
@@ -461,6 +461,11 @@ main>section.alt{background:#0b0b0d}
   // los teléfonos y tarjetas se achican enteros (con su letra) para entrar en la pantalla junto al texto
   function fit(){var m=document.documentElement.clientWidth<=860;chs.forEach(function(ch){var d=ch.querySelector('.dev');if(!d)return;d.style.zoom=1;var r=d.getBoundingClientRect(),dw=Math.max(r.width,d.scrollWidth),h=m?innerHeight*.62:innerHeight-150,vw=document.documentElement.clientWidth,w=m?vw-40:vw*.44;d.style.zoom=Math.max(.5,Math.min(1,h/r.height,w/dw)).toFixed(3)})}
   addEventListener('scroll',function(){if(!raf)raf=requestAnimationFrame(upd)},{passive:true});addEventListener('resize',function(){fit();upd()});
+  // la maqueta arranca justo debajo de las barras, midan lo que midan en cada navegador
+  function nav(){var h=0;['.gnav','.lnav'].forEach(function(q){var e=document.querySelector(q);if(e)h+=e.offsetHeight});cine.style.marginTop=-h+'px'}
+  nav();addEventListener('resize',nav);
+  // fuera de la historia la maqueta deja de dibujarse (menos memoria y batería)
+  if('IntersectionObserver' in window)new IntersectionObserver(function(e){send({cinePausa:!e[0].isIntersecting})}).observe(cine);
   fit();upd();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(upd,1500);
 })();
 </script>
