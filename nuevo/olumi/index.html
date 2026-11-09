@@ -22,7 +22,7 @@
 :root{--acc:#ffc93c;--acc-ink:#1d1d1f;--acc-t:#ffc93c;--wa:#25d366}
 .lnav{background:rgba(0,0,0,.55)}
 /* ---------- la historia ---------- */
-.cine{position:relative;background:#000;color:#f5f5f7;margin-top:-98px}/* la maqueta llega hasta arriba, por debajo de las barras */
+.cine{position:relative;background:#000;color:#f5f5f7;margin-top:-98px;overflow-x:clip}/* la maqueta llega hasta arriba, por debajo de las barras */
 .cine .bg{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;z-index:0}
 .cine .bg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;transition:opacity 1.6s var(--ease)}
 .cine.ready .bg iframe{opacity:1}
@@ -64,7 +64,7 @@
 .btn.glass{background:rgba(255,255,255,.12);color:#fff;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .btn.glass:hover{background:rgba(255,255,255,.2)}
 /* ---------- iPhone dibujado (nítido en cualquier pantalla) ---------- */
-.iph{--w:min(300px,calc((100vh - 150px) * .466));--w:min(300px,calc((100svh - 150px) * .466));width:var(--w);aspect-ratio:9/19.3;border-radius:calc(var(--w)*.17);padding:calc(var(--w)*.035);background:linear-gradient(145deg,#3a3a3c,#1c1c1e 40%,#2c2c2e);box-shadow:0 0 0 1.5px #48484a,0 40px 90px -20px rgba(0,0,0,.9),0 0 120px -30px rgba(255,201,60,.18);position:relative}
+.iph{--w:300px;width:var(--w);aspect-ratio:9/19.3;border-radius:calc(var(--w)*.17);padding:calc(var(--w)*.035);background:linear-gradient(145deg,#3a3a3c,#1c1c1e 40%,#2c2c2e);box-shadow:0 0 0 1.5px #48484a,0 40px 90px -20px rgba(0,0,0,.9),0 0 120px -30px rgba(255,201,60,.18);position:relative}
 .iph .scr{position:relative;height:100%;border-radius:calc(var(--w)*.135);overflow:hidden;background:#000;font:14px/1.35 var(--fb);color:#f5f5f7;display:flex;flex-direction:column}
 .iph .scr::before{content:"";position:absolute;top:10px;left:50%;width:31%;height:27px;margin-left:-15.5%;background:#000;border-radius:20px;z-index:5}
 .sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font:600 14px var(--fb);position:relative;z-index:4}
@@ -134,8 +134,8 @@
 .van .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),#ff8a1a);border-radius:3px;transition:width 6s cubic-bezier(.3,.1,.3,1) 2s}
 .ch.on .van .bar i{width:72%}
 /* en la obra: cámara y parte firmado */
-.pair{display:flex;gap:22px;align-items:flex-end}
-.pair .iph{--w:min(248px,calc((100vh - 200px) * .466))}
+.pair{display:flex;gap:22px;align-items:flex-end;width:max-content}.pair .iph{flex:none}
+.pair .iph{--w:248px}
 .pair .iph:first-child{margin-bottom:46px}
 .cam{flex:1;position:relative;background:#000;display:flex;flex-direction:column}
 .cam .vf{flex:1;position:relative;overflow:hidden;margin-top:-34px}
@@ -186,13 +186,13 @@ main>section.alt{background:#0b0b0d}
 /* ---------- celular ---------- */
 @media (max-width:860px){
   .ch{min-height:150vh;min-height:150svh;align-items:flex-end;padding:72px 0 56px}
-  .ch .wrap{grid-template-columns:1fr;gap:28px;justify-items:center}
+  .ch .wrap{grid-template-columns:1fr;gap:22px;justify-items:center}
+  .ch h2{font-size:clamp(34px,9.5vw,44px)}
+  .ch p{font-size:16px}
   .ch .txt{max-width:none;text-align:left;justify-self:stretch}
   .ch .dev{order:-1}
   .cine .bg::after{background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 25%,rgba(0,0,0,.55) 60%,rgba(0,0,0,.92) 100%)}
-  .iph{--w:min(232px,60vw)}
-  .tkt{right:auto;left:50%;bottom:-18px;width:240px;margin-left:-120px}
-  .pair .iph{--w:min(170px,42vw)}
+  .tkt{right:-40px;bottom:30px}
   .pair .iph:first-child{margin-bottom:28px}
   .stats{grid-template-columns:1fr;gap:18px;margin-top:28px}
   .stats b{font-size:52px}
@@ -424,8 +424,10 @@ main>section.alt{background:#0b0b0d}
     c.forEach(function(x){var r=x.e.getBoundingClientRect(),vis=r.top<vh*.62&&r.bottom>vh*.38;x.e.classList.toggle('on',vis);if(vis)on=x.e});
     if(on){cine.dataset.ch=on.classList.contains('hero')?'0':on.classList.contains('end')?'end':'x';var ev=on.dataset.ev;if(ev&&!done[ev]){done[ev]=1;send({cineEv:ev})}}
     if(Math.abs(t-last)>.0005){last=t;send({cine:t})}}
-  addEventListener('scroll',function(){if(!raf)raf=requestAnimationFrame(upd)},{passive:true});addEventListener('resize',upd);
-  upd();setTimeout(upd,1500);
+  // los teléfonos y tarjetas se achican enteros (con su letra) para entrar en la pantalla junto al texto
+  function fit(){var m=document.documentElement.clientWidth<=860;chs.forEach(function(ch){var d=ch.querySelector('.dev');if(!d)return;d.style.zoom=1;var r=d.getBoundingClientRect(),dw=Math.max(r.width,d.scrollWidth),h=m?innerHeight*.62:innerHeight-150,vw=document.documentElement.clientWidth,w=m?vw-40:vw*.44;d.style.zoom=Math.max(.5,Math.min(1,h/r.height,w/dw)).toFixed(3)})}
+  addEventListener('scroll',function(){if(!raf)raf=requestAnimationFrame(upd)},{passive:true});addEventListener('resize',function(){fit();upd()});
+  fit();upd();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(upd,1500);
 })();
 </script>
 </body>
