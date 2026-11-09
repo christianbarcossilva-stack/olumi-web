@@ -601,7 +601,7 @@ function edFrame(dt=.016){GRID.visible=ED.on&&ED.grid;const D=ED.drag,it=D?D.it:
   const s=ED.on&&(ED.ghost||ED.sel);SELM.visible=!!s;if(s){boxOn(SELM,s,mov?.06:0);SELM.material.color.set(mov&&blocked(it)?'#ff453a':ED.ghost?'#34c759':'#0a84ff')}}
 // ----- interfaz -----
 const edbar=document.getElementById('edbar'),edcat=document.getElementById('edcat'),bEdit=document.getElementById('b_edit');
-function edSet(on){ED.on=on;ED.tool='mano';setTimeout(fullSync,0);ED.sel=ED.ghost=ED.drag=null;ED.cat=false;edbar.hidden=!on;edcat.hidden=true;bEdit.setAttribute('aria-pressed',on);stage.classList.toggle('editing',on);hidePop();edBar();LAYV++}
+function edSet(on){if(on&&ED.locked){toast('La oficina la arma el dueño, un administrador o el encargado');return}ED.on=on;ED.tool='mano';setTimeout(fullSync,0);ED.sel=ED.ghost=ED.drag=null;ED.cat=false;edbar.hidden=!on;edcat.hidden=true;bEdit.setAttribute('aria-pressed',on);stage.classList.toggle('editing',on);hidePop();edBar();LAYV++}
 function edBar(){if(!ED.on)return;const s=ED.sel,P=s&&pz(s),d=s&&s.desk&&S.desks.find(q=>q.id===s.desk);
   const t=ED.msg||(ED.ghost?pz(ED.ghost).n+' · clic pone · Shift pone varios':ED.tool==='maza'?'Maza: clic en un mueble para sacarlo':ED.tool==='gotero'?'Gotero: clic en un mueble para copiarlo':s?P.n+(d?' · '+d.n:'')+' · arrastrá o girá con , .':'Tocá un mueble y arrastralo');const te=edbar.querySelector('.edt');te.textContent=te.title=t;edbar.classList.toggle('bad',!!ED.msg);
   edbar.querySelectorAll('[data-ed]').forEach(b=>{const a=b.dataset.ed;b.disabled=a==='rot'?!(s||ED.ghost):a==='del'?!s:a==='undo'?!ED.undo.length:a==='redo'?!ED.redo.length:false;if(a.startsWith('t:'))b.setAttribute('aria-pressed',ED.tool===a.slice(2))});
@@ -1017,6 +1017,13 @@ document.getElementById('b_wme').addEventListener('click',meOpen);
 usar.addEventListener('click',e=>{const b=e.target.closest('[data-me]');if(!b)return;const k=b.dataset.me,v=k==='style'?+b.dataset.v:b.dataset.v;MYLOOK={...(MYLOOK||{}),[k]:v};
   try{localStorage.setItem('olumi.avatar.v1',JSON.stringify(MYLOOK))}catch(e){}if(APP){const p=S.me&&S.people.find(p=>p.id===S.me);if(p)p.look={...p.look,...MYLOOK};post({olumiAvatar:MYLOOK})}
   usar.querySelector('.ume').outerHTML=meHtml()});
+// ---------- en la app: el acomodo y los muñecos son de la empresa (Olumi los guarda y los manda en olumiDatos) ----------
+// Solo dueño, administrador o encargado editan la oficina; lo que guardan lo ven todos. Cada uno guarda su propio muñeco.
+if(APP)addEventListener('message',e=>{const d=(e.data||{}).olumiDatos;if(!d)return;
+  ED.locked=d.editaOficina===false;document.getElementById('b_edit').hidden=ED.locked;if(ED.locked&&ED.on)edSet(false);
+  if(Array.isArray(d.lay)&&d.lay.length&&!ED.on){const j=JSON.stringify(d.lay);if(j!==JSON.stringify(LAY)){LAY=JSON.parse(j);LAYV++;try{localStorage.setItem(LKEY,j)}catch(x){}}}
+  const M=d.munecos||{},lk=o=>Object.fromEntries(Object.entries(o||{}).filter(([k,v])=>k!=='at'&&v!==''&&v!=null));
+  S.people.forEach(p=>{if(M[p.id])p.look={...p.look,...lk(M[p.id])}});if(d.me&&M[d.me])MYLOOK=lk(M[d.me])});
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
 function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}

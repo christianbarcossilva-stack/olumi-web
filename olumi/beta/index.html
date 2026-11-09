@@ -838,7 +838,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -4906,7 +4906,7 @@ function p3anim(to){const f={ph:P3.ph,th:P3.th},t0=performance.now();P3.auto=fal
 const OFI={ready:false,frame:null,last:''};
 const OFI_ROL={owner:'gerencia',admin:'gerencia',administracion:'admin',viewer:'admin',ventas:'ventas',encargado:'recepcion',tecnico:'tecnico',subcontratista:'tecnico'};
 const ofiHM=ts=>{const d=new Date(Number(ts));return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
-function ofiData(){const d=ofiData0();if(agOk())d.people=[...d.people,...Object.entries(AG).map(([k,g])=>({id:'ag-'+k,n:g.n,role:g.ofi,out:false,virtual:true,ag:k}))];return{...d,me:ME||null}}
+function ofiData(){const d=ofiData0();if(agOk())d.people=[...d.people,...Object.entries(AG).map(([k,g])=>({id:'ag-'+k,n:g.n,role:g.ofi,out:false,virtual:true,ag:k}))];return{...d,me:ME||null,lay:(CFG.oficina&&Array.isArray(CFG.oficina.lay))?CFG.oficina.lay:null,munecos:D.munecos||{},editaOficina:isLead()}}
 function ofiData0(){
   const m=stockMap(),hoy=today(),dep=deps().find(d=>d.tipo!=='vehiculo'),vans=deps().filter(d=>d.tipo==='vehiculo');
   const enCurso=new Set();arr('trabajos').forEach(j=>{if(j.estado==='en_curso'&&(!j.fecha||j.fecha===hoy))(j.tecnicos||[]).forEach(t=>enCurso.add(t))});
@@ -4947,6 +4947,8 @@ function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].n
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};if('ovFull' in d){f.classList.toggle('ofiFull',!!d.ovFull);document.documentElement.style.overflow=d.ovFull?'hidden':''}
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
   if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
+  if(Array.isArray(d.ovLayout)){if(!isLead())return;clearTimeout(OFI.layT);const lay=d.ovLayout;OFI.layT=setTimeout(()=>{if(JSON.stringify(lay)!==JSON.stringify(CFG.oficina&&CFG.oficina.lay))saveCfg({...CFG,oficina:{lay,at:Date.now(),by:ME||''}}).catch(()=>toast('No se pudo guardar la oficina. Revisá la conexión.'))},1500);return}
+  if(d.olumiAvatar&&ME){const a=d.olumiAvatar,ok=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x);put('munecos',ME,{skin:ok(a.skin)?a.skin:'',hair:ok(a.hair)?a.hair:'',top:ok(a.top)?a.top:'',style:[0,1,2].includes(a.style)?a.style:0,at:Date.now()}).catch(()=>{});return}
   if(d.olumiAbrir&&/^agentes:/.test(String(d.olumiAbrir))){AGT=String(d.olumiAbrir).split(':')[1];lsSet('olumi.ag',AGT);if(viewOk('agentes')){VIEW='agentes';lsSet('crm.view',VIEW);sr()}return}
   if(d.olumiAbrir){const v=String(d.olumiAbrir);if(v.includes(':')){const[ty,id]=v.split(':');if(D[{ent:'entradas',tk:'tickets',trab:'trabajos',pres:'presupuestos',mov:'movimientos'}[ty]]?.[id])openSheet(ty,id);return}
     if(VIEWS[v]&&viewOk(v)){VIEW=v;lsSet('crm.view',VIEW);render();window.scrollTo(0,0)}else toast('Tu rol no tiene acceso a esa sección');return}
