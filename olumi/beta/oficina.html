@@ -1027,6 +1027,35 @@ if(APP)addEventListener('message',e=>{const d=(e.data||{}).olumiDatos;if(!d)retu
   if(Array.isArray(d.lay)&&d.lay.length&&!ED.on){const j=JSON.stringify(d.lay);if(j!==JSON.stringify(LAY)){LAY=JSON.parse(j);LAYV++;try{localStorage.setItem(LKEY,j)}catch(x){}}}
   const M=d.munecos||{},lk=o=>Object.fromEntries(Object.entries(o||{}).filter(([k,v])=>k!=='at'&&v!==''&&v!=null));
   S.people.forEach(p=>{if(M[p.id])p.look={...p.look,...lk(M[p.id])}});if(d.me&&M[d.me])MYLOOK=lk(M[d.me])});
+
+// ---------- estilo "estudio": la maqueta como un modelo de arquitecto (?estilo=estudio) ----------
+// Paleta propia de Unity Tech: blancos cálidos, madera clara, salvia, terracota y grafito; sin texturas ruidosas,
+// luz de estudio suave y tono neutro (los blancos quedan blancos). La página puede cambiar día/noche con {tema:'light'|'dark'}.
+const ESTUDIO=/[?&]estilo=estudio/.test(location.search);
+if(ESTUDIO){document.documentElement.classList.add('estudio');
+  R3.toneMapping=THREE.NeutralToneMapping;
+  const C={base:'#e2ddd4',grass:'#dce1d3',pav:'#efebe4',asph:'#c9c4bc',park:'#dcd7cf',paint:'#ffffff',slab:'#f3f0ea',conc:'#ebe7e0',terr:'#f6f3ee',epox:'#ebe7e0',
+    wall:'#f5f2ec',cwall:'#e9e4dc',cut:'#2b2a28',roof:'#f3f0ea',door:'#e3d6c3',wood:'#e7dccd',tile:'#eeebe5',mull:'#2b2a28',shut:'#c4beb4',
+    fabric:'#3a3836',sofa:'#d9c7b2',black:'#2a2927',blue:'#5b6660',orange:'#e2875f',red:'#cf6a52',reel:'#eaa94a',yellow:'#f0c64a',box:'#d8c4a8',box2:'#e3d3bc',
+    leaf1:'#c9d1bc',leaf2:'#d8ddcd',trunk:'#b8ad9f',can1:'#dfe3d6',can2:'#cfd6c4',green:'#cdd5c1',pot:'#e4ddd2',stone:'#ebe6de',galv:'#c4beb4',fridge:'#eeebe6',
+    srv:'#2a2927',pend:'#d3cdc3',white:'#fbfaf7',sign:'#2b2a28',ev:'#9cbf86'};
+  // sin ruido: superficies lisas, como cartón pluma y madera de maqueta
+  ['grass','pav','asph','park','slab','conc','terr','tile','cwall','green','wood','door'].forEach(k=>{if(MAT[k]){MAT[k].map=null;MAT[k].needsUpdate=true}});
+  for(const k in C)if(MAT[k])MAT[k].color.set(C[k]);
+  MAT.glass.color.set('#e4ece9');MAT.wood.roughness=.7;MAT.mull.metalness=.2;MAT.galv.metalness=.25;MAT.blue.metalness=.1;MAT.red.metalness=0;
+  SUNL.shadow.radius=6;SUNL.shadow.blurSamples=16;R3.shadowMap.type=THREE.VSMShadowMap;SUNL.shadow.bias=-.0006;
+  const st0=setTheme;setTheme=function(){st0();const d=DARK;
+    HEMI.color.set(d?'#3c4258':'#ffffff');HEMI.groundColor.set(d?'#1d1b19':'#ece6dc');HEMI.intensity=d?.2:.9;
+    SUNL.color.set(d?'#b4c0ff':'#fff8ef');SUNL.intensity=d?.3:2.7;SC.environmentIntensity=d?.06:.3;R3.toneMappingExposure=d?1.1:1.02;
+    MAT.glass.opacity=d?.14:.2;MAT.glass.color.set(d?'#9aa8b8':'#e4ece9');
+    MAT.asph.color.set(d?'#3e3c39':'#c9c4bc');MAT.grass.color.set(d?'#4a5245':'#dce1d3');MAT.park.color.set(d?'#4a4743':'#dcd7cf')};
+  // carteles: cápsulas blancas con línea fina (de día) o grafito (de noche), letra más liviana
+  pill=function(t,x,y,f,bg,ink,h=18){ctx.font=`500 ${f}px -apple-system,BlinkMacSystemFont,"Hanken Grotesk",sans-serif`;const w=ctx.measureText(t).width+18;h=Math.max(h,f+9);ctx.save();
+    ctx.shadowColor=DARK?'rgba(0,0,0,.5)':'rgba(60,45,30,.16)';ctx.shadowBlur=14;ctx.shadowOffsetY=4;ctx.fillStyle=DARK?'rgba(29,28,26,.92)':'rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,h/2);ctx.fill();ctx.restore();
+    ctx.strokeStyle=DARK?'rgba(255,255,255,.12)':'rgba(25,24,23,.1)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x-w/2+.5,y-h/2+.5,w-1,h-1,h/2);ctx.stroke();
+    ctx.fillStyle=DARK?'#f4f1ec':'#191817';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y+.5);ctx.textBaseline='alphabetic'};
+  addEventListener('message',e=>{const t=(e.data||{}).tema;if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t}});
+}
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
 function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
