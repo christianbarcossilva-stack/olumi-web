@@ -1,43 +1,222 @@
 <!doctype html>
-<html lang="es-UY">
+<html lang="es-UY" data-theme="dark">
 <head>
-<script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5));try{var t=localStorage.getItem('ut.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Olumi · El sistema para empresas de instalaciones</title>
-<meta name="description" content="Tickets con prioridad, técnicos, obras, inventario por camioneta, presupuestos, facturas y WhatsApp en una sola app. Hecho en Uruguay por Unity Tech. 30 días gratis.">
-<link rel="icon" href="app/icono-192.png">
-<link rel="apple-touch-icon" href="app/icono-180.png">
-<meta property="og:title" content="Olumi · El sistema para empresas de instalaciones">
-<meta property="og:description" content="Tickets, técnicos, obras, presupuestos y facturas en una sola app. 30 días gratis.">
+<title>Olumi · Tu empresa virtual, viva</title>
+<meta name="description" content="Más que un CRM: tu empresa virtual. La oficina en 3D con tu equipo trabajando en vivo, del WhatsApp del cliente al informe firmado. Nació para empresas de instalaciones y sirve para cualquier equipo que trabaja en la calle. Hecho en Uruguay por Unity Tech.">
+<link rel="icon" href="/olumi/app/icono-192.png">
+<link rel="apple-touch-icon" href="/olumi/app/icono-180.png">
+<meta property="og:title" content="Olumi · Tu empresa virtual, viva">
+<meta property="og:description" content="Más que un CRM: tu empresa virtual, con tu equipo trabajando en vivo. 30 días gratis.">
 <meta property="og:image" content="https://unitytech.uy/olumi/og.png">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#f5f5f7" data-auto>
+<meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../familia.css?v=2">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../familia.css?v=3">
 <style>
-/* Olumi: amarillo y naranja sobre grafito */
-:root{--acc:#ffc93c;--acc-2:#ffc93c;--acc-ink:#1d1d1f;--acc-t:#a65400}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--acc-t:#ffc93c}}
-:root[data-theme="dark"]{--acc-t:#ffc93c}
-.hero .appicon{width:92px;height:92px;margin:0 auto 26px}
-.ov{position:relative}
-.ov iframe{display:block;width:100%;height:880px;border:0;background:transparent}
-.ov-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 20px;margin-top:14px;color:var(--faint);font-size:14px}
-.pr{display:inline-block;font:600 12px var(--fm);border-radius:7px;padding:3px 8px}
-.p1{background:#ff453a;color:#fff}.p2{background:#ff9f0a;color:#1d1d1f}.p3{background:#0a84ff;color:#fff}.p4{background:#636366;color:#fff}
-.prio{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.prio div{background:#1c1c1e;border-radius:22px;padding:22px}
-.prio b{display:block;margin:14px 0 4px;font:600 18px var(--fd);letter-spacing:-.02em;color:#f5f5f7}
-.prio span{color:#a1a1a6;font-size:15px}
-.tk{display:flex;gap:10px;align-items:center;background:var(--well);border-radius:14px;padding:10px 12px;font-size:14px}
-.tk b{font-weight:600}.tk div span{color:var(--muted);font-size:12.5px;display:block}
-.wa{display:flex;flex-direction:column;gap:8px;margin-top:auto}
-.wa p{align-self:flex-start;background:var(--well);border-radius:18px 18px 18px 6px;padding:9px 13px;font-size:14px;color:var(--ink);max-width:90%}
-.wa p.me{align-self:flex-end;background:#34c759;color:#fff;border-radius:18px 18px 6px 18px}
-@media (max-width:980px){.prio{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:520px){.prio{grid-template-columns:minmax(0,1fr)}}
+/* Olumi v4 · la página cuenta la historia mientras bajás, sobre la maqueta 3D real (modo cine del iframe) */
+:root{--acc:#ffc93c;--acc-ink:#1d1d1f;--acc-t:#ffc93c;--wa:#25d366}
+.lnav{background:rgba(0,0,0,.55)}
+/* ---------- la historia ---------- */
+.cine{position:relative;background:#000;color:#f5f5f7;margin-top:-98px;overflow-x:clip}/* la maqueta llega hasta arriba, por debajo de las barras */
+.cine .bg{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;z-index:0}
+.cine .bg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;transition:opacity 1.6s var(--ease)}
+.cine.ready .bg iframe{opacity:1}
+.cine .bg::after{content:"";position:absolute;inset:0;pointer-events:none;background:
+  linear-gradient(90deg,rgba(0,0,0,.78) 0%,rgba(0,0,0,.45) 34%,rgba(0,0,0,0) 62%),
+  linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 72%,#000 100%);transition:opacity .8s var(--ease)}
+/* portada y cierre: la maqueta se ve arriba y el texto queda sobre una franja oscura */
+.cine[data-ch="0"] .bg::after,.cine[data-ch="end"] .bg::after{background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,.2) 22%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.82) 72%,#000 100%)}
+.cine[data-ch="todo"] .bg::after{background:linear-gradient(90deg,rgba(0,0,0,.88) 0%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.1) 80%),linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 72%,#000 100%)}
+.chs{position:relative;z-index:1;margin-top:-100vh;margin-top:-100svh}
+.ch{min-height:130vh;min-height:130svh;display:flex;align-items:center;padding:96px 0}
+.ch .wrap{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(24px,6vw,96px);align-items:center}
+.ch .txt{max-width:600px;text-shadow:0 2px 24px rgba(0,0,0,.45)}
+.ch h2{font:600 clamp(40px,min(5.4vw,10.5vh),80px)/.98 var(--fd);letter-spacing:-.045em;margin:0 0 20px;text-wrap:balance}
+.ch h2 em{font-style:normal;color:var(--acc)}
+.ch p{font-size:clamp(17px,1.6vw,21px);line-height:1.45;color:#c7c7cc;margin:0;text-wrap:pretty}
+.ch .kick{display:inline-flex;align-items:center;gap:9px;font:600 13px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--acc);margin:0 0 18px}
+.ch .kick i{width:7px;height:7px;border-radius:1.5px;background:currentColor;transform:rotate(45deg)}
+/* aparece el texto cuando la toma llega */
+.ch .txt>*,.ch .dev{opacity:0;transform:translateY(28px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.ch.on .txt>*,.ch.on .dev{opacity:1;transform:none}
+.ch.on .txt>:nth-child(2){transition-delay:.08s}.ch.on .txt>:nth-child(3){transition-delay:.16s}.ch.on .txt>:nth-child(4){transition-delay:.24s}
+.ch.on .dev{transition-delay:.2s}
+/* portada */
+.ch.hero{min-height:100vh;min-height:100svh;align-items:flex-end;padding-bottom:clamp(56px,10vh,120px)}
+.ch.hero .wrap{display:block;text-align:center}
+.ch.hero h1{font:600 clamp(46px,min(9.5vw,14.5vh),148px)/.92 var(--fd);letter-spacing:-.055em;margin:0 0 22px}
+.ch.hero h1 span{display:block;background:linear-gradient(90deg,#ffe08a,#ffc93c 45%,#ff8a1a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ch.hero p{max-width:34em;margin:0 auto 30px;color:#d1d1d6}
+.ch.hero .txt{max-width:none}
+.ch.hero .kick{font-size:14px;letter-spacing:.12em;margin-bottom:24px}
+.ch.hero .cta{justify-content:center}
+.scrollcue{display:inline-flex;flex-direction:column;align-items:center;gap:8px;margin-top:38px;color:#8e8e93;font-size:13px;letter-spacing:.02em}
+.scrollcue i{width:22px;height:36px;border:1.5px solid #636366;border-radius:12px;position:relative}
+.scrollcue i::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:#aeaeb2;animation:cue 1.8s var(--ease) infinite}
+@keyframes cue{0%{opacity:0;transform:translateY(-3px)}30%{opacity:1}100%{opacity:0;transform:translateY(10px)}}
+.ch.end .wrap{display:block;text-align:center}
+.ch.end .txt{max-width:none}
+.ch.end h2{font-size:clamp(48px,8vw,120px)}
+.ch.end p{max-width:30em;margin:0 auto 32px}
+.ch.end .cta{justify-content:center}
+.btn.glass{background:rgba(255,255,255,.12);color:#fff;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.btn.glass:hover{background:rgba(255,255,255,.2)}
+/* ---------- iPhone dibujado (nítido en cualquier pantalla) ---------- */
+.iph{--w:300px;width:var(--w);aspect-ratio:9/19.3;border-radius:calc(var(--w)*.17);padding:calc(var(--w)*.035);background:linear-gradient(145deg,#3a3a3c,#1c1c1e 40%,#2c2c2e);box-shadow:0 0 0 1.5px #48484a,0 40px 90px -20px rgba(0,0,0,.9),0 0 120px -30px rgba(255,201,60,.18);position:relative}
+.iph .scr{position:relative;height:100%;border-radius:calc(var(--w)*.135);overflow:hidden;background:#000;font:14px/1.35 var(--fb);color:#f5f5f7;display:flex;flex-direction:column}
+.iph .scr::before{content:"";position:absolute;top:10px;left:50%;width:31%;height:27px;margin-left:-15.5%;background:#000;border-radius:20px;z-index:5}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font:600 14px var(--fb);position:relative;z-index:4}
+.sbar s{text-decoration:none;display:flex;gap:5px;align-items:center}
+.sbar s i{display:block;background:currentColor;border-radius:1px}
+.sbar s i:nth-child(1){width:3px;height:6px}.sbar s i:nth-child(2){width:3px;height:8px}.sbar s i:nth-child(3){width:3px;height:10px}
+.sbar s b{width:22px;height:11px;border:1.2px solid rgba(255,255,255,.55);border-radius:3.5px;position:relative;margin-left:4px}
+.sbar s b::after{content:"";position:absolute;inset:1.5px 4px 1.5px 1.5px;background:#fff;border-radius:1.5px}
+/* WhatsApp */
+.wa-h{display:flex;align-items:center;gap:10px;padding:8px 14px 10px;background:#1f2c34;border-bottom:1px solid rgba(255,255,255,.06)}
+.wa-h .av{width:34px;height:34px;border-radius:50%;background:#2a3942;display:grid;place-items:center;font:600 13px var(--fb);color:#d1d7db}
+.wa-h b{display:block;font-size:15px}.wa-h small{color:#8696a0;font-size:12px}
+.wa-b{flex:1;background:#0b141a radial-gradient(rgba(255,255,255,.035) 1px,transparent 1.2px) 0 0/14px 14px;padding:14px 10px;display:flex;flex-direction:column;gap:7px;justify-content:flex-end}
+.bub{max-width:82%;padding:7px 10px 5px;border-radius:10px;font-size:14px;line-height:1.35;position:relative;opacity:0;transform:translateY(10px) scale(.96);transform-origin:bottom left;transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.bub small{display:block;text-align:right;font-size:10.5px;color:rgba(255,255,255,.55);margin-top:2px}
+.bub.in{align-self:flex-start;background:#1f2c34;border-top-left-radius:3px}
+.bub.out{align-self:flex-end;background:#005c4b;border-top-right-radius:3px;transform-origin:bottom right}
+.bub.out small::after{content:" ✓✓";color:#53bdeb}
+.typing{align-self:flex-start;background:#1f2c34;border-radius:10px;padding:9px 12px;display:flex;gap:4px;opacity:0;transition:opacity .3s}
+.typing i{width:6px;height:6px;border-radius:50%;background:#8696a0;animation:dot 1.1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.ch.on .typing{animation:typing 1.6s .3s both}
+@keyframes typing{0%{opacity:0}10%,90%{opacity:1}100%{opacity:0;height:0;padding:0;margin:-7px 0 0}}
+.ch.on .bub.b1{opacity:1;transform:none;transition-delay:1.7s}
+.ch.on .bub.b2{opacity:1;transform:none;transition-delay:2.6s}
+.wa-f{display:flex;gap:8px;align-items:center;padding:8px 10px 22px;background:#1f2c34}
+.wa-f span{flex:1;height:34px;border-radius:17px;background:#2a3942}
+.wa-f i{width:34px;height:34px;border-radius:50%;background:#00a884}
+/* tarjeta de ticket que sale del teléfono */
+.dev{position:relative}
+.tkt{position:absolute;right:-72px;bottom:64px;width:268px;background:rgba(28,28,30,.86);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:14px 16px;box-shadow:0 30px 60px -20px rgba(0,0,0,.8);opacity:0;transform:translate(-40px,16px) scale(.9);transition:opacity .7s var(--ease) 3.4s,transform .9s var(--ease) 3.4s;z-index:3}
+.ch.on .tkt{opacity:1;transform:none}
+.tkt .top{display:flex;align-items:center;gap:8px;font-size:12px;color:#a1a1a6;margin-bottom:8px}
+.tkt .top img{width:18px;height:18px;border-radius:5px}
+.tkt b{display:block;font:600 15.5px/1.3 var(--fb);color:#fff;margin:2px 0 4px}
+.tkt .row{display:flex;gap:8px;align-items:center;font-size:12.5px;color:#a1a1a6;flex-wrap:wrap}
+.pchip{font:700 11px/1 var(--fb);padding:4px 7px;border-radius:6px;background:#ff453a;color:#fff}
+/* pantalla bloqueada con avisos */
+.lock{flex:1;background:radial-gradient(120% 80% at 30% 0%,#3a2a12 0%,#141416 55%,#0a0a0c 100%);display:flex;flex-direction:column;align-items:center;padding:6px 12px 20px}
+.lock .day{font:500 15px var(--fb);color:rgba(255,255,255,.75);margin-top:18px}
+.lock .hr{font:600 76px/1 var(--fd);letter-spacing:-.03em;color:rgba(255,255,255,.92);margin:2px 0 28px}
+.nt{width:100%;background:rgba(60,60,64,.55);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:18px;padding:11px 13px;margin-top:8px;display:flex;gap:10px;opacity:0;transform:translateY(-14px) scale(.97);transition:opacity .6s var(--ease),transform .7s var(--ease)}
+.nt img{width:34px;height:34px;border-radius:8px;flex:none}
+.nt div{min-width:0;flex:1}
+.nt .h{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.6)}
+.nt b{display:block;font-size:14px;color:#fff;margin:1px 0}
+.nt span{font-size:13px;color:rgba(255,255,255,.8);display:block}
+.ch.on .nt.n1{opacity:1;transform:none;transition-delay:.9s}
+.ch.on .nt.n2{opacity:1;transform:none;transition-delay:1.9s}
+.ch.on .nt.n3{opacity:1;transform:none;transition-delay:2.9s}
+/* camioneta */
+.van{width:min(360px,86vw);background:rgba(22,22,24,.82);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.1);border-radius:26px;padding:22px;box-shadow:0 40px 90px -24px rgba(0,0,0,.9)}
+.van .hd{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.van .plate{font:700 13px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.06em;background:#f5f5f7;color:#1d1d1f;border-radius:6px;padding:5px 8px}
+.van .hd b{display:block;font-size:16px}.van .hd small{color:#a1a1a6;font-size:13px}
+.van ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.van li{display:flex;align-items:center;gap:12px;font-size:15px;color:#e5e5ea}
+.van li .ck{width:22px;height:22px;border-radius:50%;border:1.5px solid #48484a;display:grid;place-items:center;flex:none;transition:background .35s,border-color .35s}
+.van li .ck svg{width:13px;height:13px;stroke:#1d1d1f;stroke-width:3;fill:none;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .4s var(--ease)}
+.ch.on .van li .ck{background:var(--acc);border-color:var(--acc)}
+.ch.on .van li .ck svg{stroke-dashoffset:0}
+.ch.on .van li:nth-child(1) .ck,.ch.on .van li:nth-child(1) .ck svg{transition-delay:.7s}
+.ch.on .van li:nth-child(2) .ck,.ch.on .van li:nth-child(2) .ck svg{transition-delay:1.1s}
+.ch.on .van li:nth-child(3) .ck,.ch.on .van li:nth-child(3) .ck svg{transition-delay:1.5s}
+.van .go{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);font-size:13.5px;color:#a1a1a6}
+.van .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:10px;overflow:hidden}
+.van .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),#ff8a1a);border-radius:3px;transition:width 6s cubic-bezier(.3,.1,.3,1) 2s}
+.ch.on .van .bar i{width:72%}
+/* en la obra: cámara y parte firmado */
+.pair{display:flex;gap:22px;align-items:flex-end;width:max-content}.pair .iph{flex:none}
+.pair .iph{--w:248px}
+.pair .iph:first-child{margin-bottom:46px}
+.cam{flex:1;position:relative;background:#000;display:flex;flex-direction:column}
+.cam .vf{flex:1;position:relative;overflow:hidden;margin-top:-34px}
+.cam .vf svg{position:absolute;inset:0;width:100%;height:100%}
+.cam .vf::after{content:"";position:absolute;inset:0;background:#fff;opacity:0}
+.ch.on .cam .vf::after{animation:flash 5s 1.6s infinite}
+@keyframes flash{0%,100%{opacity:0}2%{opacity:.85}12%{opacity:0}}
+.cam .grid3{position:absolute;inset:0;background:linear-gradient(90deg,transparent 33.2%,rgba(255,255,255,.18) 33.3%,rgba(255,255,255,.18) 33.5%,transparent 33.6%,transparent 66.5%,rgba(255,255,255,.18) 66.6%,rgba(255,255,255,.18) 66.8%,transparent 66.9%),linear-gradient(180deg,transparent 33.2%,rgba(255,255,255,.18) 33.3%,rgba(255,255,255,.18) 33.5%,transparent 33.6%,transparent 66.5%,rgba(255,255,255,.18) 66.6%,rgba(255,255,255,.18) 66.8%,transparent 66.9%)}
+.cam .focus{position:absolute;left:46%;top:44%;width:64px;height:64px;margin:-32px;border:1.5px solid #ffd60a;opacity:0}
+.ch.on .cam .focus{animation:focus 5s .6s infinite}
+@keyframes focus{0%{opacity:0;transform:scale(1.5)}8%{opacity:1;transform:scale(1)}26%{opacity:1}34%,100%{opacity:0}}
+.cam .ctl{height:118px;background:#000;display:flex;align-items:center;justify-content:space-around;padding:0 22px 10px}
+.cam .ctl .th{width:40px;height:40px;border-radius:8px;background:#2c2c2e center/cover;border:1.5px solid rgba(255,255,255,.2)}
+.cam .ctl .sh{width:62px;height:62px;border-radius:50%;border:3.5px solid #fff;display:grid;place-items:center}
+.cam .ctl .sh::after{content:"";width:50px;height:50px;border-radius:50%;background:#fff}
+.cam .ctl .sw{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12)}
+.cam .mode{display:flex;justify-content:center;gap:18px;font:600 11.5px var(--fb);letter-spacing:.06em;color:rgba(255,255,255,.6);padding:8px 0 2px;background:#000}
+.cam .mode b{color:#ffd60a}
+.iph .scr.rep{flex:1;background:#f2f2f7;color:#1d1d1f;padding:4px 12px 14px;display:flex;flex-direction:column;gap:7px;font-size:12px;line-height:1.3}
+.rep .sbar{color:#1d1d1f;padding-left:12px;padding-right:12px}
+.rep .sbar s b{border-color:rgba(0,0,0,.4)}.rep .sbar s b::after{background:#1d1d1f}
+.rep h4{font:700 20px/1.1 var(--fd);letter-spacing:-.03em;margin:2px 0 0}
+.rep .cli{color:#6e6e73;font-size:11.5px;margin-top:-4px}
+.rep .card{background:#fff;border-radius:11px;padding:8px 10px}
+.rep .card small{display:block;color:#8e8e93;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.rep .ph{display:flex;gap:6px}
+.rep .ph i{width:36px;height:36px;border-radius:8px;background:#d1d1d6 center/cover}
+.rep .ph i:first-child{opacity:0;transform:scale(.6);transition:opacity .5s var(--ease) 2s,transform .6s var(--ease) 2s}
+.ch.on .rep .ph i:first-child{opacity:1;transform:none}
+.rep .sig{height:40px;position:relative}
+.rep .sig svg{position:absolute;inset:0;width:100%;height:100%}
+.rep .sig path{fill:none;stroke:#1d1d1f;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:420;stroke-dashoffset:420}
+.ch.on .rep .sig path{animation:sign 2.2s cubic-bezier(.5,.1,.3,1) 3s forwards}
+@keyframes sign{to{stroke-dashoffset:0}}
+.rep .ok{display:flex;align-items:center;justify-content:center;gap:6px;background:#34c759;color:#fff;font-weight:600;border-radius:11px;padding:8px;margin-top:auto;opacity:.25;transition:opacity .5s 5.2s}
+.ch.on .rep .ok{opacity:1}
+/* números */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,3vw,40px);margin-top:44px;max-width:860px}
+.stats div{border-top:1px solid rgba(255,255,255,.18);padding-top:16px}
+.stats b{display:block;font:600 clamp(44px,6vw,80px)/1 var(--fd);letter-spacing:-.05em;color:#fff}
+.stats span{display:block;color:#a1a1a6;font-size:15px;margin-top:8px;line-height:1.4}
+.ch.todo .wrap{display:block}
+.ch.todo .txt{max-width:900px}
+/* ---------- rubros ---------- */
+.rubros h2 span{color:#86868b}
+.rgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.rgrid article{position:relative;background:linear-gradient(160deg,#1c1c1e,#111113);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:26px 24px 24px}
+.rgrid article.hoy{background:linear-gradient(160deg,#2a2412,#141210);border-color:rgba(255,201,60,.35)}
+.rgrid svg{width:34px;height:34px;fill:none;stroke:var(--acc);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:16px;display:block}
+.rgrid h3{font:600 21px/1.2 var(--fd);letter-spacing:-.025em;margin:0 0 8px}
+.rgrid p{margin:0;color:#a1a1a6;font-size:15.5px;line-height:1.5}
+.rgrid .tag{position:absolute;top:22px;right:20px;font:600 11.5px var(--fb);letter-spacing:.03em;color:#a1a1a6;background:rgba(255,255,255,.07);padding:5px 9px;border-radius:999px}
+.rgrid .hoy .tag{color:#1d1d1f;background:var(--acc)}
+@media (max-width:900px){.rgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.rgrid{grid-template-columns:1fr}}
+/* ---------- lo de abajo, sobre negro ---------- */
+main>section:not(.cine){background:#000}
+main>section.alt{background:#0b0b0d}
+.facts li{border-top-color:rgba(255,255,255,.16)}
+/* ---------- celular ---------- */
+@media (max-width:860px){
+  .ch{min-height:150vh;min-height:150svh;align-items:flex-end;padding:72px 0 56px}
+  .ch .wrap{grid-template-columns:1fr;gap:22px;justify-items:center}
+  .ch h2{font-size:clamp(34px,9.5vw,44px)}
+  .ch p{font-size:16px}
+  .ch .txt{max-width:none;text-align:left;justify-self:stretch}
+  .ch .dev{order:-1}
+  .cine .bg::after{background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 25%,rgba(0,0,0,.55) 60%,rgba(0,0,0,.92) 100%)}
+  .tkt{right:-40px;bottom:30px}
+  .pair .iph:first-child{margin-bottom:28px}
+  .stats{grid-template-columns:1fr;gap:18px;margin-top:28px}
+  .stats b{font-size:52px}
+  .ch.hero .wrap,.ch.end .wrap{text-align:center}
+  .ch.hero{padding-top:118px;padding-bottom:40px;min-height:100svh;height:auto}
+  .ch.hero h1{font-size:clamp(42px,12vw,54px)}
+  .ch.hero .scrollcue{display:none}
+  .rubros h2 br{display:none}
+}
+@media (prefers-reduced-motion:reduce){.ch .txt>*,.ch .dev,.bub,.nt,.tkt{transition:none!important;opacity:1!important;transform:none!important}.cam .vf::after,.cam .focus,.typing,.scrollcue i::after{animation:none!important}}
 </style>
 </head>
 <body>
@@ -45,121 +224,249 @@
   <a class="mark" href="../"><i></i>Unity Tech</a>
   <a class="on" href="./">Olumi</a><a href="../ondi/">Ondi</a>
   <span class="sp"></span><a href="mailto:hola@unitytech.uy">Contacto</a>
-  <button class="theme" type="button" aria-label="Cambiar entre modo claro y oscuro"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg></button>
 </div></nav>
 <header class="lnav"><div class="wrap">
   <a class="prod" href="./" aria-label="Olumi, inicio"><svg viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="#1E1F23"/><circle cx="56" cy="64" r="30" stroke="#FFC93C" stroke-width="15" fill="none"/><circle cx="92" cy="28" r="10.5" fill="#FF7A1A"/></svg><b>olumi</b></a>
-  <nav><a href="#oficina">Oficina viva</a><a href="#funciones">Funciones</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a><a href="app/">Entrar</a><a class="btn pri sm" href="app/">Probar gratis</a></nav>
+  <nav><a href="#funciones">Funciones</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a><a href="/olumi/app/">Entrar</a><a class="btn pri sm" href="/olumi/app/">Probar gratis</a></nav>
 </div></header>
 
 <main>
-<section class="hero center"><div class="wrap">
-  <svg class="appicon" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="27" fill="#1E1F23"/><circle cx="56" cy="64" r="30" stroke="#FFC93C" stroke-width="15" fill="none"/><circle cx="92" cy="28" r="10.5" fill="#FF7A1A"/></svg>
-  <p class="eyebrow"><i></i>Para instaladores y servicio técnico</p>
-  <h1>Toda tu empresa.<br>En un solo lugar.</h1>
-  <p class="lede">Los pedidos que llegan por WhatsApp, los técnicos en la calle, el stock de cada camioneta, los presupuestos y las facturas. Desde el celular o la computadora.</p>
-  <div class="cta center"><a class="btn pri lg" href="app/">Probar 30 días gratis</a><a class="more" href="#oficina">Ver la oficina viva</a></div>
-  <p class="small">Sin tarjeta para empezar · iPhone, Windows, Mac y navegador</p>
-</div></section>
+<section class="cine" id="cine" data-ch="0" aria-label="Un día en una empresa con Olumi">
+  <div class="bg"><iframe id="ofi" src="/olumi/oficina/3d.html?embed=1&amp;cine=1" title="Maqueta 3D de una empresa de instalaciones con Olumi" tabindex="-1" aria-hidden="true"></iframe></div>
+  <div class="chs">
 
-<section class="alt" id="oficina" style="padding-top:clamp(56px,7vw,96px)"><div class="wrap">
-  <div class="center">
-    <p class="eyebrow"><i></i>Nuevo · en preparación</p>
-    <h2>Tu oficina, viva.</h2>
-    <p class="sub">La maqueta de tu empresa con tu equipo trabajando. Tocá el depósito para preparar el pedido de un técnico, la recepción para ver lo que entra, o el estacionamiento para saber qué lleva cada camioneta.</p>
+    <article class="ch hero" data-t="0"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>Más que un CRM</p>
+      <h1>Tu empresa,<span>virtual y viva.</span></h1>
+      <p>La oficina en 3D con tu equipo trabajando en vivo: los pedidos que entran por WhatsApp, la gente en la calle, el stock, los informes y los cobros. Nació para empresas de instalaciones y sirve para cualquier equipo que trabaja en la calle.</p>
+      <div class="cta"><a class="btn pri lg" href="/olumi/app/">Probar 30 días gratis</a><a class="btn glass lg" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Olumi">Pedir una demo</a></div>
+      <div class="scrollcue" aria-hidden="true"><i></i>Bajá para recorrerla</div>
+    </div></div></article>
+
+    <article class="ch" data-t=".3"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>La oficina viva</p>
+      <h2>Esta es tu empresa. <em>Entrá.</em></h2>
+      <p>Cada área de la maqueta es una parte de Olumi: la recepción es la bandeja, el depósito es el stock, el estacionamiento son tus camionetas. Tu equipo se mueve en vivo, mientras trabaja.</p>
+    </div></div></article>
+
+    <article class="ch" data-t=".44" data-ev="wa"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>7:42 · Entra un pedido</p>
+      <h2>Un WhatsApp. <em>Un ticket.</em> Solo.</h2>
+      <p>El cliente escribe como siempre. Olumi le contesta con su número de pedido, arma el ticket con la prioridad y lo pone primero en la fila si tiene abono.</p>
+    </div>
+    <div class="dev">
+      <div class="iph"><div class="scr">
+        <div class="sbar"><span>7:42</span><s><i></i><i></i><i></i><b></b></s></div>
+        <div class="wa-h"><span class="av">BN</span><div><b>Barraca Norte</b><small>en línea</small></div></div>
+        <div class="wa-b">
+          <div class="typing"><i></i><i></i><i></i></div>
+          <div class="bub in b1">Hola, la cámara del portón no da imagen desde anoche 🙏<small>7:42</small></div>
+          <div class="bub out b2">¡Hola! Ya lo anotamos: ticket <b>T‑0152</b>. Te escribe un técnico enseguida.<small>7:42</small></div>
+        </div>
+        <div class="wa-f"><span></span><i></i></div>
+      </div></div>
+      <div class="tkt"><div class="top"><img src="/olumi/app/icono-192.png" alt="">Olumi · Ticket nuevo</div><b>Cámara del portón sin imagen</b><div class="row"><span class="pchip">P1</span>T‑0152 · Barraca Norte · abonado</div></div>
+    </div></div></article>
+
+    <article class="ch" data-t=".58"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>7:43 · Coordinación</p>
+      <h2>Lo toma <em>el técnico libre.</em> Sin llamadas.</h2>
+      <p>La visita cae en la agenda del técnico y en su celular, con la dirección, lo que pidió el cliente y el pedido de materiales ya armado en el depósito.</p>
+    </div>
+    <div class="dev">
+      <div class="iph"><div class="scr">
+        <div class="sbar"><span></span><s><i></i><i></i><i></i><b></b></s></div>
+        <div class="lock">
+          <div class="day">lunes 9 de noviembre</div>
+          <div class="hr">7:43</div>
+          <div class="nt n1"><img src="/olumi/app/icono-192.png" alt=""><div><div class="h"><span>OLUMI</span><span>ahora</span></div><b>Nueva visita · P1</b><span>Barraca Norte · cámara del portón sin imagen · hoy 10:30</span></div></div>
+          <div class="nt n2"><img src="/olumi/app/icono-192.png" alt=""><div><div class="h"><span>OLUMI</span><span>ahora</span></div><b>Pedido PM‑041 listo</b><span>1 cámara IP, 10 RJ45 y 30 m de UTP en el depósito</span></div></div>
+          <div class="nt n3"><img src="/olumi/app/icono-192.png" alt=""><div><div class="h"><span>OLUMI</span><span>ahora</span></div><b>Ruta lista</b><span>3 visitas hoy · la primera a 12 min</span></div></div>
+        </div>
+      </div></div>
+    </div></div></article>
+
+    <article class="ch" data-t=".72" data-ev="van"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>9:58 · Sale la camioneta</p>
+      <h2>Cada camioneta sabe <em>lo que lleva.</em></h2>
+      <p>Lo que carga el técnico se descuenta del depósito y queda en su camioneta. Lo que usa en la obra se descuenta de ahí. Nunca más un viaje de vuelta por un conector.</p>
+    </div>
+    <div class="dev">
+      <div class="van">
+        <div class="hd"><span class="plate">SCA 1907</span><div><b>Diego · técnico</b><small>Rumbo a Barraca Norte</small></div></div>
+        <ul>
+          <li><span class="ck"><svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg></span>1 × Cámara IP 4 MP</li>
+          <li><span class="ck"><svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg></span>10 × Conector RJ45</li>
+          <li><span class="ck"><svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg></span>30 m de cable UTP Cat6</li>
+        </ul>
+        <div class="go">Llega en 12 min · el cliente ya recibió el aviso<div class="bar"><i></i></div></div>
+      </div>
+    </div></div></article>
+
+    <article class="ch" data-t=".79"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>10:42 · En la obra</p>
+      <h2>Foto, informe y firma. <em>Desde el celular.</em></h2>
+      <p>El técnico saca la foto del trabajo terminado, anota lo que hizo y los materiales, y el cliente firma con el dedo. El ticket se cierra solo y el informe en PDF le llega a todos.</p>
+    </div>
+    <div class="dev pair">
+      <div class="iph"><div class="scr cam">
+        <div class="sbar"><span>10:41</span><s><i></i><i></i><i></i><b></b></s></div>
+        <div class="vf">
+          <svg viewBox="0 0 240 330" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs><linearGradient id="wl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4f57"/><stop offset="1" stop-color="#2a2d33"/></linearGradient>
+              <radialGradient id="lt" cx=".7" cy=".1" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+            <rect width="240" height="330" fill="url(#wl)"/>
+            <rect x="52" y="40" width="136" height="250" rx="6" fill="#16181c"/><rect x="58" y="46" width="124" height="238" rx="3" fill="#0d0e11"/>
+            <g fill="#1f2228" stroke="#2f333b"><rect x="64" y="58" width="112" height="22" rx="2"/><rect x="64" y="88" width="112" height="22" rx="2"/><rect x="64" y="150" width="112" height="40" rx="2"/><rect x="64" y="198" width="112" height="22" rx="2"/></g>
+            <g fill="#2b2f37"><rect x="70" y="64" width="70" height="10" rx="1"/><rect x="70" y="94" width="70" height="10" rx="1"/></g>
+            <g fill="#34c759"><circle cx="150" cy="69" r="2"><animate attributeName="opacity" values="1;.2;1" dur=".7s" repeatCount="indefinite"/></circle><circle cx="158" cy="69" r="2"><animate attributeName="opacity" values=".2;1;.2" dur=".9s" repeatCount="indefinite"/></circle><circle cx="150" cy="99" r="2"><animate attributeName="opacity" values="1;.3;1" dur="1.1s" repeatCount="indefinite"/></circle><circle cx="166" cy="99" r="2"/></g>
+            <g fill="#ffb340"><circle cx="166" cy="69" r="2"/><circle cx="158" cy="99" r="2"><animate attributeName="opacity" values=".3;1;.3" dur=".6s" repeatCount="indefinite"/></circle></g>
+            <g stroke-width="3" fill="none" stroke-linecap="round"><path d="M74 110c0 20 -4 30 -8 44" stroke="#0a84ff"/><path d="M86 110c2 22 6 30 10 40" stroke="#0a84ff"/><path d="M98 110c0 18 10 30 20 40" stroke="#ffd60a"/><path d="M110 110c4 16 20 26 34 40" stroke="#ffd60a"/><path d="M122 110c6 14 24 22 40 40" stroke="#ff9f0a"/></g>
+            <g fill="#3a3e46"><rect x="70" y="158" width="100" height="5" rx="1"/><rect x="70" y="168" width="100" height="5" rx="1"/><rect x="70" y="178" width="100" height="5" rx="1"/></g>
+            <rect x="70" y="204" width="60" height="10" rx="1" fill="#2b2f37"/><circle cx="160" cy="209" r="2.5" fill="#0a84ff"/>
+            <rect width="240" height="330" fill="url(#lt)"/>
+          </svg>
+          <div class="grid3"></div><div class="focus"></div>
+        </div>
+        <div class="mode"><span>VIDEO</span><b>FOTO</b><span>RETRATO</span></div>
+        <div class="ctl"><span class="th"></span><span class="sh"></span><span class="sw"></span></div>
+      </div></div>
+      <div class="iph"><div class="scr rep">
+        <div class="sbar"><span>10:44</span><s><i></i><i></i><i></i><b></b></s></div>
+        <h4>Informe</h4>
+        <div class="cli">T‑0152 · Barraca Norte</div>
+        <div class="card"><small>Qué se hizo</small>Cambio de fuente de la cámara del portón. Imagen de vuelta en el grabador.</div>
+        <div class="card"><small>Materiales · 1 h 20 min</small>1 × fuente 12 V · de la camioneta SCA 1907</div>
+        <div class="card"><small>Fotos</small><div class="ph"><i style="background:linear-gradient(160deg,#4a4f57,#16181c)"></i><i style="background:linear-gradient(160deg,#5b6068,#2a2d33)"></i></div></div>
+        <div class="card"><small>Firma del cliente</small><div class="sig"><svg viewBox="0 0 200 60" aria-hidden="true"><path d="M8 42c10-22 18-30 22-26s-8 26-2 28 14-30 22-30-4 24 2 24 10-16 16-16 0 14 6 14 12-20 20-22 4 18 10 18 16-12 24-14M120 44c18-4 40-8 70-10"/></svg></div></div>
+        <div class="ok">✓ Firmado · ticket resuelto</div>
+      </div></div>
+    </div></div></article>
+
+    <article class="ch todo" data-t=".86"><div class="wrap"><div class="txt">
+      <p class="kick"><i></i>Todo el día, en vivo</p>
+      <h2>Y vos lo ves todo. <em>Desde cualquier lado.</em></h2>
+      <p>Quién está en la calle, qué entró, qué se presupuestó y qué se cobró. En la computadora, en el celular o en la maqueta de tu empresa.</p>
+      <div class="stats">
+        <div><b>1</b><span>app para la oficina, los técnicos y tus clientes</span></div>
+        <div><b>4</b><span>niveles de prioridad: lo urgente siempre primero</span></div>
+        <div><b>0</b><span>planillas sueltas: cada trabajo queda en el historial</span></div>
+      </div>
+    </div></div></article>
+
+    <article class="ch end" data-t="1"><div class="wrap"><div class="txt">
+      <h2>Nació en la calle.<br><em>Para los que trabajan en ella.</em></h2>
+      <p>Lo usamos todos los días en nuestras propias obras de fibra, cámaras y redes en Uruguay. Probalo con tu equipo 30 días, sin tarjeta.</p>
+      <div class="cta"><a class="btn pri lg" href="/olumi/app/">Probar 30 días gratis</a><a class="btn glass lg" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Olumi">Pedir una demo</a></div>
+    </div></div></article>
   </div>
-  <div class="ov"><iframe src="oficina/?embed=1" title="Demo interactiva de la oficina viva de Olumi" loading="lazy" data-tema></iframe></div>
-  <div class="ov-foot"><span>Demo con datos de ejemplo. Así se va a ver Olumi.</span><a class="more" href="oficina/">Abrir en pantalla completa</a></div>
+</section>
+
+<section id="rubros" class="rubros"><div class="wrap">
+  <h2>Nació en las instalaciones.<br><span>Sirve para cualquier equipo en la calle.</span></h2>
+  <p class="sub">Si tu empresa recibe pedidos, manda gente a resolverlos y necesita saber dónde está cada uno, Olumi es tu empresa virtual. El mismo esquema, con las palabras de tu rubro.</p>
+  <div class="rgrid">
+    <article class="hoy"><span class="tag">Hoy, completo</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M12 4v3"/></svg><h3>Instalaciones y seguridad</h3><p>Fibra, cámaras, redes y control de acceso: tickets con prioridad, obras, stock por camioneta, informes firmados y factura electrónica.</p></article>
+    <article><span class="tag">Se adapta</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h2l2-5h8l2 5h4v3H3z"/><circle cx="7.5" cy="18" r="1.8"/><circle cx="16.5" cy="18" r="1.8"/><path d="M11 6h2M12 5v2"/></svg><h3>Emergencias móviles</h3><p>El llamado entra con su prioridad, la unidad libre más cercana lo toma y la base ve cada móvil en vivo.</p></article>
+    <article><span class="tag">Se adapta</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg><h3>Mantenimiento de edificios</h3><p>Cada edificio con sus equipos, abonos y visitas programadas. La administración pide por WhatsApp y ve el informe.</p></article>
+    <article><span class="tag">Se adapta</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5 5L4 17l3 3 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2-2z"/></svg><h3>Service técnico</h3><p>Equipos con número de serie y garantía, repuestos en cada camioneta y el trabajo firmado en el lugar.</p></article>
+    <article><span class="tag">Se adapta</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg><h3>Limpieza y facility</h3><p>Cuadrillas por turno, tareas por sitio con foto de cierre y control de insumos en cada lugar.</p></article>
+    <article><span class="tag">Se adapta</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="12" height="9" rx="1"/><path d="M14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><h3>Reparto y logística</h3><p>Pedidos, vehículos y choferes en vivo, con la entrega firmada desde el celular y el stock al día.</p></article>
+  </div>
+  <p class="note">¿Tu rubro tiene algo propio? Lo armamos con vos: escribinos a <a href="mailto:hola@unitytech.uy?subject=Olumi%20para%20mi%20rubro">hola@unitytech.uy</a>.</p>
 </div></section>
 
 <section id="funciones"><div class="wrap">
-  <h2>Todo lo que una empresa de instalaciones usa en el día.</h2>
-  <p class="sub">Pensado con instaladores de fibra óptica, cámaras, cableado y control de acceso de Uruguay.</p>
-  <div class="bento">
-    <div class="tile s3"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/></svg></div><h3>Tickets con prioridad</h3><p>Las emergencias van primero y los clientes con abono desempatan. Nadie queda olvidado.</p>
-      <div style="display:grid;gap:8px;margin-top:auto"><div class="tk"><span class="pr p1">P1</span><div><b>Cámara del portón sin imagen</b><span>Depósito Sur · abonado · hace 12 min</span></div></div><div class="tk"><span class="pr p3">P3</span><div><b>Mantenimiento 8 cámaras</b><span>Barraca Norte · mañana 9:00</span></div></div></div></div>
-    <div class="tile s3"><div class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/></svg></div><h3>WhatsApp que se ordena solo</h3><p>Cada mensaje al WhatsApp de la empresa se convierte en un ticket y el cliente recibe su número de pedido.</p>
-      <div class="wa"><p>Hola, la cámara del portón no da imagen</p><p class="me">¡Hola! Ya lo anotamos: ticket T-0152. Te escribe un técnico enseguida.</p></div></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div><h3>Calendario de técnicos</h3><p>Visitas por técnico, por semana, quincena o mes, con el botón para pasarlas a Google Calendar.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></div><h3>Mi día, en la obra</h3><p>Cada técnico ve sus visitas, la dirección y los planos, y sube las fotos del trabajo terminado.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17c3-4 5 2 8-2s4-6 7-3l3 2"/><path d="M3 21h18"/></svg></div><h3>Informe con firma</h3><p>El técnico anota qué hizo y los materiales, saca fotos y el cliente firma con el dedo.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></div><h3>Stock en cada camioneta</h3><p>Lo que se usa en la obra se descuenta del depósito o de la camioneta. Aviso de stock mínimo y lista de compra.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Presupuestos y facturas</h3><p>Con tu catálogo, IVA, pesos o dólares, en PDF con tu logo. Factura electrónica con Fixed.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></div><h3>Todo por proyecto</h3><p>Cada cliente con sus obras, y adentro sus pedidos, visitas, informes, fotos, presupuestos y facturas.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M10 10v4M13 10v4M17 10v4"/></svg></div><h3>Equipos con número de serie</h3><p>Cada cámara, grabador o switch en la ficha del cliente, con garantía y próximo mantenimiento.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></div><h3>Cuánto ganaste en cada obra</h3><p>Facturado contra materiales al costo y horas de los técnicos, proyecto por proyecto.</p></div>
-    <div class="tile s2"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div><h3>Portal para tus clientes</h3><p>Cargan pedidos con fotos, ven cuándo va el técnico y aceptan presupuestos online.</p></div>
-  </div>
+  <h2>Y todo lo demás que una empresa usa en el día.</h2>
+  <p class="sub">Pensado primero con instaladores de fibra óptica, cámaras, cableado y control de acceso de Uruguay.</p>
+  <ul class="facts">
+    <li><h4>Stock en cada camioneta</h4><p>Lo que se usa en la obra se descuenta del depósito o de la camioneta. Aviso de stock mínimo y lista de compra.</p></li>
+    <li><h4>Presupuestos y facturas</h4><p>Con tu catálogo, IVA, pesos o dólares, en PDF con tu logo. Factura electrónica con Fixed o exportación para Zureo.</p></li>
+    <li><h4>Todo por proyecto</h4><p>Cada cliente con sus obras, y adentro sus pedidos, visitas, informes, fotos, presupuestos y facturas.</p></li>
+    <li><h4>Equipos con número de serie</h4><p>Cada cámara, grabador o switch en la ficha del cliente, con garantía y próximo mantenimiento.</p></li>
+    <li><h4>Cuánto ganaste en cada obra</h4><p>Facturado contra materiales al costo y horas de los técnicos, proyecto por proyecto.</p></li>
+    <li><h4>Portal para tus clientes</h4><p>Cargan pedidos con fotos, ven cuándo va el técnico, siguen sus tickets y aceptan presupuestos online.</p></li>
+    <li><h4>Agenda por técnico</h4><p>Semana, quincena o mes, con los colores de prioridad y el botón para pasar cada visita a Google Calendar.</p></li>
+    <li><h4>Gastos y personal</h4><p>Gastos por trabajo o generales, con la boleta. Fichas del personal con sus vencimientos.</p></li>
+    <li><h4>Reportes</h4><p>Ganado por mes, por servicio y por cliente; tickets abiertos por prioridad y tiempos de resolución.</p></li>
+  </ul>
 </div></section>
 
-<section class="dark"><div class="wrap">
-  <h2>Primero lo urgente. Siempre.</h2>
-  <p class="sub">Olumi ordena sola la lista de pedidos en cuatro niveles. El equipo sabe qué atender primero sin preguntar.</p>
-  <div class="prio">
-    <div><span class="pr p1">P1</span><b>Emergencia de abonado</b><span>Se atiende antes que todo.</span></div>
-    <div><span class="pr p2">P2</span><b>Emergencia</b><span>Cliente sin abono, pero urgente.</span></div>
-    <div><span class="pr p3">P3</span><b>Abonado</b><span>Pedido normal de un cliente con abono.</span></div>
-    <div><span class="pr p4">P4</span><b>Normal</b><span>Consultas, relevamientos y obras nuevas.</span></div>
-  </div>
-</div></section>
-
-<section id="planes"><div class="wrap">
+<section class="alt" id="planes"><div class="wrap">
   <div class="center"><h2>Planes.</h2><p class="sub">En dólares más IVA, por empresa y por mes. Toda empresa nueva arranca con 30 días del plan Pro, gratis.</p></div>
   <div class="plans">
     <div class="plan"><h3>Gratis</h3><div class="price">US$ 0<small> para siempre</small></div><p class="who">Para arrancar o para el que trabaja solo.</p>
       <ul><li>Hasta 2 usuarios</li><li>Tickets con prioridad</li><li>Clientes con sus proyectos</li><li>Calendario, Mi día y parte diario</li><li>Informes con firma del cliente</li><li>500 MB de fotos y planos</li></ul>
-      <a class="btn" href="app/">Crear cuenta</a></div>
+      <a class="btn" href="/olumi/app/">Crear cuenta</a></div>
     <div class="plan hl"><span class="badge">El más elegido</span><h3>Pro</h3><div class="price">US$ 29<small> + IVA / mes</small></div><p class="who">Equipos de hasta 5 personas. Usuario extra US$ 6.</p>
       <ul><li>Todo lo de Gratis</li><li>Presupuestos y facturas en PDF</li><li>Abonos mensuales con prioridad</li><li>Google Calendar y reportes</li><li>Inventario por depósito y camioneta</li><li>Equipos con garantía y mantenimiento</li><li>Rentabilidad por proyecto</li><li>10 GB de fotos y planos</li></ul>
-      <a class="btn pri" href="app/">Probar 30 días gratis</a></div>
+      <a class="btn pri" href="/olumi/app/">Probar 30 días gratis</a></div>
     <div class="plan"><h3>Empresa</h3><div class="price">US$ 79<small> + IVA / mes</small></div><p class="who">Más técnicos y volumen. Hasta 15 usuarios.</p>
       <ul><li>Todo lo de Pro</li><li>Portal para tus clientes</li><li>WhatsApp automático</li><li>Factura electrónica (CFE) con Fixed, o exportación para Zureo</li><li>Logo y colores de tu empresa</li><li>50 GB de fotos y planos</li></ul>
-      <a class="btn" href="app/">Empezar</a></div>
+      <a class="btn" href="/olumi/app/">Empezar</a></div>
   </div>
   <p class="note">Se paga con Mercado Pago desde la web y se renueva solo. El pago anual trae 2 meses de regalo. Si dejás de pagar no se borra nada: la empresa vuelve al plan Gratis.</p>
 </div></section>
 
-<section class="alt" id="descargas"><div class="wrap">
+<section id="descargas"><div class="wrap">
   <h2>La misma app en todos lados.</h2>
   <p class="sub">Lo que cargás desde el celular lo ves al instante en la computadora. Elegí tu equipo.</p>
   <div class="dl">
-    <article><b>Navegador</b><p>Chrome, Safari o Edge, sin instalar nada. En Chrome podés instalarla desde la barra de dirección para que abra como ventana propia.</p><a class="btn pri" href="app/">Abrir Olumi</a></article>
-    <article><b>Windows</b><p>Descargá el ZIP, descomprimilo (por ejemplo en Documentos\Olumi) y abrí <code>Olumi.exe</code>. Windows 10 u 11, 64 bits.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Windows.zip">Descargar ZIP</a><small>Si Windows muestra «protegió tu PC», tocá «Más información» → «Ejecutar de todas formas».</small></article>
-    <article><b>Mac</b><p>Descargá el ZIP, arrastrá <code>Olumi.app</code> a Aplicaciones y la primera vez abrila con clic derecho → Abrir.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Mac.zip">Descargar ZIP</a><small>Para Mac con chip Apple. Si tu Mac es Intel: <a href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Mac-Intel.zip">esta versión</a>.</small></article>
-    <article><b>iPhone y iPad</b><p>Hoy está en TestFlight, por invitación. La versión de App Store está en camino.</p><a class="btn" href="mailto:hola@unitytech.uy?subject=Quiero%20probar%20Olumi%20en%20iPhone">Pedir invitación</a><small>Mientras tanto: abrí unitytech.uy/olumi/app en Safari y tocá Compartir → «Agregar a inicio».</small></article>
-    <article><b>Android</b><p>Pronto en Google Play. Mientras tanto funciona perfecto desde Chrome.</p><span class="soon">Próximamente</span><small>Abrí unitytech.uy/olumi/app en Chrome → menú ⋮ → «Instalar aplicación».</small></article>
+    <article><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z"/></svg></div><b>Navegador</b><p>Chrome, Safari o Edge, sin instalar nada. En Chrome podés instalarla desde la barra de dirección para que abra como ventana propia.</p><a class="btn pri" href="/olumi/app/">Abrir Olumi</a></article>
+    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 17v3"/></svg></div><b>Windows</b><p>Descargá el ZIP, descomprimilo (por ejemplo en Documentos\Olumi) y abrí <code>Olumi.exe</code>. Windows 10 u 11, 64 bits.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Windows.zip">Descargar ZIP</a><small>Si Windows muestra «protegió tu PC», tocá «Más información» → «Ejecutar de todas formas».</small></article>
+    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 19h20"/></svg></div><b>Mac</b><p>Descargá el ZIP, arrastrá <code>Olumi.app</code> a Aplicaciones y la primera vez abrila con clic derecho → Abrir.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Mac.zip">Descargar ZIP</a><small>Para Mac con chip Apple. Si tu Mac es Intel: <a href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/escritorio/Olumi-Mac-Intel.zip">esta versión</a>.</small></article>
+    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M10 4h4"/></svg></div><b>iPhone y iPad</b><p>Hoy está en TestFlight, por invitación. La versión de App Store está en camino.</p><a class="btn" href="mailto:hola@unitytech.uy?subject=Quiero%20probar%20Olumi%20en%20iPhone">Pedir invitación</a><small>Mientras tanto: abrí unitytech.uy/olumi/app en Safari y tocá Compartir → «Agregar a inicio».</small></article>
+    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18.5" r=".8" fill="currentColor"/></svg></div><b>Android</b><p>Pronto en Google Play. Mientras tanto funciona perfecto desde Chrome.</p><span class="soon">Próximamente</span><small>Abrí unitytech.uy/olumi/app en Chrome → menú ⋮ → «Instalar aplicación».</small></article>
   </div>
-  <p class="dlver" id="dlver">La web y las apps de escritorio abren siempre la última versión: se actualizan solas.</p>
+  <p class="dlver" id="dlver" data-json="/olumi/app/version.json" data-texto="La web y las apps de escritorio se actualizan solas; en iPhone, TestFlight te avisa cuando sale una nueva.">La web y las apps de escritorio abren siempre la última versión: se actualizan solas.</p>
 </div></section>
 
-<section><div class="wrap narrow">
+<section class="alt"><div class="wrap narrow">
   <h2>Preguntas frecuentes.</h2>
   <div class="faq">
     <details><summary>¿Cómo se suman mis técnicos?</summary><p>Instalan Olumi, crean su cuenta y eligen «Unirme a la empresa» con el código de 6 letras que ves en Ajustes → Equipo. Queda pendiente hasta que un administrador lo apruebe y le elija el rol: administrador, encargado, ventas, administración, técnico, subcontratista o solo lectura.</p></details>
+    <details><summary>¿La maqueta 3D es de mi empresa?</summary><p>Sí. Armás tu oficina con el editor (paredes, puestos, depósito, estacionamiento) y tu equipo aparece trabajando en vivo: quién está en la calle, qué camioneta salió y qué entró por WhatsApp o correo.</p></details>
     <details><summary>¿Necesito tarjeta para la prueba?</summary><p>No. Los 30 días de Pro empiezan cuando creás la empresa. Después seguís gratis o elegís un plan.</p></details>
     <details><summary>¿Dónde se guardan los datos?</summary><p>En servidores de Supabase en São Paulo, con copias de seguridad. Cada empresa ve solamente lo suyo. Más detalles en la <a href="privacidad.html">política de privacidad</a>.</p></details>
-    <details><summary>¿Emite la factura electrónica?</summary><p>Sí, en el plan Empresa. Si facturás con Fixed, la factura de Olumi sale como CFE real (e-Factura o e-Ticket) con un toque, y queda el PDF y el estado en DGI. Si usás Zureo, exportás clientes, artículos y ventas en planillas. Con otro proveedor, guardás el número de CFE en la factura.</p></details>
+    <details><summary>¿Emite la factura electrónica?</summary><p>Sí, en el plan Empresa. Si facturás con Fixed, la factura de Olumi sale como CFE real (e-Factura o e-Ticket) con un toque, y queda el PDF y el estado en DGI. Si usás Zureo, exportás clientes, artículos y ventas en planillas.</p></details>
     <details><summary>¿Puedo cancelar cuando quiera?</summary><p>Sí. Cancelás desde la web en Plan → Cancelar suscripción. El plan sigue hasta la fecha pagada y después pasa a Gratis, con todos tus datos.</p></details>
   </div>
-</div></section>
-
-<section class="center" style="padding-top:0"><div class="wrap">
-  <h2>Probala con tu equipo.</h2>
-  <p class="sub">30 días del plan Pro, sin tarjeta. Si te quedás, tus datos siguen ahí.</p>
-  <div class="cta center"><a class="btn pri lg" href="app/">Probar gratis</a><a class="more" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Olumi">Pedir una demo</a></div>
 </div></section>
 </main>
 
 <footer class="ffoot"><div class="wrap">
   <div class="fcols">
     <div><a class="mark" href="../"><i></i>Unity Tech</a><p>Software hecho en Montevideo por gente que instala fibra, cámaras y redes todos los días.</p></div>
-    <div><b>Olumi</b><a href="app/">Entrar</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a><a href="oficina/">Oficina viva</a></div>
+    <div><b>Olumi</b><a href="/olumi/app/">Entrar</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a><a href="/olumi/oficina/">Oficina viva</a></div>
     <div><b>Apps</b><a href="./">Olumi</a><a href="../ondi/">Ondi</a></div>
     <div><b>Contacto</b><a href="mailto:hola@unitytech.uy">hola@unitytech.uy</a><a href="https://www.instagram.com/unitytech.uy/" target="_blank" rel="noopener">Instagram</a><a href="https://www.tiktok.com/@unitytech.uy" target="_blank" rel="noopener">TikTok</a></div>
   </div>
   <div class="fbase"><span>© 2026 Unity Tech · Montevideo, Uruguay</span><span class="sp"></span><a href="privacidad.html">Privacidad</a><a href="terminos.html">Términos</a></div>
 </div></footer>
-<script src="../familia.js?v=2" defer></script>
-<script>fetch('app/version.json',{cache:'no-store'}).then(r=>r.json()).then(v=>{const f=v.fecha?new Date(v.fecha+'T12:00').toLocaleDateString('es-UY',{day:'numeric',month:'long'}):'';const e=document.getElementById('dlver');if(e)e.textContent=(v.version?'Versión '+v.version+(f?' · actualizada el '+f:'')+'. ':(f?'Actualizada el '+f+'. ':''))+'La web y las apps de escritorio se actualizan solas; en iPhone, TestFlight te avisa cuando sale una nueva.'}).catch(()=>{})</script>
+<script src="../familia.js?v=3" defer></script>
+<script>
+/* La historia: el scroll mueve la cámara de la maqueta (entre las tomas de cada parte) y cada parte dispara su momento una vez. */
+(function(){
+  var cine=document.getElementById('cine'),f=document.getElementById('ofi'),chs=[].slice.call(cine.querySelectorAll('.ch')),done={},last=-1,raf=0;
+  function send(m){try{f.contentWindow.postMessage(m,'*')}catch(e){}}
+  f.addEventListener('load',function(){send({tema:'dark'});setTimeout(function(){cine.classList.add('ready')},900)});
+  setTimeout(function(){cine.classList.add('ready')},6000);
+  function upd(){raf=0;var vh=innerHeight,mid=vh/2,c=chs.map(function(e){var r=e.getBoundingClientRect();return{e:e,c:r.top+r.height/2,t:+e.dataset.t}}),t=0,on=null;
+    if(mid<=c[0].c)t=c[0].t;else if(mid>=c[c.length-1].c)t=c[c.length-1].t;
+    else for(var i=0;i<c.length-1;i++)if(mid>=c[i].c&&mid<c[i+1].c){var u=(mid-c[i].c)/(c[i+1].c-c[i].c);t=c[i].t+(c[i+1].t-c[i].t)*u;break}
+    c.forEach(function(x){var r=x.e.getBoundingClientRect(),vis=r.top<vh*.62&&r.bottom>vh*.38;x.e.classList.toggle('on',vis);if(vis)on=x.e});
+    if(on){cine.dataset.ch=on.classList.contains('hero')?'0':on.classList.contains('end')?'end':on.classList.contains('todo')?'todo':'x';var ev=on.dataset.ev;if(ev&&!done[ev]){done[ev]=1;send({cineEv:ev})}}
+    if(Math.abs(t-last)>.0005){last=t;send({cine:t})}}
+  // los teléfonos y tarjetas se achican enteros (con su letra) para entrar en la pantalla junto al texto
+  function fit(){var m=document.documentElement.clientWidth<=860;chs.forEach(function(ch){var d=ch.querySelector('.dev');if(!d)return;d.style.zoom=1;var r=d.getBoundingClientRect(),dw=Math.max(r.width,d.scrollWidth),h=m?innerHeight*.62:innerHeight-150,vw=document.documentElement.clientWidth,w=m?vw-40:vw*.44;d.style.zoom=Math.max(.5,Math.min(1,h/r.height,w/dw)).toFixed(3)})}
+  addEventListener('scroll',function(){if(!raf)raf=requestAnimationFrame(upd)},{passive:true});addEventListener('resize',function(){fit();upd()});
+  // la maqueta arranca justo debajo de las barras, midan lo que midan en cada navegador
+  function nav(){var h=0;['.gnav','.lnav'].forEach(function(q){var e=document.querySelector(q);if(e)h+=e.offsetHeight});cine.style.marginTop=-h+'px'}
+  nav();addEventListener('resize',nav);
+  // fuera de la historia la maqueta deja de dibujarse (menos memoria y batería)
+  if('IntersectionObserver' in window)new IntersectionObserver(function(e){send({cinePausa:!e[0].isIntersecting})}).observe(cine);
+  fit();upd();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(upd,1500);
+})();
+</script>
 </body>
 </html>
