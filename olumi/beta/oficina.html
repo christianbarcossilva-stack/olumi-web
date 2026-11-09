@@ -1049,6 +1049,11 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
     SUNL.color.set(d?'#b4c0ff':'#fff8ef');SUNL.intensity=d?.3:2.7;SC.environmentIntensity=d?.06:.3;R3.toneMappingExposure=d?1.1:1.02;
     MAT.glass.opacity=d?.14:.2;MAT.glass.color.set(d?'#9aa8b8':'#e4ece9');
     MAT.asph.color.set(d?'#3e3c39':'#c9c4bc');MAT.grass.color.set(d?'#4a5245':'#dce1d3');MAT.park.color.set(d?'#4a4743':'#dcd7cf')};
+  // líneas de maqueta de arquitecto: el borde de cada pared, vidrio y losa en grafito fino
+  const EDGE=new THREE.LineBasicMaterial({color:'#2b2a28',transparent:true,opacity:.28,depthWrite:false});
+  const edges=g=>{const L=[];g.traverse(o=>{if(o.isMesh&&!o.userData.edged&&o.material!==MAT.glass&&o.material!==MAT.frost){o.userData.edged=1;const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,28),EDGE);e.matrixAutoUpdate=false;e.matrix.copy(o.matrix);L.push([o.parent,e])}});L.forEach(([p,e])=>p.add(e))};
+  edges(BLD);
+  const st1=setTheme;setTheme=function(){st1();EDGE.color.set(DARK?'#000000':'#2b2a28');EDGE.opacity=DARK?.45:.28};
   // carteles: cápsulas blancas con línea fina (de día) o grafito (de noche), letra más liviana
   pill=function(t,x,y,f,bg,ink,h=18){ctx.font=`500 ${f}px -apple-system,BlinkMacSystemFont,"Hanken Grotesk",sans-serif`;const w=ctx.measureText(t).width+18;h=Math.max(h,f+9);ctx.save();
     ctx.shadowColor=DARK?'rgba(0,0,0,.5)':'rgba(60,45,30,.16)';ctx.shadowBlur=14;ctx.shadowOffsetY=4;ctx.fillStyle=DARK?'rgba(29,28,26,.92)':'rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,h/2);ctx.fill();ctx.restore();
