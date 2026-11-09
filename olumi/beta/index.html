@@ -684,7 +684,7 @@ body.tv .vroom{margin:0;border-radius:0;min-height:100vh}
 .agm.err{background:rgba(255,69,58,.12)}.agm.pensando{opacity:.6;font-style:italic}
 .agin{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}.agin textarea{flex:1;resize:none;font:inherit;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:inherit}
 /* 1.33: oficina */
-.ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}
+.ofi{margin:0 -4px}.ofi iframe{display:block;width:100%;height:900px;border:0;background:transparent}.ofi iframe.ofiFull{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:9999;margin:0;background:#000}
 /* 1.25: en vivo */
 .live{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ddc84;margin-right:8px;vertical-align:middle;animation:livepulse 1.6s infinite}
 @keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}70%{box-shadow:0 0 0 9px rgba(61,220,132,0)}}
@@ -4942,9 +4942,9 @@ const ofiHoy=()=>isLead()&&viewOk('hoy')?`<div class="ofihoy"><h2 class="ofih2">
 function vOficina(){OFI.ready=false;OFI.last='';
   return`<div class="vhead"><div><h1>${esc(saludo())}</h1><p class="sub">${fdateL(today())} · ${esc(CFG.nombre||ORGINFO?.name||'')} en vivo. Tocá un área, una persona o tu avatar.</p></div>
     <div class="tools">${readonly?'':'<button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button>'}</div></div>
-  <div id="ofiDia">${ofiMiDia()}</div><div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
+  <div id="ofiDia">${ofiMiDia()}</div><div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1" title="Oficina en vivo" data-tema allow="fullscreen" allowfullscreen></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
 function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].name)||'').split(' ')[0];return(h<12?'Buen día':h<20?'Buenas tardes':'Buenas noches')+(n?', '+n:'')}
-async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};
+async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};if('ovFull' in d){f.classList.toggle('ofiFull',!!d.ovFull);document.documentElement.style.overflow=d.ovFull?'hidden':''}
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
   if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
   if(d.olumiAbrir&&/^agentes:/.test(String(d.olumiAbrir))){AGT=String(d.olumiAbrir).split(':')[1];lsSet('olumi.ag',AGT);if(viewOk('agentes')){VIEW='agentes';lsSet('crm.view',VIEW);sr()}return}
