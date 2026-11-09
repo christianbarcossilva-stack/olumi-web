@@ -1,3 +1,19 @@
+# Diseño de las webs de Unity Tech · v4 (9/11/2026, en vista previa en /nuevo/)
+
+Pedido de Christian: que el cliente quede enganchado con lo que ve, que se note la tecnología y que estamos por arriba de la competencia.
+Referencias que mandó: páginas que cuentan una historia mientras bajás (cámara que entra a la casa, producto que gira, números gigantes, fondo oscuro).
+
+- **Oscuras siempre** (como las páginas Pro de Apple). Titulares Instrument Sans 600 muy grandes y apretados (-0,045em).
+- **La historia va sobre la maqueta 3D real**, no sobre fotos: `/olumi/oficina/3d.html?embed=1&cine=1` en un iframe fijo de fondo.
+  La página manda `{cine:t}` (0 a 1) según el scroll y `{cineEv:'wa'|'van'|...}` al entrar a cada parte. Las tomas están en `scripts/oficina-3d/cine.js` (olumi-app).
+  `&orbita=1` hace que la cámara gire sola alrededor del edificio (portada de Unity Tech).
+- **Olumi:** portada → entrá → WhatsApp que se vuelve ticket → coordinación (avisos en el celular) → camioneta con su stock → foto, informe y firma → todo en vivo → cierre. Después funciones, planes, descargas y preguntas.
+- **Los teléfonos están dibujados en HTML/CSS** (nítidos en cualquier pantalla y animados): WhatsApp, pantalla bloqueada con avisos, cámara y parte firmado.
+- **Unity Tech:** portada con la oficina girando, las dos apps y "Una parte física, una parte inteligente": Phitel instala, Unity Tech hace el software.
+- Datos de ejemplo inventados (Barraca Norte, Diego). Nunca clientes reales.
+
+---
+
 # Diseño de las webs de Unity Tech · v3 (8/11/2026)
 
 Páginas: `index.html` (Unity Tech), `olumi/`, `ondi/`, `estiba/` (vista previa, noindex) y las legales `olumi/privacidad.html` y `olumi/terminos.html`.
