@@ -259,7 +259,7 @@ const fmtQ=(k,q)=>PROD[k].u==='m'?q+' m '+PROD[k].n:q+' × '+PROD[k].n;
 const fmtItems=it=>Object.entries(it).filter(([,q])=>q>0).map(([k,q])=>fmtQ(k,q)).join(' · ')||'—';
 const SKIN=['#f6d5bd','#efc4a4','#dca681','#b97d57','#8d5b3d'],HAIR=['#2b2220','#4a3428','#7a5236','#c99a5b','#1d1d1f','#9a9aa0'],PANTS=['#2c2c2e','#34466b','#55555a','#6b5a48'];
 function hsh(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
-function lookOf(n,role){const h=hsh(n);return{skin:SKIN[h%5],hair:HAIR[(h>>3)%6],style:(h>>6)%3,pants:role==='tecnico'?'#4a4f5a':PANTS[(h>>9)%4]}}
+function lookOf(n,role){const h=hsh(n);return{skin:SKIN[h%5],hair:HAIR[(h>>>3)%6],style:(h>>>6)%3,pants:role==="tecnico"?"#4a4f5a":PANTS[(h>>>9)%4]}}
 function mk(n,role,desk){const d=DESKS0.find(q=>q.id===desk)||DESKS0[0];return{id:'p'+Math.random().toString(36).slice(2,7),n,role,desk,x:d.x+.2,y:d.y+1.1,tx:null,ty:null,path:[],busy:0,say:null,sayT:0,state:'escritorio',inVan:false,look:lookOf(n,role),carry:false,dir:1,ph:0}}
 function van(n,plate,i){return{id:'v'+Math.random().toString(36).slice(2,7),n,plate,slot:null,x:0,y:0,out:false,t:0,driver:null,stock:{},res:0}}
 S=demoState();
@@ -755,7 +755,10 @@ function van3(v,dt){const k=v.kind||vehKind(v.model),key=k+(v.col||'')+S.name;le
   o.px=cx;o.py=cy;o.g.position.set(cx,0,cy);o.g.rotation.y=-o.h;
   if(o.beacon)o.beacon.material.emissiveIntensity=v.out&&Math.sin(T*10)>0?3:.2;return{cx,cy,o}}
 // ---------- personas 3D ----------
-function mkPerson(p){const L=p.look,col=ROLES[p.role][1],tec=p.role==='tecnico';const g=new THREE.Group();
+// el aspecto completo: lo que falte (pelo, pantalón) sale del nombre, siempre igual para cada persona
+const fullLook=p=>{const L=lookOf(p.name||p.n||p.id||'',p.role);for(const k in p.look||{})if(p.look[k]!=null)L[k]=p.look[k];return L};
+const pkey=(p,L)=>p.role+p.virtual+p.ag+L.skin+L.hair+L.style+(L.top||'');
+function mkPerson(p){const L=fullLook(p),col=ROLES[p.role][1],tec=p.role==='tecnico';const g=new THREE.Group();
   const vm=p.virtual?new THREE.MeshStandardMaterial({color:p.ag==='ada'?'#5e8cff':'#8c6dff',emissive:p.ag==='ada'?'#0a84ff':'#7c5cff',emissiveIntensity:.5,transparent:true,opacity:.78,roughness:.4}):null;
   const m=(c,r=.75)=>vm||M('c'+c+r,{color:c,roughness:r});
   const cap=(r,l,mat)=>new THREE.Mesh(new THREE.CapsuleGeometry(r,l,4,12),mat);
@@ -779,8 +782,8 @@ function mkPerson(p){const L=p.look,col=ROLES[p.role][1],tec=p.role==='tecnico';
   let star=null;if(p.virtual){star=new THREE.Mesh(new THREE.OctahedronGeometry(.13),new THREE.MeshStandardMaterial({color:p.ag==='ada'?'#0a84ff':'#7c5cff',emissive:p.ag==='ada'?'#0a84ff':'#7c5cff',emissiveIntensity:1.2}));star.position.y=2.05;g.add(star)}
   const ring=new THREE.Mesh(new THREE.RingGeometry(.4,.47,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#1d1d1f'}));ring.position.y=.135;g.add(ring);
   g.traverse(o=>{if(o.isMesh&&o!==ring){o.castShadow=true}});
-  return{g,hip,lL,lR,aL,aR,box,star,ring,h:-Math.PI/2,key:p.role+p.virtual+p.ag+L.skin+L.hair+L.style+(L.top||'')}}
-function person3(p,dt){let o=PPL.get(p.id);const key=p.role+p.virtual+p.ag+p.look.skin+p.look.hair;if(!o||o.key!==key){if(o)ACT.remove(o.g);o=mkPerson(p);PPL.set(p.id,o);ACT.add(o.g)}o.seen=1;
+  return{g,hip,lL,lR,aL,aR,box,star,ring,h:-Math.PI/2,key:pkey(p,L)}}
+function person3(p,dt){let o=PPL.get(p.id);const key=pkey(p,fullLook(p));if(!o||o.key!==key){if(o)ACT.remove(o.g);o=mkPerson(p);PPL.set(p.id,o);ACT.add(o.g)}o.seen=1;
   o.g.visible=!p.inVan&&!!S.built&&!(WALK.on&&APP&&p.id===S.me);if(!o.g.visible)return null;
   const walk=p.tx!=null,d=deskOf(p),sit=!walk&&!p.carry&&!p.virtual&&d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25;
   let x=p.x,y=p.y,h=o.h;
