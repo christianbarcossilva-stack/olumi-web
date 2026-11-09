@@ -1,4 +1,4 @@
-# Diseño de las webs de Unity Tech · v4 (9/11/2026, en vista previa en /nuevo/)
+# Diseño de las webs de Unity Tech · v4 (en vivo desde el 9/11/2026)
 
 Pedido de Christian: que el cliente quede enganchado con lo que ve, que se note la tecnología y que estamos por arriba de la competencia.
 Referencias que mandó: páginas que cuentan una historia mientras bajás (cámara que entra a la casa, producto que gira, números gigantes, fondo oscuro).
