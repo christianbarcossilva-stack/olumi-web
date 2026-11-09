@@ -976,7 +976,7 @@ function usoStep(){const n=performance.now();if(n-USO.at<120)return;USO.at=n;let
   USO.t=t;const txt=t?(t.k==='pc'?'Usar la computadora'+(deskName(t.it)?' de '+deskName(t.it):''):'Ingresar mercadería'):'';
   if(txt!==USO.k){USO.k=txt;uhint.hidden=!txt;uhint.innerHTML=txt?`<kbd>${TOUCH?'Tocá':'Clic o E'}</kbd>${esc(txt)}`:''}}
 const deskName=it=>{const d=it.desk&&S.desks.find(q=>q.id===it.desk);return d?d.n:''};
-function usoOpen(){const t=USO.t;if(!t)return false;if(document.pointerLockElement)document.exitPointerLock();USO.open=true;WALK.keys={};WALK.joy=[0,0];uhint.hidden=true;
+function usoOpen(){const t=USO.t;if(!t)return false;hidePop();if(document.pointerLockElement)document.exitPointerLock();USO.open=true;WALK.keys={};WALK.joy=[0,0];uhint.hidden=true;
   usar.hidden=false;usar.innerHTML=`<div class="uwin" role="dialog" aria-modal="true"><div class="ubar"><i></i><i></i><i></i><b>${t.k==='pc'?'Computadora'+(deskName(t.it)?' · '+esc(deskName(t.it)):''):'Depósito · Ingresar mercadería'}</b><button type="button" class="ux" aria-label="Cerrar">✕</button></div><div class="ubody">${t.k==='pc'?pcHtml('wa'):stockHtml()}</div></div>`;
   return true}
 function usoClose(){USO.open=USO.me=false;usar.hidden=true;usar.classList.remove('lado');usar.innerHTML='';USO.k='';USO.at=0}
@@ -1009,7 +1009,7 @@ const TOPS=['#ff6961','#0a84ff','#bf5af2','#30d158','#ff9f0a','#1d1d1f','#f5f5f7
 function meLook(){const p0=APP&&S.me?S.people.find(p=>p.id===S.me):null;return{...(p0?p0.look:lookOf('Vos','gerencia')),...(MYLOOK||{})}}
 function meHtml(){const L=meLook(),sw=(k,arr)=>`<div class="sw">${arr.map(c=>`<button type="button" data-me="${k}" data-v="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${L[k]===c}"></button>`).join('')}</div>`;
   return `<div class="ume"><div><h4>Piel</h4>${sw('skin',SKIN)}</div><div><h4>Pelo</h4>${sw('hair',HAIR)}<div class="sw txt" style="margin-top:9px">${['Corto','Largo','Rodete'].map((t,i)=>`<button type="button" data-me="style" data-v="${i}" aria-pressed="${L.style===i}">${t}</button>`).join('')}</div></div><div><h4>Ropa</h4>${sw('top',TOPS)}</div><p class="upie">Así te ven los demás en la oficina. Se guarda solo.</p></div>`}
-function meOpen(){if(document.pointerLockElement)document.exitPointerLock();WALK.third=true;USO.open=USO.me=true;WALK.keys={};uhint.hidden=true;usar.classList.add('lado');usar.hidden=false;
+function meOpen(){hidePop();if(document.pointerLockElement)document.exitPointerLock();WALK.third=true;USO.open=USO.me=true;WALK.keys={};uhint.hidden=true;usar.classList.add('lado');usar.hidden=false;
   usar.innerHTML=`<div class="uwin chico" role="dialog" aria-label="Mi muñeco"><div class="ubar"><i></i><i></i><i></i><b>Mi muñeco</b><button type="button" class="ux" aria-label="Cerrar">✕</button></div>${meHtml()}</div>`}
 document.getElementById('b_wme').addEventListener('click',meOpen);
 usar.addEventListener('click',e=>{const b=e.target.closest('[data-me]');if(!b)return;const k=b.dataset.me,v=k==='style'?+b.dataset.v:b.dataset.v;MYLOOK={...(MYLOOK||{}),[k]:v};
