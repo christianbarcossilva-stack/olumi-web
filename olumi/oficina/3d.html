@@ -488,7 +488,7 @@ function sync3D(dt){
 
 
 // ---------- mirar la maqueta como en Los Sims: rueda acerca, clic derecho gira, arrastrar desplaza ----------
-// Rueda / pellizco: acerca hacia donde apuntás · clic derecho (o ruedita) y arrastrar: gira · arrastrar el piso o Shift+arrastrar: desplaza
+// Rueda (editando o con Ctrl) / pellizco: acerca hacia donde apuntás · clic derecho (o ruedita) y arrastrar: gira · arrastrar el piso o Shift+arrastrar: desplaza
 // Editando: W A S D o flechas desplazan, Z / X acercan y alejan. "Vista" vuelve al encuadre original.
 const bVista=document.getElementById('b_vista');
 const CAMD={btn:-1,x:0,y:0,moved:false,swallow:false,touch:new Map(),pinch:null,active:0};
@@ -514,8 +514,8 @@ const camUp=e=>{CAMD.touch.delete(e.pointerId);if(CAMD.touch.size<2)CAMD.pinch=n
 cv.addEventListener('pointerup',camUp,true);cv.addEventListener('pointercancel',camUp,true);
 // después de mover la vista, ese clic no abre fichas ni elige muebles
 cv.addEventListener('click',e=>{if(CAMD.swallow){CAMD.swallow=false;e.stopImmediatePropagation()}},true);
-// rueda: dentro de la app o editando, siempre; en una página, después de tocar la maqueta (o con Ctrl/pellizco del trackpad)
-cv.addEventListener('wheel',e=>{if(WALK.on)return;if(!(ED.on||APP||e.ctrlKey||e.metaKey||performance.now()-CAMD.active<30000))return;e.preventDefault();const [x,y]=rel(e);
+// rueda: editando o a pantalla completa acerca siempre; en la página deja bajar y acerca con Ctrl (o pellizco del trackpad), como un mapa
+let wheelTip=0;cv.addEventListener('wheel',e=>{if(WALK.on)return;if(!(ED.on||document.fullscreenElement||stage.classList.contains('fullfake')||e.ctrlKey||e.metaKey)){const t=performance.now();if(t-wheelTip>6000){wheelTip=t;toast((/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl')+' + rueda para acercar · o tocá Editar')}return}e.preventDefault();const [x,y]=rel(e);
   vZoom(Math.exp(-(e.deltaMode?e.deltaY*16:e.deltaY)*(e.ctrlKey?.01:.0018)),x,y)},{passive:false});
 addEventListener('keydown',e=>{if(WALK.on||!ED.on||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;
   const s=11/(ISO.zoom*Math.max(1,sc/12)),f=Math.cos(VIEW.yaw),g=Math.sin(VIEW.yaw),mv=(a,b)=>{VIEW.tx+=a;VIEW.ty+=b;vClamp()};
