@@ -2463,7 +2463,7 @@ function anchorTo(d, p) { const A = devAnchor(d) || [0, 0, 0], cy = Math.cos(d.y
 
 /* ---------- historial: deshacer y rehacer todo lo del editor ---------- */
 const HIST = [], FUT = [];
-function histPush(h) { HIST.push(h); if (HIST.length > 100) HIST.shift(); FUT.length = 0; updUndo(); }
+function histPush(h) { HIST.push(h); if (HIST.length > 400) HIST.shift(); FUT.length = 0; updUndo(); }
 function updUndo() { const b = $('#edundo'); if (b) b.hidden = !HIST.length; const r = $('#edredo'); if (r) r.hidden = !FUT.length; }
 function histUndo() { const h = HIST.pop(); if (!h) { toast('No hay nada para deshacer'); return; } h.undo(); FUT.push(h); edSave(); updUndo(); toast('Deshecho · ' + h.label); gzBuild(true); }
 function histRedo() { const h = FUT.pop(); if (!h) { toast('No hay nada para rehacer'); return; } h.redo(); HIST.push(h); edSave(); updUndo(); toast('Rehecho · ' + h.label); gzBuild(true); }
@@ -4889,6 +4889,9 @@ const AUTO = { left: [] };
 extChip = (o => function (free) { o(free); const el = $('#e3ext'); if (!el || el.hidden || el.dataset.k !== 'ubicar') return; const n = (free || []).filter(x => extTool(x) === 'ap' && autoSpot(x)).length; if (!n) return;
   el.insertAdjacentHTML('beforeend', ` · <b data-auto="1">Ubicar ${n} solos por su nombre</b>`); })(extChip);
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#e3ext [data-auto]'); if (!b) return; e.preventDefault(); e.stopImmediatePropagation(); if (!ED.on) setEdit(true); autoPlace(); }, true);
+// ayuda: las teclas nuevas de construcción
+helpRender = (o => function () { o(); const el = $('#e3help'); if (!el || el.hidden || TOUCH || !(ED.on && canEdit())) return; const dl = el.querySelector('dl'); if (!dl || dl.querySelector('.simrow')) return;
+  dl.insertAdjacentHTML('beforeend', '<dt class="simrow">G</dt><dd>Cuadrícula prendida o apagada (apagada: se pone donde apuntás)</dd><dt>O</dt><dd>Cuentagotas: copia lo que apuntás, con su color</dd><dt>J</dt><dd>Paredes arriba, recortadas o abajo (vista de arriba)</dd><dt>Shift + clic</dt><dd>Con Pintar: pinta toda la habitación</dd>'); })(helpRender);
 /* ---------- avatar en tercera persona ---------- */
 const TP = { on: (() => { try { return localStorage.getItem('ondi.tp') !== '0'; } catch (e) { return true; } })(), want: 4.2, d: 4.2, h: 0, ph: 0, amp: 0, px: null, pz: null, cam: null, near: false };
 const AVC = { piel: '#E9BFA3', barba: '#4B3626', pelo: '#3E2C20', casco: '#F3F2EC', buzo: '#2F3338', chaleco: '#D9EA2B', banda: '#B9BEC3', pant: '#55595F', rodi: '#1E2022', bota: '#2A2523', ojo: '#22201E' };
