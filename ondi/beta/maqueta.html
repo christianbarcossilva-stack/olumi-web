@@ -4793,7 +4793,7 @@ walkFree = (o => function (x, z) { if (!o(x, z)) return false; if (!WALK.gr) ret
 HUD.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; if (b.dataset.w === 'eye') { WALK.gr = true; WALK.y = floorAt(WALK.x, WALK.z, 0.5) + 1.7; } if (b.dataset.w === 'top') WALK.gr = false; });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#tmenu [data-t]'); if (!b) return; if (b.dataset.t === 'eye') WALK.gr = true; if (b.dataset.t === 'top') WALK.gr = false; }, true);
 enterWalk = (o => function (...a) { o(...a); WALK.gr = true; WALK.vy = 0; })(enterWalk);
-Object.assign(window, { __sims: { OPK, PAINT, GRID, WV, LIBB, LIBU, floorAt, libPlace, roomSize, paintAt, eyeAt, opSnap, naveHoles, wvSet, roomCopy, roomTurn, f: () => ({ addAnyRaw, rmAnyRaw, roomMake, roomFrame, roomParts, select, shellGeo, innerOf, buildNave, PROPS, e3Action, e3Edit, entity, histUndo, histRedo, setTool, edState, renderPanel, walkFree, doorAt, stepWalk, sel: () => SEL, INNER, detailedInner, buildInner, OBJ }) } });
+Object.assign(window, { __sims: { OPK, PAINT, GRID, WV, LIBB, LIBU, floorAt, libPlace, roomSize, paintAt, eyeAt, opSnap, naveHoles, wvSet, roomCopy, roomTurn, f: () => ({ addAnyRaw, rmAnyRaw, roomMake, roomFrame, roomParts, select, shellGeo, innerOf, buildNave, PROPS, e3Action, e3Edit, entity, histUndo, histRedo, setTool, edState, renderPanel, walkFree, doorAt, stepWalk, sel: () => SEL, INNER, detailedInner, buildInner, OBJ, EXT, autoPlace, autoSpot, DEV, armItem, setEdit, ALL3, HIST, PLBL, ED, catShow, renderCat }) } });
 
 // entrepiso: la altura se cambia en su ficha
 e3Edit = (o => function (e, fld) { let h = o(e, fld); if (!h || e.t !== 'item' || e.R.k !== 'it' || e.R.o.k !== 'mez') return h; const add = fld('Altura del piso', `<span class="stp"><input class="e3num" type="number" step="0.1" data-ed="mz_h" value="${mzH(e.R.o)}"><em>m</em></span>`) + '<p class="ehelp">Se sube por una escalera: Construcción → Escalera.</p>'; const i = h.indexOf('<button class="btn danger"'); return i < 0 ? h + add : h.slice(0, i) + add + h.slice(i); })(e3Edit);
@@ -4855,6 +4855,40 @@ aimDown = (o => function (b) { if (b === 0 && ED.on && canEdit() && ED.tool === 
 e3Tool = (o => function (t, e) { if (t !== 'plbl') return o(t, e); if (POP && !POP.hidden && !PLB.go) { popClose(); return true; } if (WALK.on && !PLB.go) { plbStart(e); return true; } PLB.go = false; return o(t, e); })(e3Tool);
 addEventListener('pointerup', () => { const t0 = PLB.d; if (t0 === null) return; PLB.d = null; if (PLB.mv >= 12 || performance.now() - t0 > 450 || ED.tool !== 'plbl' || !WALK.on) return;
   const ev = PLB.e ? Object.assign(cev(), PLB.e) : cev(); if (LOCK.on) unlock(); setTimeout(() => { PLB.go = true; e3Tool('plbl', ev); PLB.go = false; }, 20); }, true);
+extTool = (o => function (x) { const s = [x.modelo, x.nombre].join(' ').toLowerCase(); if (x.tipo !== 'camara' && /\bac[\s-]?(pro|lite|lr|mesh|hd|shd)\b|nanohd|flexhd|beaconhd|\bu6\b|\bu7\b|uap/.test(s)) return 'ap'; return o(x); })(extTool);
+// ubicar solos los equipos de UniFi por su nombre (ej. "E1 Mezzanine X13", "E4 - R2A07", "E1 - C16-14", "Ofi 2")
+const nrmS = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function autoSpot(x) { const s = nrmS(x.nombre), E = id => naveById(id), at = (N, u, d, y, loc) => { const [px2, pz2] = NP(N, clamp(u, 1.5, N.L - 1.5), -clamp(d, 1.5, N.D - 1.5)); return { x: px2, z: pz2, y, nave: N.id, loc: N.full + ' · ' + loc }; };
+  const E1 = E('e1'), E4 = E('e4');
+  const mz = /mez+a?n+i+n+e|mezz\b|mezanin/.test(s);
+  if (mz && E1) { const integra = /integra/.test(s), N = integra && E4 ? E4 : E1; const lv = (s.match(/\b(?:nivel\s*)?([xyz])\s?(\d{1,2})\b/) || s.match(/\bnivel\s+([xyz])\b/) || s.match(/\b([xyz])\s+(?:pasillo|escritorio)/) || [])[1], num = +((s.match(/\b[xyz]\s?(\d{1,2})\b/) || [])[1] || 0);
+    const L2 = lv || 'x', Y = { x: 3.15, y: 6.55, z: 9.6 }[L2]; if (!lv && N === E1) return at(E1, 30, 80, Y, 'entrepiso');
+    if (N === E1) { const I = innerOf(E1), it = num ? I.items.find(q => q.name === L2.toUpperCase() + ' ' + pad(num)) : null;
+      if (it) return at(E1, it.u + it.su / 2, it.d + it.sd + 1.3, Y, 'entrepiso, pasillo ' + L2.toUpperCase() + pad(num));
+      const u = /oficina|escritorio/.test(s) ? 30 : 20, d = /fondo/.test(s) ? 112 : /escritorio|oficina/.test(s) ? 47 : 80; return at(E1, u, d, Y, 'entrepiso nivel ' + L2.toUpperCase()); }
+    return at(N, N.L * 0.15, N.D * 0.5, 6, 'entrepiso'); }
+  const r4 = s.match(/\br(\d)\s?a(\d{1,2})\b/); if (r4 && E4) return at(E4, E4.L * (+r4[2] - 0.5) / 7, E4.D * (+r4[1] - 0.5) / 3, E4.h - 1.5, 'R' + r4[1] + 'A' + pad(+r4[2]));
+  if (/\be4\b/.test(s) && E4) { const r = (s.match(/\br(\d)\b/) || [])[1]; return at(E4, /oficina/.test(s) ? E4.L * 0.85 : E4.L * 0.5, /ultimo pasillo/.test(s) && !r ? E4.D - 5 : r ? E4.D * (+r - 0.5) / 3 : E4.D * 0.5, E4.h - 1.5, r ? 'fila R' + r : 'último pasillo'); }
+  if (/integra/.test(s) && E4) return at(E4, E4.L * 0.3, 5, 4, 'frente, jaula de acceso');
+  if (E1 && (/\be1\b/.test(s) || /\bc\d{1,2}\b/.test(s))) { const c = s.match(/\bc(\d{1,2})(?:\s?-\s?(\d{1,2}))?\b/), p = s.match(/\bp\s?(\d{1,2})\b/);
+    if (c) { const a = +c[1], b = c[2] ? +c[2] : null, d = b ? E1.D * (b - 0.5) / 25 : /fondo/.test(s) ? E1.D - 8 : 16; return at(E1, E1.L * (a - 0.5) / 18, d, 8, 'columna C' + pad(a) + (b ? '-' + b : '')); }
+    if (p && E1.docks[+p[1] - 1]) { const k = E1.docks[+p[1] - 1]; return at(E1, k.u, 6, 6, 'andén ' + p[1]); }
+    if (/anden/.test(s)) return at(E1, 22, 9, 6, 'columna del andén');
+    if (/contenedor/.test(s)) return at(E1, 8, 9, 2.6, 'contenedor de oficina');
+    if (/ex it|\bit\b/.test(s)) return at(E1, 4, 4, 3, 'ex sala de IT'); }
+  if (/contenedor/.test(s) && E1) return at(E1, 8, 9, 2.6, 'contenedor de oficina');
+  const ofi = s.match(/\bofi\w*\s+[a-z]+\s*(\d)\b/); if (ofi) { const i = +(ofi[1] || 1) - 1, [ax, az] = ADMIN_POS; return { x: ax - 6 + i * 6, z: az, y: 2.7, nave: '', loc: 'Oficinas del polo · ' + (i + 1) }; }
+  if (/santa\s?rosa|\bsr\b/.test(s)) { const Z = zonaById('sr'); if (Z) return { x: Z.pos[0] + (/gerencia/.test(s) ? 8 : 0), z: Z.pos[2], y: 3, nave: '', loc: 'Playa 0 km' + (/gerencia/.test(s) ? ' · gerencia' : '') }; }
+  if (/control de acceso|porteria/.test(s)) return { x: GATE_POS[0], z: GATE_POS[1], y: 3, nave: '', loc: 'Portería · control de acceso' };
+  return null; }
+function autoPlace() { const used = new Set(DEV.filter(d => d.ext).map(d => d.ext.uid)), free = EXT.list.filter(x => !used.has(x.uid) && !x.consola && extTool(x) === 'ap'), made = [], left = [];
+  for (const x of free) { const p = autoSpot(x); if (!p) { left.push(x.nombre); continue; } const d = mkDev('ap'); Object.assign(d, { kind: x.modelo || d.kind, mount: 'ceiling', x: p.x, z: p.z, y: p.y, yaw: 0, loc: p.loc, nave: p.nave || undefined, name: x.nombre, ext: { uid: x.uid, marca: x.marca, mac: x.mac || '' }, extInfo: x, status: extSt(x.estado) }); if (!d.nave) delete d.nave; addDevRaw(d); made.push(d); }
+  if (made.length) { const snaps = made.map(snapD); histPush({ label: made.length + ' Wi-Fi ubicados por su nombre', undo: () => snaps.forEach(s => rmAnyRaw(s.id)), redo: () => snaps.forEach(s => addDevRaw(JSON.parse(JSON.stringify(s)))) }); edSave(); extCat(); }
+  AUTO.left = left; toast(made.length ? `Ubiqué ${made.length} Wi-Fi por su nombre${left.length ? '; ' + left.length + ' quedan para ubicar a mano' : ''} · Ctrl+Z para deshacer` : 'No reconocí el lugar en los nombres de los equipos'); return { made: made.map(d => [d.name, d.loc]), left }; }
+const AUTO = { left: [] };
+extChip = (o => function (free) { o(free); const el = $('#e3ext'); if (!el || el.hidden || el.dataset.k !== 'ubicar') return; const n = (free || []).filter(x => extTool(x) === 'ap' && autoSpot(x)).length; if (!n) return;
+  el.insertAdjacentHTML('beforeend', ` · <b data-auto="1">Ubicar ${n} solos por su nombre</b>`); })(extChip);
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#e3ext [data-auto]'); if (!b) return; e.preventDefault(); e.stopImmediatePropagation(); if (!ED.on) setEdit(true); autoPlace(); }, true);
 /* ---------- avatar en tercera persona ---------- */
 const TP = { on: (() => { try { return localStorage.getItem('ondi.tp') !== '0'; } catch (e) { return true; } })(), want: 4.2, d: 4.2, h: 0, ph: 0, amp: 0, px: null, pz: null, cam: null, near: false };
 const AVC = { piel: '#E9BFA3', barba: '#4B3626', pelo: '#3E2C20', casco: '#F3F2EC', buzo: '#2F3338', chaleco: '#D9EA2B', banda: '#B9BEC3', pant: '#55595F', rodi: '#1E2022', bota: '#2A2523', ojo: '#22201E' };
