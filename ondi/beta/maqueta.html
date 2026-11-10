@@ -671,7 +671,8 @@ void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh
   vec3 col;
   if(uReal>0.5){
     float hor=smoothstep(0.55,0.9,n.y);
-    if(uTexOn<0.5 && vC.a<0.5){ float n1=fbm(vW.xz*0.16), n2=vn(vW.xz*2.7+vec2(vW.y*1.7));
+    bool ch=abs(vC.a-0.0123)<0.001;
+    if(uTexOn<0.5 && vC.a<0.5 && !ch){ float n1=fbm(vW.xz*0.16), n2=vn(vW.xz*2.7+vec2(vW.y*1.7));
       base*=mix(1.0,0.8+0.4*n1,0.62*hor)*(0.95+0.1*n2);
       base*=mix(1.0,0.7+0.3*smoothstep(0.0,1.5,vW.y),(1.0-hor)*0.65);
       float wl=1.0-smoothstep(0.02,0.06,distance(vC.rgb,uWall)), rf=1.0-smoothstep(0.02,0.06,distance(vC.rgb,uRoof));
@@ -684,7 +685,7 @@ void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh
     float fr=pow(1.0-max(dot(n,V),0.0),4.0); vec3 R=reflect(-V,n); vec3 sky=mix(uHz,uZen,pow(clamp(R.y,0.0,1.0),0.55));
     vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.06,1.0,s));
     lit=mix(lit, sky*mix(0.55,1.0,s)*0.9, glass*(0.45+0.5*fr)) + sky*fr*0.07*(1.0-glass) + uSunC*sp;
-    lit=mix(lit, base*1.15, vC.a);
+    lit=mix(lit, base*1.15, ch?0.0:vC.a);
     col=aces(lit*1.04);
   } else { vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s)); col=mix(lit, base*mix(0.72,1.0,s), vC.a); }
   col=mix(col,uTint,uTintA);
@@ -737,6 +738,7 @@ class Renderer {
     const ext = gl.getExtension('EXT_texture_filter_anisotropic'); if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, 8); }
   mesh(o) {
     let m = this.cache.get(o); if (m && m.v === o.version) return m; const gl = this.gl;
+    if (m && o.dyn && m.count === o.dyn.p.length / 3) { gl.bindBuffer(gl.ARRAY_BUFFER, m.bufs[0]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, o.dyn.p); gl.bindBuffer(gl.ARRAY_BUFFER, m.bufs[1]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, o.dyn.n); m.v = o.version; return m; }
     if (m) { gl.deleteVertexArray(m.vao); m.bufs.forEach(b => gl.deleteBuffer(b)); }
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const bufs = [];
     const put = (arr, loc, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0); bufs.push(b); };
@@ -4894,41 +4896,132 @@ helpRender = (o => function () { o(); const el = $('#e3help'); if (!el || el.hid
   dl.insertAdjacentHTML('beforeend', '<dt class="simrow">G</dt><dd>Cuadrícula prendida o apagada (apagada: se pone donde apuntás)</dd><dt>O</dt><dd>Cuentagotas: copia lo que apuntás, con su color</dd><dt>J</dt><dd>Paredes arriba, recortadas o abajo (vista de arriba)</dd><dt>Shift + clic</dt><dd>Con Pintar: pinta toda la habitación</dd>'); })(helpRender);
 /* ---------- avatar en tercera persona ---------- */
 const TP = { on: (() => { try { return localStorage.getItem('ondi.tp') !== '0'; } catch (e) { return true; } })(), want: 4.2, d: 4.2, h: 0, ph: 0, amp: 0, px: null, pz: null, cam: null, near: false };
-const AVC = { piel: '#E9BFA3', barba: '#4B3626', pelo: '#3E2C20', casco: '#F3F2EC', buzo: '#2F3338', chaleco: '#D9EA2B', banda: '#B9BEC3', pant: '#55595F', rodi: '#1E2022', bota: '#2A2523', ojo: '#22201E' };
-function avGeo(part) { const g = new Geo(), B = (x0, y0, z0, x1, y1, z1, c, o) => g.box(x0, y0, z0, x1, y1, z1, c, Object.assign({ ao: 0.94 }, o || {}));
-  if (part === 'leg') { B(-0.08, -0.86, -0.075, 0.08, 0.04, 0.075, AVC.pant); B(0.08, -0.56, -0.07, 0.105, -0.36, 0.07, AVC.rodi, { ao: 1 });
-    B(-0.09, -0.93, -0.08, 0.17, -0.82, 0.08, AVC.bota, { bottom: true }); }
-  else if (part === 'arm') { B(-0.06, -0.54, -0.055, 0.06, 0.04, 0.055, AVC.buzo); g.blob(0.01, -0.6, 0, 0.055, AVC.piel, { rings: 4, seg: 6 }); }
-  else { // cuerpo y cabeza, pies en y = 0
-    B(-0.11, 0.86, -0.19, 0.11, 1.0, 0.19, AVC.pant); B(-0.12, 0.98, -0.2, 0.12, 1.47, 0.2, AVC.buzo);
-    B(-0.135, 0.97, -0.215, 0.135, 1.4, 0.215, AVC.chaleco, { ao: 0.97 });
-    for (const y of [1.06, 1.2]) B(-0.14, y, -0.22, 0.14, y + 0.045, 0.22, AVC.banda, { ao: 1 });
-    for (const z of [-0.12, 0.12]) { B(0.132, 1.24, z - 0.022, 0.142, 1.4, z + 0.022, AVC.banda, { ao: 1 }); B(-0.142, 1.24, z - 0.022, -0.132, 1.4, z + 0.022, AVC.banda, { ao: 1 });
-      B(-0.12, 1.4, z - 0.045, 0.12, 1.47, z + 0.045, AVC.chaleco, { ao: 1 }); }
-    B(0.136, 0.97, -0.008, 0.142, 1.4, 0.008, '#8A9A20', { ao: 1 });
-    B(-0.05, 1.46, -0.05, 0.05, 1.55, 0.05, AVC.piel);
-    g.blob(0, 1.66, 0, 0.125, AVC.piel, { rings: 6, seg: 10, sy: 1.08 });
-    B(0.045, 1.545, -0.085, 0.122, 1.62, 0.085, AVC.barba); B(0.06, 1.63, -0.1, 0.118, 1.655, -0.03, AVC.barba); B(0.06, 1.63, 0.03, 0.118, 1.655, 0.1, AVC.barba);
-    g.blob(-0.03, 1.67, 0, 0.122, AVC.pelo, { rings: 6, seg: 10, sy: 1.02 });
-    for (const z of [-0.045, 0.045]) B(0.112, 1.68, z - 0.015, 0.128, 1.70, z + 0.015, AVC.ojo, { ao: 1 });
-    g.prism(0, 1.71, 0, 0.142, 0.06, 14, AVC.casco); g.blob(0, 1.77, 0, 0.142, AVC.casco, { rings: 6, seg: 14, sy: 0.62 });
-    B(0.09, 1.705, -0.11, 0.21, 1.725, 0.11, AVC.casco); B(-0.02, 1.84, -0.022, 0.13, 1.86, 0.022, '#E2E1DA', { ao: 1 }); }
-  return g; }
-const AVP = [['av-body', 'body'], ['av-legL', 'leg'], ['av-legR', 'leg'], ['av-armL', 'arm'], ['av-armR', 'arm']];
-function avBuild() { for (const [id, p] of AVP) if (!OBJID.get(id)) obj(id, { geo: avGeo(p), layer: 'base', pick: false, on: false }); }
-function avHide() { for (const [id] of AVP) { const o = OBJID.get(id); if (o) o.on = false; } }
-function avSync() { const show = WALK.on && TP.on && !TP.near; if (!show) { avHide(); return; } avBuild();
-  const fy = WALK.y - 1.7, h = TP.h, ch = Math.cos(h), sh = Math.sin(h), bob = Math.abs(Math.sin(TP.ph)) * 0.035 * TP.amp, sw = Math.sin(TP.ph) * 0.6 * TP.amp;
-  const W3 = (lx, ly, lz) => [WALK.x + ch * lx + sh * lz, fy + ly + bob, WALK.z - sh * lx + ch * lz];
-  const set = (id, p, rz) => { const o = OBJID.get(id); o.on = true; o.model = M.trs(p[0], p[1], p[2], h, rz); };
-  set('av-body', W3(0, 0, 0), 0); set('av-legL', W3(0, 0.92, -0.105), sw); set('av-legR', W3(0, 0.92, 0.105), -sw);
-  set('av-armL', W3(0, 1.42, -0.265), -sw * 0.8); set('av-armR', W3(0, 1.42, 0.265), sw * 0.8); }
+const AVC = { piel: '#E0B193', barba: '#3F2C1F', pelo: '#33261C', casco: '#F3F2EC', buzo: '#30343A', buzo2: '#25282D', chaleco: '#D2E52B', banda: '#D3D7DB', pant: '#5A5F66', pant2: '#4D5258', cinto: '#3A2E24', rodi: '#1E2022', bota: '#4A3626', ojo: '#22201E' };
+/* Muñeco con esqueleto: una sola piel que se dobla en hombros, codos, cadera, rodillas y tobillos (CPU skinning),
+   caminata y trote con cadera, rodillas y brazos naturales, y respiración quieto. Mirando hacia +x, pies en y = 0. */
+const AVK = 0.0123; // marca de color: el sombreado realista no le pone ruido de piso ni oscurece las piernas
+const AVB = [ // [padre, pivote]  (I = -z, D = +z)
+  [-1, [0, 0.98, 0]], [0, [0, 1.08, 0]], [1, [0, 1.3, 0]], [2, [0, 1.5, 0]], [3, [0.005, 1.57, 0]],
+  [2, [0, 1.43, -0.19]], [5, [0, 1.15, -0.212]], [6, [0.008, 0.905, -0.222]],
+  [2, [0, 1.43, 0.19]], [8, [0, 1.15, 0.212]], [9, [0.008, 0.905, 0.222]],
+  [0, [0, 0.93, -0.095]], [11, [0.012, 0.51, -0.1]], [12, [0, 0.095, -0.105]],
+  [0, [0, 0.93, 0.095]], [14, [0.012, 0.51, 0.1]], [15, [0, 0.095, 0.105]]];
+const AV = { o: null, bp: null, bn: null, b0: null, b1: null, w: null, sp: null, sn: null, S: AVB.map(() => new Float32Array(12)), t: 0 };
+function avBuildGeo() { const g = new Geo(), bp = [], bn = [], b0 = [], b1 = [], w = [];
+  const put = (p, n, c, i, j = i, k = 1) => { g.v(p, n, c, AVK); bp.push(p[0], p[1], p[2]); bn.push(n[0], n[1], n[2]); b0.push(i); b1.push(j); w.push(k); };
+  const sm = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  // superficie por grilla (anillos × gajos) con normales suaves; f(i,j) → {p, c, b:[b0,b1,w]}
+  const grid = (R, S, f, wrap = true, skip) => { const P = []; for (let i = 0; i < R; i++) { const row = []; for (let j = 0; j < S; j++) row.push(f(i, j)); P.push(row); }
+    const at = (i, j) => P[clamp(i, 0, R - 1)][wrap ? (j + S) % S : clamp(j, 0, S - 1)].p;
+    const N = (i, j) => { const du = sub(at(i, j + 1), at(i, j - 1)), dv = sub(at(i + 1, j), at(i - 1, j)); let n = cross(dv, du); const l = Math.hypot(n[0], n[1], n[2]); if (l < 1e-9) return P[i][j].n || [0, 1, 0]; n = [n[0] / l, n[1] / l, n[2] / l]; const o = P[i][j].o; if (o && dot(n, sub(P[i][j].p, o)) < 0) n = [-n[0], -n[1], -n[2]]; return n; };
+    const V = (i, j) => { const q = P[i][(j + S) % S], b = q.b; put(q.p, N(i, (j + S) % S), q.c, b[0], b[1], b[2]); };
+    for (let i = 0; i < R - 1; i++) for (let j = 0; j < (wrap ? S : S - 1); j++) { if (skip && skip(i, j)) continue; V(i, j); V(i + 1, j); V(i + 1, j + 1); V(i, j); V(i + 1, j + 1); V(i, j + 1); } };
+  // tubo vertical por secciones [y, a(x), b(z), cx, cz] con exponente de superelipse
+  const tube = (secs, S, col, wt, o = {}) => { const ex = o.ex || 2, fr = o.front || 0;
+    grid(secs.length, S, (i, j) => { const [y, a, b, cx, cz] = secs[i], th = j / S * Math.PI * 2, cs = Math.cos(th), sn = Math.sin(th);
+      const pw = v => Math.sign(v) * Math.pow(Math.abs(v), 2 / ex); let ra = a, rb = b; if (o.bump) { const d = o.bump(y, th); ra += d; rb += d; }
+      const p = [cx + ra * pw(cs) + fr * Math.max(0, cs) * 0, y, cz + rb * pw(sn)]; return { p, o: [cx, y, cz], c: C(col(y, th, cs, sn)), b: wt(y) }; }, true, o.skip); };
+  const ell = (c, r, col, bone, o = {}) => { const R = o.r || 8, S = o.s || 12, rot = o.rot || 0;
+    grid(R + 1, S, (i, j) => { const la = -Math.PI / 2 + i / R * Math.PI, lo = j / S * Math.PI * 2; let x = Math.cos(la) * Math.cos(lo) * r[0], y = Math.sin(la) * r[1], z = Math.cos(la) * Math.sin(lo) * r[2];
+      if (rot) { const cr = Math.cos(rot), sr = Math.sin(rot); [x, y] = [x * cr - y * sr, x * sr + y * cr]; }
+      const p = [c[0] + x, c[1] + y, c[2] + z]; return { p, o: c, c: C(typeof col === 'function' ? col(x / r[0], y / r[1], z / r[2]) : col), b: [bone, bone, 1] }; }); };
+  const box = (x0, y0, z0, x1, y1, z1, col, bone) => { const c = C(col), q = (a, b, cc, d, n) => { for (const p of [a, b, cc, a, cc, d]) put(p, n, c, bone); };
+    q([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [0, 1, 0]); q([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], [1, 0, 0]); q([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0]);
+    q([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1]); q([x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0], [0, 0, -1]); };
+  const K = AVC, mix2 = (a, b, x) => { const A = C(a), B = C(b); return '#' + A.map((v, i) => Math.round((v + (B[i] - v) * x) * 255).toString(16).padStart(2, '0')).join(''); };
+  const blend = (y, ya, yb, ba, bb) => { const t = sm(ya, yb, y); return t <= 0 ? [ba, ba, 1] : t >= 1 ? [bb, bb, 1] : [ba, bb, 1 - t]; };
+  // torso: pantalón, cinturón y buzo
+  tube([[0.84, 0.1, 0.13, 0, 0], [0.88, 0.118, 0.172, 0, 0], [0.94, 0.122, 0.178, 0, 0], [1.0, 0.118, 0.166, 0, 0], [1.08, 0.112, 0.153, -0.004, 0], [1.18, 0.118, 0.162, -0.006, 0], [1.28, 0.127, 0.178, -0.004, 0],
+    [1.36, 0.128, 0.19, 0, 0], [1.42, 0.118, 0.198, -0.006, 0], [1.465, 0.098, 0.172, -0.01, 0], [1.5, 0.07, 0.1, -0.01, 0], [1.525, 0.055, 0.058, -0.004, 0]], 20,
+    (y) => y < 0.99 ? K.pant : y < 1.018 ? K.cinto : y > 1.49 ? K.buzo2 : K.buzo,
+    y => y < 1.06 ? blend(y, 0.98, 1.06, 0, 1) : y < 1.26 ? blend(y, 1.12, 1.26, 1, 2) : blend(y, 1.47, 1.53, 2, 3), { ex: 2.5 });
+  // chaleco abierto adelante, con bandas reflectivas
+  tube([[1.045, 0.13, 0.173, -0.003, 0], [1.1, 0.126, 0.166, -0.004, 0], [1.18, 0.132, 0.175, -0.006, 0], [1.28, 0.141, 0.191, -0.004, 0], [1.36, 0.142, 0.203, 0, 0], [1.415, 0.13, 0.205, -0.006, 0], [1.45, 0.108, 0.17, -0.01, 0]], 24,
+    (y, th, cs, sn) => { const az = Math.abs(sn) * 0.2, band = (y > 1.12 && y < 1.158) || (y > 1.235 && y < 1.273) || (y > 1.273 && Math.abs(az - 0.107) < 0.017); return band ? K.banda : K.chaleco; },
+    y => y < 1.26 ? blend(y, 1.12, 1.26, 1, 2) : [2, 2, 1], { ex: 2.5, skip: (i, j) => j === 0 || j === 23 });
+  ell([-0.075, 1.5, 0], [0.055, 0.045, 0.125], K.buzo2, 2, { r: 6, s: 12 }); // capucha caída
+  ell([0.002, 1.565, 0], [0.05, 0.05, 0.05], K.piel, 3, { r: 6, s: 10 }); // cuello
+  // cabeza: forma propia (mandíbula, nuca), barba con volumen, boca, pelo corto
+  const HC = [0.012, 1.655, 0];
+  grid(17, 22, (i, j) => { const la = -Math.PI / 2 + i / 16 * Math.PI, lo = j / 22 * Math.PI * 2; let x = Math.cos(la) * Math.cos(lo), y = Math.sin(la), z = Math.cos(la) * Math.sin(lo);
+    if (y < 0) { z *= 1 - 0.3 * Math.pow(-y, 1.4); if (x < 0) x *= 1 - 0.42 * (-y); else x *= 1 - 0.1 * (-y); }
+    if (x < 0 && y > -0.2) x *= 1.07; if (y > 0.2) z *= 1 - 0.06 * y;
+    const front = x > 0.25, beard = (y < -0.06 && x > -0.42) || (Math.abs(z) > 0.66 && y < 0.3 && y > -0.1 && x > -0.35 && x < 0.32), lip = front && Math.abs(z) < 0.26 && y > -0.42 && y < -0.33 && x > 0.75,
+      hair = !beard && y > 0.08 && (x < 0.52) && !(x > 0.25 && y < 0.38), r = beard && !lip ? 1.055 : hair ? 1.02 : 1;
+    const p = [HC[0] + x * 0.112 * r, HC[1] + y * 0.128 * r, HC[2] + z * 0.099 * r];
+    return { p, o: HC, c: C(lip ? '#7A4C3E' : beard ? K.barba : hair ? K.pelo : K.piel), b: [4, 4, 1] }; });
+  for (const s of [-1, 1]) { const z = 0.037 * s;
+    ell([0.101, 1.676, z], [0.012, 0.0115, 0.0165], '#F4F1EC', 4, { r: 6, s: 10 }); ell([0.111, 1.676, z], [0.004, 0.0085, 0.0085], '#3B2A1E', 4, { r: 5, s: 8 });
+    ell([0.104, 1.697, z + 0.004 * s], [0.012, 0.0055, 0.022], K.barba, 4, { r: 4, s: 8, rot: -0.12 }); // cejas
+    ell([0.0, 1.655, 0.099 * s], [0.02, 0.031, 0.009], mix2(K.piel, '#C8977E', 0.4), 4, { r: 5, s: 10 }); } // orejas
+  ell([0.118, 1.652, 0], [0.02, 0.024, 0.0145], mix2(K.piel, '#D9A88F', 0.35), 4, { r: 6, s: 10, rot: -0.35 }); // nariz
+  ell([0.11, 1.611, 0], [0.012, 0.007, 0.03], K.barba, 4, { r: 4, s: 8 }); // bigote
+  // casco: cáscara, visera, cresta y borde
+  const HH = [0.006, 1.705, 0];
+  grid(8, 26, (i, j) => { const la = i / 7 * Math.PI / 2, lo = j / 26 * Math.PI * 2, cl = Math.cos(la);
+    const p = [HH[0] + cl * Math.cos(lo) * 0.134, HH[1] + Math.sin(la) * 0.112, HH[2] + cl * Math.sin(lo) * 0.123]; return { p, o: HH, c: C(K.casco), b: [4, 4, 1] }; });
+  grid(2, 26, (i, j) => { const lo = j / 26 * Math.PI * 2, f = Math.max(0, Math.cos(lo)), r = i ? 1.06 + 0.32 * Math.pow(f, 2.2) : 1;
+    const p = [HH[0] + Math.cos(lo) * 0.134 * r, HH[1] - 0.004 - i * 0.012 * f, HH[2] + Math.sin(lo) * 0.123 * (i ? 1.06 : 1)]; return { p, n: [0, 1, 0], c: C(i ? K.casco : '#DCDAD2'), b: [4, 4, 1] }; });
+  ell([0.006, 1.812, 0], [0.12, 0.016, 0.017], '#E4E2DA', 4, { r: 4, s: 10 });
+  // brazos (manga del buzo) y manos
+  for (const [s, b0, b1, b2] of [[-1, 5, 6, 7], [1, 8, 9, 10]]) { const z = v => v * s;
+    tube([[1.495, 0.012, 0.012, 0, z(0.19)], [1.48, 0.05, 0.05, 0, z(0.192)], [1.45, 0.062, 0.062, 0, z(0.196)], [1.38, 0.06, 0.057, 0, z(0.202)], [1.27, 0.054, 0.051, 0, z(0.208)], [1.17, 0.048, 0.046, 0, z(0.212)],
+      [1.1, 0.046, 0.044, 0.003, z(0.215)], [1.0, 0.043, 0.041, 0.006, z(0.219)], [0.945, 0.045, 0.043, 0.007, z(0.221)], [0.915, 0.041, 0.039, 0.008, z(0.222)], [0.905, 0.025, 0.024, 0.008, z(0.222)]], 14,
+      y => y < 0.95 ? K.buzo2 : K.buzo, y => blend(y, 1.11, 1.2, b1, b0), {});
+    ell([0.012, 0.842, z(0.226)], [0.04, 0.058, 0.021], K.piel, b2, { r: 7, s: 12 });
+    ell([0.04, 0.868, z(0.212)], [0.015, 0.032, 0.015], K.piel, b2, { r: 5, s: 8, rot: 0.5 }); }
+  // piernas (pantalón cargo con bolsillo y rodilleras) y botines
+  for (const [s, b0, b1, b2] of [[-1, 11, 12, 13], [1, 14, 15, 16]]) { const z = v => v * s, out = (th) => Math.max(0, Math.sin(th) * s);
+    tube([[0.97, 0.07, 0.07, 0, z(0.09)], [0.93, 0.097, 0.097, 0, z(0.095)], [0.84, 0.096, 0.092, 0.002, z(0.097)], [0.74, 0.089, 0.084, 0.005, z(0.098)], [0.64, 0.079, 0.074, 0.009, z(0.099)], [0.56, 0.072, 0.068, 0.011, z(0.1)],
+      [0.5, 0.07, 0.066, 0.012, z(0.1)], [0.42, 0.067, 0.064, 0.01, z(0.101)], [0.3, 0.064, 0.061, 0.006, z(0.103)], [0.19, 0.063, 0.06, 0.002, z(0.104)], [0.13, 0.066, 0.064, 0, z(0.105)], [0.11, 0.056, 0.056, 0, z(0.105)]], 14,
+      (y, th) => out(th) > 0.75 && y > 0.6 && y < 0.78 ? K.pant2 : K.pant, y => blend(y, 0.48, 0.6, b1, b0), { bump: (y, th) => out(th) > 0.7 && y > 0.6 && y < 0.78 ? 0.012 * (out(th) - 0.7) / 0.3 : 0 });
+    ell([0.073, 0.505, z(0.1)], [0.027, 0.07, 0.062], (x, y) => Math.abs(y) > 0.78 ? '#2B2D30' : K.rodi, b1, { r: 7, s: 12 });
+    ell([0.04, 0.072, z(0.105)], [0.112, 0.062, 0.056], (x, y) => x > 0.55 && y > -0.2 ? mix2(K.bota, '#000000', 0.25) : K.bota, b2, { r: 8, s: 14 });
+    ell([-0.005, 0.135, z(0.105)], [0.062, 0.058, 0.057], K.bota, b2, { r: 6, s: 12 });
+    box(-0.078, 0, z(0.105) - 0.058, 0.158, 0.024, z(0.105) + 0.058, '#18191A', b2); }
+  AV.bp = new Float32Array(bp); AV.bn = new Float32Array(bn); AV.b0 = Uint8Array.from(b0); AV.b1 = Uint8Array.from(b1); AV.w = new Float32Array(w);
+  AV.sp = new Float32Array(bp); AV.sn = new Float32Array(bn); return g; }
+// matrices 3×4: rotación local de cada hueso sobre su pivote, encadenada al padre
+const m34 = (a, b) => { const o = new Float32Array(12); for (let r = 0; r < 3; r++) { for (let c = 0; c < 3; c++) o[r * 4 + c] = a[r * 4] * b[c] + a[r * 4 + 1] * b[4 + c] + a[r * 4 + 2] * b[8 + c]; o[r * 4 + 3] = a[r * 4] * b[3] + a[r * 4 + 1] * b[7] + a[r * 4 + 2] * b[11] + a[r * 4 + 3]; } return o; };
+const rxyz = (x, y, z) => { const a = Math.cos(x), b = Math.sin(x), c = Math.cos(y), d = Math.sin(y), e = Math.cos(z), f = Math.sin(z); // Ry·Rz·Rx
+  return [c * e, -c * f * a + d * b, c * f * b + d * a, -0, f, e * a, -e * b, 0, -d * e, d * f * a + c * b, -d * f * b + c * a, 0]; };
+function avPose(t, ph, a, run) { const R = AVB.map(() => [0, 0, 0]), idle = 1 - a, sat = v => Math.max(0, v);
+  const thA = 0.4 + 0.3 * run, knA = 0.6 + 1.05 * run, s = Math.sin(ph);
+  for (const [k, b0, b1, b2] of [[0, 11, 12, 13], [1, 14, 15, 16]]) { const pl = ph + k * Math.PI, sp = Math.sin(pl), cp = Math.cos(pl);
+    const th = a * (thA * sp + 0.06 * run), kn = -a * (0.05 + knA * Math.pow(sat(Math.cos(pl + 0.35)), 1.8) + 0.14 * (1 - run) * Math.pow(sat(Math.sin(pl - 1.2)), 2));
+    R[b0] = [0, 0, th]; R[b1] = [0, 0, kn]; R[b2] = [0, 0, -(th + kn) * 0.85 + a * (-0.3 * sat(-sp) * sat(cp + 0.2) + 0.1 * sat(Math.cos(pl + 0.35)))]; }
+  const yaw = a * (0.11 + 0.05 * run) * s, bob = -a * (0.026 + 0.03 * run) * s * s + a * run * 0.015;
+  R[0] = [idle * 0.012 * Math.sin(t * 0.45), yaw, -a * 0.02];
+  R[1] = [0, -yaw * 0.5, -a * (0.02 + 0.1 * run)]; R[2] = [0, -yaw * 0.7, idle * 0.018 * Math.sin(t * 1.6) - a * 0.03 * run];
+  R[3] = [0, yaw * 0.4, a * (0.04 + 0.12 * run)]; R[4] = [0, yaw * 0.3 + idle * 0.22 * Math.sin(t * 0.23) * Math.sin(t * 0.11), idle * 0.03 * Math.sin(t * 0.7)];
+  const arA = 0.34 + 0.42 * run, elB = 0.16 + 1.1 * run * run;
+  for (const [k, b0, b1, b2, side] of [[0, 5, 6, 7, -1], [1, 8, 9, 10, 1]]) { const sw = -a * arA * Math.sin(ph + k * Math.PI); // brazo contrario a la pierna del mismo lado
+    R[b0] = [-side * (0.07 + 0.04 * run) - idle * side * 0.01 * Math.sin(t * 1.6), 0, sw + idle * 0.02 * Math.sin(t * 0.8 + side)];
+    R[b1] = [0, -side * 0.1 * run, elB + a * (0.3 * sat(sw) + 0.06) + idle * 0.07]; R[b2] = [side * 0.1, 0, 0.12]; }
+  return { R, dy: bob + idle * 0.004 * Math.sin(t * 1.6), sway: idle * 0.012 * Math.sin(t * 0.45) }; }
+function avSkin(pose) { const S = AV.S;
+  for (let b = 0; b < AVB.length; b++) { const [par, pv] = AVB[b], r = pose.R[b], m = rxyz(r[0], r[1], r[2]);
+    m[3] = pv[0] - (m[0] * pv[0] + m[1] * pv[1] + m[2] * pv[2]); m[7] = pv[1] - (m[4] * pv[0] + m[5] * pv[1] + m[6] * pv[2]); m[11] = pv[2] - (m[8] * pv[0] + m[9] * pv[1] + m[10] * pv[2]);
+    if (par < 0) { m[7] += pose.dy; m[11] += pose.sway; S[b] = m; } else S[b] = m34(S[par], m); }
+  const P = AV.bp, N = AV.bn, O = AV.sp, ON = AV.sn, B0 = AV.b0, B1 = AV.b1, W = AV.w, n = AV.w.length;
+  for (let i = 0, k = 0; i < n; i++, k += 3) { const x = P[k], y = P[k + 1], z = P[k + 2], nx = N[k], ny = N[k + 1], nz = N[k + 2], a = S[B0[i]], w = W[i];
+    let px = a[0] * x + a[1] * y + a[2] * z + a[3], py = a[4] * x + a[5] * y + a[6] * z + a[7], pz = a[8] * x + a[9] * y + a[10] * z + a[11];
+    let qx = a[0] * nx + a[1] * ny + a[2] * nz, qy = a[4] * nx + a[5] * ny + a[6] * nz, qz = a[8] * nx + a[9] * ny + a[10] * nz;
+    if (w < 1) { const b = S[B1[i]], v = 1 - w; px = px * w + (b[0] * x + b[1] * y + b[2] * z + b[3]) * v; py = py * w + (b[4] * x + b[5] * y + b[6] * z + b[7]) * v; pz = pz * w + (b[8] * x + b[9] * y + b[10] * z + b[11]) * v;
+      qx = qx * w + (b[0] * nx + b[1] * ny + b[2] * nz) * v; qy = qy * w + (b[4] * nx + b[5] * ny + b[6] * nz) * v; qz = qz * w + (b[8] * nx + b[9] * ny + b[10] * nz) * v; const l = Math.hypot(qx, qy, qz) || 1; qx /= l; qy /= l; qz /= l; }
+    O[k] = px; O[k + 1] = py; O[k + 2] = pz; ON[k] = qx; ON[k + 1] = qy; ON[k + 2] = qz; } }
+function avBuild() { if (AV.o) return; const geo = avBuildGeo(); AV.o = obj('av-body', { geo, layer: 'base', pick: false, on: false, dyn: { p: AV.sp, n: AV.sn } }); }
+function avHide() { if (AV.o) AV.o.on = false; }
+function avSync(dt = 0) { const show = WALK.on && TP.on && !TP.near; if (!show) { avHide(); return; } avBuild();
+  AV.t += dt; avSkin(avPose(AV.t, TP.ph, TP.amp, TP.run || 0)); const o = AV.o; o.on = true; o.version++; o.model = M.trs(WALK.x, WALK.y - 1.7, WALK.z, TP.h, 0); }
 stepWalk = (o => function (dt) { const x0 = WALK.x, z0 = WALK.z; o(dt); if (!WALK.on) { avHide(); return; }
-  const dx = WALK.x - x0, dz = WALK.z - z0, L = Math.hypot(dx, dz), sp = dt > 0 ? L / dt : 0;
-  if (sp > 0.3) { const th = Math.atan2(-dz, dx); let d = th - TP.h; d = Math.atan2(Math.sin(d), Math.cos(d)); TP.h += d * Math.min(1, dt * 12); TP.ph += dt * (4 + sp * 1.6); TP.amp = Math.min(1, TP.amp + dt * 6); }
-  else { TP.amp = Math.max(0, TP.amp - dt * 5); if (TP.amp === 0) TP.ph = 0; if (!TP.on || ED.on) { let d = WALK.yaw + Math.PI / 2 - TP.h; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) > 1.2) TP.h += d * Math.min(1, dt * 4); } }
-  TP.d += (TP.want - TP.d) * Math.min(1, dt * 6); avSync(); })(stepWalk);
-enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { TP.h = WALK.yaw + Math.PI / 2; TP.d = 0.5; TP.amp = 0; } })(enterWalk);
+  const dx = WALK.x - x0, dz = WALK.z - z0, L = Math.hypot(dx, dz), sp = dt > 0 ? L / dt : 0; TP.sp = (TP.sp || 0) + (sp - (TP.sp || 0)) * Math.min(1, dt * 8);
+  const run = clamp((TP.sp - 2.2) / 3.5, 0, 1); TP.run = (TP.run || 0) + (run - (TP.run || 0)) * Math.min(1, dt * 4);
+  if (sp > 0.3) { const th = Math.atan2(-dz, dx); let d = th - TP.h; d = Math.atan2(Math.sin(d), Math.cos(d)); TP.h += d * Math.min(1, dt * 10); TP.amp = Math.min(1, TP.amp + dt * 5); }
+  else { TP.amp = Math.max(0, TP.amp - dt * 4); if (!TP.on || ED.on) { let d = WALK.yaw + Math.PI / 2 - TP.h; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) > 1.2) TP.h += d * Math.min(1, dt * 4); } }
+  TP.ph += dt * Math.PI * 2 * Math.min(Math.max(TP.sp, 0.6) / (1.5 + 1.6 * TP.run), 1.6); if (TP.amp === 0) TP.ph = 0;
+  TP.d += (TP.want - TP.d) * Math.min(1, dt * 6); avSync(dt); })(stepWalk);
+enterWalk = (o => function (...a) { const was = WALK.on; o(...a); if (!was) { TP.h = WALK.yaw + Math.PI / 2; TP.d = 0.5; TP.amp = 0; TP.sp = 0; TP.run = 0; } })(enterWalk);
 exitWalk = (o => function () { o(); avHide(); })(exitWalk);
 // cámara: detrás y un poco arriba del hombro; no atraviesa paredes ni estanterías
 walkView = (o => function (w, h) { if (!TP.on) { TP.near = false; return o(w, h); }
@@ -4953,7 +5046,7 @@ HUD.addEventListener('click', e => { const b = e.target.closest('[data-w="tp"]')
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#tmenu [data-t="tp"]'); if (!b) return; e.stopPropagation(); e.stopImmediatePropagation(); TM.open = false; tpCycle(); }, true);
 helpRender = (o => function () { o(); const el = $('#e3help'); if (!el || el.hidden) return; const dl = el.querySelector('dl'); if (!dl || dl.querySelector('.tprow')) return;
   dl.insertAdjacentHTML('beforeend', TOUCH ? '<dt class="tprow">☰ Cámara</dt><dd>Verte de atrás, de lejos o desde tus ojos</dd>' : '<dt class="tprow">P</dt><dd>Verte de atrás (3ª persona) o desde tus ojos</dd><dt>Rueda</dt><dd>Acercar o alejar la cámara</dd>'); })(helpRender);
-setTimeout(() => Object.assign(window.__e3 || (window.__e3 = {}), { TP, avSync, tpSet, tpCycle }), 0);
+setTimeout(() => Object.assign(window.__e3 || (window.__e3 = {}), { TP, AV, avSync, tpSet, tpCycle }), 0);
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
 if (BLANK) PHOTO.src = (HOST && HOST.plano) || '';
