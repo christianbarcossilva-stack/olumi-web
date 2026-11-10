@@ -5047,6 +5047,60 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 helpRender = (o => function () { o(); const el = $('#e3help'); if (!el || el.hidden) return; const dl = el.querySelector('dl'); if (!dl || dl.querySelector('.tprow')) return;
   dl.insertAdjacentHTML('beforeend', TOUCH ? '<dt class="tprow">☰ Cámara</dt><dd>Verte de atrás, de lejos o desde tus ojos</dd>' : '<dt class="tprow">P</dt><dd>Verte de atrás (3ª persona) o desde tus ojos</dd><dt>Rueda</dt><dd>Acercar o alejar la cámara</dd>'); })(helpRender);
 setTimeout(() => Object.assign(window.__e3 || (window.__e3 = {}), { TP, AV, avSync, tpSet, tpCycle }), 0);
+/* ---------- modo cine para la web (?embed=1&cine=1&estilo=estudio) ----------
+   La página manda {cine:t} (0 a 1, según el scroll), {cineEv:'caida'|'van'|'ok'}, {tema:'light'|'dark'} y {cinePausa:bool}.
+   Sin interfaz: solo la maqueta, las alertas y el furgón. Estilo "estudio": maqueta de arquitecto en papel cálido (de noche, ventanas encendidas). */
+const CINE = (() => { const q = new URLSearchParams(location.search); return { on: q.has('cine'), embed: q.has('embed'), estudio: q.get('estilo') === 'estudio', t: 0, pausa: false, pins: {}, k: 0 }; })();
+if (CINE.estudio) {
+  PAL.light = Object.assign({}, PAL.light, { clear: '#F3F0EB', ground: '#ECE7DF', grass: '#E2E2D2', site: '#F6F3EE', apron: '#EFEBE4', road: '#DCD5CA', mark: '#FBF9F5', markY: '#E2C677', walk: '#E9E3D9',
+    wall: '#FBFAF7', base: '#DDD6CB', roof: '#F0ECE5', parapet: '#E3DDD3', fascia: '#4A4640', door: '#BDB5A9', frame: '#6B655D', glass: '#C7D0CF', sky: '#E7E1D6', solar: '#9EA6AB', hvac: '#D6D0C6',
+    tree: '#C7D1AF', tree2: '#B6C29C', trunk: '#A58D73', fence: '#BCB4A8', pole: '#C4BCB0', lamp: '#F8F5EF', dirt: '#E3DBCC', pallet: '#D6BE96', pbase: '#B8A07E',
+    cont: ['#8E9A9F', '#B9C2C2', '#C9937D', '#E6E1D8', '#9FAE9A', '#B3AEA6'], cab: ['#4A4640', '#FBFAF7', '#7D8A90', '#D9D3C9'], trailer: '#FBFAF7', tire: '#3A3631', car: ['#BFC3C2', '#E6E1D8', '#8C8780', '#C9937D', '#F4F1EC'],
+    fiber: '#0A7FA3', dev: '#FFFFFF', devD: '#3A3631', acc: '#0A7FA3', tint: '#0A7FA3', sunC: [1, .96, .9], sun: .56, sky3: [.95, .93, .9], gnd3: [.86, .83, .78], amb: .72 });
+  PAL.dark = Object.assign({}, PAL.dark, { clear: '#100F0E', ground: '#1A1816', grass: '#1E2019', site: '#24221F', apron: '#282623', road: '#33302C', mark: '#6E6860', markY: '#B39550', walk: '#272522',
+    wall: '#57534C', base: '#3A3733', roof: '#4A4641', parapet: '#5A554F', fascia: '#121110', door: '#5E5953', frame: '#1F1D1B', glass: '#F2C47A', glassE: .75, sky: '#2B2925', solar: '#2E343A', hvac: '#5A554F',
+    tree: '#2F3B2B', tree2: '#293524', trunk: '#4B3F34', fence: '#57524C', pole: '#605A54', lamp: '#FFD9A0', lampE: 1, dirt: '#26231F', pallet: '#7D6A50', pbase: '#62533F',
+    fiber: '#3FC6EA', dev: '#BBB4A9', devD: '#1F1D1B', acc: '#3FC6EA', tint: '#3FC6EA', sunC: [.66, .7, .86], sun: .4, sky3: [.46, .46, .54], gnd3: [.24, .23, .22], amb: .78 });
+  REAL = false; LAYERS.real = false;
+}
+if (CINE.embed) { document.documentElement.classList.add('embed');
+  const st = document.createElement('style'); st.textContent = `html.embed body>*:not(#scene):not(#labels){display:none!important}
+    html.embed #labels .lbl:not(:has(.pin)):not(:has(.vanlbl)){display:none!important} html.embed #scene{cursor:default}`;
+  document.head.appendChild(st); }
+if (CINE.on) { for (const d of DEV) d.status = 'ok'; FOLLOW = false; }
+// tomas de la cámara (ortográfica, como una maqueta de arquitecto); en celular, más lejos y centradas
+const CSH = [
+  { t: 0, tx: -110, tz: 40, yaw: 0.42, pitch: 0.6, zoom: 470 },
+  { t: 0.16, tx: -260, tz: 10, yaw: 0.62, pitch: 0.68, zoom: 205 },
+  { t: 0.32, tx: -258, tz: 30, yaw: 0.98, pitch: 0.5, zoom: 38 },
+  { t: 0.48, tx: -236, tz: 18, yaw: 1.32, pitch: 0.8, zoom: 105 },
+  { t: 0.64, tx: -300, tz: 140, yaw: 0.52, pitch: 0.74, zoom: 250 },
+  { t: 0.78, tx: -240, tz: 52, yaw: 2.1, pitch: 0.36, zoom: 80 },
+  { t: 0.9, tx: -60, tz: 20, yaw: -0.55, pitch: 0.56, zoom: 470 },
+  { t: 1, tx: -40, tz: 20, yaw: -0.9, pitch: 0.92, zoom: 600 }];
+function cineCam(t) { let a = CSH[0], b = CSH[CSH.length - 1];
+  for (let i = 0; i < CSH.length - 1; i++) if (t >= CSH[i].t && t <= CSH[i + 1].t) { a = CSH[i]; b = CSH[i + 1]; break; }
+  const u = b.t > a.t ? clamp((t - a.t) / (b.t - a.t), 0, 1) : 0, s = u * u * (3 - 2 * u), L = k => a[k] + (b[k] - a[k]) * s, n = narrow();
+  return { tx: n ? L('tx') + 30 : L('tx'), tz: L('tz'), yaw: L('yaw'), pitch: L('pitch'), zoom: L('zoom') * (n ? 1.55 : 1) }; }
+function cinePin(id, on) { const L = CINE.pins[id]; if (L) { rmLabel(L); delete CINE.pins[id]; }
+  if (on) CINE.pins[id] = addLabel(`<button class="pin crit" aria-label="Alerta ${id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`,
+    () => { const p = entPos(id); return p ? [p[0], p[1] + 2.2, p[2]] : [0, -999, 0]; }, 'red', id, 'pin'); }
+function cineEv(ev) { const d = DEV.find(x => x.id === 'AP-11') || DEV.find(x => x.type === 'ap'); if (!d) return;
+  if (ev === 'caida' && d.status !== 'crit') { d.status = 'crit'; devObj(d); devTag(d); cinePin(d.id, true); }
+  if (ev === 'van') { if (d.status !== 'crit') cineEv('caida'); if (!VEH.some(v => v.kind === 'phitel' && v.state !== 'idle')) sendVan(d.id, 143); }
+  if (ev === 'ok' && d.status !== 'ok') { d.status = 'ok'; devObj(d); devTag(d); cinePin(d.id, false); } }
+if (CINE.on) {
+  addEventListener('message', e => { const m = e.data; if (!m || typeof m !== 'object') return;
+    if (typeof m.cine === 'number') CINE.t = clamp(m.cine, 0, 1);
+    if (m.cineEv) cineEv(m.cineEv);
+    if (m.tema === 'dark' || m.tema === 'light') { if (document.documentElement.dataset.theme !== m.tema) document.documentElement.dataset.theme = m.tema; }
+    if ('cinePausa' in m) CINE.pausa = !!m.cinePausa; });
+  stepWalk = (o => function (dt) { o(dt); if (WALK.on) return; tween = null; CINE.k += dt; const c = cineCam(CINE.t), f = Math.min(1, dt * 2.6), br = RM ? 0 : Math.sin(CINE.k * 0.11) * 0.035;
+    cam.tx += (c.tx - cam.tx) * f; cam.tz += (c.tz - cam.tz) * f; cam.yaw += (c.yaw + br - cam.yaw) * f; cam.pitch += (c.pitch - cam.pitch) * f; cam.zoom += (c.zoom - cam.zoom) * f; })(stepWalk);
+  frame = (o => function (now) { if (CINE.pausa) { prev = now; requestAnimationFrame(frame); return; } o(now); })(frame);
+  Object.assign(cam, cineCam(0));
+}
+
 /* ---------- arranque ---------- */
 try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
 if (BLANK) PHOTO.src = (HOST && HOST.plano) || '';
