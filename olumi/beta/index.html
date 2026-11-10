@@ -1337,7 +1337,7 @@ function render(){
   {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+setupBanner();
+  $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -1498,6 +1498,9 @@ function vRep(){
   const rate=won.length+lost.length?Math.round(won.length*100/(won.length+lost.length))+' %':'—';
   const kp=(l,v,s)=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`;
   const stageRows=ETAPAS.filter(e=>!['gan','per'].includes(e.k)).map(e=>{const l=open.filter(o=>(o.etapa||'nuevo')===e.k);return{l:`${e.n} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon),c:`var(--s-${e.k})`}});
+  // embudo: hasta qué etapa llegó cada oportunidad (las perdidas, según su historial) y cuántas pasan de una etapa a la otra
+  const ord=['nuevo','relev','pres','neg','gan'],reach=o=>{let m=ord.indexOf(o.etapa||'nuevo');if(m<0){m=0;(o.bitacora||[]).forEach(b=>{if(b.tipo==='sys'&&/^Etapa: /.test(b.text||''))ord.forEach((k,i)=>{if(i>m&&k!=='gan'&&b.text.includes(EK[k].n))m=i})})}return m},RR=ops.map(reach);
+  const funRows=ord.map((k,i)=>{const n=RR.filter(r=>r>=i).length,pv=i?RR.filter(r=>r>=i-1).length:0;return{l:`${EK[k].n} (${n})${i&&pv?` · pasa el ${Math.round(n*100/pv)} %`:''}`,v:n,t:ops.length?Math.round(n*100/ops.length)+' %':'—',c:`var(--s-${k})`}});
   const servRows=SERV.map(s=>{const l=won.filter(o=>o.servicio===s);return{l:`${s} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon)}}).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
   const reasons={};lost.forEach(o=>{const k=(o.motivoPerdida||'Sin motivo').trim()||'Sin motivo';reasons[k]=(reasons[k]||0)+1});
   const reasonRows=Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([l,v])=>({l,v,t:v,c:'var(--s-per)'}));
@@ -1509,6 +1512,7 @@ function vRep(){
     const lbl=d.toLocaleDateString('es-UY',{month:'long',year:'numeric'});months.push({l:`${lbl.charAt(0).toUpperCase()+lbl.slice(1)} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon),c:'var(--s-gan)'})}
   return head+`<div class="kpis">${kp('Oportunidades abiertas',money(sum(open,C),repMon),`${open.length} oportunidades`)}${kp('Ponderado',money(sum(open,o=>C(o)*n0(o.prob)/100),repMon),'según probabilidad')}${kp('Ganado este mes',money(sum(wonM,C),repMon),`${wonM.length} cerradas`)}${kp('Tasa de cierre',rate,`${won.length} ganadas · ${lost.length} perdidas`)}</div>
   <div class="panels"><section class="panel"><h2>Oportunidades por etapa</h2>${bars(stageRows)}</section>
+  <section class="panel"><h2>Embudo de ventas</h2>${ops.length?bars(funRows)+'<p class="hint" style="margin:8px 0 0">De todas las oportunidades cargadas, cuántas llegaron a cada etapa y qué porcentaje pasa de una a la siguiente.</p>':none}</section>
   <section class="panel"><h2>Ganado por mes</h2>${bars(months)}</section>
   <section class="panel"><h2>Ganado por servicio</h2>${servRows.length?bars(servRows,'var(--s-gan)'):none}</section>
   <section class="panel"><h2>Mejores clientes</h2>${cliRows.length?bars(cliRows):none}</section>
@@ -2331,6 +2335,8 @@ if(await planosAct(k,el,arg))return;
       if(SH&&SH.type==='op')setTimeout(()=>{const e=$('#opActs');if(e&&SH)e.innerHTML=opActsHtml(SH.id)},60);break}
     case'mine':mine=!mine;sr();break;
     case'seguir':seguir=!seguir;sr();break;
+    case'segver':seguir=true;mine=arg==='1';fResp='';VIEW='pipeline';lsSet('crm.view',VIEW);render();window.scrollTo(0,0);break;
+    case'segoff':lsSet('olumi.seg.off',today());render();break;
     case'opnext':{const o=D.oportunidades[arg],s=o&&opSig(o);if(s&&!readonly)await opMove(arg,s.k);break}
     case'lost':showLost=!showLost;sr();break;
     case'mon':repMon=arg;lsSet('crm.mon',arg);sr();break;
@@ -2398,6 +2404,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.ch==='fServ'){fServ=t.value;sr();return}
   if(t.dataset.ch==='fResp'){fResp=t.value;sr();return}
+  if(t.dataset.ch==='optpl'){const o=SH&&D.oportunidades[SH.id],cl=o&&D.clientes[o.clienteId],x=o&&cl&&opTpls(o,cl)[+t.value];if(x&&t.value!==''){const a=$('#op_nota');a.value=x[1];a.rows=6;a.focus()}t.value='';return}
   if(t.dataset.ch==='calTec'){calTec=t.value;sr();return}
   if(t.dataset.ch==='calV'){CALV=t.value;try{lsSet('crm.calv',CALV)}catch(e){}if(CALV!=='mes')calStart=monday(calStart||new Date());sr();return}
   if(t.dataset.up){onUpload(t);return}
@@ -3772,6 +3779,9 @@ function setupSteps(){
 }
 const setupPending=()=>isBoss()&&!CFG.setupDone&&setupSteps().some(s=>!s.ok);
 const setupOff=()=>{try{return localStorage.getItem('olumi.setupoff.'+ORG)==='1'}catch(e){return false}};
+function segBanner(){if(!ROLE||readonly||VIEW==='pipeline'||!viewOk('pipeline')||!canMoney())return'';let off='';try{off=localStorage.getItem('olumi.seg.off')||''}catch(e){}if(off===today())return'';
+  const l=arr('oportunidades').filter(opSeguir),m=l.filter(o=>o.responsable===ME).length,n=m||(isLead()?l.length:0);if(!n)return'';
+  return`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>${m?`Tenés ${pl(m,'oportunidad','oportunidades')} para seguir hoy`:`Hay ${pl(n,'oportunidad','oportunidades')} del equipo para seguir`}: sin próxima actividad, con una vencida o quietas hace más de 14 días.</span> <button class="btn ghost" data-act="segver:${m?1:0}">Ver</button><button class="btn ghost" data-act="segoff" title="No avisar más por hoy" aria-label="Cerrar por hoy" style="margin-left:auto;min-width:36px">✕</button></p>`}
 function setupBanner(){if(!setupPending()||setupOff()||VIEW==='inicio')return'';const s=setupSteps();return`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Configurá Olumi: ${s.filter(x=>x.ok).length} de ${s.length} pasos listos.</span> <button class="btn ghost" data-view="inicio">Seguir</button><button class="btn ghost" data-act="setupoff" title="Lo encontrás después en Menú → Primeros pasos" aria-label="Cerrar" style="margin-left:auto;min-width:34px;padding:0 10px">✕</button></p>`}
 function vInicio(){
   const s=setupSteps(),r=new Set(CFG.rubros||[]);
@@ -3836,13 +3846,16 @@ async function readXlsx(buf){
 function parseCsv(t){t=t.replace(/^﻿/,'');const f0=(t.split(/\r?\n/)[0]||'');const sep=[';',',','\t'].map(s=>[s,f0.split(s).length]).sort((a,b)=>b[1]-a[1])[0][0];
   const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}else if(ch==='"')q=true;else if(ch===sep){row.push(f);f=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=ch}
   if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>String(x).trim()))}
-const IMPMAP={clientes:{nombre:['nombre','razon social','cliente','empresa','nombre o razon social'],rut:['rut','ci','documento','cedula','rut o ci'],contacto:['contacto','persona de contacto'],telefono:['telefono','celular','tel','movil','whatsapp'],email:['email','correo','mail','e-mail','correo electronico'],direccion:['direccion','domicilio'],departamento:['departamento','depto'],notas:['notas','observaciones','comentarios']},
+const IMPMAP={oportunidades:{nombre:['titulo','oportunidad','nombre','asunto','negocio','titulo de la oportunidad'],cliente:['cliente','empresa','razon social'],servicio:['servicio','rubro'],monto:['monto','importe','valor','monto estimado','total'],moneda:['moneda'],etapa:['etapa','estado'],cierre:['cierre','cierre esperado','fecha de cierre','fecha'],origen:['origen','como llego'],obra:['obra','lugar','lugar de la obra','direccion'],notas:['notas','observaciones','comentarios']},clientes:{nombre:['nombre','razon social','cliente','empresa','nombre o razon social'],rut:['rut','ci','documento','cedula','rut o ci'],contacto:['contacto','persona de contacto'],telefono:['telefono','celular','tel','movil','whatsapp'],email:['email','correo','mail','e-mail','correo electronico'],direccion:['direccion','domicilio'],departamento:['departamento','depto'],notas:['notas','observaciones','comentarios']},
   productos:{codigo:['codigo','sku','cod','codigo interno'],nombre:['nombre','descripcion','producto','articulo'],unidad:['unidad','um','unidad de medida'],precio:['precio','precio sin iva','precio de venta','pvp','precio unitario'],moneda:['moneda'],costo:['costo','precio de costo','costo unitario'],servicio:['servicio','rubro','categoria']}};
 const numUY=v=>{let s=String(v??'').replace(/[^\d,.\-]/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else if(s.includes(','))s=s.replace(',','.');return Number(s)||0};
 function impMap(kind,rows){
   const hdr=(rows[0]||[]).map(h=>qn(h).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()),M=IMPMAP[kind],idx={};
   Object.entries(M).forEach(([k,al])=>{let i=hdr.findIndex(h=>al.includes(h));if(i<0)i=hdr.findIndex(h=>al.some(a=>h.startsWith(a)));if(i>=0)idx[k]=i});
   const out=rows.slice(1).map(r=>{const o={};Object.entries(idx).forEach(([k,i])=>o[k]=String(r[i]??'').trim());return o}).filter(o=>o.nombre);
+  if(kind==='oportunidades')out.forEach(o=>{o.monto=numUY(o.monto);o.moneda=/us|u\$|dol/i.test(o.moneda||'')?'USD':(o.moneda?'UYU':defMon());const e=ETAPAS.find(x=>qn(x.n)===qn(o.etapa)||qn(x.n).startsWith(qn(o.etapa||'-').slice(0,4)));o.etapa=e?e.k:'nuevo';
+    o.servicio=impAprox(SERV,o.servicio)||'Otro';o.origen=impAprox(ORIG,o.origen)||'';const c=String(o.cierre||'').trim(),m=c.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    o.cierre=/^\d{4}-\d{2}-\d{2}/.test(c)?c.slice(0,10):m?`${m[3].length===2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:/^\d{5}(\.\d+)?$/.test(c)?new Date(Math.round((+c-25569)*864e5)).toISOString().slice(0,10):''});
   if(kind==='clientes')out.forEach(o=>{if(o.departamento){const d=DEPTOS.find(x=>qn(x)===qn(o.departamento));o.departamento=d||o.departamento}});
   if(kind==='productos')out.forEach(o=>{const u=UNID.find(x=>qn(x)===qn(o.unidad)||qn(x).startsWith(qn(o.unidad||'-'))&&qn(o.unidad).length>=2);o.unidad=u||(/^m(t|ts|etros?)?$/.test(qn(o.unidad))?'metro':'unidad');o.precio=numUY(o.precio);if('costo' in o)o.costo=numUY(o.costo);o.moneda=/us|u\$|dol/i.test(o.moneda||'')?'USD':'UYU'});
   return{idx,out,cols:Object.keys(idx)};
@@ -3850,9 +3863,10 @@ function impMap(kind,rows){
 let IMP=null;
 function impBoxHtml(){if(!IMP)return'';const {kind,map,dup}=IMP,nuevos=map.out.length-dup;
   return`<div class="panel" style="margin-top:10px"><b>${map.out.length} ${kind} en el archivo</b>${dup?` · ${dup} ya estaban y se saltean`:''}<p class="hint" style="margin:4px 0 8px">Columnas reconocidas: ${esc(map.cols.join(', ')||'ninguna')}</p>
-    ${map.out.length?`<div class="tablewrap"><table><thead><tr>${map.cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${map.out.slice(0,4).map(o=>`<tr>${map.cols.map(c=>`<td>${esc(String(o[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="err">No encontré una columna de nombre. La primera fila tiene que tener los títulos (Nombre, RUT, Teléfono…).</p>'}
+    ${map.out.length?`<div class="tablewrap"><table><thead><tr>${map.cols.map(c=>`<th>${esc(kind==='oportunidades'&&c==='nombre'?'título':c)}</th>`).join('')}</tr></thead><tbody>${map.out.slice(0,4).map(o=>`<tr>${map.cols.map(c=>`<td>${esc(String(kind==='oportunidades'&&c==='etapa'?EK[o[c]].n:kind==='oportunidades'&&c==='cierre'&&o[c]?fdate(o[c]):o[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="err">No encontré la columna principal. La primera fila tiene que tener los títulos (Nombre, RUT, Teléfono… o Título, Cliente, Monto…).</p>'}
     ${nuevos>0?`<div class="actions" style="margin-top:10px"><button class="btn pri" data-act="impgo">Importar ${nuevos} ${kind}</button><button class="btn ghost" data-act="impcancel">Cancelar</button></div>`:''}<p class="busy" id="impBusy" hidden></p></div>`}
-function impDup(kind,o){if(kind==='clientes'){const r=String(o.rut||'').replace(/\D/g,'');return arr('clientes').some(c=>qn(c.nombre)===qn(o.nombre)||(r&&String(c.rut||'').replace(/\D/g,'')===r))}
+const impAprox=(L,v)=>{const q=qn(v||'').trim();return q?L.find(x=>qn(x)===q)||L.find(x=>qn(x).includes(q)||q.includes(qn(x))):undefined};
+function impDup(kind,o){if(kind==='oportunidades')return arr('oportunidades').some(x=>qn(x.titulo)===qn(o.nombre)&&qn(cliName(x.clienteId))===qn(o.cliente));if(kind==='clientes'){const r=String(o.rut||'').replace(/\D/g,'');return arr('clientes').some(c=>qn(c.nombre)===qn(o.nombre)||(r&&String(c.rut||'').replace(/\D/g,'')===r))}
   return arr('productos').some(p=>(o.codigo&&p.codigo&&qn(p.codigo)===qn(o.codigo))||qn(p.nombre)===qn(o.nombre))}
 
 /* --- Catálogo y ajustes: rubros, kits, listas e importación --- */
@@ -3862,8 +3876,8 @@ function ajustes16Html(){
   ${ks.length?`<div class="list">${ks.map(k=>`<div class="row" role="button" tabindex="0" data-open="kit:${k.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(k.nombre)}</strong><span class="muted">${esc((k.items||[]).map(x=>x.desc).join(', ').slice(0,120))}</span></div><span class="muted">${(k.items||[]).length} líneas</span></div>`).join('')}</div>`:`<p class="muted">Todavía no hay kits. ${boss?'Elegí tus rubros en <button class="btn ghost" data-view="inicio">Primeros pasos</button> para cargar ejemplos.':''}</p>`}
   <div class="vhead" style="margin-top:34px"><div><h1>Listas de control</h1><p class="sub">Lo que el técnico tiene que revisar antes de irse, según el tipo de trabajo. Quedan en el informe que firma el cliente.</p></div>${readonly?'':'<div class="tools"><button class="btn pri" data-act="chknew">+ Lista</button></div>'}</div>
   ${cs.length?`<div class="list">${cs.map(c=>`<div class="row" role="button" tabindex="0" data-open="chk:${c.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(c.nombre)}</strong><span class="muted">${esc(TTIPOK[c.tipo]||'Cualquier trabajo')} · ${(c.items||[]).length} controles</span></div></div>`).join('')}</div>`:'<p class="muted">Todavía no hay listas de control.</p>'}
-  <div class="vhead" style="margin-top:34px"><div><h1>Importar desde Excel</h1><p class="sub">Planillas de Excel (.xlsx) o CSV. La primera fila con los títulos: Nombre, RUT, Teléfono, Email, Dirección… o Código, Nombre, Unidad, Precio, Moneda, Costo.</p></div></div>
-  ${readonly?'<p class="muted">Necesitás permiso de edición para importar.</p>':`<div class="tools"><label class="btn upl">Importar clientes<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="clientes" hidden></label><label class="btn upl">Importar productos<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="productos" hidden></label><button class="btn ghost" data-act="impmodelo:clientes">Planilla modelo de clientes</button><button class="btn ghost" data-act="impmodelo:productos">Planilla modelo de productos</button></div><div id="impBox">${impBoxHtml()}</div>`}`;
+  <div class="vhead" style="margin-top:34px"><div><h1>Importar desde Excel</h1><p class="sub">Planillas de Excel (.xlsx) o CSV. La primera fila con los títulos: Nombre, RUT, Teléfono, Email, Dirección… · Código, Nombre, Unidad, Precio, Moneda, Costo · o, para oportunidades, Título, Cliente, Servicio, Monto, Moneda, Etapa, Cierre esperado.</p></div></div>
+  ${readonly?'<p class="muted">Necesitás permiso de edición para importar.</p>':`<div class="tools"><label class="btn upl">Importar clientes<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="clientes" hidden></label><label class="btn upl">Importar productos<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="productos" hidden></label><label class="btn upl">Importar oportunidades<input type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-imp="oportunidades" hidden></label><button class="btn ghost" data-act="impmodelo:oportunidades">Planilla modelo de oportunidades</button><button class="btn ghost" data-act="impmodelo:clientes">Planilla modelo de clientes</button><button class="btn ghost" data-act="impmodelo:productos">Planilla modelo de productos</button></div><div id="impBox">${impBoxHtml()}</div>`}`;
 }
 
 /* --- subcontratistas: solo su día, sus tareas y su historial --- */
@@ -3905,13 +3919,16 @@ async function rubAct(k,el,arg){
     case'chknew':openSheet('chk',null);return true;
     case'ckload':{const c=D.checklists[$('#ck_pick')?.value];if(!c||!TJ)return true;TJ._ck=(c.items||[]).map(t=>({t,ok:false}));$('#ckBox').outerHTML=ckHtml(TJ);SH.dirty=true;return true}
     case'impcancel':IMP=null;$('#impBox').innerHTML='';return true;
-    case'impmodelo':{const h=arg==='clientes'?[['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],['Depósito Sur SA','219999990011','Ana Pérez','099 123 456','compras@deposur.uy','Ruta 1 km 20','Canelones','Cliente con abono']]:[['Código','Nombre','Unidad','Precio','Moneda','Costo','Servicio'],['DOMO4','Cámara IP domo 4 MP','unidad','95','USD','52','CCTV']];
+    case'impmodelo':{const h=arg==='oportunidades'?[['Título','Cliente','Servicio','Monto','Moneda','Etapa','Cierre esperado','Origen','Lugar de la obra','Notas'],['CCTV 8 cámaras depósito','Depósito Sur SA','CCTV','2400','USD','Presupuestado','15/12/2026','Referido','Ruta 1 km 20','Pidió domos en el portón']]:arg==='clientes'?[['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],['Depósito Sur SA','219999990011','Ana Pérez','099 123 456','compras@deposur.uy','Ruta 1 km 20','Canelones','Cliente con abono']]:[['Código','Nombre','Unidad','Precio','Moneda','Costo','Servicio'],['DOMO4','Cámara IP domo 4 MP','unidad','95','USD','52','CCTV']];
       saveFile(`Planilla modelo de ${arg}.csv`,csv(h));return true}
     case'impgo':{if(!IMP)return true;const {kind,map}=IMP,b=$('#impBusy');el.disabled=true;let n=0,i=0;
       for(const o of map.out){i++;if(impDup(kind,o))continue;const id=uid();
+        if(kind==='oportunidades'){let cid='';if(o.cliente){const ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(o.cliente).trim());if(ya)cid=ya.id;else{cid=uid();const c={nombre:o.cliente,creado:Date.now()};await put('clientes',cid,c);D.clientes[cid]=c}}
+          const d={titulo:o.nombre,clienteId:cid,servicio:o.servicio,monto:o.monto,moneda:o.moneda,etapa:o.etapa,prob:EK[o.etapa].p,cierre:o.cierre,origen:o.origen||'',obra:o.obra||'',notas:o.notas||'',responsable:ME||'',prioridad:0,creado:Date.now(),creadoPor:ME||'',actualizado:Date.now(),...(o.etapa==='gan'?{ganadoEn:o.cierre||today()}:{}),...(o.etapa==='per'?{perdidoEn:o.cierre||today()}:{})};
+          await put('oportunidades',id,d);D.oportunidades[id]=d;n++;if(b&&n%10===0){b.hidden=false;b.textContent=`Importando ${i} de ${map.out.length}…`}continue}
         const data=kind==='clientes'?{...o,creado:Date.now()}:{...o,moneda:o.moneda||defMon(),...(o.servicio&&!SERV.includes(o.servicio)?{servicio:''}:{}),creado:Date.now()};
         await put(kind,id,data);D[kind][id]=data;n++;if(b&&n%10===0){b.hidden=false;b.textContent=`Importando ${i} de ${map.out.length}…`}}
-      IMP=null;toast(`Importados ${n} ${kind}`);sr();return true}
+      IMP=null;toast(`${kind==='productos'||kind==='clientes'?'Importados':'Importadas'} ${n} ${kind}`);sr();return true}
   }
   return false;
 }
@@ -4538,8 +4555,18 @@ function opLogHtml(o){
 }
 function opLogSection(id){
   const o=D.oportunidades[id]||{},cl=D.clientes[o.clienteId]||{};
-  return`<section class="rel" id="opLog"><h3>Historial</h3>${readonly?'':`<div class="mini"><textarea id="op_nota" rows="2" placeholder="Registrar una nota: qué se habló, qué quedó pendiente…"></textarea><div class="row2" style="flex-wrap:wrap"><button class="btn" data-act="opnota">Registrar nota</button>${cl.telefono&&waLink(cl.telefono)?'<button class="btn" data-act="opmsg:wa">Enviar por WhatsApp</button>':''}${cl.email?'<button class="btn" data-act="opmsg:mail">Enviar por email</button>':''}</div></div>`}<div id="opLogList">${opLogHtml(o)}</div></section>`;
+  return`<section class="rel" id="opLog"><h3>Historial</h3>${readonly?'':`<div class="mini" style="grid-template-columns:1fr">${cl.telefono||cl.email?`<select id="op_tpl" data-ch="optpl" aria-label="Plantilla de mensaje"><option value="">Usar una plantilla de mensaje…</option>${opTpls(o,cl).map((t,i)=>`<option value="${i}">${esc(t[0])}</option>`).join('')}</select>`:''}<textarea id="op_nota" rows="2" placeholder="Registrar una nota: qué se habló, qué quedó pendiente…"></textarea><div class="row2" style="flex-wrap:wrap"><button class="btn" data-act="opnota">Registrar nota</button>${cl.telefono&&waLink(cl.telefono)?'<button class="btn" data-act="opmsg:wa">Enviar por WhatsApp</button>':''}${cl.email?'<button class="btn" data-act="opmsg:mail">Enviar por email</button>':''}</div></div>`}<div id="opLogList">${opLogHtml(o)}</div></section>`;
 }
+// plantillas: primero la de la etapa en la que está la oportunidad; el texto se puede retocar antes de enviar
+function opTpls(o,cl){const n=String(cl.contacto||cl.nombre||'').trim().split(' ')[0]||'',yo=myFirst()==='Mi día'?'':myFirst(),emp=(ORGINFO&&ORGINFO.name)||'',s=(o.servicio&&o.servicio!=='Otro'?o.servicio:o.titulo||'tu consulta').toLowerCase(),
+    q=arr('presupuestos').filter(x=>x.oportunidadId===o.id).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))[0],hola=`Hola${n?' '+n:''}, `,firma=`\n${yo}${yo&&emp?' · ':''}${emp}`;
+  const T={nuevo:['Primer contacto',`${hola}${yo?'soy '+yo+(emp?' de '+emp:'')+'. ':''}Recibimos tu consulta por ${s}. ¿Qué día te queda bien que pasemos a ver el lugar? Así te armamos una propuesta a medida.${firma}`],
+    relev:['Coordinar el relevamiento',`${hola}para avanzar con ${s} necesitamos ver el lugar. ¿Te sirve que pasemos esta semana? Decime día y horario y lo agendo.${firma}`],
+    pres:['Envío del presupuesto',`${hola}te envío el presupuesto${q?' '+q.numero:''} por ${s}. Cualquier duda o ajuste que quieras hacer, lo vemos juntos.${firma}`],
+    neg:['Seguimiento del presupuesto',`${hola}¿pudiste ver el presupuesto${q?' '+q.numero:''}? Si querés ajustar algo o tenés dudas, lo conversamos. Tenemos agenda para empezar en los próximos días.${firma}`],
+    gan:['Gracias y coordinación',`${hola}¡gracias por confiar en nosotros! Coordinemos la fecha de inicio de los trabajos. ¿Qué día les queda mejor?${firma}`],
+    per:['Dejar la puerta abierta',`${hola}gracias por habernos tenido en cuenta. Quedamos a las órdenes para lo que necesites más adelante.${firma}`]};
+  const k=o.etapa||'nuevo';return[T[k],...Object.keys(T).filter(x=>x!==k).map(x=>T[x]),['Recordatorio amable',`${hola}te escribo para retomar lo de ${s}. ¿Seguís interesado? Si preferís que te llame, decime cuándo.${firma}`]]}
 async function opAddLog(id,entry){
   const o=D.oportunidades[id];if(!o)return;
   const b=[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',...entry}].slice(-300);
