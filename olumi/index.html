@@ -2,6 +2,7 @@
 <html lang="es-UY">
 <head>
 <meta charset="utf-8">
+<script>try{if(localStorage.getItem('unity.tema')==='noche')document.documentElement.classList.add('n')}catch(e){}</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <title>Olumi · Tu empresa virtual, viva</title>
@@ -18,8 +19,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/estudio.css?v=1">
 <style>
-/* Olumi v5 "Estudio" · de día arriba; cuando la historia llega a "en vivo", la página y la maqueta pasan a la noche */
-body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:#9b958d;--ink3:#5f5b55;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--sh:0 1px 0 rgba(255,255,255,.04) inset,0 30px 60px -30px rgba(0,0,0,.7);--sh2:var(--sh)}
+/* Olumi v5 "Estudio" · un solo color en toda la página (claro por defecto); arriba a la derecha se cambia a noche y queda guardado */
+body.noche,html.n body{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:#9b958d;--ink3:#5f5b55;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.18);--sh:0 1px 0 rgba(255,255,255,.04) inset,0 30px 60px -30px rgba(0,0,0,.7);--sh2:var(--sh)}
 /* ---------- la historia sobre la maqueta ---------- */
 .cine{position:relative;overflow-x:clip}
 .cine .bg{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;z-index:0}
@@ -31,6 +32,11 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
 .cine[data-ch="end"] .bg::after{background:linear-gradient(180deg,color-mix(in srgb,var(--paper) 30%,transparent) 0%,transparent 30%,color-mix(in srgb,var(--paper) 72%,transparent) 62%,var(--paper) 100%)}
 .cine[data-ch="todo"] .bg::after{background:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 88%,transparent) 45%,color-mix(in srgb,var(--paper) 0%,transparent) 80%),linear-gradient(180deg,color-mix(in srgb,var(--paper) 60%,transparent) 0%,transparent 18%,transparent 78%,var(--paper) 100%)}
 .cine[data-ch="0"] .bg::after{background:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 82%,transparent) 32%,color-mix(in srgb,var(--paper) 0%,transparent) 62%),linear-gradient(180deg,color-mix(in srgb,var(--paper) 40%,transparent) 0%,transparent 22%,transparent 70%,var(--paper) 100%)}
+.modo{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;transition:transform .45s var(--spring),border-color .25s}
+.modo:hover{border-color:var(--ink)}.modo:active{transform:scale(.92)}
+.modo svg{grid-area:1/1;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;transition:opacity .35s,transform .5s var(--spring)}
+.modo .luna{opacity:0;transform:rotate(-60deg) scale(.6)}
+body.noche .modo .sol{opacity:0;transform:rotate(60deg) scale(.6)}body.noche .modo .luna{opacity:1;transform:none}
 .chs{position:relative;z-index:1;margin-top:-100vh;margin-top:-100svh}
 .ch{min-height:130vh;min-height:130svh;display:flex;align-items:center;padding:110px 0 96px}
 .ch .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(24px,6vw,96px);align-items:center}
@@ -235,7 +241,7 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
 <header class="top" id="top"><div class="wrap">
   <a class="logo" href="./" aria-label="Olumi, inicio"><svg viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="30" fill="#191817"/><circle cx="56" cy="64" r="30" stroke="#FFC93C" stroke-width="15" fill="none"/><circle cx="92" cy="28" r="10.5" fill="#FF7A1A"/></svg>olumi<small>by Unity Tech</small></a>
   <nav class="tabs" aria-label="Secciones"><a class="on" href="#cine">La oficina</a><a href="#rubros">Rubros</a><a href="#funciones">Funciones</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a></nav>
-  <div class="right"><a class="ent" href="/olumi/app/">Entrar</a><a class="btn ink sm" href="/olumi/app/">Probar gratis</a></div>
+  <div class="right"><button type="button" class="modo" id="modo" aria-label="Cambiar a modo noche" title="Día o noche"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="luna" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><a class="ent" href="/olumi/app/">Entrar</a><a class="btn ink sm" href="/olumi/app/">Probar gratis</a></div>
 </div></header>
 
 <main>
@@ -350,7 +356,7 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
       </div></div>
     </div></div></article>
 
-    <article class="ch todo" data-t=".86" data-noche><div class="wrap"><div class="txt">
+    <article class="ch todo" data-t=".86"><div class="wrap"><div class="txt">
       <p class="time"><b>19:30</b>todo el día, en vivo</p>
       <h2>Y vos lo ves todo. <span class="two">Desde cualquier lado.</span></h2>
       <p class="lede">Quién está en la calle, qué entró, qué se presupuestó y qué se cobró. En la computadora, en el celular o en la maqueta de tu empresa.</p>
@@ -361,7 +367,7 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
       </div>
     </div></div></article>
 
-    <article class="ch end" data-t="1" data-noche><div class="wrap"><div class="txt" style="max-width:820px">
+    <article class="ch end" data-t="1"><div class="wrap"><div class="txt" style="max-width:820px">
       <h2>Nació en la calle. <span class="two">Para los que trabajan en ella.</span></h2>
       <p class="lede">Lo usamos todos los días en nuestras propias obras de fibra, cámaras y redes en Uruguay. Probalo con tu equipo 30 días, sin tarjeta.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:30px"><a class="btn ink lg" href="/olumi/app/">Probar 30 días gratis</a><a class="btn lg" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Olumi">Pedir una demo</a></div>
@@ -448,9 +454,9 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
 <script>
 /* La historia: el scroll mueve la cámara de la maqueta; de día hasta que llega "en vivo", ahí la página y la maqueta pasan a la noche. */
 (function(){
-  var cine=document.getElementById('cine'),f=document.getElementById('ofi'),chs=[].slice.call(cine.querySelectorAll('.ch')),done={},last=-1,raf=0,tema='light',top=document.getElementById('top');
+  var cine=document.getElementById('cine'),f=document.getElementById('ofi'),chs=[].slice.call(cine.querySelectorAll('.ch')),done={},last=-1,raf=0,top=document.getElementById('top');
   function send(m){try{f.contentWindow.postMessage(m,'*')}catch(e){}}
-  f.addEventListener('load',function(){send({tema:tema});setTimeout(function(){cine.classList.add('ready')},900)});
+  f.addEventListener('load',function(){send({tema:document.body.classList.contains('noche')?'dark':'light'});setTimeout(function(){cine.classList.add('ready')},900)});
   setTimeout(function(){cine.classList.add('ready')},6000);
   // puntos de la camioneta: se van prendiendo como en las fotos (24 de 38)
   var vd=document.getElementById('vdots');for(var i=0;i<38;i++){var d=document.createElement('i');vd.appendChild(d)}
@@ -460,9 +466,6 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
     c.forEach(function(x){var r=x.e.getBoundingClientRect(),vis=r.top<vh*.62&&r.bottom>vh*.38;x.e.classList.toggle('on',vis);if(vis)on=x.e});
     if(on){cine.dataset.ch=on.classList.contains('hero')?'0':on.classList.contains('end')?'end':on.classList.contains('todo')?'todo':'x';var ev=on.dataset.ev;if(ev&&!done[ev]){done[ev]=1;send({cineEv:ev})}
       if(ev==='van'){[].forEach.call(vd.children,function(d,i){setTimeout(function(){d.classList.toggle('on',i<24)},2000+i*45)})}}
-    // de noche desde "en vivo" hasta que termina la historia
-    var r=cine.getBoundingClientRect(),noche=!!(on&&on.hasAttribute('data-noche'))&&r.bottom>vh*.5,nt=noche?'dark':'light';
-    if(nt!==tema){tema=nt;send({tema:tema});document.body.classList.toggle('noche',noche);var m=document.querySelector('meta[name=theme-color]');if(m)m.content=noche?'#100f0e':'#f3f0eb'}
     top.classList.toggle('sc',scrollY>20);
     if(Math.abs(t-last)>.0005){last=t;send({cine:t})}}
   function fit(){var m=document.documentElement.clientWidth<=860;chs.forEach(function(ch){var d=ch.querySelector('.dev');if(!d)return;d.style.zoom=1;var r=d.getBoundingClientRect(),dw=Math.max(r.width,d.scrollWidth),h=m?innerHeight*.62:innerHeight-170,vw=document.documentElement.clientWidth,w=m?vw-40:vw*.44;d.style.zoom=Math.max(.5,Math.min(1,h/r.height,w/dw)).toFixed(3)})}
@@ -472,6 +475,9 @@ body.noche{--paper:#100f0e;--paper2:#191817;--card:#1d1c1a;--ink:#f4f1ec;--ink2:
   var tabs=[].slice.call(document.querySelectorAll('.tabs a'));
   if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)tabs.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id)})})},{rootMargin:'-45% 0px -50% 0px'});
     tabs.forEach(function(a){var s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s)})}
+  // día o noche: uno solo para toda la página, se elige arriba a la derecha y queda guardado
+  var mb=document.getElementById('modo');function modo(n,anim){document.body.classList.toggle('noche',n);document.documentElement.classList.toggle('n',n);mb.setAttribute('aria-label',n?'Cambiar a modo día':'Cambiar a modo noche');var m=document.querySelector('meta[name=theme-color]');if(m)m.content=n?'#100f0e':'#f3f0eb';send({tema:n?'dark':'light'});try{localStorage.setItem('unity.tema',n?'noche':'dia')}catch(e){}}
+  var t0='dia';try{t0=localStorage.getItem('unity.tema')||'dia'}catch(e){}modo(t0==='noche');mb.addEventListener('click',function(){modo(!document.body.classList.contains('noche'))});
   fit();upd();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(upd,1500);
 })();
 </script>
