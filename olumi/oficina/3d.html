@@ -418,12 +418,15 @@ function walkShell(){const g=new THREE.Group(),H=3.0;
 function chair(g,x,y){CY(g,MAT.steel,x,y,0,.03,.42,8);B(g,MAT.steel,x-.28,y-.02,.05,.56,.04,.03);B(g,MAT.steel,x-.02,y-.28,.05,.04,.56,.03);
   B(g,MAT.fabric,x-.26,y-.26,.42,.52,.52,.08,.04);B(g,MAT.fabric,x-.24,y+.2,.5,.48,.08,.55,.04)}
 function desk(g,d){const x=d.x,y=d.y;
-  if(d.room==='rec'){B(g,MAT.white,x-.4,y,0,2.6,.9,1.0,.03);B(g,MAT.oak,x-.45,y-.05,1.0,2.7,1.0,.05,.02);B(g,MAT.oak,x-.3,y+.05,.72,2.4,.75,.04)}
+  // recepción como las de verdad: mostrador alto adelante para el que llega y, atrás, el escritorio a 74 cm donde trabaja la recepcionista
+  const rec=d.room==='rec',my0=rec?y+.36:y+.12;
+  if(rec){B(g,MAT.white,x-.4,y,0,2.6,.32,1.04,.03);B(g,MAT.oak,x-.45,y-.05,1.04,2.7,.42,.05,.02);B(g,MAT.oak,x-.4,y+.32,.7,2.6,.62,.04,.015);
+    B(g,MAT.white,x-.4,y+.32,0,.04,.62,.7);B(g,MAT.white,x+2.16,y+.32,0,.04,.62,.7)}
   else{[[.05,.05],[1.69,.05],[.05,.79],[1.69,.79]].forEach(([a,b])=>B(g,MAT.steel,x+a,y+b,0,.06,.06,.7));B(g,MAT.oak,x,y,.7,1.8,.9,.04,.015)}
-  const z=d.room==='rec'?1.05:.74;
-  [[x+.3,y+.12],[x+.96,y+.12]].forEach(([mx,my])=>{B(g,MAT.steel,mx+.23,my+.08,z,.1,.12,.02);B(g,MAT.steel,mx+.26,my+.12,z,.04,.04,.24);B(g,MAT.black,mx,my,z+.18,.58,.03,.36,.01);
+  const z=.74;
+  [[x+.3,my0],[x+.96,my0]].forEach(([mx,my])=>{B(g,MAT.steel,mx+.23,my+.08,z,.1,.12,.02);B(g,MAT.steel,mx+.26,my+.12,z,.04,.04,.24);B(g,MAT.black,mx,my,z+.18,.58,.03,.36,.01);
     const s=new THREE.Mesh(new THREE.PlaneGeometry(.54,.32),MAT.screen);s.position.set(mx+.29,z+.36,my+.035);g.add(s)});
-  B(g,MAT.white,x+.65,y+.48,z,.48,.15,.015,.005);chair(g,x+.88,y+1.32);
+  B(g,MAT.white,x+.65,rec?y+.66:y+.48,z,.48,.15,.015,.005);chair(g,x+.88,y+1.32);
   // luminaria lineal colgante
   B(g,MAT.pend,x+.1,y+.4,2.42,1.6,.08,.05,.02);B(g,MAT.led,x+.12,y+.42,2.415,1.56,.04,.005);[x+.3,x+1.5].forEach(px=>CY(g,MAT.steel,px,y+.44,2.47,.004,.53,4))}
 function planter(g,x,y,s){B(g,MAT.pot,x-.25,y-.25,0,.5,.5,.45,.05);[[0,0,.72,.36,MAT.leaf1],[-.13,.1,.98,.3,MAT.leaf2],[.15,-.08,1.15,.26,MAT.leaf1],[0,0,1.36,.2,MAT.leaf2]].forEach(([dx,dy,z,r,m])=>SP(g,m,x+dx*s,y+dy*s,z*s,r*s,1,1.15,1))}
@@ -1090,7 +1093,7 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
     MAT.asph.color.set(d?'#3e3c39':'#c9c4bc');MAT.grass.color.set(d?'#4a5245':'#dce1d3');MAT.park.color.set(d?'#4a4743':'#dcd7cf')};
   // líneas de maqueta de arquitecto: el borde de cada pared, vidrio y losa en grafito fino
   const EDGE=new THREE.LineBasicMaterial({color:'#2b2a28',transparent:true,opacity:.28,depthWrite:false});
-  const edges=g=>{const L=[];g.traverse(o=>{if(o.isMesh&&!o.userData.edged&&o.material!==MAT.glass&&o.material!==MAT.frost){o.userData.edged=1;const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,28),EDGE);e.matrixAutoUpdate=false;e.matrix.copy(o.matrix);L.push([o.parent,e])}});L.forEach(([p,e])=>p.add(e))};
+  const edges=g=>{const L=[];g.traverse(o=>{if(o.isMesh&&!o.userData.edged&&o.material!==MAT.glass&&o.material!==MAT.frost){o.userData.edged=1;[].concat(o.material).forEach(m=>{if(!m.polygonOffset){m.polygonOffset=true;m.polygonOffsetFactor=1;m.polygonOffsetUnits=1}});const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,28),EDGE);e.matrixAutoUpdate=false;e.matrix.copy(o.matrix);L.push([o.parent,e])}});L.forEach(([p,e])=>p.add(e))};
   edges(BLD);
   const st1=setTheme;setTheme=function(){st1();EDGE.color.set(DARK?'#000000':'#2b2a28');EDGE.opacity=DARK?.45:.28};
   // carteles: cápsulas blancas con línea fina (de día) o grafito (de noche), letra más liviana
