@@ -143,6 +143,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .card h3{font-family:var(--f-body);font-stretch:100%;font-size:14.5px;font-weight:650;line-height:1.3;overflow-wrap:anywhere}
 .ccli{margin:0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
 .cbot{display:flex;align-items:center;gap:8px;margin-top:3px}
+.cnext{margin-left:auto;width:28px;height:28px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:17px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 2px}.cnext:hover{background:var(--accent);color:var(--accent-fg);border-color:transparent}.cbot .av+.cnext{margin-left:0}
 .cbot .amt{font-size:13px;font-weight:500;margin-right:auto}
 .tag{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px;white-space:nowrap}
 .t-bad{background:var(--bad-soft);color:var(--bad)}
@@ -1206,7 +1207,7 @@ let DB=null, USER=null, DL=null, AS=null, SAMPLE=null, ME=null, mode='loading', 
 let aboOnly=false, calStart=null, calTec='', tkFilter='abiertos', faTab='facturas', campoDay=0, campoAll=false;
 const loaded=new Set();
 const NAMES={};
-let Q='', fServ='', mine=false, showLost=false;
+let Q='', fServ='', mine=false, showLost=false, fResp='', seguir=false;
 let VIEW=lsGet('crm.view')||'tickets';
 let repMon=lsGet('crm.mon')||'UYU';
 let pView=lsGet('crm.pview')||'board';
@@ -1371,23 +1372,37 @@ const opts=(list,v)=>list.map(o=>{const[val,l]=Array.isArray(o)?o:[o,o];return`<
 function opMatch(o){
   if(fServ&&o.servicio!==fServ)return false;
   if(mine&&o.responsable!==ME)return false;
+  if(fResp&&(o.responsable||'-')!==fResp)return false;
+  if(seguir&&!opSeguir(o))return false;
   if(!Q)return true;
   return qn([o.titulo,cliName(o.clienteId),o.servicio,o.obra].join(' ')).includes(qn(Q));
 }
-function card(o){
+// días sin movimiento, y si hay que seguirla: abierta y sin próxima actividad, con una vencida o quieta hace más de 14 días
+const opQuieta=o=>isOpen(o)?Math.floor((Date.now()-n0(o.actualizado||o.creado||Date.now()))/864e5):0;
+const opSeguir=o=>{if(!isOpen(o))return false;const a=pendingActs(o.id)[0];return!a||actState(a)==='t-bad'||opQuieta(o)>14};
+const opSig=o=>{const i=ETAPAS.findIndex(e=>e.k===(o.etapa||'nuevo')),n=ETAPAS[i+1];return n&&n.k!=='per'&&isOpen(o)?n:null};
+async function opMove(id,k){const o=D.oportunidades[id];if(!o||(o.etapa||'nuevo')===k||!EK[k])return;
+  const n={...o,etapa:k,prob:EK[k].p,actualizado:Date.now(),bitacora:[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',tipo:'sys',text:`Etapa: ${EK[o.etapa||'nuevo'].n} → ${EK[k].n}`}].slice(-300)};if(k==='gan')n.ganadoEn=today();else n.ganadoEn='';if(k==='per'&&!n.perdidoEn)n.perdidoEn=today();
+  await put('oportunidades',id,n);toast(`Movida a ${EK[k].n}`);
+  if(k==='per'&&!n.motivoPerdida)setTimeout(()=>{openSheet('op',id);const m=$('#f_motivoPerdida');if(m){m.scrollIntoView({block:'center'});m.focus()}toast('Anotá por qué se perdió')},80)}
+function card(o){const q=opQuieta(o),sg=opSig(o);
   const c=cliName(o.clienteId);
   const cierre=o.cierre&&isOpen(o)&&o.cierre<today()?`<span class="tag t-bad" title="Fecha de cierre pasada">Cierre ${fdate(o.cierre)}</span>`:'';
   return`<article class="card" draggable="true" data-id="${o.id}" data-open="op:${o.id}" tabindex="0">
     <div class="ctop"><span class="svc">${esc(o.servicio||'Sin servicio')}</span>${n0(o.prioridad)>0?`<span class="stars" aria-label="Prioridad ${o.prioridad}">${'★'.repeat(n0(o.prioridad))}</span>`:''}</div>
-    <h3>${esc(o.titulo)}</h3>${o.etiquetas?`<div class="chips">${tagChips(o.etiquetas)}</div>`:''}${c?`<p class="ccli">${esc(c)}${o.obra?' · '+esc(o.obra):''}</p>`:''}
-    <div class="cbot"><span class="amt">${money(o.monto,o.moneda)}</span>${cierre||(isOpen(o)?actBadge(pendingActs(o.id)[0]):'')}${av(o.responsable)}</div></article>`;
+    <h3>${esc(o.titulo)}</h3>${o.etiquetas||q>14?`<div class="chips">${q>14?`<span class="tag t-warn" title="Nadie la tocó en ${q} días">Sin movimiento · ${q} d</span>`:''}${tagChips(o.etiquetas)}</div>`:''}${c?`<p class="ccli">${esc(c)}${o.obra?' · '+esc(o.obra):''}</p>`:''}
+    <div class="cbot"><span class="amt">${money(o.monto,o.moneda)}</span>${cierre||(isOpen(o)?actBadge(pendingActs(o.id)[0]):'')}${av(o.responsable)}${sg&&!readonly?`<button type="button" class="cnext" data-act="opnext:${o.id}" title="Pasar a ${sg.n}" aria-label="Pasar a ${sg.n}">›</button>`:''}</div></article>`;
 }
 function vPipeline(){
   const all=arr('oportunidades');const ops=all.filter(opMatch);
   const open=ops.filter(isOpen);
-  const head=`<div class="vhead"><div><h1>CRM</h1><p class="sub">${open.length} abiertas · <span class="num">${money(sum(open,o=>conv(o.monto,o.moneda,repMon)),repMon)}</span> en juego</p></div>
+  const c90=localISO(Date.now()-90*864e5).slice(0,10),g90=all.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'')>=c90).length,p90=all.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
+  const resp=[...new Set(all.map(o=>o.responsable||'-'))],nSeg=all.filter(opSeguir).length;
+  const head=`<div class="vhead"><div><h1>CRM</h1><p class="sub">${open.length} abiertas · <span class="num">${money(sum(open,o=>conv(o.monto,o.moneda,repMon)),repMon)}</span> en juego · <span class="num">${money(sum(open,o=>conv(o.monto,o.moneda,repMon)*n0(o.prob)/100),repMon)}</span> ponderado${g90+p90?` · cierre ${Math.round(g90/(g90+p90)*100)} % en 90 días`:''}</p></div>
     <div class="tools"><select id="fServ" data-ch="fServ" aria-label="Filtrar por servicio"><option value="">Todos los servicios</option>${opts(SERV,fServ)}</select>
+    ${resp.length>1?`<select id="fResp" data-ch="fResp" aria-label="Filtrar por responsable"><option value="">Todos los responsables</option>${opts(resp.map(r=>[r,r==='-'?'Sin responsable':(NAMES[r]&&NAMES[r].name)||(r===ME?'Vos':'Compañero')]),fResp)}</select>`:''}
     ${ME?`<button class="tgl${mine?' on':''}" data-act="mine" aria-pressed="${mine}">Solo mías</button>`:''}
+    <button class="tgl${seguir?' on':''}" data-act="seguir" aria-pressed="${seguir}" title="Sin próxima actividad, con una vencida o sin movimiento hace más de 14 días">Para seguir${nSeg?` · ${nSeg}`:''}</button>
     <button class="tgl${showLost?' on':''}" data-act="lost" aria-pressed="${showLost}">Perdidas</button>
     <div class="seg" role="group" aria-label="Vista"><button class="${pView==='board'?'on':''}" data-act="pview:board">Tablero</button><button class="${pView==='list'?'on':''}" data-act="pview:list">Lista</button></div></div></div>`;
   if(!all.length)return head+empty('Todavía no hay oportunidades','Cargá la primera con cliente, servicio y monto estimado. Después la movés por etapas: relevamiento, presupuesto, negociación, hasta ganarla.','op','+ Nueva oportunidad');
@@ -2056,7 +2071,7 @@ async function saveOp(){
   const v=readForm(OPF());const err=$('#shErr');
   if(!v.titulo){err.textContent='Poné un título para la oportunidad.';err.hidden=false;$('#f_titulo').focus();return}
   const nc=($('#f_nuevoCli')?.value||'').trim();
-  if(nc){const cid=uid();await put('clientes',cid,{nombre:nc,creado:Date.now()});v.clienteId=cid}
+  if(nc){const ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(nc));if(ya){v.clienteId=ya.id;toast(`Ya existía ${ya.nombre}: usé ese cliente`)}else{const cid=uid();await put('clientes',cid,{nombre:nc,creado:Date.now()});v.clienteId=cid}}
   v.prioridad=n0(v.prioridad);
   const base=SH.id?{...D.oportunidades[SH.id]}:{creado:Date.now(),creadoPor:ME||''};
   const o={...base,...v,actualizado:Date.now()};
@@ -2092,6 +2107,8 @@ function sheetCli(id){
 }
 async function saveCli(){
   const v=readForm(CLIF);if(!v.nombre){const e=$('#shErr');e.textContent='Poné el nombre del cliente.';e.hidden=false;return}
+  if(!SH.id&&!SH.dupOk){const dg=s=>String(s||'').replace(/\D/g,''),ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(v.nombre).trim()||(dg(v.rut).length>5&&dg(c.rut)===dg(v.rut))||(dg(v.telefono).length>6&&dg(c.telefono).slice(-8)===dg(v.telefono).slice(-8)));
+    if(ya){SH.dupOk=true;const e=$('#shErr');e.textContent=`Ya hay un cliente parecido: ${ya.nombre}${ya.rut?' · '+ya.rut:''}. Si es otro, tocá Guardar de nuevo.`;e.hidden=false;return}}
   const base=SH.id?{...D.clientes[SH.id]}:{creado:Date.now()};
   const contactos=cliReadContactos().filter(x=>x.nombre||x.telefono||x.email);
   await put('clientes',SH.id||uid(),{...base,...v,contactos});toast('Cliente guardado');closeSheet();
@@ -2313,6 +2330,8 @@ if(await planosAct(k,el,arg))return;
     case'done':{const x=D.actividades[arg];if(!x)return;await put('actividades',arg,{...x,hecha:!x.hecha,hechaEn:!x.hecha?Date.now():0});
       if(SH&&SH.type==='op')setTimeout(()=>{const e=$('#opActs');if(e&&SH)e.innerHTML=opActsHtml(SH.id)},60);break}
     case'mine':mine=!mine;sr();break;
+    case'seguir':seguir=!seguir;sr();break;
+    case'opnext':{const o=D.oportunidades[arg],s=o&&opSig(o);if(s&&!readonly)await opMove(arg,s.k);break}
     case'lost':showLost=!showLost;sr();break;
     case'mon':repMon=arg;lsSet('crm.mon',arg);sr();break;
     case'addline':QE.lineas.push({desc:'',cant:1,unidad:'unidad',precio:0});$('#qlines').innerHTML=qLinesHtml();document.getElementById('ql_d_'+(QE.lineas.length-1)).focus();qRefresh();break;
@@ -2331,7 +2350,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.46',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.47',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2378,6 +2397,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.ch==='fServ'){fServ=t.value;sr();return}
+  if(t.dataset.ch==='fResp'){fResp=t.value;sr();return}
   if(t.dataset.ch==='calTec'){calTec=t.value;sr();return}
   if(t.dataset.ch==='calV'){CALV=t.value;try{lsSet('crm.calv',CALV)}catch(e){}if(CALV!=='mes')calStart=monday(calStart||new Date());sr();return}
   if(t.dataset.up){onUpload(t);return}
@@ -2390,11 +2410,10 @@ document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.clo
 document.addEventListener('dragend',e=>{document.querySelectorAll('.card.drag,.col.over').forEach(x=>x.classList.remove('drag','over'));dragId=null});
 document.addEventListener('dragover',e=>{const col=e.target.closest&&e.target.closest('.col');if(!col||!dragId)return;e.preventDefault();document.querySelectorAll('.col.over').forEach(x=>x!==col&&x.classList.remove('over'));col.classList.add('over')});
 document.addEventListener('drop',async e=>{const col=e.target.closest&&e.target.closest('.col');if(!col||!dragId)return;e.preventDefault();col.classList.remove('over');
-  const id=dragId,k=col.dataset.stage,o=D.oportunidades[id];dragId=null;if(!o||(o.etapa||'nuevo')===k)return;
-  const n={...o,etapa:k,prob:EK[k].p,actualizado:Date.now(),bitacora:[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',tipo:'sys',text:`Etapa: ${EK[o.etapa||'nuevo'].n} → ${EK[k].n}`}].slice(-300)};if(k==='gan')n.ganadoEn=today();else n.ganadoEn='';if(k==='per'&&!n.perdidoEn)n.perdidoEn=today();
-  try{await put('oportunidades',id,n);toast(`Movida a ${EK[k].n}`);
-    if(k==='per'&&!n.motivoPerdida)setTimeout(()=>{openSheet('op',id);const m=$('#f_motivoPerdida');if(m){m.scrollIntoView({block:'center'});m.focus()}toast('Anotá por qué se perdió')},80)}
-  catch(x){if(x&&x.code!=='loading')handleErr(x)}});
+  const id=dragId,k=col.dataset.stage;dragId=null;
+  try{await opMove(id,k)}catch(x){if(x&&x.code!=='loading')handleErr(x)}});
+// motivos de pérdida sugeridos (se puede escribir otro)
+document.addEventListener('focusin',e=>{if(e.target.id!=='f_motivoPerdida')return;let d=document.getElementById('motivos');if(!d){d=document.createElement('datalist');d.id='motivos';d.innerHTML=['Precio','Eligió a otro proveedor','Se postergó','No respondió más','No era lo que buscaba','Sin presupuesto del cliente','Fuera de zona o de rubro'].map(m=>`<option value="${m}">`).join('');document.body.append(d)}e.target.setAttribute('list','motivos')});
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
