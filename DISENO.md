@@ -1,3 +1,13 @@
+# Ondi v5 «Estudio» · vista previa en unitytech.uy/nuevo/ondi/ (9/11/2026)
+
+- Mismo lenguaje que Olumi v5 (`/estudio.css`): papel cálido, títulos en dos tonos, números finos, tarjetas blancas y **tarjeta de color de Ondi** (`--m-ondi`, azul petróleo con grano).
+- La historia va sobre la **maqueta real del parque** en estilo de arquitecto: `/ondi/maqueta/?embed=1&cine=1&estilo=estudio` (copia estable de `/ondi/beta/maqueta.html` para la web; se actualiza a mano copiando la beta).
+  La página manda `{cine:t}`, `{cineEv:'caida'|'van'|'ok'}`, `{tema}` y `{cinePausa}`; las tomas están en `CSH` dentro de la maqueta.
+- Capítulos: portada → el predio a escala → cae un AP (aviso en el celular) → una alerta, no veinte → el ticket y el furgón → recorrerlo y ver cada cámara → en vivo (noche) → cierre. Después funciones, consola vs Ondi, planes, descargas y preguntas.
+- Datos inventados (parque de ejemplo, Martín). La v4 sigue en /ondi/ hasta que Christian apruebe.
+
+---
+
 # Diseño de las webs de Unity Tech · v4 (en vivo desde el 9/11/2026)
 
 Pedido de Christian: que el cliente quede enganchado con lo que ve, que se note la tecnología y que estamos por arriba de la competencia.
