@@ -949,6 +949,9 @@ NAVES.forEach(prepNave);
 { const N = NAVES.find(n => n.id === 'e10'); if (N) { for (const d of N.docks) { const i = DOCKS.indexOf(d); if (i >= 0) DOCKS.splice(i, 1); } N.docks = []; let k = 1;
   const put = (u, num) => { const [x, z] = NP(N, u, 8.9), d = { nave: N, k: k++, u, x, z, head: Math.atan2(-N.n[1], N.n[0]), occ: null, num }; N.docks.push(d); DOCKS.push(d); };
   for (let i = 0; i < 15; i++) put(20 + i * 5.07, 13 + i); for (let i = 0; i < 21; i++) put(172 + i * 6.25, 34 + i); N.nivel = [[151, 30], [158, 32], [164.5, 33]]; } }
+{ const N = NAVES.find(n => n.id === 'e1'); if (N) { for (const d of N.docks) { const i = DOCKS.indexOf(d); if (i >= 0) DOCKS.splice(i, 1); } N.docks = []; let k = 1;
+  const put = (u, num) => { const [x, z] = NP(N, u, 8.9), d = { nave: N, k: k++, u, x, z, head: Math.atan2(-N.n[1], N.n[0]), occ: null, num }; N.docks.push(d); DOCKS.push(d); };
+  [[14, 1], [19, 2], [26, 3], [30.5, 4], [72.3, 6], [76.5, 7], [80.7, 8], [84.6, 9], [88.8, 10], [92.8, 11]].forEach(q => put(q[0], q[1])); } }
 const naveById = id => NAVES.find(n => n.id === id);
 const GATE_POS = [...px(62, 727)], ADMIN_POS = px(274, 525);
 const ZONAS = [
@@ -5198,18 +5201,32 @@ pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 3)
 pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 4) return; ED.seed = 4; const has = new Set(PROPS.map(q => q.id));
   const add = (id, k, X, Y, op) => { if (has.has(id)) return; const [x, z] = px(X, Y); PROPS.push(Object.assign({ id, type: 'prop', k, seed: 7, x, y: 0, z, yaw: 0 }, op)); };
   add('TQ-E10A', 'tanque', 588, 1017, { r: 4.6, h: 2.6, name: 'Tanque de agua' }); add('TQ-E10B', 'tanque', 595.5, 1012.5, { r: 1.5, h: 13, name: 'Silo' }); add('EDI-E10S', 'edif', 602, 1027, { w: 5, d: 4.2, h: 4, pisos: 0, name: 'Subestación' }); })(pzSeed);
+// número de un andén: chapa de color con dígitos blancos de siete segmentos (sirve para cualquier galpón)
+function plateNum(lb, n, uc, col, y0 = 5.95) { const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgecd', 7: 'abc', 8: 'abcdefg', 9: 'abfgcd' }, W7 = 0.22, H7 = 0.36, T7 = 0.05, s = String(n), yb = y0 + 0.07;
+  lb(uc - 0.45, uc + 0.45, 0.32, 0.37, y0, y0 + 0.5, col, { ao: 1 });
+  [...s].forEach((ch, i) => { const c = uc + (i - (s.length - 1) / 2) * 0.34, q = (a, b, y, yy) => lb(c + a, c + b, 0.37, 0.385, yb + y, yb + yy, '#FFFFFF', { e: 0.25, ao: 1 });
+    for (const k of SEG[ch] || '') { if (k === 'a') q(-W7 / 2, W7 / 2, H7 - T7, H7); if (k === 'd') q(-W7 / 2, W7 / 2, 0, T7); if (k === 'g') q(-W7 / 2, W7 / 2, H7 / 2 - T7 / 2, H7 / 2 + T7 / 2);
+      if (k === 'b') q(W7 / 2 - T7, W7 / 2, H7 / 2, H7); if (k === 'c') q(W7 / 2 - T7, W7 / 2, 0, H7 / 2); if (k === 'f') q(-W7 / 2, -W7 / 2 + T7, H7 / 2, H7); if (k === 'e') q(-W7 / 2, -W7 / 2 + T7, 0, H7 / 2); } }); }
+// E1 (foto y videos del 11/11): chapas verdes numeradas, anexo con portón corredizo y el alero bajo que cubre la puerta 5 y los andenes 6 a 11
+buildNave = (o => function (N) { o(N); if (BLANK || N.id !== 'e1' || !N.docks || !N.docks.length) return; const ob = OBJID.get(N.id); if (!ob || !ob.geo) return; const g = ob.geo;
+  const lb = (u0, u1, v0, v1, y0, y1, col, op) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); g.box(Math.min(ax, bx), y0, Math.min(az, bz), Math.max(ax, bx), y1, Math.max(az, bz), col, op); };
+  const VD = '#1F4D3A', BL = '#F3F5F4', A0 = 54, A1 = 113, DV = 12.5, HC = 7.6;
+  for (const d of N.docks) plateNum(lb, d.num || d.k, d.u, VD);
+  // alero: techo bajo, frente alto de chapa blanca, pared lateral del lado norte y columna en la esquina sur
+  lb(A0, A1, 0.3, DV, HC - 0.3, HC, BL, { top: P.roof, bottom: true, ao: 0.95 }); lb(A0, A1, DV - 0.3, DV, HC - 1.9, HC + 0.05, BL, { ao: 1 }); lb(A1 - 0.3, A1, 0.3, DV, HC - 1.9, HC, BL, { ao: 1 });
+  lb(A1 - 1.1, A1 - 0.4, DV - 1.0, DV - 0.3, 0, HC - 1.9, BL, { ao: 0.95 }); lb(A1 - 1.5, A1, DV - 1.4, DV + 0.1, 0, 0.9, '#F2C230', { ao: 1 });
+  // puerta 5 (a nivel de la plataforma) con su escalera
+  lb(67.1 - 1.5, 67.1 + 1.5, 0, 0.3, 1.2, 4.6, '#E9ECEA', { ao: 1 }); plateNum(lb, 5, 67.1, VD); lb(69.2, 70.6, 0.3, 2.4, 0, 1.2, '#8A8F93', { ao: 0.9 });
+  // anexo del lado norte del alero, con su portón corredizo
+  lb(36, A0, 0.3, DV, 0, HC, BL, { top: P.roof, ao: 0.9 }); lb(42, 48.5, DV, DV + 0.06, 0, 5.2, '#16191C', { ao: 1 });
+  ob.version++; })(buildNave);
 // E10: el alero sobre el tramo del medio, el número de cada andén y los portones a nivel (de los videos)
 buildNave = (o => function (N) { o(N); if (BLANK || N.id !== 'e10' || !N.docks || !N.docks.length) return; const ob = OBJID.get(N.id); if (!ob || !ob.geo) return; const g = ob.geo;
   const lb = (u0, u1, v0, v1, y0, y1, col, op) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); g.box(Math.min(ax, bx), y0, Math.min(az, bz), Math.max(ax, bx), y1, Math.max(az, bz), col, op); };
   const u0 = N.skip ? N.skip[0] + 1 : 95, u1 = N.skip ? N.skip[1] - 1 : 147, DV = 13, AM = '#F2C230';
   lb(u0, u1, 0.3, DV, 7.2, 7.45, P.roof, { top: P.roof, bottom: true, ao: 0.95 }); lb(u0, u1, DV - 0.25, DV, 6.95, 7.5, P.parapet, { ao: 1 });
   for (let i = 0; i <= 6; i++) { const u = u0 + 0.5 + i * (u1 - u0 - 1) / 6; lb(u - 0.22, u + 0.22, DV - 0.62, DV - 0.18, 0, 7.2, '#F2F4F5', { ao: 0.95 }); lb(u - 0.5, u + 0.5, DV - 0.95, DV + 0.15, 0, 0.9, AM, { ao: 1 }); }
-  // número de cada andén, con dígitos de siete segmentos sobre la chapa azul
-  const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgecd', 7: 'abc', 8: 'abcdefg', 9: 'abfgcd' }, W7 = 0.22, H7 = 0.36, T7 = 0.05;
-  const num = (n, uc) => { const s = String(n), y0 = 6.02; lb(uc - 0.45, uc + 0.45, 0.32, 0.37, 5.95, 6.45, '#2F6FD6', { ao: 1 });
-    [...s].forEach((ch, i) => { const c = uc + (i - (s.length - 1) / 2) * 0.34, q = (a, b, y, yy) => lb(c + a, c + b, 0.37, 0.385, y0 + y, y0 + yy, '#FFFFFF', { e: 0.25, ao: 1 });
-      for (const k of SEG[ch] || '') { if (k === 'a') q(-W7 / 2, W7 / 2, H7 - T7, H7); if (k === 'd') q(-W7 / 2, W7 / 2, 0, T7); if (k === 'g') q(-W7 / 2, W7 / 2, H7 / 2 - T7 / 2, H7 / 2 + T7 / 2);
-        if (k === 'b') q(W7 / 2 - T7, W7 / 2, H7 / 2, H7); if (k === 'c') q(W7 / 2 - T7, W7 / 2, 0, H7 / 2); if (k === 'f') q(-W7 / 2, -W7 / 2 + T7, H7 / 2, H7); if (k === 'e') q(-W7 / 2, -W7 / 2 + T7, 0, H7 / 2); } }); };
+  const num = (n, uc) => plateNum(lb, n, uc, '#2F6FD6');
   for (const d of N.docks) num(d.num || d.k, d.u);
   // portones a nivel del piso, con defensas amarillas a los costados
   for (const [u, n] of N.nivel || []) { lb(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, P.frame, { ao: 1 }); lb(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, '#16191C', { ao: 1 }); num(n, u);

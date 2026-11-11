@@ -43,7 +43,7 @@ D.tema = (clave, porDefecto) => { const h = document.documentElement; let t = po
 /* Maqueta 3D real (la pública, sin nombres reales) dentro de un iframe */
 D.maqueta = (cont, c, { limpio = true, orbita = false, cerca = 1 } = {}) => {
   window.__ondiMaqueta = { state: null, role: 'cli', park: c.n, installer: D.inst, base: 'vacia', demo: c.base === 'polo' ? 'parque' : undefined, generica: c.base !== 'polo', canTicket: false, save() {}, savePlano() {}, juego() {} };
-  cont.innerHTML = ''; const f = document.createElement('iframe'); f.src = '../maqueta.html?v=30'; f.title = 'Maqueta 3D de ' + c.n; f.setAttribute('allow', 'fullscreen'); f.style.cssText = 'border:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .9s';
+  cont.innerHTML = ''; const f = document.createElement('iframe'); f.src = '../maqueta.html?v=31'; f.title = 'Maqueta 3D de ' + c.n; f.setAttribute('allow', 'fullscreen'); f.style.cssText = 'border:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .9s';
   f.onload = () => { try { const d = f.contentDocument, s = d.createElement('style');
       if (limpio) s.textContent = '.topbar,.kpiwrap,.dock,.controls,.panel,.camview,.editbar,.vignette,.roview,.toast,#labels .poi,#labels .street,#labels .chip{display:none!important}';
       d.head.appendChild(s); } catch (e) {}
