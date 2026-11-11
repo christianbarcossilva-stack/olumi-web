@@ -3,6 +3,11 @@ import bpy, sys, math
 from mathutils import Vector
 a = sys.argv[sys.argv.index('--') + 1:]; out = a[0]; vista = a[1] if len(a) > 1 else '34'
 sc = bpy.context.scene
+if len(a) > 2:      # tercer dato: color de la pintura (r,g,b de 0 a 1) y, opcional, 'llantas' para pintarlas igual
+    rgb = [float(x) for x in a[2].split(',')]
+    for m in bpy.data.materials:
+        if m.name.startswith('pintura') or (len(a) > 3 and m.name.startswith('llanta')): m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*rgb, 1)
+# NEGRO: para ver un auto oscuro la luz va más fuerte
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = 40; sc.cycles.use_denoising = False
 sc.render.resolution_x, sc.render.resolution_y = 1100, 620
 P = {'34': (5.6, -5.0, 2.1), 'lado': (0, -8.5, 1.2), 'atras': (-5.6, -5.0, 2.1), 'frente': (8.5, -.6, 1.3), 'arriba': (.01, -.01, 11), 'cola': (-8.5, -.6, 1.3)}[vista]

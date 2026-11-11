@@ -1,5 +1,5 @@
 # Vehículos modelados por secciones. uso: blender -b --python vehiculo.py -- <modelo> salida.blend [salida.glb]
-#   modelos: suv (SUV eléctrico mediano, medidas del Chery eQ7) · toro (pickup doble cabina, Fiat Toro) · bipper (furgoneta chica, Peugeot Bipper) · fiorino (furgón, Fiat Fiorino 2025)
+#   modelos: suv (SUV mediano genérico) · eq7 (Chery eQ7, ajustado con fotos) · toro (pickup doble cabina, Fiat Toro) · bipper (furgoneta chica, Peugeot Bipper) · fiorino (furgón, Fiat Fiorino 2025)
 # La carrocería es una "piel" tendida entre secciones a lo largo del vehículo (silueta de costado + ancho en planta + forma de cada sección),
 # suavizada; después se abren los pasarruedas (y la caja, en la pickup) y se suman vidrios, luces, juntas, espejos y ruedas.
 # La pintura queda en un material aparte ("pintura") para que la app le ponga el color de la ficha del vehículo.
@@ -21,6 +21,20 @@ def suv():
         frente=[('luz', 'faro', -.60, .60, .772, .792, 30, 1, .009, 0), ('faro', 'faro', .54, .84, .755, .825, 10, 3, .011, 1), ('toma', 'negro', -.66, .66, .30, .50, 28, 4, .009, 0), ('patente', 'patente', -.2, .2, .345, .445, 6, 2, .014, 0)],
         cola=[('luz', 'stop', -.74, .74, .965, 1.0, 30, 2, .009, 0), ('stop', 'stop', .56, .86, .94, 1.03, 10, 3, .011, 1), ('paragolpes', 'negro', -.74, .74, .36, .56, 28, 4, .009, 0), ('patente', 'patente', -.2, .2, .70, .80, 6, 2, .012, 0)],
         juntas=[(.86, .36, 1.0), (-.115, .36, 1.03), (-1.13, 'arco', 1.06)], junta_baja=(-1.0, .86, .361), manijas=[(.42, .62, .925, .95, 'cromo'), (-.52, -.32, .925, .95, 'cromo')], molduras=[], espejo_en=(.86, 1.035))
+
+def eq7():
+    L, W, EJ, vF = 4.675, 1.91, 2.83, .905; XF = L / 2; XR = -XF; AXF = XF - vF; AXR = AXF - EJ; COWL = 1.10; ROOF0 = .28; TAIL = -2.20
+    return dict(L=L, W=W, EJ=EJ, vF=vF, RR=.365, RL=.262, tw=.12, arc=.078, arco='negro', espejo='negro', rayos=((0,), .30, .17),
+        top=[(XR, 1.09), (XR + .06, 1.16), (TAIL, 1.21), (-2.05, 1.31), (-1.80, 1.47), (-1.42, 1.585), (-.85, 1.64), (-.1, 1.66), (ROOF0, 1.635), (.60, 1.45), (.90, 1.21), (COWL, 1.07), (1.5, 1.01), (1.95, .93), (XF - .12, .85), (XF, .78)],
+        cin=[(XR, 1.07), (TAIL, 1.19), (-1.75, 1.25), (-1.25, 1.11), (-.2, 1.045), (.75, 1.01), (COWL, 1.0), (1.6, .95), (XF - .1, .83), (XF, .76)],
+        pis=[(XR, .42), (XR + .25, .28), (AXR, .20), (0, .19), (AXF, .20), (XF - .25, .24), (XF, .36)],
+        planta=[(XR, .80), (XR + .25, .90), (AXR, .945), (-.3, .955), (AXF, .94), (XF - .3, .88), (XF, .76)], esquinas=((XF, .42, .22), (XR, .36, .22)),
+        cab=(TAIL + .1, COWL - .02, .17, .45, .3, 0), vid=(-1.74, COWL - .34), parantes=[(-.16, -.07), (-1.22, -1.13)], parabrisas=(ROOF0 + .04, COWL - .03), luneta=(TAIL + .04, -1.56),
+        frente=[('diurna', 'faro', .20, .74, .792, .815, 12, 1, .010, 1), ('franja', 'negro', -.86, .86, .57, .73, 30, 3, .008, 0), ('faro', 'faro', .54, .80, .61, .675, 8, 2, .014, 1),
+                ('parrilla', 'negro', -.70, .70, .27, .52, 28, 4, .009, 0), ('patente', 'patente', -.2, .2, .36, .46, 6, 2, .016, 0)],
+        cola=[('luz', 'stop', -.74, .74, 1.065, 1.095, 30, 2, .009, 0), ('stop', 'stop', .56, .86, 1.03, 1.12, 10, 3, .011, 1), ('paragolpes', 'negro', -.76, .76, .38, .60, 28, 4, .009, 0), ('patente', 'patente', -.2, .2, .76, .86, 6, 2, .012, 0)],
+        juntas=[(.86, .36, 1.0), (-.115, .36, 1.04), (-1.13, 'arco', 1.09)], junta_baja=None, manijas=[(.40, .60, .95, .975, 'negro'), (-.56, -.36, .98, 1.005, 'negro')],
+        molduras=[(-.93, .86, .345, .50, 'negro')], espejo_en=(.86, 1.035))
 
 def toro():
     L, W, EJ, vF = 4.944, 1.844, 2.99, .92; XF = L / 2; XR = -XF; AXF = XF - vF; AXR = AXF - EJ; COWL = 1.02; ROOF0 = .30
@@ -60,7 +74,7 @@ def fiorino():
         cola=[('stop', 'stop', .54, .67, .52, .88, 4, 6, .011, 1), ('puertas', 'negro', -.005, .005, .48, 1.80, 1, 16, .004, 0), ('manija', 'negro', .02, .14, 1.0, 1.03, 2, 1, .010, 0), ('paragolpes', 'negro', -.76, .76, .34, .46, 28, 2, .009, 0), ('patente', 'patente', -.6, -.2, .60, .70, 6, 2, .012, 0)],
         juntas=[(1.10, 'arcoF', 1.0), (.12, .32, 1.50)], junta_baja=None, manijas=[(.18, .32, .96, .99, 'negro')], molduras=[], espejo_en=(1.06, 1.04), cartel=(-1.0, 1.28))
 
-MODELOS = dict(suv=suv, toro=toro, bipper=bipper, fiorino=fiorino); C = MODELOS[TIPO]()
+MODELOS = dict(suv=suv, eq7=eq7, toro=toro, bipper=bipper, fiorino=fiorino); C = MODELOS[TIPO]()
 L, W, EJ = C['L'], C['W'], C['EJ']; XF = L / 2; XR = -L / 2; AXF = XF - C['vF']; AXR = AXF - EJ; RR = C['RR']      # ejes y radio de rueda
 def curva(pts):
     """interpola suave (Catmull-Rom) por los puntos (x, valor); se ordenan de atrás hacia adelante"""
@@ -214,7 +228,7 @@ for s in (-1, 1):
         bpy.ops.mesh.primitive_cube_add(size=1, location=((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)); o = bpy.context.active_object; o.name = nm; o.scale = (x1 - x0, abs(y1 - y0), z1 - z0); bpy.ops.object.transform_apply(scale=True)
         b = o.modifiers.new('b', 'BEVEL'); b.width = bis; b.segments = 3; bpy.ops.object.modifier_apply(modifier='b'); o.data.materials.append(M[m_]); [setattr(p, 'use_smooth', True) for p in o.data.polygons]; piezas.append(o)
 # ruedas torneadas: cubierta con hombro redondo, llanta hundida con cinco rayos dobles
-RL = C['RL']; TW = C['tw']
+RL = C['RL']; TW = C['tw']; RAY = C.get('rayos') or ((-.2, .2), .16, .045 * .27 / C['RL'])
 def rueda(x, s):
     y = s * (W / 2 - TW - .03); bm = bmesh.new(); SEG = 32
     def torno(perfil):
@@ -232,7 +246,7 @@ def rueda(x, s):
         q = (v0[0], v0[1], v1[1], v1[0]); return [bm.faces.new(q[::-1] if s < 0 else q)]
     for k in range(5):
         a = 2 * math.pi * k / 5 + .31
-        for d in (-.2, .2): l += sector(.055, RL - .014, a + d * .55, .16, .045 * .27 / RL, TW - .02)
+        for d in RAY[0]: l += sector(.055, RL - .014, a + d * .55, RAY[1], RAY[2], TW - .02)
     l += torno([(.075, TW - .02), (.07, TW - .006), (.0005, TW - .002)])
     for q in g: q.material_index = 0
     for q in l: q.material_index = 1

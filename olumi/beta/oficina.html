@@ -1292,6 +1292,8 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
   window.__ofi.cruzar=()=>{const a=S.people.filter(p=>!p.inVan&&!p.virtual);a.forEach((p,i)=>{const d=deskOf(a[(i+1)%a.length]);goTo(p,d.x+.2,d.y+1.7)})};
   window.__ofi.reunion=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>aReunion(p));
   window.__ofi.volver=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)});
+  // para las fotos de prueba: cambiar datos de los vehículos del estacionamiento (nombre, modelo, tipo, color), por posición
+  window.__ofi.flota=l=>l.forEach((x,i)=>{if(x&&S.vans[i])Object.assign(S.vans[i],x)});
   // cámara del recorrido: se camina pegado a una pared moviendo apenas la vista. Vibrar = ir y venir: se cuentan los cambios de sentido (acercarse ↔ alejarse)
   // de más de 2 cm y el mayor paso hacia afuera en un cuadro, en la medida cruda (libre) y en la cámara ya suavizada
   window.__ofi.camara=()=>{const g={x:WALK.x,y:WALK.y,s:WALK.camS,h:WALK.camHold,T},out={};
@@ -1439,10 +1441,12 @@ function mkPersonGLB(p){const md=AV.mod[avPick(p)];if(!md)return null;let o;try{
 const vehOn=()=>Q.n<3;
 function vehPick(v,k){if(!vehOn())return null;const L=Object.values(AV.veh);if(!L.length)return null;const t=(v.model||'')+' '+(v.n||'');
   return L.find(m=>m.re&&m.re.test(t))||L.find(m=>(m.tipo||m.id)===k&&m.porDefecto)||L.find(m=>(m.tipo||m.id)===k)||null}
-function mkVehGLB(v,md){try{const g=new THREE.Group(),b=new THREE.Group(),col=v.col||md.color||'#e8eaed';
-    const mm={pintura:M('vehp'+col,{color:col,metalness:.28,roughness:.34,clearcoat:.8,clearcoatRoughness:.1},1),vidrio:M('vglass2',{color:'#263039',metalness:.3,roughness:.1}),negro:M('vdark',{color:'#1f2125',roughness:.7}),
+function mkVehGLB(v,md){try{const g=new THREE.Group(),b=new THREE.Group(),col=v.col||md.color||'#e8eaed',[cr,cg,cb]=hex2(col),osc=(.299*cr+.587*cg+.114*cb)/255<.14;
+    // pintura oscura: sin reflejos un auto negro es una mancha; se le da más brillo y más reflejo del entorno para que se lean las formas
+    const sube=c=>Math.max(c,22),pint=osc?{color:new THREE.Color(sube(cr)/255,sube(cg)/255,sube(cb)/255+.01),metalness:0,roughness:.3,clearcoat:1,clearcoatRoughness:.04,envMapIntensity:4.5}:{color:col,metalness:.28,roughness:.34,clearcoat:.8,clearcoatRoughness:.1};
+    const mm={pintura:M('vehp'+col,pint,1),vidrio:M('vglass2',{color:'#263039',metalness:.3,roughness:.1}),negro:M('vdark',{color:'#1f2125',roughness:.7}),
       faro:M('vhead',{color:'#fffbe8',emissive:'#fff6c8',emissiveIntensity:.4}),stop:M('vtail',{color:'#ff453a',emissive:'#ff453a',emissiveIntensity:.5}),patente:M('vplate',{color:'#f1f1ec',roughness:.5}),
-      cromo:M('vchrome',{color:'#c7c7cc',metalness:.9,roughness:.25}),goma:M('tire',{color:'#161618',roughness:.9}),llanta:M('vrim',{color:'#c9ccd1',metalness:.55,roughness:.34})};
+      cromo:M('vchrome',{color:'#c7c7cc',metalness:.9,roughness:.25}),goma:M('tire',{color:'#161618',roughness:.9}),llanta:md.llanta?M('vrim'+md.llanta,{color:md.llanta,metalness:.2,roughness:.3,clearcoat:1,clearcoatRoughness:.1,envMapIntensity:7},1):M('vrim',{color:'#c9ccd1',metalness:.55,roughness:.34})};
     [mm.vidrio,mm.faro,mm.stop,mm.cromo,mm.patente].forEach(m=>m.userData.nc=1);md.scene.updateMatrixWorld(true);
     md.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,mm[o.material&&o.material.name]||mm.negro);m.applyMatrix4(o.matrixWorld);b.add(m)});
     const ad=md.adelante||0;b.position.x=ad;const mb=merge(b);g.add(mb);
