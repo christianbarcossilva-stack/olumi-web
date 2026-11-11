@@ -943,6 +943,10 @@ function prepNave(N) {
 }
 if (BLANK) NAVES.length = 0;
 NAVES.forEach(prepNave);
+// E10 (video del 11/11): andenes 13 a 27 al norte del alero, portones a nivel 30, 32 y 33, y andenes 34 a 54 hasta la esquina sur
+{ const N = NAVES.find(n => n.id === 'e10'); if (N) { for (const d of N.docks) { const i = DOCKS.indexOf(d); if (i >= 0) DOCKS.splice(i, 1); } N.docks = []; let k = 1;
+  const put = (u, num) => { const [x, z] = NP(N, u, 8.9), d = { nave: N, k: k++, u, x, z, head: Math.atan2(-N.n[1], N.n[0]), occ: null, num }; N.docks.push(d); DOCKS.push(d); };
+  for (let i = 0; i < 15; i++) put(20 + i * 5.07, 13 + i); for (let i = 0; i < 21; i++) put(172 + i * 6.25, 34 + i); N.nivel = [[151, 30], [158, 32], [164.5, 33]]; } }
 const naveById = id => NAVES.find(n => n.id === id);
 const GATE_POS = [...px(62, 727)], ADMIN_POS = px(274, 525);
 const ZONAS = [
@@ -5187,13 +5191,28 @@ pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 3)
   add('edif', 970, 622, { w: 34, d: 24, h: 11, pisos: 0, yaw: yawDir(1, -0.6), name: 'Galpón de la planta vecina' }); ed(930, 944, 530, 548, 3.4, { pisos: 1, name: 'Portería de la planta vecina' });
   add('tanque', 805, 726, { r: 9, h: 2.4, name: 'Tanque australiano' });
 })(pzSeed);
-// E10: el alero grande sobre los andenes y el cartel azul de cada andén (de los videos)
+// junto a la esquina sur de E10 (video del 11/11): tanque bajo, silo y la casilla de la subestación
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 4) return; ED.seed = 4; const has = new Set(PROPS.map(q => q.id));
+  const add = (id, k, X, Y, op) => { if (has.has(id)) return; const [x, z] = px(X, Y); PROPS.push(Object.assign({ id, type: 'prop', k, seed: 7, x, y: 0, z, yaw: 0 }, op)); };
+  add('TQ-E10A', 'tanque', 588, 1017, { r: 4.6, h: 2.6, name: 'Tanque de agua' }); add('TQ-E10B', 'tanque', 595.5, 1012.5, { r: 1.5, h: 13, name: 'Silo' }); add('EDI-E10S', 'edif', 602, 1027, { w: 5, d: 4.2, h: 4, pisos: 0, name: 'Subestación' }); })(pzSeed);
+// E10: el alero sobre el tramo del medio, el número de cada andén y los portones a nivel (de los videos)
 buildNave = (o => function (N) { o(N); if (BLANK || N.id !== 'e10' || !N.docks || !N.docks.length) return; const ob = OBJID.get(N.id); if (!ob || !ob.geo) return; const g = ob.geo;
   const lb = (u0, u1, v0, v1, y0, y1, col, op) => { const [ax, az] = NP(N, u0, v0), [bx, bz] = NP(N, u1, v1); g.box(Math.min(ax, bx), y0, Math.min(az, bz), Math.max(ax, bx), y1, Math.max(az, bz), col, op); };
-  const us = N.docks.map(d => d.u), u0 = Math.min(...us) - 4, u1 = Math.max(...us) + 4;
-  lb(u0, u1, 0.3, 5.4, 6.8, 7.05, P.roof, { top: P.roof, bottom: true, ao: 0.95 }); lb(u0, u1, 5.2, 5.45, 6.55, 7.1, P.parapet, { ao: 1 });
-  for (let u = u0 + 3; u < u1; u += 9) { lb(u - 0.05, u + 0.05, 0.32, 5.3, 7.05, 7.15, P.frame, { ao: 1 }); lb(u - 0.06, u + 0.06, 0.3, 0.42, 7.05, 9.6, P.frame, { ao: 1 }); }
-  for (const d of N.docks) lb(d.u - 0.45, d.u + 0.45, 0.32, 0.37, 5.95, 6.45, '#2F6FD6', { ao: 1 });
+  const u0 = N.skip ? N.skip[0] + 1 : 95, u1 = N.skip ? N.skip[1] - 1 : 147, DV = 13, AM = '#F2C230';
+  lb(u0, u1, 0.3, DV, 7.2, 7.45, P.roof, { top: P.roof, bottom: true, ao: 0.95 }); lb(u0, u1, DV - 0.25, DV, 6.95, 7.5, P.parapet, { ao: 1 });
+  for (let i = 0; i <= 6; i++) { const u = u0 + 0.5 + i * (u1 - u0 - 1) / 6; lb(u - 0.22, u + 0.22, DV - 0.62, DV - 0.18, 0, 7.2, '#F2F4F5', { ao: 0.95 }); lb(u - 0.5, u + 0.5, DV - 0.95, DV + 0.15, 0, 0.9, AM, { ao: 1 }); }
+  // número de cada andén, con dígitos de siete segmentos sobre la chapa azul
+  const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgecd', 7: 'abc', 8: 'abcdefg', 9: 'abfgcd' }, W7 = 0.22, H7 = 0.36, T7 = 0.05;
+  const num = (n, uc) => { const s = String(n), y0 = 6.02; lb(uc - 0.45, uc + 0.45, 0.32, 0.37, 5.95, 6.45, '#2F6FD6', { ao: 1 });
+    [...s].forEach((ch, i) => { const c = uc + (i - (s.length - 1) / 2) * 0.34, q = (a, b, y, yy) => lb(c + a, c + b, 0.37, 0.385, y0 + y, y0 + yy, '#FFFFFF', { e: 0.25, ao: 1 });
+      for (const k of SEG[ch] || '') { if (k === 'a') q(-W7 / 2, W7 / 2, H7 - T7, H7); if (k === 'd') q(-W7 / 2, W7 / 2, 0, T7); if (k === 'g') q(-W7 / 2, W7 / 2, H7 / 2 - T7 / 2, H7 / 2 + T7 / 2);
+        if (k === 'b') q(W7 / 2 - T7, W7 / 2, H7 / 2, H7); if (k === 'c') q(W7 / 2 - T7, W7 / 2, 0, H7 / 2); if (k === 'f') q(-W7 / 2, -W7 / 2 + T7, H7 / 2, H7); if (k === 'e') q(-W7 / 2, -W7 / 2 + T7, 0, H7 / 2); } }); };
+  for (const d of N.docks) num(d.num || d.k, d.u);
+  // portones a nivel del piso, con defensas amarillas a los costados
+  for (const [u, n] of N.nivel || []) { lb(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, P.frame, { ao: 1 }); lb(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, '#16191C', { ao: 1 }); num(n, u);
+    for (const s of [-1, 1]) lb(u + s * 2.75 - 0.16, u + s * 2.75 + 0.16, 0.5, 0.82, 0, 1.15, AM, { ao: 1 }); }
+  // rejillas de desagüe en el adoquín del patio
+  for (let u = 24; u < N.L - 10; u += 29) lb(u - 1.3, u + 1.3, 24, 25.1, 0.05, 0.075, '#3A3F44', { ao: 1 });
   ob.version++; })(buildNave);
 
 /* ---------- parques de simulación (clientes inventados): se arman solos con este código y no copian ningún predio real ----------
