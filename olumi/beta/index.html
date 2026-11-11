@@ -4082,7 +4082,7 @@ const roleViews=()=>PORTAL()?null:(ROLV[ROLE]===undefined?null:ROLV[ROLE]);
 /* 1.32: canal de pruebas */
 const BETA=/\/beta\//.test(location.pathname)||(()=>{try{return localStorage.getItem('olumi.beta')==='1'}catch(e){return false}})();
 const enPrueba=()=>BETA;            // funciones nuevas: solo en el canal de pruebas hasta que se aprueben
-const hasVivo=()=>has('vivo')||enPrueba();
+const hasVivo=()=>has('vivo')||enPrueba()||!!(PLAN&&PLAN.founder);
 const viewOk=v=>{if(v==='vivo'&&!hasVivo())return false;if(v==='agentes'&&!agOk())return false;if(v==='personal'&&!isRRHH())return false;const l=roleViews();return!l||l.includes(v)||(v==='plan'&&isBoss())||(v==='admin'&&ISADMIN)};
 function subGuard(){if(VIEW==='vivo'&&!hasVivo())VIEW='hoy';document.body.classList.remove('tec','sub');const l=roleViews();if(!l)return;
   if(ROLE==='tecnico')document.body.classList.add('tec');if(ROLE==='subcontratista'){document.body.classList.add('sub');PRYTAB='tareas'}
@@ -5272,9 +5272,18 @@ const hmNow=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+
 /* --- compartir la ubicación (la app del técnico) --- */
 setInterval(()=>{const el=document.getElementById('vrClock');if(el)el.textContent=new Date().toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})},1000);
 function geoStart(){if(!navigator.geolocation||VIVO.watch!=null||!ME||!ORG)return;
-  VIVO.watch=navigator.geolocation.watchPosition(async p=>{const now=Date.now();if(now-VIVO.lastSend<10000)return;VIVO.lastSend=now;
-    const d={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),vel:Math.round((p.coords.speed||0)*3.6),ts:now,nombre:(NAMES[ME]&&NAMES[ME].name)||''};
-    try{await put('posiciones',ME,d);D.posiciones=D.posiciones||{};D.posiciones[ME]=d}catch(e){}},()=>{toast('No se pudo leer la ubicación. Revisá el permiso del navegador.');geoToggle(false)},{enableHighAccuracy:true,maximumAge:5000});}
+  // solo el permiso negado la apaga: sin señal o demora del GPS son pasajeros y se sigue intentando
+  VIVO.watch=navigator.geolocation.watchPosition(p=>geoSend(p),e=>{if(e&&e.code===1){toast('No se pudo leer la ubicación. Revisá el permiso del navegador.');geoToggle(false)}},{enableHighAccuracy:true,maximumAge:5000});}
+async function geoSend(p,ya){const now=Date.now();if(p)VIVO.last=p;const q=p||VIVO.last;if(!q||!ME||(!ya&&now-VIVO.lastSend<10000))return;VIVO.lastSend=now;
+  const d={lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6),acc:Math.round(q.coords.accuracy||0),vel:p?Math.round((p.coords.speed||0)*3.6):0,ts:now,nombre:(NAMES[ME]&&NAMES[ME].name)||''};
+  try{await put('posiciones',ME,d);D.posiciones=D.posiciones||{};D.posiciones[ME]=d}catch(e){}}
+// quieto en una obra también cuenta: cada minuto se confirma la última posición; al volver a la app o recuperar internet se retoma sola
+setInterval(()=>{if(VIVO.geoOn&&VIVO.last&&document.visibilityState==='visible'&&Date.now()-VIVO.lastSend>60000)geoSend(null,true)},20000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!VIVO.geoOn||!navigator.geolocation||!ME||!ORG)return;geoStop();geoStart();navigator.geolocation.getCurrentPosition(p=>geoSend(p,true),()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:15000})});
+addEventListener('online',()=>{if(VIVO.geoOn)geoSend(null,true)});
+function geoPedir(id){if(id===ME){if(!VIVO.geoOn)geoToggle(true);return}const n=personName(id).split(' ')[0],tel=tecFicha(id).telefono,msg=`Hola ${n}, abrí Olumi y dejá prendido “Compartir ubicación”, así te vemos en el mapa: https://unitytech.uy/olumi/${BETA?'beta':'app'}/?geo=1`;
+  if(tel&&waLink(tel)){window.open(waLink(tel)+'?text='+encodeURIComponent(msg),'_blank');toast(`Se abrió WhatsApp para pedirle la ubicación a ${n}`)}
+  else{try{navigator.clipboard.writeText(msg)}catch(e){}toast(`${n} no está compartiendo la ubicación. Copié el pedido para que se lo mandes.`)}}
 function geoStop(){if(VIVO.watch!=null&&navigator.geolocation){navigator.geolocation.clearWatch(VIVO.watch)}VIVO.watch=null}
 function geoToggle(on){VIVO.geoOn=!!on;try{lsSet('olumi.geo',on?'1':'0')}catch(e){}if(on)geoStart();else geoStop();sr()}
 const geoBtn=()=>navigator.geolocation?`<button class="btn${VIVO.geoOn?' pri':''}" data-act="geotoggle" title="Mientras está activo, la oficina te ve en el mapa de En vivo">${VIVO.geoOn?'📍 Compartiendo ubicación':'📍 Compartir ubicación'}</button>`:'';
@@ -5326,7 +5335,7 @@ function vVivo(){if(!hasVivo())return`<div class="vhead vhead-top"><div><h1>En v
     ${n?`<div class="near"><span class="av" style="background:${techColor(n.t.id)}">${esc(n.t.n[0])}</span><div><b>${esc(n.t.n)}</b><br><span class="muted">la más cercana · <span data-eta="${n.t.id}|${t.clienteId}">${n.r?`${n.r.km.toFixed(1)} km por calle · ${n.r.min} min`:`${n.km.toFixed(1)} km · ~${etaMin(n.km)} min`}</span></span></div></div><button class="btn pri" data-act="vivoasig:${t.id}:${n.t.id}">Mandar a ${esc(n.t.n)}</button>`
     :`<div class="vr-alact"><span class="muted">${!t.clienteId?'Sin cliente asignado':c&&c.geo?'Nadie compartiendo ubicación':'Falta la dirección del cliente'}</span><button class="vr-btn sm" data-open="tk:${t.id}">Abrir</button></div>`}</div>`}).join('');
   const feed=vivoFeed().map(i=>`<div class="vev ${i.cls}" role="button" tabindex="0" data-open="${i.open}"><i></i><div><b>${esc(i.b)}</b><span>${esc(i.s)}</span></div><time>${minAgo(i.ts)<1?'ahora':minAgo(i.ts)<60?minAgo(i.ts)+' min':minAgo(i.ts)<1440?Math.round(minAgo(i.ts)/60)+' h':fdate(new Date(i.ts).toISOString().slice(0,10))}</time></div>`).join('')||'<p class="muted">Todavía no pasó nada hoy.</p>';
-  const fleet=d.techs.map(t=>`<button class="tech" type="button" data-act="vivofoco:${t.id}"><span class="av" style="background:${techColor(t.id)}">${esc(t.n[0])}</span><span><b>${esc(t.n)}</b>${vehOf(t.id)?`<span>🚐 ${esc(vehTxt(vehOf(t.id)))}</span>`:''}<span>${t.cur?esc((cliName(t.cur.clienteId)||t.cur.obra||'')+' · '+(t.cur.titulo||'')):t.total?`${t.done} de ${t.total} visitas hechas`:'Sin visitas hoy'}</span><span class="st ${t.fresh?(t.st==='obra'?'obra':'camino'):'fin'}">${t.fresh?(t.st==='obra'?'En obra':'En movimiento')+' · hace '+minAgo(t.p.ts)+' min':t.p?'Última posición hace '+(minAgo(t.p.ts)<1440?Math.round(minAgo(t.p.ts)/60)+' h':'más de un día'):'No comparte ubicación'}</span></span></button>`).join('')||'<p class="muted">Cuando un técnico active “Compartir ubicación” en Mi día, aparece acá.</p>';
+  const fleet=d.techs.map(t=>`<button class="tech" type="button" data-act="vivofoco:${t.id}"><span class="av" style="background:${techColor(t.id)}">${esc(t.n[0])}</span><span><b>${esc(t.n)}</b>${vehOf(t.id)?`<span>🚐 ${esc(vehTxt(vehOf(t.id)))}</span>`:''}<span>${t.cur?esc((cliName(t.cur.clienteId)||t.cur.obra||'')+' · '+(t.cur.titulo||'')):t.total?`${t.done} de ${t.total} visitas hechas`:'Sin visitas hoy'}</span><span class="st ${t.fresh?(t.st==='obra'?'obra':'camino'):'fin'}">${t.fresh?(t.st==='obra'?'En obra':'En movimiento')+' · hace '+minAgo(t.p.ts)+' min':t.p?(minAgo(t.p.ts)<60?'Última posición hace '+minAgo(t.p.ts)+' min':minAgo(t.p.ts)<1440?'Última posición hace '+Math.round(minAgo(t.p.ts)/60)+' h':'Última posición hace más de un día')+' · tocá para pedírsela':'No comparte ubicación · tocá para pedírsela'}</span></span></button>`).join('')||'<p class="muted">Cuando un técnico active “Compartir ubicación” en Mi día, aparece acá.</p>';
   setTimeout(vivoMount,0);
   const sinTec=!d.techs.some(t=>t.fresh);
   return`<div class="vroom">`+head+`<div class="vivo-grid"><section class="vivo-map" id="vivoMapBox"><div id="vivoMapHost"></div><div class="vr-maptitle"><span class="live"></span>${esc(CFG.ciudad||'Montevideo')} · posiciones cada 10 s · ${d.clis.length} cliente${d.clis.length===1?'':'s'} en el mapa</div>
@@ -5365,7 +5374,7 @@ function vivoMarkers(){if(!VIVO.map||!window.L)return;const d=vivoData();VIVO.la
 async function vivoAct(k,el,arg){
   if(k==='geotoggle'){geoToggle(!VIVO.geoOn);return true}
   if(k==='vivotv'){document.body.classList.toggle('tv');if(document.body.classList.contains('tv')&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});else if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});sr();setTimeout(()=>VIVO.map&&VIVO.map.invalidateSize(),300);return true}
-  if(k==='vivofoco'){const p=posOf(arg);if(p&&VIVO.map){VIVO.map.setView([p.lat,p.lng],15)}else toast('Ese técnico no está compartiendo la ubicación.');return true}
+  if(k==='vivofoco'){const p=posOf(arg);if(p&&VIVO.map)VIVO.map.setView([p.lat,p.lng],15);if(!geoFresh(p))geoPedir(arg);return true}
   if(k==='vivoasig'){const [tid,uid2]=String(arg).split(':');const t=D.tickets[tid];if(!t)return true;const id=uid();
     const j={creado:Date.now(),actualizado:Date.now(),estado:'programado',fecha:today(),hora:hmNow(),duracion:1,tecnicos:[uid2],ticketId:tid,proyectoId:t.proyectoId||'',clienteId:t.clienteId||'',titulo:t.titulo||'Urgencia',obra:t.obra||'',notas:'Asignado desde En vivo: era el técnico más cercano.',fotos:[],planos:[]};
     await put('trabajos',id,j);D.trabajos[id]=j;if((t.estado||'nuevo')==='nuevo')await patch('tickets',tid,{estado:'agendado',responsable:uid2,actualizado:Date.now()});toast(personName(uid2)+' queda asignado. Avisale por WhatsApp desde la visita.');sr();openSheet('trab',id);return true}
@@ -5856,7 +5865,7 @@ function mdFac(){const ls=arr('gastos').filter(g=>g.por===ME).sort((a,b)=>(b.fec
 function mdRep(){const ls=arr('trabajos').filter(j=>(j.tecnicos||[]).includes(ME)&&(j.estado!=='programado'||j.informe)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.actualizado)-n0(a.actualizado)).slice(0,20);
   return`<p class="hint" style="margin-top:0">El reporte es el parte de cada día en el cliente: qué hiciste, materiales, horas y la firma del cliente. Le llega al jefe de operaciones y a Administración, y queda en el proyecto del cliente.</p>
     <div class="actions" style="margin-bottom:12px">${readonly?'':'<button class="btn pri" data-act="mdrep">+ Nuevo reporte</button>'}</div>${ls.length?`<div class="list">${ls.map(j=>`<div class="row" role="button" tabindex="0" data-open="rep:${j.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(jCli(j)||j.titulo||'Trabajo')}</strong><span class="muted">${esc([fdate(j.fecha),j.titulo,pryName(j.proyectoId)].filter(Boolean).join(' · '))}</span></div><span style="text-align:right">${j.cargo?`<span class="tag t-none">${CARGOK[j.cargo]}${n0(j.horasMO)?' · '+hsTxt(j.horasMO):''}</span><br>`:''}${j.firma&&j.firma.id?'<span class="tag t-ok">Firmado</span>':j.estado==='terminado'?'<span class="tag t-warn">Sin firma</span>':'<span class="tag t-acc">En curso</span>'}</span></div>`).join('')}</div>`:'<p class="muted">Todavía no hay reportes.</p>'}`}
-function mdUbi(){return`<section class="rel"><h3>Ubicación</h3><p style="margin:0 0 10px">Mientras está activo, la oficina te ve en el mapa de "En vivo" y sabe quién está más cerca de una urgencia. Funciona con la app abierta.</p><div class="actions">${geoBtn()||'<span class="muted">Este dispositivo no permite compartir la ubicación.</span>'}</div></section>`}
+function mdUbi(){return`<section class="rel"><h3>Ubicación</h3><p style="margin:0 0 10px">Mientras está activo, la oficina te ve en el mapa de "En vivo" y sabe quién está más cerca de una urgencia. Funciona con la app abierta; si salís, al volver se retoma sola.</p><div class="actions">${geoBtn()||'<span class="muted">Este dispositivo no permite compartir la ubicación.</span>'}</div></section>`}
 /* 1.45: reporte en una sola pantalla · 1.46: reporte tecnico (sin lista de clientes, materiales por origen, unido al ticket) */
 let REPJ=null;
 function jCli(j){return cliName(j&&j.clienteId)||(j&&j.clienteNombre?j.clienteNombre+' (sin registrar)':'')}
@@ -6410,7 +6419,7 @@ async function boot(){
     if(og){mems=[...mems,{org_id:sop,role:'admin',soporte:true,orgs:{name:og.name,join_code:og.join_code}}];lsSet('olumi.org',sop)}else{localStorage.removeItem('olumi.soporte');if(lsGet('olumi.org')===sop)localStorage.removeItem('olumi.org')}}}
   if(!mems.length){clearTimeout(slowT);showAuth('org');return}
   MEMS=mems;const pick=mems.find(m=>m.org_id===lsGet('olumi.org'))||mems[0];SOPORTE=!!pick.soporte;
-  try{if(lsGet('olumi.geo')==='1'){VIVO.geoOn=true;setTimeout(geoStart,3000)}}catch(e){}
+  try{if(lsGet('olumi.geo')==='1'||/[?&]geo=1/.test(location.search)){VIVO.geoOn=true;lsSet('olumi.geo','1');setTimeout(geoStart,3000)}}catch(e){}
   ORG=pick.org_id;ROLE=pick.role;ORGINFO={id:ORG,...(pick.orgs||{})};lsSet('olumi.org',ORG);
   readonly=ROLE==='viewer'||ROLE==='cliente'||ROLE==='pendiente';
   if(!lsGet('crm.view')&&!PORTAL())VIEW=isLead()?'hoy':ROLE==='tecnico'||ROLE==='subcontratista'?'campo':'tickets';
