@@ -40,6 +40,9 @@
 .card h3 .code{font-weight:600;opacity:.75;margin-right:4px}
 @media(max-width:640px){.fjp input{width:60px}.fjr>select{flex:1 1 120px}}
 /* fin CRM 1.49 */
+/* 1.49b */
+.calover{outline:2px dashed var(--accent);outline-offset:-3px;border-radius:12px}.ev[draggable=true],.mev[draggable=true]{cursor:grab}.ev.drag,.mev.drag{opacity:.45}
+/* fin 1.49b */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1367,7 +1370,7 @@ function render(){
   {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+setupBanner();
+  $('#banner').innerHTML=(BETA?`<p class="note beta-note">🧪 <b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">🛠 <b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner();
   $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -1764,7 +1767,7 @@ function sheetTrab(id,p){
   const loc=[j.obra||c?.direccion,c?.departamento].filter(Boolean).join(', ');
   const data=`<div class="grid">${TRF().map(f=>fld(f,j[f.k])).join('')}<div class="fld full"><span>Técnicos</span>${techsHtml(j.tecnicos||[])}${cuaPickHtml()}</div></div><p class="err" id="shErr" hidden></p>`;
   if(!id)return sheetFrame('Trabajo'+(t?' · '+t.numero:''),'Agendar trabajo',(t?`<div class="contact">${prChip(tkPrio(t))}<span>${PRN[tkPrio(t)]}</span>${aboTag(t.clienteId)}</div>`:'')+data);
-  const body=`<div class="contact">${t?prChip(tkPrio(t))+`<span class="code">${esc(t.numero)}</span>`:''}<strong>${esc(c?.nombre||j.clienteNombre||'Sin cliente')}</strong>${aboTag(j.clienteId)}<span class="muted">${fdate(j.fecha)} ${esc(j.hora||'')}</span></div>
+  const body=`<div class="contact">${t?prChip(tkPrio(t))+`<span class="code">${esc(t.numero)}</span>`:''}<strong>${esc(c?.nombre||j.clienteNombre||'Sin cliente')}</strong>${aboTag(j.clienteId)}<span class="muted">${fdate(j.fecha)} ${esc(j.hora||'')}</span></div>${calAvisoHtml(j,c)}
     <div class="actions">${j.estado==='programado'?'<button class="btn pri" data-act="jstate:en_curso">Empezar trabajo</button>':''}${j.estado==='en_curso'?'<button class="btn pri" data-act="jstate:terminado">Terminar trabajo</button>':''}${j.estado==='terminado'?'<span class="tag t-ok">Terminado</span>':''}
       ${loc?`<a class="btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc+', Uruguay')}" target="_blank" rel="noopener">Cómo llegar</a>`:''}
       ${c?.telefono?`<a class="btn" href="tel:${esc(String(c.telefono).replace(/[^\d+]/g,''))}">Llamar</a>`:''}${c?.telefono&&waLink(c.telefono)?`<a class="btn" href="${esc(waLink(c.telefono))}" target="_blank" rel="noopener">WhatsApp</a>`:''}
@@ -1849,7 +1852,7 @@ async function onUpload(inp){
 function monday(d){const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 function evHtml(j){
   const t=j.ticketId&&D.tickets[j.ticketId],p=t?tkPrio(t):4;
-  return`<div class="ev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" style="--ec:${PRC[p]}"><span class="h">${esc(j.hora||'')}${j.duracion?` · ${qty(j.duracion)} h`:''}${j.estado==='terminado'?' · ✓':''}</span><b>${esc(jCli(j)||j.titulo||'Trabajo')}</b><span class="muted">${esc(j.titulo||'')}</span> ${(j.tecnicos||[]).map(av).join('')}</div>`;
+  return`<div class="ev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style="--ec:${PRC[p]}"><span class="h">${esc(j.hora||'')}${j.estado==='terminado'&&n0(j.horasMO)?` · ${qty(j.horasMO)} h reales`:j.duracion?` · ${qty(j.duracion)} h`:''}${j.estado==='terminado'?' · ✓':''}</span><b>${esc(jCli(j)||j.titulo||'Trabajo')}</b><span class="muted">${esc(j.titulo||'')}</span> ${(j.tecnicos||[]).map(av).join('')}</div>`;
 }
 /* 1.27: calendario por período */
 let CALV=(()=>{try{return lsGet('crm.calv')||'semana'}catch(e){return'semana'}})();
@@ -1869,17 +1872,17 @@ function vCal(){
     <select id="calTec" data-ch="calTec" aria-label="Filtrar por técnico"><option value="">Todos los técnicos</option>${opts(peopleOpts().slice(1),calTec)}</select></div></div>`;
   if(CALV==='mes'){const m=mesRef.getMonth();return head+`<div class="month"><div class="mh">${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<span>${x}</span>`).join('')}</div><div class="mg">${days.map(d=>{const dd=new Date(d+'T12:00');const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));const da=acts.filter(a=>a.fecha.slice(0,10)===d);
       return`<section class="mday${d===t?' today':''}${dd.getMonth()!==m?' other':''}" data-date="${d}"><div class="mdh"><b data-act="mday:${d}" role="button" tabindex="0">${dd.getDate()}</b>${!readonly?`<button class="madd" data-new="trab" data-date="${d}" aria-label="Nuevo trabajo el ${fdate(d)}">+</button>`:''}</div>
-        ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" style="--ec:${PRC[p]}" title="${esc((j.hora||'')+' '+(jCli(j)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(jCli(j)||j.titulo||'Trabajo')}</div>`}).join('')}
-        ${da.slice(0,2).map(a=>`<div class="mev fu" role="button" tabindex="0" data-open="act:${a.id}">${esc(a.fecha.slice(11,16))} ${esc(a.titulo||'')}</div>`).join('')}
+        ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style=""--ec:${PRC[p]}" title="${esc((j.hora||'')+' '+(jCli(j)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(jCli(j)||j.titulo||'Trabajo')}</div>`}).join('')}
+        ${da.slice(0,2).map(a=>`<div class="mev fu" role="button" tabindex="0" data-open="act:${a.id}" draggable="${calMueve()}" data-cal="a:${a.id}">${esc(a.fecha.slice(11,16))} ${esc(a.titulo||'')}</div>`).join('')}
         ${dj.length>4?`<div class="mmore">+${dj.length-4} más</div>`:''}</section>`}).join('')}</div></div>
-    <p class="hint" style="margin-top:12px">Clic en un día para ver la semana. El color marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4.</p>`}
+    <p class="hint" style="margin-top:12px">Clic en un día para ver la semana. Para reprogramar, arrastrá el trabajo a otro día. El color marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4.</p>`}
   return head+`<div class="week${CALV==='quincena'?' q2':''}">${days.map((d,i)=>{
     const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')),da=acts.filter(a=>a.fecha.slice(0,10)===d);
     const dn=new Date(d+'T12:00').toLocaleDateString('es-UY',{weekday:'long'});
-    return`<section class="day${d===t?' today':''}${i%7>4?' off':''}${!dj.length&&!da.length?' noev':''}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
-      <div class="dayb">${dj.map(evHtml).join('')}${da.map(a=>`<div class="ev fu" role="button" tabindex="0" data-open="act:${a.id}"><span class="h">${esc(a.fecha.slice(11,16))} · seguimiento</span><b>${esc(a.titulo||'')}</b></div>`).join('')}</div>
+    return`<section class="day${d===t?' today':''}${i%7>4?' off':''}${!dj.length&&!da.length?' noev':''}" data-date="${d}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
+      <div class="dayb">${dj.map(evHtml).join('')}${da.map(a=>`<div class="ev fu" role="button" tabindex="0" data-open="act:${a.id}" draggable="${calMueve()}" data-cal="a:${a.id}"><span class="h">${esc(a.fecha.slice(11,16))} · seguimiento</span><b>${esc(a.titulo||'')}</b></div>`).join('')}</div>
       <button class="dayadd" data-new="trab" data-date="${d}">+ Trabajo</button></section>`}).join('')}</div>
-    <p class="hint" style="margin-top:12px">El color del borde marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4. Cada trabajo tiene un botón para copiarlo a Google Calendar.</p>`;
+    <p class="hint" style="margin-top:12px">El color del borde marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4. Cada trabajo tiene un botón para copiarlo a Google Calendar. Para reprogramar, arrastrá el trabajo a otro día.</p>`;
 }
 function jobCard(j){
   const c=D.clientes[j.clienteId],t=j.ticketId&&D.tickets[j.ticketId];
@@ -2303,6 +2306,7 @@ if(await planosAct(k,el,arg))return;
   if(await avAct(k,el,arg))return;
   if(await crmAct(k,el,arg))return;
   if(await fjAct(k,el,arg))return;
+  if(await opeAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -2720,6 +2724,40 @@ function fjAntes(){if(!CRMD||!Array.isArray(CRMD.flujo)||!CRMD.flujo.length)retu
   return arr('oportunidades').filter(o=>!ks.has(o.etapa||'nuevo')).map(o=>{let i=viejo.indexOf(o.etapa);while(i>0&&!ks.has(viejo[i]))i--;return[o.id,i>=0&&ks.has(viejo[i])?viejo[i]:'nuevo']})}
 async function fjDespues(mv){for(const [id,k] of mv){const o=D.oportunidades[id];if(o)try{await put('oportunidades',id,{...o,etapa:k})}catch(e){}}if(mv.length)toast(`${pl(mv.length,'oportunidad pasó','oportunidades pasaron')} al bloque anterior`)}
 /* === fin CRM 1.49 === */
+/* === 1.49b · calendario y gastos === */
+/* --- calendario: arrastrar un trabajo o un seguimiento a otro día (llovió, hay que reprogramar) --- */
+let CDRAG='';
+const calMueve=()=>!readonly&&(!isTec()||isLead());
+const calDia=f=>new Date(f+'T12:00').toLocaleDateString('es-UY',{weekday:'long',day:'numeric',month:'long'});
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('[data-cal]');if(!c||!calMueve())return;CDRAG=c.dataset.cal;c.classList.add('drag');try{e.dataTransfer.setData('text/plain',CDRAG);e.dataTransfer.effectAllowed='move'}catch(x){}});
+document.addEventListener('dragend',()=>{CDRAG='';document.querySelectorAll('.calover,.ev.drag,.mev.drag').forEach(x=>x.classList.remove('calover','drag'))});
+document.addEventListener('dragover',e=>{if(!CDRAG)return;const d=e.target.closest&&e.target.closest('[data-date]');if(!d)return;e.preventDefault();document.querySelectorAll('.calover').forEach(x=>x!==d&&x.classList.remove('calover'));d.classList.add('calover')});
+document.addEventListener('drop',async e=>{if(!CDRAG)return;const d=e.target.closest&&e.target.closest('[data-date]');if(!d)return;e.preventDefault();const [tipo,id]=CDRAG.split(':'),f=d.dataset.date;CDRAG='';
+  try{if(tipo==='j'){const j=D.trabajos[id];if(!j||j.fecha===f)return;await put('trabajos',id,{...j,fecha:f,movidoDe:j.fecha,movidoEn:Date.now(),actualizado:Date.now()});const c=D.clientes[j.clienteId];toast(`Trabajo pasado al ${calDia(f)}.${c&&c.telefono?' Abrilo para avisarle al cliente.':''}`)}
+    else{const a=D.actividades[id];if(!a||!a.fecha||a.fecha.slice(0,10)===f)return;await put('actividades',id,{...a,fecha:f+a.fecha.slice(10)});toast(`Seguimiento pasado al ${calDia(f)}`)}}catch(x){}sr()});
+// después de mover un trabajo: el mensaje para coordinar de nuevo con el cliente, listo para mandar
+const calAvisoHtml=(j,c)=>{if(!j.movidoDe||j.movidoDe===j.fecha||Date.now()-n0(j.movidoEn)>4*864e5||j.estado==='terminado'||!c||!waLink(c.telefono))return'';
+  const n=String(c.contacto||c.nombre||'').trim().split(' ')[0],txt=`Hola${n?' '+n:''}, tuvimos que reprogramar ${j.titulo?'el trabajo “'+j.titulo+'”':'la visita'}: pasaría al ${calDia(j.fecha)}${j.hora?' a las '+j.hora:''}. ¿Te queda bien?`;
+  return`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Lo pasaste del ${fdate(j.movidoDe)} al ${fdate(j.fecha)}.</span><a class="btn" href="${waLink(c.telefono)}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Avisarle al cliente por WhatsApp</a></p>`};
+/* --- gastos: cómo se pagó cada factura (la empresa, el que compró, o a crédito para pagar después) --- */
+const GPAGO=[['empresa','Con plata de la empresa'],['propio','Con plata mía (me la devuelven)'],['credito','A crédito: se paga después']];
+const finMes=f=>{const d=new Date((f||today())+'T12:00');return localISO(new Date(d.getFullYear(),d.getMonth()+1,0,12)).slice(0,10)};
+const gPorPagar=g=>g.pago==='credito'&&!g.pagado&&g.estado!=='rechazado';
+const gPorDevolver=g=>g.pago==='propio'&&!['reembolsado','rechazado'].includes(g.estado||'pendiente');
+const gPagoTag=g=>gPorPagar(g)?`<span class="tag ${(g.vence||finMes(g.fecha))<today()?'t-bad':'t-warn'}">A crédito · se paga el ${fdate(g.vence||finMes(g.fecha))}</span>`:g.pago==='credito'?'<span class="tag t-none">Crédito pagado</span>':gPorDevolver(g)?`<span class="tag t-warn">Devolver${g.por?' a '+esc(personName(g.por).split(' ')[0]):''}</span>`:'';
+const gSuma=l=>['UYU','USD'].map(m=>[m,l.filter(g=>(g.moneda||'UYU')===m).reduce((a,g)=>a+n0(g.monto),0)]).filter(x=>x[1]>0).map(([m,v])=>money(v,m)).join(' + ')||money(0,'UYU');
+function gPagoKpis(all){const c=all.filter(gPorPagar),d=all.filter(gPorDevolver);return`<div class="kpi"><span>A crédito, por pagar</span><b>${gSuma(c)}</b></div><div class="kpi"><span>Por devolver al equipo</span><b>${gSuma(d)}</b></div>`}
+// aviso para administración: lo que se compró a crédito y vence (o ya venció), y siempre en los últimos días del mes
+function gastoBanner(){if(!ROLE||readonly||!gastoAdmin()||VIEW==='gastos')return'';let off='';try{off=localStorage.getItem('olumi.gcred.off')||''}catch(e){}if(off===today())return'';
+  const l=arr('gastos').filter(gPorPagar);if(!l.length)return'';const t=today(),en5=localISO(new Date(Date.now()+5*864e5)).slice(0,10),ven=l.filter(g=>(g.vence||finMes(g.fecha))<t).length,pro=l.filter(g=>{const v=g.vence||finMes(g.fecha);return v>=t&&v<=en5}).length;
+  if(!ven&&!pro&&finMes(t)>en5)return'';
+  return`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Hay ${pl(l.length,'factura a crédito','facturas a crédito')} por pagar (${gSuma(l)})${ven?`: ${pl(ven,'vencida','vencidas')}`:pro?`: ${pl(pro,'vence','vencen')} en estos días`:': cierra el mes'}.</span> <button class="btn ghost" data-act="gporpagar">Ver</button><button class="btn ghost" data-act="gcredoff" title="No mostrar más por hoy" aria-label="No mostrar más por hoy">✕</button></p>`}
+async function opeAct(k,el,arg){
+  if(k==='gporpagar'){lsSet('olumi.gfil','porpagar');VIEW='gastos';lsSet('crm.view',VIEW);render();window.scrollTo(0,0);return true}
+  if(k==='gcredoff'){try{localStorage.setItem('olumi.gcred.off',today())}catch(e){}render();return true}
+  if(k==='gpagado'){const g=D.gastos[arg];if(g&&gastoAdmin()&&!readonly){await put('gastos',arg,{...g,pagado:true,pagadoEn:today(),pagadoPor:ME||'',actualizado:Date.now()});toast('Anotado como pagado');if(SH)closeSheet();sr()}return true}
+  return false}
+/* === fin 1.49b === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -5695,12 +5733,12 @@ function gTrabOpts(v){const lim=localISO(new Date(Date.now()-10*864e5)).slice(0,
   const js=arr('trabajos').filter(j=>(j.id===v)||((j.fecha||'')>=lim&&(!isTec()||(j.tecnicos||[]).includes(ME)))).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
   return[['','Sin trabajo (gasto general)'],...js.map(j=>[j.id,`${fdate(j.fecha)} · ${j.titulo||'Trabajo'}${j.clienteId?' · '+jCli(j):''}`])]}
 const GASTOF=v=>[{k:'fecha',l:'Fecha',t:'date'},{k:'monto',l:'Monto total',t:'number',step:'0.01'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','Pesos ($)'],['USD','Dólares (US$)']]},
-  {k:'categoria',l:'Qué es',t:'select',o:GCAT},{k:'proveedor',l:'Dónde lo compraste',ph:'Ej.: Barraca Sur, Ancap Rivera'},{k:'numero',l:'N.º de factura o boleta',ph:'Opcional'},
+  {k:'categoria',l:'Qué es',t:'select',o:GCAT},{k:'proveedor',l:'Dónde lo compraste',ph:'Ej.: Barraca Sur, Ancap Rivera'},{k:'numero',l:'N.º de factura o boleta',ph:'Opcional'},{k:'pago',l:'Cómo se pagó',t:'select',o:GPAGO},{k:'vence',l:'Si es a crédito, se paga el',t:'date'},
   {k:'trabajoId',l:'Para qué trabajo',t:'select',o:gTrabOpts(v&&v.trabajoId),w:'full'},{k:'nota',l:'Nota',t:'textarea',w:'full',ph:'Ej.: 2 rollos de UTP para la obra de Rivera'}];
 function gFotosHtml(edit){return`<div class="gfotos">${GFOT.map((f,i)=>`<figure><a href="${esc(blobUrl(f.id))}" target="_blank" rel="noopener"><img src="${esc(blobUrl(f.id))}" alt="Factura ${i+1}"></a>${edit?`<button class="btn ghost" data-act="gfotodel:${i}" aria-label="Sacar foto">✕</button>`:''}</figure>`).join('')}</div>
   ${edit?`<div class="actions"><label class="btn pri upl">📷 Sacar foto de la factura<input type="file" accept="image/*" capture="environment" data-up="gasto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*,application/pdf" multiple data-up="gasto"></label></div><p class="busy" id="gBusy" hidden></p>`:''}`}
 function sheetGasto(id){
-  const g=id?{...D.gastos[id]}:{fecha:today(),moneda:'UYU',categoria:'materiales',estado:'pendiente',por:ME||''};
+  const g=id?{...D.gastos[id]}:{fecha:today(),moneda:'UYU',categoria:'materiales',estado:'pendiente',pago:'empresa',por:ME||''};
   GFOT=[...(g.fotos||[])];
   const mio=!id||g.por===ME,adm=gastoAdmin(),edit=!readonly&&((mio&&(g.estado||'pendiente')==='pendiente')||adm);
   const st=GEST[g.estado||'pendiente']||GEST.pendiente;
@@ -5708,7 +5746,7 @@ function sheetGasto(id){
   const body=`${id?`<div class="contact"><span class="tag ${st[1]}">${st[0]}</span>${quien?`<span>Subido por <b>${esc(quien)}</b></span>`:''}${g.creado?`<span class="muted">${fdate(localISO(new Date(g.creado)).slice(0,10))}</span>`:''}</div>`:'<p class="hint" style="margin-top:0">Sacale una foto a la factura o boleta entera, que se lea el total. Después completá el monto y para qué trabajo fue.</p>'}
     <section class="rel" style="margin-top:6px"><h3>Foto de la factura</h3><div id="gFotos">${gFotosHtml(edit)}</div></section>
     <div class="grid">${GASTOF(g).map(f=>fld(f,g[f.k])).join('')}</div>
-    ${adm&&id?`<section class="rel"><h3>Revisión</h3><div class="grid">${fld({k:'estado',l:'Estado',t:'select',o:Object.entries(GEST).map(([k,v])=>[k,v[0]])},g.estado||'pendiente','g_')}${fld({k:'notaAdm',l:'Comentario para el técnico',ph:'Ej.: falta el RUT de la empresa'},g.notaAdm||'','g_')}</div></section>`:g.notaAdm?`<p class="note">${esc(g.notaAdm)}</p>`:''}
+    ${adm&&id&&gPorPagar(g)?`<p class="note" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Comprado a crédito: se paga el ${fdate(g.vence||finMes(g.fecha))}.</span><button type="button" class="btn" data-act="gpagado:${id}">Ya se pagó</button></p>`:''}${adm&&id?`<section class="rel"><h3>Revisión</h3><div class="grid">${fld({k:'estado',l:'Estado',t:'select',o:Object.entries(GEST).map(([k,v])=>[k,v[0]])},g.estado||'pendiente','g_')}${fld({k:'notaAdm',l:'Comentario para el técnico',ph:'Ej.: falta el RUT de la empresa'},g.notaAdm||'','g_')}</div></section>`:g.notaAdm?`<p class="note">${esc(g.notaAdm)}</p>`:''}
     <p class="err" id="shErr" hidden></p>`;
   if(!edit){setTimeout(()=>document.querySelectorAll('#sheet .sh-b input,#sheet .sh-b select,#sheet .sh-b textarea').forEach(x=>{if(!x.closest('.rel')||x.id.startsWith('f_'))x.disabled=true}),0)}
   return sheetFrame('Gasto',id?(g.proveedor||'Factura de compra'):'Subir factura',body,{del:!!id&&edit,saveLabel:edit?'Guardar':'Cerrar'});
@@ -5722,6 +5760,7 @@ async function saveGasto(){
   const extra=adm&&id?{estado:$('#g_estado').value,notaAdm:($('#g_notaAdm').value||'').trim()}:{};
   if(extra.estado&&extra.estado!==(old.estado||'pendiente'))extra.revisadoPor=ME||'',extra.revisadoEn=Date.now();
   const doc={...(old||{creado:Date.now(),por:ME||'',estado:'pendiente'}),...v,...extra,fotos:GFOT,actualizado:Date.now()};
+  if(doc.pago==='credito'&&!doc.vence)doc.vence=finMes(doc.fecha);if(doc.pago!=='credito')doc.vence='';
   const t=v.trabajoId&&D.trabajos[v.trabajoId];if(t){doc.clienteId=t.clienteId||'';doc.proyectoId=t.proyectoId||''}
   await put('gastos',id||uid(),doc);toast(id?'Gasto guardado':'Factura subida. Administración la va a revisar.');closeSheet();
 }
@@ -5733,17 +5772,17 @@ async function gastoUpload(inp){if(inp.dataset.up!=='gasto')return false;
 function vGastos(){
   const adm=gastoAdmin(),f=lsGet('olumi.gfil')||(adm?'pendiente':'todos');
   const all=arr('gastos').filter(g=>adm||gMine(g)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado));
-  const ls=f==='todos'?all:all.filter(g=>(g.estado||'pendiente')===f);
+  const ls=f==='todos'?all:f==='porpagar'?all.filter(g=>gPorPagar(g)||gPorDevolver(g)):all.filter(g=>(g.estado||'pendiente')===f);
   const tot=m=>all.filter(g=>(g.estado||'pendiente')==='pendiente'&&(g.moneda||'UYU')===m).reduce((a,g)=>a+n0(g.monto),0);
   const pend=all.filter(g=>(g.estado||'pendiente')==='pendiente').length;
-  const kpis=adm?`<div class="kpis" style="margin-bottom:14px"><div class="kpi"><span>Para revisar</span><b>${pend}</b></div><div class="kpi"><span>Pendiente en pesos</span><b>${money(tot('UYU'),'UYU')}</b></div><div class="kpi"><span>Pendiente en dólares</span><b>${money(tot('USD'),'USD')}</b></div></div>`:'';
+  const kpis=adm?`<div class="kpis" style="margin-bottom:14px"><div class="kpi"><span>Para revisar</span><b>${pend}</b></div><div class="kpi"><span>Pendiente en pesos</span><b>${money(tot('UYU'),'UYU')}</b></div><div class="kpi"><span>Pendiente en dólares</span><b>${money(tot('USD'),'USD')}</b></div>${gPagoKpis(all)}</div>`:'';
   return`<div class="vhead"><div><h1>Gastos</h1><p class="sub">${adm?'Facturas y boletas que suben los técnicos de lo que compran para los trabajos.':'Sacale una foto a la factura de lo que compres para un trabajo y queda para que administración la revise.'}</p></div>
     <div class="tools">${readonly?'':'<button class="btn pri" data-new="gasto">📷 Subir factura</button>'}</div></div>${kpis}
-    <div class="seg" role="group" aria-label="Filtro" style="margin-bottom:12px">${[['pendiente','Para revisar'],['aprobado','Aprobados'],['reembolsado','Reembolsados'],['rechazado','Rechazados'],['todos','Todos']].map(([k,n])=>`<button class="${f===k?'on':''}" data-act="gfil:${k}">${n}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="Filtro" style="margin-bottom:12px">${[['pendiente','Para revisar'],['porpagar','Por pagar o devolver'],['aprobado','Aprobados'],['reembolsado','Reembolsados'],['rechazado','Rechazados'],['todos','Todos']].map(([k,n])=>`<button class="${f===k?'on':''}" data-act="gfil:${k}">${n}</button>`).join('')}</div>
     ${ls.length?`<div class="list">${ls.map(g=>{const st=GEST[g.estado||'pendiente']||GEST.pendiente,t=g.trabajoId&&D.trabajos[g.trabajoId];const ft=(g.fotos||[])[0];
       return`<div class="row" role="button" tabindex="0" data-open="gasto:${g.id}" style="grid-template-columns:52px minmax(0,1fr) auto;align-items:center">${ft?`<img class="gthumb" src="${esc(blobUrl(ft.id))}" alt="">`:'<span class="gthumb"></span>'}
         <div class="r-main"><strong>${esc(g.proveedor||(GCAT.find(c=>c[0]===g.categoria)||[,'Gasto'])[1])}</strong><span class="muted">${esc([fdate(g.fecha),adm&&g.por?personName(g.por):'',t?(t.titulo||'Trabajo'):'',g.clienteId?cliName(g.clienteId):''].filter(Boolean).join(' · '))}</span></div>
-        <span style="text-align:right"><b class="num">${money(n0(g.monto),g.moneda||'UYU')}</b><br><span class="tag ${st[1]}">${st[0]}</span></span></div>`}).join('')}</div>`
+        <span style="text-align:right"><b class="num">${money(n0(g.monto),g.moneda||'UYU')}</b><br><span class="tag ${st[1]}">${st[0]}</span>${gPagoTag(g)?'<br>'+gPagoTag(g):''}</span></div>`}).join('')}</div>`
       :`<div class="empty"><p>${f==='pendiente'&&adm?'No hay facturas para revisar.':'Todavía no hay gastos acá.'}</p>${readonly?'':'<button class="btn pri" data-new="gasto">📷 Subir la primera factura</button>'}</div>`}`;
 }
 async function gastoAct(k,arg,el){
