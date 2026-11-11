@@ -25,6 +25,21 @@
 .cv{display:grid;gap:10px}.cvr{display:grid;grid-template-columns:130px 170px minmax(0,1fr) 120px;gap:8px;align-items:center}.cvr>span{font-weight:600;font-size:13.5px}.cvr2{grid-template-columns:minmax(0,1fr) 170px}.cvh>span{font-size:12px;color:var(--muted);font-weight:500}
 @media(max-width:700px){.cvr{grid-template-columns:1fr 1fr}.cvr>span:first-child,.cvr>input[data-cv$=".txt"]{grid-column:1/-1}.cvr2{grid-template-columns:minmax(0,1fr) 120px}.cvr2>span:first-child{grid-column:auto}.cvh{display:none}.cmeta{flex-direction:column;align-items:flex-start;gap:6px}.cmeta .trk{flex:none;width:100%}.bulk{top:4px}}
 /* fin CRM 1.48 */
+/* CRM 1.49 */
+.fj{border:1px solid var(--line);border-left:4px solid var(--sc,var(--line));border-radius:12px;padding:10px 12px;margin-top:8px;display:grid;gap:8px}
+.fjh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fjh .dot{width:10px;height:10px;border-radius:50%;background:var(--sc);flex:none}
+.fjh>input{flex:1 1 160px;min-width:0;font-weight:600}.fjb{display:flex;gap:4px;margin-left:auto}.fjb .btn{padding:4px 9px;min-height:32px}
+.fjr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fjr>input{flex:1 1 180px;min-width:0}.fjr>select{flex:0 1 150px}
+.fjp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.fjp input{width:84px}
+.fjs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chipb{border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.86em;cursor:pointer}
+.chipb.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.fjadd{display:block;width:100%;margin-top:8px;border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:6px;font:inherit;font-size:.86em;cursor:pointer}
+.fjadd:hover,.fjadd:focus-visible{color:inherit;border-color:currentColor}
+.fjc{margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fjc .btn{padding:3px 9px;min-height:30px}
+.card h3 .code{font-weight:600;opacity:.75;margin-right:4px}
+@media(max-width:640px){.fjp input{width:60px}.fjr>select{flex:1 1 120px}}
+/* fin CRM 1.49 */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1191,11 +1206,11 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
 /* ---------- constantes del negocio ---------- */
 const ETAPAS=[
   {k:'nuevo',n:'Nuevo',p:10},{k:'relev',n:'Relevamiento',p:25},{k:'pres',n:'Presupuestado',p:50},
-  {k:'neg',n:'Negociación',p:70},{k:'gan',n:'Ganado',p:100},{k:'per',n:'Perdido',p:0}];
+  {k:'neg',n:'Negociación',p:70},{k:'gan',n:'Ganado',p:100,c:'g'},{k:'per',n:'Perdido',p:0,c:'p'}];
 const EK=Object.fromEntries(ETAPAS.map(e=>[e.k,e]));
 const SERV=['Fibra óptica','CCTV','Cableado estructurado','Control de acceso','Redes y WiFi','Mantenimiento','Otro'];
 const DEPTOS=['Artigas','Canelones','Cerro Largo','Colonia','Durazno','Flores','Florida','Lavalleja','Maldonado','Montevideo','Paysandú','Río Negro','Rivera','Rocha','Salto','San José','Soriano','Tacuarembó','Treinta y Tres'];
-const ORIG=['Referido','WhatsApp','Llamada','Web / redes','Cliente existente','Licitación','Otro'];
+const ORIG=['Referido','WhatsApp','Llamada','Web / redes','Cliente existente','Venta técnica','Licitación','Otro'];
 const TIPOS=[['visita','Visita técnica'],['llamada','Llamada'],['reunion','Reunión'],['mensaje','Email / mensaje'],['instal','Instalación'],['tarea','Tarea']];
 const TK=Object.fromEntries(TIPOS);
 const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
@@ -1272,7 +1287,7 @@ const ARRC=new Map();let ARRV=0;const arrDirty=()=>{ARRV++};
 const arr=col=>{const o=D[col];if(!o)return[];const c=ARRC.get(col);if(c&&c.o===o&&c.v===ARRV)return c.a.slice();const a=Object.entries(o).map(([id,x])=>({...x,id}));ARRC.set(col,{o,a,v:ARRV});return a.slice()};
 const cliName=id=>D.clientes[id]?.nombre||'';
 const opp=id=>D.oportunidades[id];
-const isOpen=o=>!['gan','per'].includes(o.etapa||'nuevo');
+const isOpen=o=>!(EK[o.etapa||'nuevo']||{}).c;
 function waLink(tel){const d=String(tel||'').replace(/\D/g,'');if(d.length<8)return'';const n=d.startsWith('598')?d:'598'+d.replace(/^0/,'');return'https://wa.me/'+n}
 
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
@@ -1286,6 +1301,7 @@ function handleErr(e){
 }
 const clean=o=>JSON.parse(JSON.stringify(o));
 async function put(col,id,data){
+  if(col==='oportunidades'&&data&&!data.numero)data={...data,numero:opNumNuevo()};
   if(mode==='loading'||(mode==='live'&&!liveCol(col).loaded)){toast('Esperá a que terminen de cargar los datos.');throw {code:'loading'}}
   if(mode==='live'&&(col==='presupuestos'||col==='facturas')&&!has(col)){toast(`${col==='facturas'?'Las facturas no están incluidas':'Los presupuestos no están incluidos'} en el plan ${PLAN.nombre} de tu empresa.`);throw {code:'loading'}}
   AV.touched.add(col+':'+id);AV.t=0;
@@ -1334,7 +1350,7 @@ function overdueCount(){const t=today();return arr('actividades').filter(a=>!a.h
 /* ---------- render ---------- */
 let rq=0;function sr(){if(!rq)rq=requestAnimationFrame(()=>{rq=0;render()})}
 function render(){
-  arrDirty();applyRubros();applyEtapas();subGuard();
+  arrDirty();applyRubros();applyEtapas();fjTick();subGuard();
   if(ROLE==='pendiente'){document.body.classList.add('portal');$('#banner').innerHTML='';$('#main').innerHTML=pendingHtml();return}
   if(CFEI===undefined&&mode==='live'&&ORG&&PLAN&&has('cfe')&&!PORTAL())loadCfe();
   if(PORTAL()){document.body.classList.add('portal');applyBrand();$('#banner').innerHTML='';$('#main').innerHTML=(loaded.size>=NEED||slow)?vPortal():loadingHtml();return}
@@ -1393,24 +1409,24 @@ function opMatch(o){
 }
 // días sin movimiento, y si hay que seguirla: abierta y sin próxima actividad, con una vencida o quieta hace más de 14 días
 const opQuieta=o=>isOpen(o)?Math.floor((Date.now()-n0(o.actualizado||o.creado||Date.now()))/864e5):0;
-const opSeguir=o=>{if(!isOpen(o))return false;const a=pendingActs(o.id)[0];return!a||actState(a)==='t-bad'||opQuieta(o)>14};
-const opSig=o=>{const i=ETAPAS.findIndex(e=>e.k===(o.etapa||'nuevo')),n=ETAPAS[i+1];return n&&n.k!=='per'&&isOpen(o)?n:null};
-async function opMove(id,k){const o=D.oportunidades[id];if(!o||(o.etapa||'nuevo')===k||!EK[k])return;
-  const n={...o,etapa:k,prob:EK[k].p,actualizado:Date.now(),bitacora:[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',tipo:'sys',text:`Etapa: ${EK[o.etapa||'nuevo'].n} → ${EK[k].n}`}].slice(-300)};if(k==='gan')n.ganadoEn=today();else n.ganadoEn='';if(k==='per'&&!n.perdidoEn)n.perdidoEn=today();
-  await put('oportunidades',id,n);toast(`Movida a ${EK[k].n}`+await segTras(id,n));
+const opSeguir=o=>{if(!isOpen(o))return false;const a=pendingActs(o.id)[0];return!a||actState(a)==='t-bad'||opQuieta(o)>fjAviso(o)};
+const opSig=o=>fjSig(o);
+async function opMove(id,k){const o=D.oportunidades[id];if(!o||(o.etapa||'nuevo')===k||!EK[k])return;{const e=flujoPuede(o,k,id);if(e){toast(e);return}}
+  const n={...o,etapa:k,prob:EK[k].p,actualizado:Date.now(),bitacora:[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',tipo:'sys',text:`Etapa: ${EK[o.etapa||'nuevo'].n} → ${EK[k].n}`}].slice(-300)};if(EK[k].c==='g')n.ganadoEn=n.ganadoEn||today();else n.ganadoEn='';if(k==='per'&&!n.perdidoEn)n.perdidoEn=today();
+  await put('oportunidades',id,n);toast(`Movida a ${EK[k].n}`+await segTras(id,n)+await fjObra(id,{...n,numero:n.numero||(D.oportunidades[id]||{}).numero}));
   if(k==='per'&&!n.motivoPerdida)setTimeout(()=>openSheet('crmper',id),80)}
 function card(o){const q=opQuieta(o),sg=opSig(o);
   const c=cliName(o.clienteId);
   const cierre=o.cierre&&isOpen(o)&&o.cierre<today()?`<span class="tag t-bad" title="Fecha de cierre pasada">Cierre ${fdate(o.cierre)}</span>`:'';
   return`<article class="card" draggable="true" data-id="${o.id}" data-open="op:${o.id}" tabindex="0">
     <div class="ctop"><span class="svc">${esc(o.servicio||'Sin servicio')}</span>${n0(o.prioridad)>0?`<span class="stars" aria-label="Prioridad ${o.prioridad}">${'★'.repeat(n0(o.prioridad))}</span>`:''}</div>
-    <h3>${esc(o.titulo)}</h3>${o.etiquetas||q>14?`<div class="chips">${q>14?`<span class="tag t-warn" title="Nadie la tocó en ${q} días">Sin movimiento · ${q} d</span>`:''}${tagChips(o.etiquetas)}</div>`:''}${c?`<p class="ccli">${esc(c)}${o.obra?' · '+esc(o.obra):''}</p>`:''}
+    <h3>${o.numero?`<span class="code">${esc(o.numero)}</span>`:''}${esc(o.titulo)}</h3>${o.etiquetas||q>fjAviso(o)||fjVence(o)?`<div class="chips">${fjVence(o)}${q>fjAviso(o)?`<span class="tag t-warn" title="Nadie la tocó en ${q} días">Sin movimiento · ${q} d</span>`:''}${tagChips(o.etiquetas)}</div>`:''}${c?`<p class="ccli">${esc(c)}${o.obra?' · '+esc(o.obra):''}</p>`:''}
     <div class="cbot"><span class="amt">${money(o.monto,o.moneda)}</span>${cierre||(isOpen(o)?actBadge(pendingActs(o.id)[0]):'')}${av(o.responsable)}${sg&&!readonly?`<button type="button" class="cnext" data-act="opnext:${o.id}" title="Pasar a ${sg.n}" aria-label="Pasar a ${sg.n}">›</button>`:''}</div></article>`;
 }
 function vPipeline(){
   const all=arr('oportunidades');const ops=all.filter(opMatch);
   const open=ops.filter(isOpen);
-  const c90=localISO(Date.now()-90*864e5).slice(0,10),g90=all.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'')>=c90).length,p90=all.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
+  const c90=localISO(Date.now()-90*864e5).slice(0,10),g90=all.filter(o=>esGan(o)&&(o.ganadoEn||'')>=c90).length,p90=all.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
   const resp=[...new Set(all.map(o=>o.responsable||'-'))],nSeg=all.filter(opSeguir).length;
   const head=`<div class="vhead"><div><h1>CRM</h1><p class="sub">${open.length} abiertas · <span class="num">${money(sum(open,o=>conv(o.monto,o.moneda,repMon)),repMon)}</span> en juego · <span class="num">${money(sum(open,o=>conv(o.monto,o.moneda,repMon)*n0(o.prob)/100),repMon)}</span> ponderado${g90+p90?` · cierre ${Math.round(g90/(g90+p90)*100)} % en 90 días`:''}</p></div>
     <div class="tools"><select id="fServ" data-ch="fServ" aria-label="Filtrar por servicio"><option value="">Todos los servicios</option>${opts(SERV,fServ)}</select>
@@ -1436,7 +1452,7 @@ function vPipeline(){
     return`<section class="col" data-stage="${e.k}" style="--sc:var(--s-${e.k})" aria-label="${e.n}">
       <header class="colh"><span class="dot"></span><h2>${e.n}</h2><span class="cnt">${cs.length+older}</span><span class="tot">${money(tot,repMon)}</span></header>
       <div class="cards">${cs.map(card).join('')||(older?'':'<p class="nocards">Sin oportunidades en esta etapa.</p>')}${older?`<button class="addq" data-act="pview:list" style="padding:4px 2px">+ ${older} de hace más de 60 días, ver en la lista</button>`:''}</div>
-      ${e.k!=='per'&&e.k!=='gan'?`<button class="addq" data-new="op" data-stage="${e.k}">+ Agregar</button>`:''}</section>`}).join('')}</div>`;
+      ${!e.c&&(!CRMC().unaEntrada||e.k==='nuevo')?`<button class="addq" data-new="op" data-stage="${e.k}">+ Agregar</button>`:''}</section>`}).join('')}</div>`;
 }
 function vSearch(){
   const q=qn(Q),hit=s=>qn(s).includes(q);
@@ -1466,7 +1482,7 @@ function vClientes(){
   if(!list.length)return head+`<p class="muted">Ningún cliente coincide con “${esc(Q)}”.</p>`;
   return head+`<div class="lhead"><span>Cliente</span><span>Departamento</span><span>Abiertas</span><span>Ganado (${repMon})</span></div><div class="list">${list.map(c=>{
     const mine_=ops.filter(o=>o.clienteId===c.id);const nOpen=mine_.filter(isOpen).length;
-    const won=sum(mine_.filter(o=>o.etapa==='gan'),o=>conv(o.monto,o.moneda,repMon));
+    const won=sum(mine_.filter(o=>esGan(o)),o=>conv(o.monto,o.moneda,repMon));
     return`<div class="row" role="button" tabindex="0" data-open="cli:${c.id}"><div><strong>${esc(c.nombre)} ${aboTag(c.id)}${c.prospecto?' <span class="tag t-warn">Posible cliente</span>':''}</strong><span class="muted">${esc([c.contacto,c.telefono].filter(Boolean).join(' · ')||'Sin contacto cargado')}</span></div>
       <span class="r-meta">${esc(c.departamento||'—')}</span><span class="r-num r-open">${nOpen}</span><span class="r-num">${won?money(won,repMon):'—'}</span></div>`}).join('')}</div>`;
 }
@@ -1508,13 +1524,13 @@ function vRep(){
   const ops=arr('oportunidades');const C=o=>conv(o.monto,o.moneda,repMon);
   const head=`<div class="vhead"><div><h1>Reportes</h1><p class="sub">Montos en ${repMon==='USD'?'dólares':'pesos'} · cotización ${money(cot(),'UYU',2)} por US$ 1</p></div><div class="tools"><div class="seg" role="group" aria-label="Moneda"><button class="${repMon==='UYU'?'on':''}" data-act="mon:UYU">$ UYU</button><button class="${repMon==='USD'?'on':''}" data-act="mon:USD">US$</button></div></div></div>`;
   if(!ops.length&&!Object.keys(D.tickets).length)return head+empty('Sin datos para reportar','Los reportes se arman solos a medida que cargás oportunidades y las vas ganando o perdiendo.','op','+ Nueva oportunidad');
-  const open=ops.filter(isOpen),won=ops.filter(o=>o.etapa==='gan'),lost=ops.filter(o=>o.etapa==='per');
+  const open=ops.filter(isOpen),won=ops.filter(o=>esGan(o)),lost=ops.filter(o=>o.etapa==='per');
   const ym=today().slice(0,7);const wonM=won.filter(o=>(o.ganadoEn||'').startsWith(ym));
   const rate=won.length+lost.length?Math.round(won.length*100/(won.length+lost.length))+' %':'—';
   const kp=(l,v,s)=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`;
-  const stageRows=ETAPAS.filter(e=>!['gan','per'].includes(e.k)).map(e=>{const l=open.filter(o=>(o.etapa||'nuevo')===e.k);return{l:`${e.n} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon),c:`var(--s-${e.k})`}});
+  const stageRows=ETAPAS.filter(e=>!e.c).map(e=>{const l=open.filter(o=>(o.etapa||'nuevo')===e.k);return{l:`${e.n} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon),c:`var(--s-${e.k})`}});
   // embudo: hasta qué etapa llegó cada oportunidad (las perdidas, según su historial) y cuántas pasan de una etapa a la otra
-  const ord=['nuevo','relev','pres','neg','gan'],reach=o=>{let m=ord.indexOf(o.etapa||'nuevo');if(m<0){m=0;(o.bitacora||[]).forEach(b=>{if(b.tipo==='sys'&&/^Etapa: /.test(b.text||''))ord.forEach((k,i)=>{if(i>m&&k!=='gan'&&b.text.includes(EK[k].n))m=i})})}return m},RR=ops.map(reach);
+  const ord=ETAPAS.filter(e=>e.c!=='p').map(e=>e.k),reach=o=>{let m=ord.indexOf(o.etapa||'nuevo');if(m<0){m=0;(o.bitacora||[]).forEach(b=>{if(b.tipo==='sys'&&/^Etapa: /.test(b.text||''))ord.forEach((k,i)=>{if(i>m&&!EK[k].c&&b.text.includes(EK[k].n))m=i})})}return m},RR=ops.map(reach);
   const funRows=ord.map((k,i)=>{const n=RR.filter(r=>r>=i).length,pv=i?RR.filter(r=>r>=i-1).length:0;return{l:`${EK[k].n} (${n})${i&&pv?` · pasa el ${Math.round(n*100/pv)} %`:''}`,v:n,t:ops.length?Math.round(n*100/ops.length)+' %':'—',c:`var(--s-${k})`}});
   const servRows=SERV.map(s=>{const l=won.filter(o=>o.servicio===s);return{l:`${s} (${l.length})`,v:sum(l,C),t:money(sum(l,C),repMon)}}).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
   const reasons={};lost.forEach(o=>{const k=(o.motivoPerdida||'Sin motivo').trim()||'Sin motivo';reasons[k]=(reasons[k]||0)+1});
@@ -2022,7 +2038,7 @@ const OPF=()=>[
   {k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},
   {k:'servicio',l:'Servicio',t:'select',o:SERV},
   {k:'monto',l:'Monto estimado',t:'number',step:'any'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','$ Pesos'],['USD','US$ Dólares']]},
-  {k:'prob',l:'Probabilidad (%)',t:'number',step:'1'},{k:'cierre',l:'Cierre esperado',t:'date'},
+  {k:'prob',l:'Probabilidad (%)',t:'number',step:'1'},{k:'cierre',l:'Cierre esperado',t:'date'},{k:'implementacion',l:'Implementación estimada',t:'date'},
   {k:'prioridad',l:'Prioridad',t:'select',o:[[0,'Normal'],[1,'★ Media'],[2,'★★ Alta'],[3,'★★★ Urgente']]},
   {k:'origen',l:'Cómo llegó',t:'select',o:[['','—'],...ORIG]},
   {k:'obra',l:'Lugar de la obra',ph:'Dirección o referencia del sitio'},
@@ -2072,7 +2088,7 @@ function sheetOp(id,p){
   const stepper=`<div class="stepper" role="group" aria-label="Etapa">${ETAPAS.map(e=>`<button type="button" class="step${(o.etapa||'nuevo')===e.k?' on':''}" data-act="step:${e.k}" style="--sc:var(--s-${e.k})" aria-pressed="${(o.etapa||'nuevo')===e.k}">${e.n}</button>`).join('')}</div>`;
   const f=OPF();const cl=D.clientes[o.clienteId];
   const strip=id&&cl&&(cl.telefono||cl.email)?`<div class="contact"><strong>${esc(cl.contacto||cl.nombre)}</strong>${cl.telefono?`<span class="num">${esc(cl.telefono)}</span>${waLink(cl.telefono)?`<a href="${waLink(cl.telefono)}" target="_blank" rel="noopener">WhatsApp</a>`:''}`:''}${cl.email?`<span>${esc(cl.email)}</span>`:''}</div>`:'';
-  let body=strip+(id?opSmart(id,o):'')+stepper+`<div class="grid">${f.map(x=>fldv(x,o)).join('')}${!id?fld({k:'nuevoCli',l:'…o escribí un cliente nuevo',w:'full',ph:'Se crea al guardar'},''):''}</div><p class="err" id="shErr" hidden></p>`;
+  let body=strip+(id?opSmart(id,o)+fjCarpHtml(o):'')+stepper+`<div class="grid">${f.map(x=>fldv(x,o)).join('')}${!id?fld({k:'nuevoCli',l:'…o escribí un cliente nuevo',w:'full',ph:'Se crea al guardar'},''):''}</div><p class="err" id="shErr" hidden></p>`;
   if(id){
     body+=`<section class="rel"><h3>Actividades</h3><div id="opActs">${opActsHtml(id)}</div>
       <div class="mini"><select id="na_tipo" aria-label="Tipo">${opts(TIPOS,'visita')}</select><input type="datetime-local" id="na_fecha" value="${tomorrow9()}" aria-label="Fecha">
@@ -2081,7 +2097,7 @@ function sheetOp(id,p){
       <div><button class="btn" data-new="pres" data-op="${id}">+ Presupuesto para esta oportunidad</button></div></section>
       ${opLogSection(id)}${adjSection('oportunidades',id,'opadj')}${cliRelHtml(o.clienteId)}`;
   }
-  return sheetFrame('Oportunidad',id?o.titulo:'Nueva oportunidad',body,{del:!!id});
+  return sheetFrame('Oportunidad'+(o.numero?' '+o.numero:''),id?o.titulo:'Nueva oportunidad',body,{del:!!id});
 }
 function opActsHtml(id){
   const l=arr('actividades').filter(a=>a.oportunidadId===id).sort((a,b)=>(a.hecha-b.hecha)||(a.fecha||'9').localeCompare(b.fecha||'9'));
@@ -2093,14 +2109,16 @@ async function saveOp(){
   if(!v.titulo){err.textContent='Poné un título para la oportunidad.';err.hidden=false;$('#f_titulo').focus();return}
   const nc=($('#f_nuevoCli')?.value||'').trim();
   if(nc){const ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(nc));if(ya){v.clienteId=ya.id;toast(`Ya existía ${ya.nombre}: usé ese cliente`)}else{const cid=uid();await put('clientes',cid,{nombre:nc,creado:Date.now()});v.clienteId=cid}}
+  if(CRMC().oblig&&!SH.id){const f=!(v.clienteId||nc)?'el cliente':!(n0(v.monto)>0)?'el monto estimado':v.prob===''||v.prob==null?'la probabilidad':!(v.implementacion||v.cierre)?'la fecha estimada':'';if(f){err.textContent=`Falta ${f}: es un dato obligatorio para abrir la oportunidad.`;err.hidden=false;return}}
   v.prioridad=n0(v.prioridad);
   const base=SH.id?{...D.oportunidades[SH.id]}:{creado:Date.now(),creadoPor:ME||''};
-  const o={...base,...v,actualizado:Date.now()};
+  const o={...base,...v,actualizado:Date.now()};if(!SH.id&&CRMC().unaEntrada)o.etapa='nuevo';
+  if(SH.id){const e=flujoPuede(base,o.etapa||'nuevo',SH.id);if(e){err.textContent=e;err.hidden=false;return}}
   {const chg=SH.id?opLogChanges(D.oportunidades[SH.id],o):[];if(chg.length)o.bitacora=[...(o.bitacora||[]),...chg.map(c=>({id:uid(),ts:Date.now(),by:ME||'',...c}))].slice(-300)}
-  if(o.etapa==='gan'&&!o.ganadoEn)o.ganadoEn=today();
-  if(o.etapa!=='gan')o.ganadoEn='';
+  if(esGan(o)&&!o.ganadoEn)o.ganadoEn=today();
+  if(!esGan(o))o.ganadoEn='';
   if(o.etapa==='per'&&!o.perdidoEn)o.perdidoEn=today();
-  const oid=SH.id||uid(),camb=!SH.id||(base.etapa||'nuevo')!==(o.etapa||'nuevo');await put('oportunidades',oid,o);toast('Oportunidad guardada'+(camb?await segTras(oid,o):''));closeSheet();
+  const oid=SH.id||uid(),camb=!SH.id||(base.etapa||'nuevo')!==(o.etapa||'nuevo');await put('oportunidades',oid,o);toast('Oportunidad guardada'+(camb?await segTras(oid,o)+await fjObra(oid,{...o,numero:o.numero||(D.oportunidades[oid]||{}).numero}):''));closeSheet();
 }
 
 /* cliente */
@@ -2164,7 +2182,7 @@ function sheetProd(id){const p=id?D.productos[id]:{unidad:'unidad',moneda:defMon
 async function saveProd(){const v=readForm(prodF());if('mantCada' in v)v.mantCada=n0(v.mantCada);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}const pid=SH.id||uid();const prev=SH.id?D.productos[SH.id]:{};await put('productos',pid,{...prev,...v,...(PRODFOTO===false?{foto:null}:PRODFOTO&&PRODFOTO.id?{foto:{id:PRODFOTO.id,type:PRODFOTO.type}}:{})});PRODFOTO=null;toast('Guardado en el catálogo');if(ING_BACK&&ING){ING_BACK=null;closeSheet();openSheet('ing',null,{resume:true});ingAdd({...(D.productos[pid]||v),id:pid});return}closeSheet()}
 
 /* presupuesto */
-function nextNum(){const m=Math.max(0,...arr('presupuestos').map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
+function nextNum(){const m=Math.max(0,...arr('presupuestos').filter(p=>!/\.S\d+$/.test(String(p.numero||''))).map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
 function sheetPres(id,p){
   if(id)QE=JSON.parse(JSON.stringify(D.presupuestos[id]));
   else if(p.copy)QE=p.copy;
@@ -2204,7 +2222,7 @@ function qRefresh(){QE.lineas.forEach((l,i)=>{const el=document.getElementById('
 function qValid(){const e=$('#shErr');if(!QE.clienteId&&!QE.oportunidadId){e.textContent='Elegí un cliente o una oportunidad.';e.hidden=false;return false}if(!QE.lineas.some(l=>l.desc)){e.textContent='Agregá al menos una línea con descripción.';e.hidden=false;return false}e.hidden=true;return true}
 async function saveQ(close=true){
   if(!qValid())return null;
-  if(!QE.numero)QE.numero=nextNum();
+  if(!QE.numero)QE.numero=await fjNumPres(QE)||nextNum();
   QE.lineas=QE.lineas.filter(l=>l.desc||n0(l.precio));
   const id=SH.id||uid();SH.id=id;
   await put('presupuestos',id,{...QE,actualizado:Date.now()});
@@ -2284,6 +2302,7 @@ if(await planosAct(k,el,arg))return;
   if(await offAct(k))return;
   if(await avAct(k,el,arg))return;
   if(await crmAct(k,el,arg))return;
+  if(await fjAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -2374,7 +2393,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.48',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.49',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2440,7 +2459,6 @@ document.addEventListener('drop',async e=>{const col=e.target.closest&&e.target.
 /* === CRM 1.48 === pronóstico por mes, seguimiento en un toque, plan de seguimiento, metas, señales, selección múltiple, motivos y etapas a medida */
 const CRMC=()=>CFG.crm||{};
 const ET_BASE=ETAPAS.map(e=>({...e}));
-function applyEtapas(){const c=CRMC().etapas||{};ETAPAS.forEach((e,i)=>{const b=ET_BASE[i],x=c[e.k]||{};e.n=String(x.n||'').trim()||b.n;e.p=e.k==='gan'?100:e.k==='per'?0:(x.p===undefined||x.p===''?b.p:Math.min(99,Math.max(1,Math.round(n0(x.p)))))})}
 const MOTIVOS_DEF=['Precio','Eligió a otro proveedor','Se postergó','No respondió más','No era lo que buscaba','Sin presupuesto del cliente','Fuera de zona o de rubro'];
 const crmMotivos=()=>{const l=String(CRMC().motivos||'').split('\n').map(x=>x.trim()).filter(Boolean);return l.length?l:MOTIVOS_DEF};
 document.addEventListener('focusin',e=>{if(e.target.id!=='f_motivoPerdida')return;let d=document.getElementById('motivos');if(!d){d=document.createElement('datalist');d.id='motivos';document.body.append(d)}d.innerHTML=crmMotivos().map(m=>`<option value="${esc(m)}">`).join('');e.target.setAttribute('list','motivos')});
@@ -2452,7 +2470,7 @@ async function opSet(id,f,txt){const o=D.oportunidades[id];if(!o)return null;con
 
 /* --- plan de seguimiento: la próxima actividad se programa sola (Ajustes → Ventas) --- */
 const SEG_DEF={nuevo:['llamada','Llamar para coordinar la visita',1],relev:['visita','Hacer el relevamiento',2],pres:['llamada','Llamar por el presupuesto',3],neg:['llamada','Cerrar condiciones y fecha de inicio',2]};
-const segPlan=k=>{const b=SEG_DEF[k];if(!b)return null;const c=(CRMC().plan||{})[k]||{};return{t:c.t||b[0],txt:String(c.txt||'').trim()||b[1],d:c.d===undefined||c.d===''?b[2]:Math.max(0,Math.round(n0(c.d)))}};
+const segPlan=k=>{const e=EK[k];return e&&!e.c&&e.at&&String(e.atx||'').trim()?{t:e.at,txt:String(e.atx).trim(),d:Math.max(0,Math.round(n0(e.ad)))}:null};
 const segAuto=()=>CRMC().auto!==false&&!readonly;
 function segFecha(n){n=Math.max(0,Math.round(n0(n)));const d=new Date();d.setDate(d.getDate()+n);const w=d.getDay();if(w===6)d.setDate(d.getDate()+2);else if(w===0)d.setDate(d.getDate()+1);d.setHours(n?9:17,0,0,0);return localISO(d).slice(0,16)}
 const diaTxt=f=>new Date(f.slice(0,10)+'T12:00').toLocaleDateString('es-UY',{weekday:'long',day:'numeric'});
@@ -2473,14 +2491,14 @@ function opSenales(id,o){const s=[];if(!isOpen(o))return s;const c=D.clientes[o.
   if(!o.clienteId)s.push([0,'Sin cliente']);else if(!c.telefono&&!c.email)s.push([0,'El cliente no tiene teléfono ni email']);
   if(ETAPAS.findIndex(e=>e.k===(o.etapa||'nuevo'))>=2&&!qs.length&&has('presupuestos'))s.push([0,'Sin presupuesto cargado']);
   if(qs.some(x=>x.estado==='aceptado'))s.push([1,'Presupuesto aceptado']);else if(qs.some(x=>x.estado==='enviado'))s.push([1,'Presupuesto enviado']);
-  if(o.clienteId&&arr('oportunidades').some(x=>x.id!==id&&x.clienteId===o.clienteId&&x.etapa==='gan'))s.push([1,'Cliente que ya compró']);
+  if(o.clienteId&&arr('oportunidades').some(x=>x.id!==id&&x.clienteId===o.clienteId&&esGan(x)))s.push([1,'Cliente que ya compró']);
   if(isAbo(o.clienteId))s.push([1,'Abonado']);
   return s}
 const opSenalesHtml=(id,o)=>{const s=opSenales(id,o);return s.length?`<div class="senal"><b>Señales</b>${s.map(([ok,t])=>`<span class="tag ${ok?'t-ok':'t-warn'}">${ok?'✓ ':''}${esc(t)}</span>`).join('')}</div>`:''};
 
 /* --- metas del mes --- */
 function crmMeta(quien){const m=CRMC().meta||{},mon=m.mon||defMon(),who=quien!==undefined?quien:(mine?ME:(fResp&&fResp!=='-'?fResp:''));const v=who?n0((m.por||{})[who]):(n0(m.total)||sum(Object.values(m.por||{}),n0));return v?conv(v,mon,repMon):0}
-function crmMetaHtml(all){const meta=crmMeta();if(!meta)return'';const who=mine?ME:(fResp&&fResp!=='-'?fResp:''),ym=today().slice(0,7),g=sum(all.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'').startsWith(ym)&&(!who||o.responsable===who)),o=>conv(o.monto,o.moneda,repMon)),pc=Math.round(g*100/meta);
+function crmMetaHtml(all){const meta=crmMeta();if(!meta)return'';const who=mine?ME:(fResp&&fResp!=='-'?fResp:''),ym=today().slice(0,7),g=sum(all.filter(o=>esGan(o)&&(o.ganadoEn||'').startsWith(ym)&&(!who||o.responsable===who)),o=>conv(o.monto,o.moneda,repMon)),pc=Math.round(g*100/meta);
   return`<div class="cmeta" title="Se cambia en Ajustes → Ventas"><div class="trk"><i style="width:${Math.min(100,pc)}%"></i></div><span>Meta de ${mesNom(ym).toLowerCase()}${who?' de '+esc(sinVos(who)):''}: <b>${money(g,repMon)}</b> de ${money(meta,repMon)} · ${pc} %</span></div>`}
 
 /* --- pronóstico: las abiertas según el mes en que se espera cerrarlas --- */
@@ -2489,7 +2507,7 @@ function crmFore(ops){const C=o=>conv(o.monto,o.moneda,repMon),P=o=>C(o)*n0(o.pr
   const cols=[{k:'atr',n:'Atrasadas',l:open.filter(o=>o.cierre&&o.cierre.slice(0,7)<ym0),c:'var(--bad)'}];
   for(let i=0;i<4;i++){const k=ymAdd(i);cols.push({k,n:mesNom(k),l:open.filter(o=>(o.cierre||'').slice(0,7)===k),c:i?'var(--s-pres)':'var(--s-gan)'})}
   cols.push({k:'lej',n:'Más adelante',l:open.filter(o=>(o.cierre||'').slice(0,7)>ymN),c:'var(--s-nuevo)'},{k:'sin',n:'Sin fecha de cierre',l:open.filter(o=>!o.cierre),c:'var(--muted)'});
-  const wonM=ops.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'').startsWith(ym0)),gan=sum(wonM,C),mes=cols[1].l,pond=sum(mes,P),meta=crmMeta(),kp=(l,v,s)=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`;
+  const wonM=ops.filter(o=>esGan(o)&&(o.ganadoEn||'').startsWith(ym0)),gan=sum(wonM,C),mes=cols[1].l,pond=sum(mes,P),meta=crmMeta(),kp=(l,v,s)=>`<div class="kpi"><span>${l}</span><b>${v}</b><small>${s}</small></div>`;
   return`<div class="kpis">${kp('Ganado en '+mesNom(ym0).toLowerCase(),money(gan,repMon),pl(wonM.length,'cerrada','cerradas'))}${kp('Por cerrar este mes',money(sum(mes,C),repMon),`${money(pond,repMon)} ponderado`)}${kp('Pronóstico del mes',money(gan+pond,repMon),'ganado + ponderado')}${meta?kp('Meta del mes',money(meta,repMon),`${Math.round((gan+pond)*100/meta)} % con el pronóstico`):kp('Atrasadas',cols[0].l.length,cols[0].l.length?'con el cierre en un mes que ya pasó':'ninguna')}</div>
   <div class="board fore">${cols.filter(c=>c.l.length||!['atr','lej'].includes(c.k)).map(c=>`<section class="col" data-fm="${c.k}" style="--sc:${c.c}" aria-label="${esc(c.n)}"><header class="colh"><span class="dot"></span><h2>${esc(c.n)}</h2><span class="cnt">${c.l.length}</span><span class="tot">${money(sum(c.l,C),repMon)}</span></header><div class="cards">${c.l.map(card).join('')||`<p class="nocards">${c.k==='sin'?'Todas tienen fecha de cierre.':'Nada previsto.'}</p>`}</div>${c.k.length===7&&c.l.length?`<p class="fpond">Ponderado ${money(sum(c.l,P),repMon)}</p>`:''}</section>`).join('')}</div>
   <p class="hint" style="margin-top:8px">Arrastrá una tarjeta a otro mes para cambiarle la fecha de cierre. El ponderado es el monto por la probabilidad de la etapa.</p>`}
@@ -2545,18 +2563,18 @@ async function segHecho(id,o,como,msg,nota,dias){const now=Date.now(),f=segFecha
 const crmSegStrip=()=>{if(!seguir||readonly)return'';const n=arr('oportunidades').filter(o=>opSeguir(o)&&opMatch(o)).length;return n?`<div class="segstrip"><span><b>${pl(n,'oportunidad','oportunidades')} para seguir.</b> Resolvelas una por una: el mensaje ya viene escrito, lo mandás y pasa la siguiente.</span><button class="btn pri" data-act="segq">Empezar</button></div>`:''};
 
 /* --- ficha del cliente: los números de un vistazo --- */
-function cli360(id){const C=o=>conv(o.monto,o.moneda,repMon),ops=arr('oportunidades').filter(o=>o.clienteId===id),g=ops.filter(o=>o.etapa==='gan'),ab=ops.filter(isOpen),tks=arr('tickets').filter(t=>t.clienteId===id);let deb=0;
+function cli360(id){const C=o=>conv(o.monto,o.moneda,repMon),ops=arr('oportunidades').filter(o=>o.clienteId===id),g=ops.filter(o=>esGan(o)),ab=ops.filter(isOpen),tks=arr('tickets').filter(t=>t.clienteId===id);let deb=0;
   if(has('facturas')&&canMoney())arr('facturas').filter(f=>f.clienteId===id&&['pendiente','parcial','vencida'].includes(factState(f))).forEach(f=>{deb+=conv(factCalc(f).saldo,f.moneda,repMon)});
   const ult=Math.max(0,...ops.map(o=>n0(o.actualizado||o.creado)),...tks.map(t=>n0(t.actualizado||t.creado)),...arr('trabajos').filter(j=>j.clienteId===id).map(j=>n0(j.actualizado||j.creado))),k=(l,v)=>`<div class="k3"><span>${l}</span><b>${v}</b></div>`;
   return`<div class="c360">${canMoney()?k('Ganado',g.length?money(sum(g,C),repMon):'—')+k('En juego',ab.length?money(sum(ab,C),repMon):'—')+(has('facturas')?k('Por cobrar',deb>0.5?money(deb,repMon):'—'):''):''}${k('Tickets abiertos',tks.filter(tkOpen).length||'—')}${k('Último movimiento',ult?ago(ult):'—')}</div>`}
 
 /* --- reportes: vendedores, origen y tiempo de cierre --- */
 function crmRepExtra(ops,C){const none='<p class="muted">Todavía no hay datos.</p>',ym=today().slice(0,7),c90=localISO(Date.now()-90*864e5).slice(0,10),dias=o=>Math.max(0,(new Date(o.ganadoEn+'T12:00').getTime()-n0(o.creado))/864e5);
-  const vs=[...new Set(ops.map(o=>o.responsable).filter(Boolean))].map(u=>{const m=ops.filter(o=>o.responsable===u),g=sum(m.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'').startsWith(ym)),C),meta=crmMeta(u),g9=m.filter(o=>o.etapa==='gan'&&(o.ganadoEn||'')>=c90).length,p9=m.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
+  const vs=[...new Set(ops.map(o=>o.responsable).filter(Boolean))].map(u=>{const m=ops.filter(o=>o.responsable===u),g=sum(m.filter(o=>esGan(o)&&(o.ganadoEn||'').startsWith(ym)),C),meta=crmMeta(u),g9=m.filter(o=>esGan(o)&&(o.ganadoEn||'')>=c90).length,p9=m.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
     return{l:`${sinVos(u)} · ${pl(m.filter(isOpen).length,'abierta','abiertas')}${g9+p9?` · cierra el ${Math.round(g9*100/(g9+p9))} %`:''}`,v:g,t:money(g,repMon)+(meta?` de ${money(meta,repMon)}`:''),c:'var(--s-gan)'}}).sort((a,b)=>b.v-a.v);
-  const og={};ops.forEach(o=>{const x=og[o.origen||'Sin dato']||(og[o.origen||'Sin dato']={n:0,g:0,p:0,m:0});x.n++;if(o.etapa==='gan'){x.g++;x.m+=C(o)}if(o.etapa==='per')x.p++});
+  const og={};ops.forEach(o=>{const x=og[o.origen||'Sin dato']||(og[o.origen||'Sin dato']={n:0,g:0,p:0,m:0});x.n++;if(esGan(o)){x.g++;x.m+=C(o)}if(o.etapa==='per')x.p++});
   const ors=Object.entries(og).sort((a,b)=>b[1].n-a[1].n).slice(0,7).map(([l,x])=>({l:`${l} (${x.n})${x.g+x.p?` · gana el ${Math.round(x.g*100/(x.g+x.p))} %`:''}`,v:x.n,t:x.m?money(x.m,repMon):'—'}));
-  const won=ops.filter(o=>o.etapa==='gan'&&o.ganadoEn&&o.creado),avg=l=>l.length?sum(l,dias)/l.length:0;
+  const won=ops.filter(o=>esGan(o)&&o.ganadoEn&&o.creado),avg=l=>l.length?sum(l,dias)/l.length:0;
   const cs=[['Todas',won],...SERV.map(s=>[s,won.filter(o=>o.servicio===s)])].filter(x=>x[1].length).map(([l,x])=>({l:`${l} (${x.length})`,v:avg(x),t:`${Math.round(avg(x))} días`}));
   return`<section class="panel"><h2>Vendedores · ${mesNom(ym).toLowerCase()}</h2>${vs.length?bars(vs)+'<p class="hint" style="margin:8px 0 0">Lo ganado en el mes por cada uno, contra su meta si la tiene (Ajustes → Ventas).</p>':none}</section>
   <section class="panel"><h2>De dónde llegan</h2>${ors.length?bars(ors)+'<p class="hint" style="margin:8px 0 0">Cuántas oportunidades trajo cada origen, qué porcentaje se gana y cuánto dejó.</p>':none}</section>
@@ -2572,12 +2590,8 @@ function crmAjustesHtml(){if(!isBoss())return'';const v=CRMD||CRMC(),m=v.meta||{
     ${crmVend().map(u=>`<div class="cvr cvr2"><span>${esc(sinVos(u))}</span><input type="number" min="0" step="any" inputmode="decimal" data-cv="meta.por.${esc(u)}" value="${val((m.por||{})[u])}" placeholder="Sin meta" aria-label="Meta de ${esc(sinVos(u))}"></div>`).join('')}
     <p class="hint">El avance se ve arriba del CRM, en el pronóstico y en Reportes → Vendedores.</p></div>
   <div class="panel cv" style="margin-top:12px"><h2 style="margin:0">Seguimiento automático</h2><label class="fld chk"><input type="checkbox" data-cv="auto"${v.auto!==false?' checked':''}><span>Programar sola la próxima actividad cuando una oportunidad entra a una etapa o se completa la anterior</span></label>
-    <div class="cvr cvh"><span>Al entrar a</span><span>Tipo</span><span>Qué hay que hacer</span><span>A los… (días)</span></div>
-    ${Object.keys(SEG_DEF).map(k=>{const p=segPlan(k),c=pl_[k]||{};return`<div class="cvr"><span>${esc(EK[k].n)}</span><select data-cv="plan.${k}.t" aria-label="Tipo">${opts(TIPOS,c.t||p.t)}</select><input data-cv="plan.${k}.txt" value="${val(c.txt)}" placeholder="${esc(SEG_DEF[k][1])}" aria-label="Qué hay que hacer"><input type="number" min="0" step="1" inputmode="numeric" data-cv="plan.${k}.d" value="${val(c.d)}" placeholder="${SEG_DEF[k][2]}" aria-label="Días"></div>`}).join('')}
-    <p class="hint">Así ninguna oportunidad queda sin próximo paso. Sábados y domingos pasan al lunes.</p></div>
-  <div class="panel cv" style="margin-top:12px"><h2 style="margin:0">Etapas</h2><div class="cvr cvr2 cvh"><span>Nombre que ve tu equipo</span><span>Probabilidad (%)</span></div>
-    ${ET_BASE.map(b=>{const c=et[b.k]||{};return`<div class="cvr cvr2"><input data-cv="etapas.${b.k}.n" value="${val(c.n)}" placeholder="${esc(b.n)}" aria-label="Nombre de la etapa ${esc(b.n)}">${['gan','per'].includes(b.k)?`<span class="muted">${b.p} %</span>`:`<input type="number" min="1" max="99" step="1" inputmode="numeric" data-cv="etapas.${b.k}.p" value="${val(c.p)}" placeholder="${b.p}" aria-label="Probabilidad de ${esc(b.n)}">`}</div>`}).join('')}
-    <p class="hint">Si tu empresa les dice distinto (por ejemplo “Visita” o “Demostración”), cambiales el nombre. Vacío deja el de fábrica.</p></div>
+    <p class="hint">Qué se agenda al entrar a cada bloque se define abajo, en el proceso de ventas. Sábados y domingos pasan al lunes.</p></div>
+  ${fjHtml()}
   <div class="panel cv" style="margin-top:12px"><h2 style="margin:0">Motivos de pérdida</h2><textarea data-cv="motivos" rows="5" placeholder="${esc(MOTIVOS_DEF.join('\n'))}" aria-label="Motivos de pérdida, uno por renglón">${val(v.motivos)}</textarea><p class="hint">Uno por renglón. Son los que se ofrecen al marcar una oportunidad como perdida.</p>
     <div class="tools" style="justify-content:flex-end"><button class="btn pri" data-act="crmsave">Guardar ventas</button></div></div>`}
 document.addEventListener('input',e=>{const t=e.target,p=t.dataset&&t.dataset.cv;if(SH&&SH.type==='crmseg')SH.dirty=false;if(!p)return;if(!CRMD)CRMD=JSON.parse(JSON.stringify(CRMC()));const ks=p.split('.');let o=CRMD;ks.slice(0,-1).forEach(k=>{o=o[k]&&typeof o[k]==='object'?o[k]:(o[k]={})});o[ks[ks.length-1]]=t.type==='checkbox'?t.checked:t.type==='number'?(t.value===''?'':n0(t.value)):t.value});
@@ -2603,9 +2617,109 @@ async function crmAct(k,el,arg){
   if(k==='bclr'){CSEL.clear();sr();return true}
   if(k==='bper'){if(CSEL.size)openSheet('crmper',[...CSEL][0],{ids:[...CSEL]});return true}
   if(k==='bcsv'){if(!canMoney())return true;saveFile(`Oportunidades seleccionadas ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').filter(o=>CSEL.has(o.id)).map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));return true}
-  if(k==='crmsave'){if(!isBoss()||readonly)return true;await saveCfg({...CFG,crm:CRMD||CRMC()});CRMD=null;applyEtapas();toast('Ajustes de ventas guardados');sr();return true}
+  if(k==='crmsave'){if(!isBoss()||readonly)return true;const mv=fjAntes();await saveCfg({...CFG,crm:CRMD||CRMC()});CRMD=null;applyEtapas();await fjDespues(mv);toast('Ajustes de ventas guardados');sr();return true}
   return false}
 /* === fin CRM 1.48 === */
+/* === CRM 1.49 · proceso de ventas === */
+// Cada empresa arma su proceso de ventas en Ajustes → Ventas: bloques en orden (se renombran, se agregan en el medio, se sacan) y cada uno con
+// sus reglas. Tres bloques son fijos porque el resto de la app se apoya en ellos: el de entrada ('nuevo'), el de venta ganada ('gan') y el de
+// perdida ('per'). Sin proceso propio guardado, todo funciona como siempre: las seis etapas de fábrica, sin reglas.
+const FJ_COL=['#0f8a8a','#b8479a','#6b7a1f','#c2410c','#3657c9','#8a6d00','#2f9e6e'],FJ_FIJOS=['nuevo','gan','per'];
+// proceso estándar (el de Phitel): Oportunidad → Cotizar → Cotizado → Ganado → Finalizado, y Perdido / Anulado
+const FJ_STD=()=>[
+  {k:'nuevo',n:'Oportunidad',p:10,c:'',sig:['cot','per'],qa:14,qp:30,at:'tarea',atx:'Revisar la oportunidad: ¿ya está todo para cotizar?',ad:5},
+  {k:'cot',n:'Cotizar',p:30,c:'',tpl:'pres',sig:['pres','per'],req:true,qa:3,qp:'',at:'tarea',atx:'Enviar la cotización',ad:2},
+  {k:'pres',n:'Cotizado',p:60,c:'',tpl:'neg',sig:['cot','gan','per'],qa:14,qp:60,at:'llamada',atx:'Seguimiento de la cotización',ad:5},
+  {k:'gan',n:'Ganado',p:100,c:'g',sig:['fin','cot','per'],pry:true},
+  {k:'fin',n:'Finalizado',p:100,c:'g',tpl:'gan',fijo:true},
+  {k:'per',n:'Perdido / Anulado',p:0,c:'p'}];
+// el proceso de la empresa; si no armó uno, sale de las etapas de fábrica con los nombres y el plan de seguimiento que tenga guardados
+function flujoDe(c){if(Array.isArray(c.flujo)&&c.flujo.length)return c.flujo;const et=c.etapas||{},pl=c.plan||{};
+  return ET_BASE.map(b=>{const x=et[b.k]||{},s=SEG_DEF[b.k],y=pl[b.k]||{};return{k:b.k,n:String(x.n||'').trim()||b.n,p:x.p===undefined||x.p===''?b.p:x.p,c:b.k==='gan'?'g':b.k==='per'?'p':'',...(s?{at:y.t||s[0],atx:String(y.txt||'').trim()||s[1],ad:y.d===undefined||y.d===''?s[2]:y.d}:{})}})}
+function applyEtapas(){const st=document.documentElement.style;let j=0;ETAPAS.length=0;for(const k in EK)delete EK[k];
+  flujoDe(CRMC()).forEach(s=>{if(!s||!s.k||EK[s.k])return;const e={...s,n:String(s.n||'').trim()||'Bloque',p:s.c==='g'?100:s.c==='p'?0:Math.min(99,Math.max(1,Math.round(n0(s.p))||10))};ETAPAS.push(e);EK[e.k]=e;if(!ET_BASE.some(b=>b.k===e.k))st.setProperty('--s-'+e.k,FJ_COL[j++%FJ_COL.length])});
+  ET_BASE.filter(b=>FJ_FIJOS.includes(b.k)&&!EK[b.k]).forEach(b=>{const e={...b};b.k==='nuevo'?ETAPAS.unshift(e):ETAPAS.push(e);EK[e.k]=e});   // los tres fijos nunca faltan
+  let ch=0;for(const id in D.oportunidades||{}){const o=D.oportunidades[id];if(o&&o.etapa&&!EK[o.etapa]){o.etapa='nuevo';ch=1}}if(ch)arrDirty()}   // la que quedó en un bloque que ya no existe se ve en el primero
+const fjE=o=>EK[o.etapa||'nuevo']||ETAPAS[0];
+const esGan=o=>fjE(o).c==='g';
+const fjAviso=o=>n0(fjE(o).qa)||14;
+const fjQuieta=o=>isOpen(o)?Math.floor((Date.now()-Math.max(n0(o.actualizado||o.creado),n0(CRMC().flujoDesde)))/864e5):0;
+const fjVence=o=>{const e=fjE(o),qp=n0(e.qp);if(!qp||e.c)return'';const f=qp-fjQuieta(o);return f<=7?`<span class="tag t-bad" title="Sin acciones registradas: pasa sola a ${esc(EK.per.n)}">${f<=0?'Pasa':'En '+f+' d pasa'} a ${esc(EK.per.n)}</span>`:''};
+// ¿se puede pasar esta oportunidad al bloque k? Devuelve el motivo si no se puede
+function flujoPuede(o,k,id){const a=fjE(o),b=EK[k];if(!b||a.k===k)return'';
+  if(a.fijo)return`${a.n} es el bloque final: la oportunidad ya no cambia de estado.`;
+  if(a.sig&&a.sig.length&&!a.sig.includes(k))return`De ${a.n} se pasa a ${a.sig.map(x=>EK[x]&&EK[x].n).filter(Boolean).join(', ')}; no a ${b.n}.`;
+  if(a.req&&b.c!=='p'&&ETAPAS.indexOf(b)>ETAPAS.indexOf(a)&&!arr('presupuestos').some(q=>q.oportunidadId===id))return`Para pasar a ${b.n} hace falta al menos un presupuesto. Cargalo desde la oportunidad (“+ Presupuesto”).`;
+  return''}
+// el bloque que sigue (para el botón ›): el primero de más adelante al que se puede pasar
+const fjSig=o=>{const a=fjE(o),i=ETAPAS.indexOf(a);if(a.c==='p'||a.fijo)return null;return ETAPAS.slice(i+1).find(e=>e.c!=='p'&&(!a.sig||!a.sig.length||a.sig.includes(e.k)))||null};
+// número de la oportunidad: nace con ella (P1, P2…) y es el que después lleva el proyecto y sus presupuestos
+let FJ_N=0;
+function opNumNuevo(){const m=Math.max(FJ_N,n0(CRMC().numDesde)-1,...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0));return'P'+(FJ_N=m+1)}
+async function fjNumPres(q){try{if(!CRMC().cotNum||!q.oportunidadId)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
+  if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
+  const m=Math.max(0,...arr('presupuestos').filter(x=>x.oportunidadId===q.oportunidadId).map(x=>{const r=/\.S(\d+)$/.exec(String(x.numero||''));return r?+r[1]:0}));return o.numero+'.S'+(m+1)}catch(e){return''}}
+// nombre de carpeta con el formato de siempre (número, fecha, descripción), para usar el mismo en el disco o en la nube
+const fjCarpeta=o=>o&&o.numero?`${o.numero}_${localISO(new Date(n0(o.creado)||Date.now())).slice(0,10)}_${String(o.titulo||'').replace(/[\\/:*?"<>|]/g,'').trim()}`:'';
+const fjCarpHtml=o=>o&&o.numero?`<p class="fjc"><span class="muted">Carpeta del proyecto</span> <span class="code">${esc(fjCarpeta(o))}</span> <button type="button" class="btn ghost" data-act="fjcarp">Copiar</button></p>`:'';
+// al entrar a un bloque que abre el proyecto: lo crea con el número de la oportunidad (si ya hay un presupuesto aceptado, sale de ahí con sus tareas)
+async function fjObra(id,o){try{if(!fjE(o).pry||arr('proyectos').some(p=>p.oportunidadId===id)||arr('presupuestos').some(x=>x.oportunidadId===id&&x.obraId&&D.proyectos[x.obraId]))return'';
+  const q=arr('presupuestos').find(x=>x.oportunidadId===id&&x.estado==='aceptado');if(q){await obraFromQuote(q);return' · creé la obra con sus tareas'}
+  const c=D.clientes[o.clienteId]||{},p={numero:o.numero||'',oportunidadId:id,nombre:(o.numero?o.numero+' · ':'')+(o.titulo||'Proyecto'),clienteId:o.clienteId||'',estado:'activo',inicio:today(),direccion:o.obra||c.direccion||'',contactoLugar:c.contacto||'',etapas:ETPL.map(e=>({...e})),creado:Date.now()};
+  await put('proyectos',uid(),p);return` · abrí el proyecto ${o.numero||''}`.trimEnd()}catch(e){return''}}
+// una vez por día, en el equipo de un jefe: las que pasaron el plazo de su bloque sin acciones van solas a Perdido (el plazo corre desde que se prendió la regla)
+let FJ_T=0;
+function fjTick(){if(FJ_T||readonly||!isBoss()||mode==='loading'||(mode==='live'&&!liveCol('oportunidades').loaded))return;FJ_T=1;setTimeout(fjVencer,6000)}
+async function fjVencer(){try{const hoy=today();let dia='';try{dia=localStorage.getItem('olumi.fj.dia')||''}catch(e){}if(dia===hoy)return;
+  const l=arr('oportunidades').filter(o=>{const e=fjE(o),qp=n0(e.qp);return!e.c&&qp>0&&fjQuieta(o)>=qp}).slice(0,40);
+  for(const o of l){const e=fjE(o),n={...D.oportunidades[o.id],etapa:'per',prob:0,perdidoEn:hoy,motivoPerdida:o.motivoPerdida||'Sin actividad',actualizado:Date.now(),bitacora:[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:'',tipo:'sys',text:`Etapa: ${e.n} → ${EK.per.n} (sola: ${fjQuieta(o)} días sin acciones)`}].slice(-300)};await put('oportunidades',o.id,n);await segTras(o.id,n)}
+  try{localStorage.setItem('olumi.fj.dia',hoy)}catch(e){}
+  if(l.length){toast(`${pl(l.length,'oportunidad pasó','oportunidades pasaron')} a ${EK.per.n} por falta de actividad`);sr()}}catch(e){}}
+/* --- el armador del proceso (Ajustes → Ventas) --- */
+const fjDraft=()=>{if(!CRMD)CRMD=JSON.parse(JSON.stringify(CRMC()));if(!Array.isArray(CRMD.flujo)||!CRMD.flujo.length)CRMD.flujo=JSON.parse(JSON.stringify(flujoDe(CRMD)));return CRMD.flujo};
+function fjHtml(){const v=CRMD||CRMC(),propio=Array.isArray(v.flujo)&&v.flujo.length>0,F=propio?v.flujo:flujoDe(v),val=x=>esc(x===undefined||x===null?'':String(x)),per=(F.find(s=>s.k==='per')||{}).n||'Perdido';
+  const ks=new Set(F.map(s=>s.k)),hu=arr('oportunidades').filter(o=>!ks.has(o.etapa||'nuevo')).length;let j=0;
+  return`<div class="panel cv" style="margin-top:12px"><h2 style="margin:0">Proceso de ventas</h2>
+    <p class="hint" style="margin-top:0">Los bloques por los que pasa una oportunidad, en orden. Cambiales el nombre, agregá uno en el medio, sacá el que no uses y definí las reglas de cada uno.${propio?'':' Hoy están las etapas de fábrica, sin reglas.'}</p>
+    <div class="tools"><button class="btn" data-act="fjstd" title="Oportunidad → Cotizar → Cotizado → Ganado → Finalizado, con sus reglas">Cargar el proceso estándar</button>${propio?'<button class="btn ghost" data-act="fjfab">Volver a las etapas de fábrica</button>':''}</div>
+    ${F.map((b,i)=>{const fijo=FJ_FIJOS.includes(b.k),col=ET_BASE.some(x=>x.k===b.k)?`var(--s-${b.k})`:FJ_COL[j++%FJ_COL.length],mv=b.k!=='nuevo'&&b.k!=='per',ab=!b.c&&b.k!=='per';
+      return`<div class="fj" style="--sc:${col}"><div class="fjh"><span class="dot"></span><input data-fj="${i}.n" value="${val(b.n)}" aria-label="Nombre del bloque" maxlength="40">
+        ${ab?`<label class="fjp"><input type="number" min="1" max="99" step="1" inputmode="numeric" data-fj="${i}.p" value="${val(b.p)}" aria-label="Probabilidad de ${val(b.n)}"><span>%</span></label>`:`<span class="muted">${b.c==='g'||b.k==='gan'?'Venta ganada · 100 %':'Perdida · 0 %'}</span>`}
+        <span class="fjb">${mv&&i>1?`<button type="button" class="btn ghost" data-act="fjup:${i}" aria-label="Mover antes">↑</button>`:''}${mv&&i<F.length-2?`<button type="button" class="btn ghost" data-act="fjdn:${i}" aria-label="Mover después">↓</button>`:''}${fijo?'':`<button type="button" class="btn ghost" data-act="fjdel:${i}" aria-label="Sacar el bloque ${val(b.n)}">✕</button>`}</span></div>
+        ${ab?`<div class="fjr"><span>Al entrar, agendar</span><select data-fj="${i}.at" aria-label="Tipo de actividad">${opts([['','Nada'],...TIPOS],b.at||'')}</select><input data-fj="${i}.atx" value="${val(b.atx)}" placeholder="Qué hay que hacer" aria-label="Qué hay que hacer"><label class="fjp"><span>en</span><input type="number" min="0" step="1" inputmode="numeric" data-fj="${i}.ad" value="${val(b.ad)}" placeholder="1" aria-label="Días hábiles"><span>días hábiles</span></label></div>
+        <div class="fjr"><label class="fjp"><span>Avisar a los</span><input type="number" min="0" step="1" inputmode="numeric" data-fj="${i}.qa" value="${val(b.qa)}" placeholder="14" aria-label="Días para el aviso"><span>días sin acciones</span></label><label class="fjp"><span>Pasa sola a ${esc(per)} a los</span><input type="number" min="0" step="1" inputmode="numeric" data-fj="${i}.qp" value="${val(b.qp)}" placeholder="nunca" aria-label="Días para pasar a perdida"><span>días</span></label></div>
+        <label class="fld chk"><input type="checkbox" data-fj="${i}.req"${b.req?' checked':''}><span>Para avanzar desde acá hace falta al menos un presupuesto cargado</span></label>`:''}
+        ${b.c==='g'||b.k==='gan'?`<label class="fld chk"><input type="checkbox" data-fj="${i}.pry"${b.pry?' checked':''}><span>Al entrar, abrir el proyecto con el mismo número de la oportunidad</span></label><label class="fld chk"><input type="checkbox" data-fj="${i}.fijo"${b.fijo?' checked':''}><span>Bloque final: una vez acá, no cambia más de estado</span></label>`:''}
+        ${mv&&!fijo?`<label class="fld chk"><input type="checkbox" data-fj="${i}.cg"${b.c==='g'?' checked':''}><span>Este bloque cuenta como venta ganada</span></label>`:''}
+        ${b.fijo?'':`<div class="fjs"><span class="muted">Puede pasar a</span>${F.filter(x=>x.k!==b.k).map(x=>`<button type="button" class="chipb${(b.sig||[]).includes(x.k)?' on':''}" data-act="fjsig:${i}:${x.k}" aria-pressed="${(b.sig||[]).includes(x.k)}">${val(x.n)}</button>`).join('')}${(b.sig||[]).length?'':'<span class="muted">· sin marcar ninguno: a cualquiera</span>'}</div>`}
+      </div>${b.k!=='per'&&(F[i+1]||{}).k!=='nuevo'?`<button type="button" class="fjadd" data-act="fjadd:${i}">+ Agregar un bloque acá</button>`:''}`}).join('')}
+    <label class="fld chk"><input type="checkbox" data-cv="unaEntrada"${v.unaEntrada?' checked':''}><span>Toda oportunidad entra por el primer bloque (no se cargan directo en los siguientes)</span></label>
+    <label class="fld chk"><input type="checkbox" data-cv="oblig"${v.oblig?' checked':''}><span>Para abrir una oportunidad son obligatorios el cliente, el monto, la probabilidad y la fecha estimada</span></label>
+    <label class="fld chk"><input type="checkbox" data-cv="cotNum"${v.cotNum?' checked':''}><span>Los presupuestos de una oportunidad llevan su número: P12.S1, P12.S2…</span></label>
+    <div class="cvr cvr2"><span>Cada oportunidad nace con su número (P1, P2…) y el proyecto lo hereda. Empezar en</span><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="1" aria-label="Primer número"></div>
+    ${hu?`<p class="hint">Al guardar, ${pl(hu,'oportunidad que está','oportunidades que están')} en un bloque que sacaste ${hu>1?'pasan':'pasa'} al bloque anterior.</p>`:''}
+    <p class="hint">Se guarda con “Guardar ventas”, abajo.</p></div>`}
+document.addEventListener('input',e=>{const t=e.target,p=t.dataset&&t.dataset.fj;if(!p)return;const [i,f]=p.split('.'),b=fjDraft()[+i];if(!b)return;
+  if(f==='cg'){b.c=t.checked?'g':'';sr();return}b[f]=t.type==='checkbox'?t.checked:t.type==='number'?(t.value===''?'':n0(t.value)):t.value});
+async function fjAct(k,el,arg){if(!/^fj/.test(k))return false;
+  if(k==='fjcarp'){const t=fjCarpeta(SH&&SH.id&&D.oportunidades[SH.id]);try{await navigator.clipboard.writeText(t);toast('Nombre de la carpeta copiado')}catch(e){toast(t)}return true}
+  if(!isBoss()||readonly)return true;const F=fjDraft(),[a,b]=String(arg||'').split(':'),i=+a;
+  if(k==='fjadd')F.splice(i+1,0,{k:'e'+Date.now().toString(36),n:'Bloque nuevo',p:Math.min(99,Math.round(n0(F[i].p)||10)+10),c:''});
+  else if(k==='fjdel'){if(F[i]&&!FJ_FIJOS.includes(F[i].k)){const x=F[i].k;F.splice(i,1);F.forEach(s=>{if(s.sig)s.sig=s.sig.filter(y=>y!==x)})}}
+  else if(k==='fjup'||k==='fjdn'){const j=i+(k==='fjup'?-1:1);if(F[i]&&F[j]&&![F[i].k,F[j].k].some(x=>x==='nuevo'||x==='per'))[F[i],F[j]]=[F[j],F[i]]}
+  else if(k==='fjsig'){const s=F[i];if(s)s.sig=(s.sig||[]).includes(b)?s.sig.filter(y=>y!==b):[...(s.sig||[]),b]}
+  else if(k==='fjstd')Object.assign(CRMD,{flujo:FJ_STD(),unaEntrada:true,oblig:true,cotNum:true,flujoDesde:Date.now()});
+  else if(k==='fjfab')Object.assign(CRMD,{flujo:[],unaEntrada:false,oblig:false,cotNum:false});
+  sr();return true}
+// antes de guardar: ordena y limpia el proceso y anota a dónde van las oportunidades de los bloques que se sacaron
+function fjAntes(){if(!CRMD||!Array.isArray(CRMD.flujo)||!CRMD.flujo.length)return[];const viejo=ETAPAS.map(e=>e.k);let F=CRMD.flujo.filter(s=>s&&s.k);
+  F=[...F.filter(s=>s.k==='nuevo'),...F.filter(s=>s.k!=='nuevo'&&s.k!=='per'),...F.filter(s=>s.k==='per')];const ks=new Set(F.map(s=>s.k));
+  F.forEach(s=>{s.n=String(s.n||'').trim()||'Bloque';s.c=s.k==='per'?'p':s.k==='gan'?'g':s.k==='nuevo'?'':s.c==='g'?'g':'';if(s.sig){s.sig=s.sig.filter(x=>ks.has(x));if(!s.sig.length)delete s.sig}
+    if(s.c)['req','qa','qp','at','atx','ad'].forEach(x=>delete s[x]);if(s.c!=='g'){delete s.pry;delete s.fijo}});
+  CRMD.flujo=F;if(F.some(s=>n0(s.qp)>0)&&!CRMD.flujoDesde)CRMD.flujoDesde=Date.now();
+  return arr('oportunidades').filter(o=>!ks.has(o.etapa||'nuevo')).map(o=>{let i=viejo.indexOf(o.etapa);while(i>0&&!ks.has(viejo[i]))i--;return[o.id,i>=0&&ks.has(viejo[i])?viejo[i]:'nuevo']})}
+async function fjDespues(mv){for(const [id,k] of mv){const o=D.oportunidades[id];if(o)try{await put('oportunidades',id,{...o,etapa:k})}catch(e){}}if(mv.length)toast(`${pl(mv.length,'oportunidad pasó','oportunidades pasaron')} al bloque anterior`)}
+/* === fin CRM 1.49 === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -3744,7 +3858,7 @@ async function obraFromQuote(q){
   if(q.obraId&&D.proyectos[q.obraId])return q.obraId;
   const o=q.oportunidadId&&D.oportunidades[q.oportunidadId],c=D.clientes[q.clienteId]||{};
   let pid=q.proyectoId&&D.proyectos[q.proyectoId]?q.proyectoId:'';
-  if(!pid){pid=uid();D.proyectos[pid]={nombre:(o&&o.titulo)||`Obra ${q.numero||''} · ${c.nombre||''}`.trim(),clienteId:q.clienteId||'',estado:'activo',inicio:today(),direccion:(o&&o.obra)||q.obra||c.direccion||'',contactoLugar:q.contactoLugar||c.contacto||'',telLugar:q.telLugar||'',presupuestoId:q.id,etapas:ETPL.map(e=>({...e})),creado:Date.now()};await put('proyectos',pid,D.proyectos[pid])}
+  if(!pid){pid=uid();D.proyectos[pid]={numero:(o&&o.numero)||'',oportunidadId:q.oportunidadId||'',nombre:(o&&o.numero?o.numero+' · ':'')+((o&&o.titulo)||`Obra ${q.numero||''} · ${c.nombre||''}`.trim()),clienteId:q.clienteId||'',estado:'activo',inicio:today(),direccion:(o&&o.obra)||q.obra||c.direccion||'',contactoLugar:q.contactoLugar||c.contacto||'',telLugar:q.telLugar||'',presupuestoId:q.id,etapas:ETPL.map(e=>({...e})),creado:Date.now()};await put('proyectos',pid,D.proyectos[pid])}
   if(q.relevamientoId){for(const pl of arr('planos').filter(x=>x.relevamientoId===q.relevamientoId&&!x.proyectoId))await put('planos',pl.id,{...D.planos[pl.id],proyectoId:pid});const rl=D.relevamientos[q.relevamientoId];if(rl&&!rl.proyectoId)await patch('relevamientos',q.relevamientoId,{proyectoId:pid})}
   else if(!(D.proyectos[pid].etapas||[]).length){D.proyectos[pid]={...D.proyectos[pid],etapas:ETPL.map(e=>({...e})),presupuestoId:q.id};await put('proyectos',pid,D.proyectos[pid])}
   const E=D.proyectos[pid].etapas,eid=k=>(E.find(e=>e.id===k)||E[0]).id;
@@ -4109,7 +4223,7 @@ async function rubAct(k,el,arg){
     case'impgo':{if(!IMP)return true;const {kind,map}=IMP,b=$('#impBusy');el.disabled=true;let n=0,i=0;
       for(const o of map.out){i++;if(impDup(kind,o))continue;const id=uid();
         if(kind==='oportunidades'){let cid='';if(o.cliente){const ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(o.cliente).trim());if(ya)cid=ya.id;else{cid=uid();const c={nombre:o.cliente,creado:Date.now()};await put('clientes',cid,c);D.clientes[cid]=c}}
-          const d={titulo:o.nombre,clienteId:cid,servicio:o.servicio,monto:o.monto,moneda:o.moneda,etapa:o.etapa,prob:EK[o.etapa].p,cierre:o.cierre,origen:o.origen||'',obra:o.obra||'',notas:o.notas||'',responsable:ME||'',prioridad:0,creado:Date.now(),creadoPor:ME||'',actualizado:Date.now(),...(o.etapa==='gan'?{ganadoEn:o.cierre||today()}:{}),...(o.etapa==='per'?{perdidoEn:o.cierre||today()}:{})};
+          const d={titulo:o.nombre,clienteId:cid,servicio:o.servicio,monto:o.monto,moneda:o.moneda,etapa:o.etapa,prob:EK[o.etapa].p,cierre:o.cierre,origen:o.origen||'',obra:o.obra||'',notas:o.notas||'',responsable:ME||'',prioridad:0,creado:Date.now(),creadoPor:ME||'',actualizado:Date.now(),...(esGan(o)?{ganadoEn:o.cierre||today()}:{}),...(o.etapa==='per'?{perdidoEn:o.cierre||today()}:{})};
           await put('oportunidades',id,d);D.oportunidades[id]=d;n++;if(b&&n%10===0){b.hidden=false;b.textContent=`Importando ${i} de ${map.out.length}…`}continue}
         const data=kind==='clientes'?{...o,creado:Date.now()}:{...o,moneda:o.moneda||defMon(),...(o.servicio&&!SERV.includes(o.servicio)?{servicio:''}:{}),creado:Date.now()};
         await put(kind,id,data);D[kind][id]=data;n++;if(b&&n%10===0){b.hidden=false;b.textContent=`Importando ${i} de ${map.out.length}…`}}
@@ -4751,7 +4865,7 @@ function opTpls(o,cl){const n=String(cl.contacto||cl.nombre||'').trim().split(' 
     neg:['Seguimiento del presupuesto',`${hola}¿pudiste ver el presupuesto${q?' '+q.numero:''}? Si querés ajustar algo o tenés dudas, lo conversamos. Tenemos agenda para empezar en los próximos días.${firma}`],
     gan:['Gracias y coordinación',`${hola}¡gracias por confiar en nosotros! Coordinemos la fecha de inicio de los trabajos. ¿Qué día les queda mejor?${firma}`],
     per:['Dejar la puerta abierta',`${hola}gracias por habernos tenido en cuenta. Quedamos a las órdenes para lo que necesites más adelante.${firma}`]};
-  const k=o.etapa||'nuevo';return[T[k],...Object.keys(T).filter(x=>x!==k).map(x=>T[x]),['Recordatorio amable',`${hola}te escribo para retomar lo de ${s}. ¿Seguís interesado? Si preferís que te llame, decime cuándo.${firma}`]]}
+  const e=fjE(o),k=T[e.tpl]?e.tpl:T[e.k]?e.k:e.c==='g'?'gan':'nuevo';return[T[k],...Object.keys(T).filter(x=>x!==k).map(x=>T[x]),['Recordatorio amable',`${hola}te escribo para retomar lo de ${s}. ¿Seguís interesado? Si preferís que te llame, decime cuándo.${firma}`]]}
 async function opAddLog(id,entry){
   const o=D.oportunidades[id];if(!o)return;
   const b=[...(o.bitacora||[]),{id:uid(),ts:Date.now(),by:ME||'',...entry}].slice(-300);
