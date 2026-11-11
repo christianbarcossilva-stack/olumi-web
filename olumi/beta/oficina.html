@@ -1263,6 +1263,7 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
   // pruebas de choque: todos al mismo punto, o cada uno al escritorio de otro (se cruzan en pasillos y puertas)
   window.__ofi.juntar=(x,y)=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>goTo(p,x??SPOTS.cafe.x,y??SPOTS.cafe.y));
   window.__ofi.cruzar=()=>{const a=S.people.filter(p=>!p.inVan&&!p.virtual);a.forEach((p,i)=>{const d=deskOf(a[(i+1)%a.length]);goTo(p,d.x+.2,d.y+1.7)})};
+  window.__ofi.reunion=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>aReunion(p));
   window.__ofi.volver=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)});
   // cuántas piezas dibuja cada parte de la escena (para saber dónde conviene unir)
   window.__ofi.partes=()=>{const n=g=>{let c=0;const rec=(o,v)=>{v=v&&o.visible;if(v&&(o.isMesh||o.isLineSegments||o.isLine))c++;o.children.forEach(x=>rec(x,v))};rec(g,true);return c};return{edificio:n(BLD),muebles:n(FURN),actores:n(ACT),total:n(SC),personas:PPL.size,vehiculos:VEH.size}};
