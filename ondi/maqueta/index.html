@@ -3998,7 +3998,8 @@ function casExtGeo(g, p) { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, dc = cl
   g.box(dc - 0.5, 0, -d - 0.07, dc + 0.5, 2.1, -d, P.door, { ao: 0.95 }); g.box(dc - 0.56, 2.1, -d - 0.08, dc + 0.56, 2.18, -d, P.frame); g.box(dc - 0.7, 0, -d - 0.9, dc + 0.7, 0.15, -d, P.parapet);
   g.box(-w + 0.6, 2.2, d, -w + 1.5, 2.75, d + 0.45, '#D9DEE2', { ao: 1 }); return g; }
 propGeo = (o => p => { const k = p.k, g = new Geo(), r = seeded((p.seed || 7) * 131 + 17);
-  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, h = pv(p, 'h'), col = p.col === 'hvac' ? P.hvac : P.wall; g.box(-w, 0, -d, w, h, d, col, { top: P.roof, ao: 0.86 });
+  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, h = pv(p, 'h'), col = p.col === 'hvac' ? P.hvac : p.estilo === 'osc' ? '#2D3033' : P.wall; g.box(-w, 0, -d, w, h, d, col, { top: P.roof, ao: 0.86 });
+    if (p.estilo === 'osc') for (const [a, b] of [[h * 0.45, h * 0.57], [h - 0.6, h + 0.02]]) g.box(-w - 0.14, a, -d - 0.14, w + 0.14, b, d + 0.14, '#F4F5F3', { ao: 1 });
     for (let i = 0; i < pv(p, 'pisos'); i++) { const y = 1.6 + i * 4; if (y + 2.4 > h - 0.3) break; g.win(-w, -d, w, d, y, 2.4, P.glass, P.glassE); }
     g.box(-w - 0.05, h, -d - 0.05, w + 0.05, h + 0.6, -d + 0.4, P.parapet); g.box(-w - 0.05, h, d - 0.4, w + 0.05, h + 0.6, d + 0.05, P.parapet); g.box(-w - 0.05, h, -d, -w + 0.4, h + 0.6, d, P.parapet); g.box(w - 0.4, h, -d, w + 0.05, h + 0.6, d, P.parapet);
     if (p.techo === 'solar') { for (let x = -w + 4; x < w - 8; x += 7.4) for (let z = -d + 4; z < d - 6; z += 5.4) g.box(x, h + 0.25, z, x + 7, h + 0.55, z + 5, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 }); }
@@ -5290,7 +5291,7 @@ function demoStart() { const S = DEMO, R = seeded(77), si = S.site, zr = S.ruta,
   S.serv.forEach((p, i) => ED.roads.push({ id: 'CL-S' + i, name: 'Calle de servicio', w: 8, pts: [[p.x0, p.z], [p.x1, p.z]], sq: 1 }));
   ED.roads.push({ id: 'AL-1', kind: 'alambrado', pts: [[-10, si[3]], [si[0], si[3]], [si[0], si[1]], [si[2], si[1]], [si[2], si[3]], [10, si[3]]] });
   // galpones
-  S.naves.forEach(([name, rubro, x0, x1, z0, z1, h, face], i) => { const N = { id: 'n' + (i + 1), code: 'N' + (i + 1), name, rubro, x0, x1, z0, z1, h, face, custom: true }; prepNave(N); NAVES.push(N); DMO.docks.push(...N.docks);
+  S.naves.forEach(([name, rubro, x0, x1, z0, z1, h, face], i) => { const N = { id: 'n' + (i + 1), code: 'N' + (i + 1), name, rubro, x0, x1, z0, z1, h, face, custom: true, cartel: { t: name, c: ['#1E6FD6', '#D8344A', '#1E9E5A', '#E08A1E', '#6B4FD8', '#0E8FA3', '#C2415B', '#3B7A2E'][i % 8] } }; prepNave(N); NAVES.push(N); DMO.docks.push(...N.docks);
     try { INNER[N.id] = { items: defaultInner(N), walls: [], trays: [] }; } catch (e) { console.warn(e); } });
   rebuildBlank(); NAVES.forEach(N => { buildNave(N); chipFor(N); });
   // portería, barreras, oficinas, estacionamiento y verde
@@ -5329,6 +5330,26 @@ tick = (o => function () { o(); if (!DEMO) return; const T = VEH.filter(v => v.k
   $('#kTr').innerHTML = T.length + ' <em>en tránsito ' + (T.length - est.length) + '</em>'; $('#kDk').innerHTML = est.length + ' <em>de ' + DMO.docks.length + '</em>'; $('#kIn').textContent = String(DMO.in);
   for (const N of NAVES) { const el = N.chip && N.chip.el, sp = el && el.querySelector('span'); if (sp) sp.textContent = `${N.code} · ${N.docks.filter(d => d.occ && d.occ.state === 'parked').length}/${N.docks.length} andenes`; } })(tick);
 genericStart = (o => function () { if (DEMO && !NAVES.length) { try { demoStart(); } catch (e) { console.warn('demo', e); } return; } o(); })(genericStart);
+
+/* ---------- carteles de fachada, oficinas del parque y escultura (de los videos del predio) ----------
+   Un galpón con `cartel: { t, c, u, y }` lleva su nombre en letras grandes sobre la pared de los andenes. */
+const SIGNTEX = new Map();
+function signTex(txt, col, bg) { const k = txt + '|' + col + '|' + bg; let cv = SIGNTEX.get(k); if (cv) return cv; cv = document.createElement('canvas'); cv.width = 1024; cv.height = 192; const x = cv.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, 1024, 192); x.fillStyle = col; x.textAlign = 'center'; x.textBaseline = 'middle'; let fs = 150; do { x.font = '800 ' + fs + 'px "Hanken Grotesk", "Inter", system-ui, sans-serif'; fs -= 6; } while (x.measureText(txt).width > 980 && fs > 40);
+  x.fillText(txt, 512, 102); SIGNTEX.set(k, cv); return cv; }
+function naveSign(N) { const id = 'sign-' + N.id, c = N.cartel; if (!c || !c.t) { if (OBJID.get(id)) rmObj(id); return; }
+  const hg = c.h || 2.4, wd = Math.min(N.L * 0.6, Math.max(8, c.t.length * 1.55 + 2)), uc = c.u == null ? N.L / 2 : c.u, y0 = c.y == null ? N.h - hg - 1.1 : c.y, rt = [N.n[1], -N.n[0]], fl = N.t[0] * rt[0] + N.t[1] * rt[1] < 0;
+  const g = new Geo(), A = NP(N, uc - wd / 2, 0.4), B = NP(N, uc + wd / 2, 0.4), n = [N.n[0], 0, N.n[1]], col = [1, 1, 1], V = (q, y, u, v) => { g.uv = [fl ? 1 - u : u, v]; g.v([q[0], y, q[1]], n, col, isDark() ? 0.35 : 0); };
+  V(A, y0, 0, 1); V(B, y0, 1, 1); V(B, y0 + hg, 1, 0); V(A, y0, 0, 1); V(B, y0 + hg, 1, 0); V(A, y0 + hg, 0, 0); V(A, y0, 0, 1); V(B, y0 + hg, 1, 0); V(B, y0, 1, 1); V(A, y0, 0, 1); V(A, y0 + hg, 0, 0); V(B, y0 + hg, 1, 0); g.uv = null;
+  obj(id, { geo: g, layer: 'base', noShadow: true, texImg: signTex(c.t, c.c || '#1E6FD6', P.wall), tex: true }); }
+buildNave = (o => function (N) { o(N); try { naveSign(N); } catch (e) { console.warn(e); } })(buildNave);
+// oficinas del parque: oscuras con franjas blancas (se aplica una vez a las maquetas ya guardadas); escultura roja inclinada en la rotonda
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 5) return; ED.seed = 5; const of = PROPS.find(q => q.id === 'EDI-01'); if (of && !of.estilo) { of.estilo = 'osc'; if (!of.pisos || of.pisos < 2) of.pisos = 2; } })(pzSeed);
+buildBase = (o => function () { o(); if (BLANK) return; const g = new Geo(), [cx, cz] = px(RB[0], RB[1]), s = 2.6, R = '#B23A2E', a = 0.62, b = 0.5, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), n0 = g.p.length;
+  g.box(-s, -s, -s, s, s, s, R, { top: '#C24A3C', ao: 0.9 }); for (const j of [-1.2, 0, 1.2]) { g.box(-s - 0.05, j - 0.28, -s * 0.7, -s, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); g.box(s, j - 0.28, -s * 0.7, s + 0.05, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); }
+  const rot = (A, i) => { const x = A[i], y = A[i + 1], z = A[i + 2], y1 = y * ca - z * sa, z1 = y * sa + z * ca, x2 = x * cb - y1 * sb, y2 = x * sb + y1 * cb; A[i] = x2; A[i + 1] = y2; A[i + 2] = z1; };
+  for (let i = n0; i < g.p.length; i += 3) { rot(g.p, i); rot(g.n, i); g.p[i] += cx; g.p[i + 1] += s * 1.45; g.p[i + 2] += cz; }
+  g.mn = [cx - 5, 0, cz - 5]; g.mx = [cx + 5, 9, cz + 5]; g.box(cx - 1.6, 0, cz - 1.6, cx + 1.6, 0.5, cz + 1.6, P.base, { ao: 0.9 }); obj('escultura', { geo: g, layer: 'base' }); })(buildBase);
 
 /* ---------- gráficos v25 (2): luz de los focos de noche y control de calidad automático ----------
    De noche, cada foco y cada andén dejan un charco de luz cálida en el piso y en lo que tienen cerca (un mapa de luz visto desde arriba, que se rehace cuando se mueve un foco).
