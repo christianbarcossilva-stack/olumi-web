@@ -26,3 +26,14 @@ Cómo se hacen las personas (y después autos y objetos) que usan las maquetas. 
 - El reposo viene con brazos en A y codos doblados: el adaptador (`avatar.js` en la oficina) los lleva a colgar rectos antes de aplicar las poses.
 - Para medir el cuerpo (casco, chaleco) hay que fijar antes los rasgos (`TargetService.bake_targets`): las coordenadas crudas son las del molde base, no las de la persona.
 - El mameluco tiene bolsillos gruesos que atraviesan el chaleco: el técnico con chaleco va con remera polo y pantalón de trabajo.
+
+## Vehículos (11/11)
+- `blender -b --python suv.py -- salida/suv.blend salida/suv.glb` — SUV eléctrico mediano modelado por secciones (medidas arriba del guion: largo, ancho, alto, entre ejes). La pintura queda en el material `pintura`: la app le pone el color de la ficha.
+- `blender -b salida/suv.blend --python foto_auto.py -- salida/suv.png 34` — foto de control (vistas: `34`, `lado`, `atras`, `frente`).
+- Se publica copiando el GLB a `olumi/beta/3d/` y sumando el renglón en `vehiculos` de `catalogo.json`.
+
+## Técnico con casco y chaleco
+- Exportar con tope 18500 (`exportar.py -- crudo.glb 18500`): el chaleco no se achica y con menos triángulos el pantalón se abre en las rodillas al sentarse.
+
+## Visor: poses útiles
+- `idle@3.7` (otra persona, otra postura), `walk0.3` (fase del paso), `sit`, `tecla`, `g:saludo:1.2` (gesto a los 1,2 s), `para0.2` (0,2 s después de frenar). `h=1.5708&recto=1` mira de frente; `mira=1.25&fov=11` acerca al torso.
