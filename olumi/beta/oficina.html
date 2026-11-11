@@ -1027,7 +1027,7 @@ const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
 // 60 cuadros por segundo como máximo (aunque la pantalla dé 120) y 30 cuando nadie la está tocando: la maqueta abierta no calienta el equipo
 function frame(now){requestAnimationFrame(frame);if(CINE.pausa){frame.last=now;return}
-  frame.lim=WALK.on||ED.on||CINE.on||BUILD<1||now-ACTV<2500?15:31;if(now-(frame.last||0)<frame.lim)return;
+  frame.lim=WALK.on||ED.on||CINE.on||BUILD<1||now-ACTV<2500?12:31;if(now-(frame.last||0)<frame.lim)return;
   T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
   if(TAB!=='armar'&&S.built){if(!APP&&(!CINE.on||CINE.orbit)&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
   const dk=themeNow();if(dk!==DARK||!frame.th){DARK=dk;frame.th=1;setTheme()}
@@ -1164,12 +1164,11 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
 
 // ---------- fluidez: la maqueta se cuida sola ----------
 // Si el equipo no llega a 40 cuadros por segundo durante 3 segundos seguidos, baja un escalón de calidad (píxeles y sombras) y lo recuerda en ese dispositivo.
-// Escalones: 0 completa · 1 sombras más livianas y menos píxeles · 2 además las sombras se rehacen cuadro por medio · 3 mínima. ?calidad=0..3 la fija a mano.
+// Escalones: 0 completa · 1 sombras de 1024 y píxeles ×1,5 · 2 píxeles ×1,25 y las sombras se rehacen cuadro por medio · 3 sombras de 512 y píxeles ×1. ?calidad=0..3 la fija a mano.
 // No se cambia el tipo de sombra en marcha (deja manchas): solo su tamaño, su suavizado y cada cuánto se rehace.
 const Q={n:0,mal:0,bien:0,fijo:false,t0:performance.now()};
 function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE.on?1.25:2,[2,1.5,1.25,1][n]);const sh=SUNL.shadow,tam=n>=3?512:n>=1||innerWidth<700||CINE.on?1024:2048;
   if(sh.mapSize.x!==tam){sh.mapSize.set(tam,tam);for(const k of ['map','mapPass'])if(sh[k]){sh[k].dispose();sh[k]=null}}
-  if(sh.blurSamples>4)sh.blurSamples=n>=1?8:16;
   Q.salto=n>=2;R3.shadowMap.autoUpdate=!Q.salto;R3.shadowMap.needsUpdate=true;fit();if(guardar)try{localStorage.setItem('olumi.ofi.q',String(n))}catch(e){}}
 {const u=(location.search.match(/[?&]calidad=([0-3])/)||[])[1];let g=null;try{g=localStorage.getItem('olumi.ofi.q')}catch(e){}if(u!=null){Q.fijo=true;calidad(+u)}else if(g>0)calidad(+g)}
 ['pointermove','pointerdown','wheel','keydown','touchstart'].forEach(k=>addEventListener(k,()=>{ACTV=performance.now()},{passive:true}));
