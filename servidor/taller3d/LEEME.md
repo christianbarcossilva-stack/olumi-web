@@ -28,8 +28,10 @@ Cómo se hacen las personas (y después autos y objetos) que usan las maquetas. 
 - El mameluco tiene bolsillos gruesos que atraviesan el chaleco: el técnico con chaleco va con remera polo y pantalón de trabajo.
 
 ## Vehículos (11/11)
-- `blender -b --python suv.py -- salida/suv.blend salida/suv.glb` — SUV eléctrico mediano modelado por secciones (medidas arriba del guion: largo, ancho, alto, entre ejes). La pintura queda en el material `pintura`: la app le pone el color de la ficha.
-- `blender -b salida/suv.blend --python foto_auto.py -- salida/suv.png 34` — foto de control (vistas: `34`, `lado`, `atras`, `frente`).
+- `blender -b --python vehiculo.py -- <modelo> salida/<modelo>.blend salida/<modelo>.glb` — modelos: `suv` (medidas del Chery eQ7), `toro` (Fiat Toro, con la caja abierta), `bipper` (Peugeot Bipper), `fiorino` (Fiat Fiorino 2025). Cada uno es una ficha en `MODELOS`: medidas de fábrica, tres curvas de costado, planta y la lista de detalles. La pintura queda en el material `pintura`: la app le pone el color de la ficha.
+- La resta (pasarruedas, caja) se comprueba sola por volumen y, si un método falla, prueba otro (en la Bipper el exacto daba la pieza dada vuelta).
+- En `catalogo.json` cada vehículo lleva `tipo` (suv, pickup, utilitario), `modelo` (expresión que se busca en el modelo o el nombre de la ficha), medidas, `adelante` (corrimiento para que la trompa quede en su lugar) y, en los furgones, `cartel` (dónde va el nombre de la empresa; el guion imprime `CARTEL … costado` con la medida).
+- `blender -b salida/toro.blend --python foto_auto.py -- salida/toro.png 34` — foto de control (vistas: `34`, `lado`, `atras`, `frente`).
 - Se publica copiando el GLB a `olumi/beta/3d/` y sumando el renglón en `vehiculos` de `catalogo.json`.
 
 ## Técnico con casco y chaleco
