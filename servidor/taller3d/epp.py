@@ -34,7 +34,7 @@ def chaleco():
             if solo is not None and v.index not in solo: continue
             w = {}
             for x in v.groups: w[g[x.group]] = w.get(g[x.group], 0) + x.weight
-            if sum(w.get(k, 0) for k in TOR) > .5 and sum(w.get(k, 0) for k in BRA) < .28 and sum(w.get(k, 0) for k in CAB) < .22 and zc - .09 < v.co.z < zn + .02 and w.get('LeftUpLeg', 0) + w.get('RightUpLeg', 0) < .45: r.add(v.index)
+            if sum(w.get(k, 0) for k in TOR) > (.5 if solo is None else .3) and sum(w.get(k, 0) for k in BRA) < (.28 if solo is None else .62) and sum(w.get(k, 0) for k in CAB) < (.22 if solo is None else .55) and zc - (.09 if solo is None else .14) < v.co.z < zn + (.02 if solo is None else .06) and w.get('LeftUpLeg', 0) + w.get('RightUpLeg', 0) < .45: r.add(v.index)
         return r
     # el molde es el torso del cuerpo (malla pareja); cada punto se separa lo necesario para quedar por fuera de la ropa que haya
     ropa = [o for o in bpy.data.objects if o.type == 'MESH' and o is not body and o.name.split('.')[-1] not in ('casco', 'chaleco') and not o.name.split('.')[-1].startswith(('eye', 'low-poly', 'high-poly', 'short', 'bob', 'long', 'ponytail', 'afro', 'braid', 'teeth', 'tongue', 'shoes'))]
@@ -44,7 +44,6 @@ def chaleco():
     for p in sm.polygons:
         if not all(i in sel for i in p.vertices): continue
         c = p.center
-        if p.normal.y < -.2 and c.z > zv + .09 and abs(c.x) < (c.z - zv - .09) * .5 + .02: continue    # escote corto
         caras.append(p)
     idx = sorted({i for p in caras for i in p.vertices}); mapa = {i: k for k, i in enumerate(idx)}
     from mathutils.bvhtree import BVHTree
@@ -75,7 +74,24 @@ def chaleco():
     bmesh.ops.holes_fill(bm, edges=bm.edges[:], sides=18)     # agujeritos sueltos (no el cuello, las sisas ni el borde de abajo)
     bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
     for _ in range(2): bmesh.ops.smooth_vert(bm, verts=[v for v in bm.verts if not v.is_boundary], factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-    for _ in range(3): bmesh.ops.smooth_vert(bm, verts=[v for v in bm.verts if v.is_boundary], factor=.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    # bordes: se cortan por curvas limpias (abajo recto, sisas por un plano inclinado desde el hombro, cuello redondo con escote en V adelante)
+    # y los puntos del borde se llevan justo a esa curva, así no queda el dentado de la malla
+    sh = hueso('LeftArm'); xs = abs(sh.x); zs = sh.z + .03; yn = hueso('Neck').y; zb = zc - .075; NA = Vector((1, 0, .45)).normalized()
+    def F(p):
+        f = p.z - zb
+        for sx in (-1, 1): f = min(f, -(Vector((sx * p.x, 0, p.z)) - Vector((xs - .04, 0, zs))).dot(NA))
+        if p.z > zn - .09: f = min(f, math.hypot(p.x, p.y - yn) - .082)
+        if p.y < yn + .02 and p.z > zv: f = min(f, abs(p.x) - (p.z - zv) * .5)
+        return f
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if any(F(v.co) < 0 for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS'); bm.normal_update()
+    for _ in range(3):
+        for v in [v for v in bm.verts if v.is_boundary]:
+            f = F(v.co)
+            if f > .045: continue                      # borde que no es de estas curvas (no debería quedar ninguno)
+            e = .004; g = Vector(((F(v.co + Vector((e, 0, 0))) - f) / e, (F(v.co + Vector((0, e, 0))) - f) / e, (F(v.co + Vector((0, 0, e))) - f) / e)); g -= v.normal * g.dot(v.normal)
+            if g.length > .2: v.co -= g * (f / g.length_squared) * .8
+    for _ in range(2): bmesh.ops.smooth_vert(bm, verts=[v for v in bm.verts if not v.is_boundary and any(w.is_boundary for e in v.link_edges for w in e.verts)], factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     bm.to_mesh(nm); bm.free()
     # mapa: alrededor del torso (u) y altura (v); la costura queda en la espalda
     zs = [v.co.z for v in nm.vertices]; z0, z1 = min(zs), max(zs); cx = sum(v.co.x for v in nm.vertices) / len(nm.vertices); cy = sum(v.co.y for v in nm.vertices) / len(nm.vertices)

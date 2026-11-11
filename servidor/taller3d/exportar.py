@@ -17,7 +17,8 @@ def tris(o): o.data.calc_loop_triangles(); return len(o.data.loop_triangles)
 tot = sum(tris(o) for o in ms)
 if tot > TRI:
     # se achica más lo que más pesa (cuerpo y ropa); pelo, cejas, pestañas y ojos quedan como están
-    gr = [o for o in ms if tris(o) > 2500]; fijo = tot - sum(tris(o) for o in gr); k = max(.18, (TRI - fijo) / max(1, sum(tris(o) for o in gr)))
+    gr = [o for o in ms if tris(o) > 2500 and 'chaleco' not in o.name];      # el chaleco no se achica: se le desarman los bordes
+    fijo = tot - sum(tris(o) for o in gr); k = max(.18, (TRI - fijo) / max(1, sum(tris(o) for o in gr)))
     for o in gr:
         d = o.modifiers.new('liviano', 'DECIMATE'); d.ratio = min(1, k * (1.25 if o is bm else 1)); d.use_collapse_triangulate = True
         # el esqueleto tiene que quedar último
