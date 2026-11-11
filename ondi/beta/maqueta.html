@@ -3999,8 +3999,8 @@ function casExtGeo(g, p) { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, dc = cl
   g.box(dc - 0.5, 0, -d - 0.07, dc + 0.5, 2.1, -d, P.door, { ao: 0.95 }); g.box(dc - 0.56, 2.1, -d - 0.08, dc + 0.56, 2.18, -d, P.frame); g.box(dc - 0.7, 0, -d - 0.9, dc + 0.7, 0.15, -d, P.parapet);
   g.box(-w + 0.6, 2.2, d, -w + 1.5, 2.75, d + 0.45, '#D9DEE2', { ao: 1 }); return g; }
 propGeo = (o => p => { const k = p.k, g = new Geo(), r = seeded((p.seed || 7) * 131 + 17);
-  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, h = pv(p, 'h'), col = p.col === 'hvac' ? P.hvac : p.estilo === 'osc' ? '#2D3033' : P.wall; g.box(-w, 0, -d, w, h, d, col, { top: P.roof, ao: 0.86 });
-    if (p.estilo === 'osc') for (const [a, b] of [[h * 0.45, h * 0.57], [h - 0.6, h + 0.02]]) g.box(-w - 0.14, a, -d - 0.14, w + 0.14, b, d + 0.14, '#F4F5F3', { ao: 1 });
+  if (k === 'edif') { const w = pv(p, 'w') / 2, d = pv(p, 'd') / 2, h = pv(p, 'h'), col = p.col === 'hvac' ? P.hvac : (p.estilo === 'osc' || p.osc >= 1) ? '#2D3033' : P.wall; g.box(-w, 0, -d, w, h, d, col, { top: P.roof, ao: 0.86 });
+    if (p.estilo === 'osc' || p.osc >= 1) for (const [a, b] of [[h * 0.45, h * 0.57], [h - 0.6, h + 0.02]]) g.box(-w - 0.14, a, -d - 0.14, w + 0.14, b, d + 0.14, '#F4F5F3', { ao: 1 });
     for (let i = 0; i < pv(p, 'pisos'); i++) { const y = 1.6 + i * 4; if (y + 2.4 > h - 0.3) break; g.win(-w, -d, w, d, y, 2.4, P.glass, P.glassE); }
     g.box(-w - 0.05, h, -d - 0.05, w + 0.05, h + 0.6, -d + 0.4, P.parapet); g.box(-w - 0.05, h, d - 0.4, w + 0.05, h + 0.6, d + 0.05, P.parapet); g.box(-w - 0.05, h, -d, -w + 0.4, h + 0.6, d, P.parapet); g.box(w - 0.4, h, -d, w + 0.05, h + 0.6, d, P.parapet);
     if (p.techo === 'solar') { for (let x = -w + 4; x < w - 8; x += 7.4) for (let z = -d + 4; z < d - 6; z += 5.4) g.box(x, h + 0.25, z, x + 7, h + 0.55, z + 5, P.solar, { top: mulc(C(P.solar), 1.25), ao: 1 }); }
@@ -5369,11 +5369,18 @@ pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 6)
     for (const F of FIBS) F.pts.forEach((v, i) => { const n = ins(v[0], v[1]); if (n) F.pts[i] = n; }); };
   mvTo('balanza', 156, 720, 163, 714.6, { L: 22 }); mvTo('casilla', 161.75, 724.2, 187, 720.8, { name: 'Control de acceso y balanza' });
   if (!PROPS.some(q => q.id === 'CT-ENT')) { const [x, z] = px(214, 716.5); PROPS.push({ id: 'CT-ENT', type: 'prop', k: 'cartel', seed: 3, x, y: 0, z, yaw: 0, name: 'Empresas del parque' }); } })(pzSeed);
-buildBase = (o => function () { o(); if (BLANK) return; const g = new Geo(), [cx, cz] = px(240.5, 698.5), s = 2.6, R = '#B23A2E', a = 0.62, b = 0.5, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), n0 = g.p.length;
-  g.box(-s, -s, -s, s, s, s, R, { top: '#C24A3C', ao: 0.9 }); for (const j of [-1.2, 0, 1.2]) { g.box(-s - 0.05, j - 0.28, -s * 0.7, -s, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); g.box(s, j - 0.28, -s * 0.7, s + 0.05, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); }
-  const rot = (A, i) => { const x = A[i], y = A[i + 1], z = A[i + 2], y1 = y * ca - z * sa, z1 = y * sa + z * ca, x2 = x * cb - y1 * sb, y2 = x * sb + y1 * cb; A[i] = x2; A[i + 1] = y2; A[i + 2] = z1; };
-  for (let i = n0; i < g.p.length; i += 3) { rot(g.p, i); rot(g.n, i); g.p[i] += cx; g.p[i + 1] += s * 1.45; g.p[i + 2] += cz; }
-  g.mn = [cx - 5, 0, cz - 5]; g.mx = [cx + 5, 9, cz + 5]; g.box(cx - 1.6, 0, cz - 1.6, cx + 1.6, 0.5, cz + 1.6, P.base, { ao: 0.9 }); obj('escultura', { geo: g, layer: 'base' }); })(buildBase);
+// escultura de la rotonda: es una pieza del catálogo (en modo edición se mueve, se agranda o se borra)
+Object.assign(PK, { escultura: { n: 'Escultura (cubo inclinado)', tags: 'escultura cubo arte rotonda entrada', out: true } }); Object.assign(PRE3, { escultura: 'ESC-' }); Object.assign(PBIG, { escultura: 1 });
+PRM.escultura = [['r', 'Tamaño', 0.2, 0.8, 8, 2.6]]; { const ex = CAT3.find(c => c[0] === 'Exterior y decoración'); if (ex) { const it = ['prop:escultura', PK.escultura.n, 'tree', PK.escultura.tags]; ex[1].push(it); ALL3.push({ k: it[0], n: it[1], ic: it[2], tags: it[3], c: 'Exterior y decoración' }); } } PRM.edif.push(['osc', 'Fachada oscura con franjas (0 no · 1 sí)', 1, 0, 1, 0]);
+propGeo = (o => p => { if (p.k !== 'escultura') return o(p); const g = new Geo(), s = pv(p, 'r'), R = '#B23A2E', a = 0.62, b = 0.5, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  g.box(-s, -s, -s, s, s, s, R, { top: '#C24A3C', ao: 0.9 }); for (const j of [-0.46, 0, 0.46]) { g.box(-s - 0.05, (j - 0.1) * s, -s * 0.7, -s, (j + 0.1) * s, s * 0.7, '#7E241C', { ao: 1 }); g.box(s, (j - 0.1) * s, -s * 0.7, s + 0.05, (j + 0.1) * s, s * 0.7, '#7E241C', { ao: 1 }); }
+  const rot = (A, i) => { const x = A[i], y = A[i + 1], z = A[i + 2], y1 = y * ca - z * sa, z1 = y * sa + z * ca; A[i] = x * cb - y1 * sb; A[i + 1] = x * sb + y1 * cb; A[i + 2] = z1; };
+  for (let i = 0; i < g.p.length; i += 3) { rot(g.p, i); rot(g.n, i); g.p[i + 1] += s * 1.45; }
+  g.mn = [-s * 1.8, 0, -s * 1.8]; g.mx = [s * 1.8, s * 3.2, s * 1.8]; g.box(-s * 0.6, 0, -s * 0.6, s * 0.6, 0.5, s * 0.6, P.base, { ao: 0.9 }); return g; })(propGeo);
+solids = (o => function (p) { if (p.k === 'escultura') { const s = pv(p, 'r') * 1.2; return [{ mn: [-s, 0, -s], mx: [s, s * 2.6, s] }]; } return o(p); })(solids);
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 7) return; ED.seed = 7;
+  if (!PROPS.some(q => q.k === 'escultura')) { const [x, z] = px(RB[0] - 0.5, RB[1] + 5); PROPS.push({ id: 'ESC-01', type: 'prop', k: 'escultura', seed: 1, x, y: 0, z, yaw: 0, name: 'Escultura de la entrada' }); }
+  const of = PROPS.find(q => q.id === 'EDI-01'); if (of && of.estilo === 'osc') { of.osc = 1; delete of.estilo; } })(pzSeed);
 
 /* ---------- gráficos v25 (2): luz de los focos de noche y control de calidad automático ----------
    De noche, cada foco y cada andén dejan un charco de luz cálida en el piso y en lo que tienen cerca (un mapa de luz visto desde arriba, que se rehace cuando se mueve un foco).
