@@ -5343,7 +5343,16 @@ function naveSign(N) { const id = 'sign-' + N.id, c = N.cartel; if (!c || !c.t) 
 buildNave = (o => function (N) { o(N); try { naveSign(N); } catch (e) { console.warn(e); } })(buildNave);
 // oficinas del parque: oscuras con franjas blancas (se aplica una vez a las maquetas ya guardadas); escultura roja inclinada en la rotonda
 pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 5) return; ED.seed = 5; const of = PROPS.find(q => q.id === 'EDI-01'); if (of && !of.estilo) { of.estilo = 'osc'; if (!of.pisos || of.pisos < 2) of.pisos = 2; } })(pzSeed);
-buildBase = (o => function () { o(); if (BLANK) return; const g = new Geo(), [cx, cz] = px(RB[0], RB[1]), s = 2.6, R = '#B23A2E', a = 0.62, b = 0.5, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), n0 = g.p.length;
+// entrada según el video del 11/11: la balanza sobre el borde norte del acceso y la casilla de control enfrente, pegadas a la rotonda (solo si nadie las movió)
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 6) return; ED.seed = 6;
+  const mvTo = (k, X0, Y0, X1, Y1, op) => { const [ox, oz] = px(X0, Y0), p = PROPS.find(q => q.k === k && Math.hypot(q.x - ox, q.z - oz) < 1.5); if (!p) return; const old = { x: p.x, z: p.z, yaw: p.yaw || 0 }, fp = PCARRY[k] ? PCARRY[k](p) : null, [nx, nz] = px(X1, Y1); p.x = nx; p.z = nz; Object.assign(p, op);
+    if (!fp) return; const ins = (x, z) => { const [lx, lz] = W2L(old, x, z); return lx < fp[0] || lx > fp[1] || lz < fp[2] || lz > fp[3] ? null : L2W(p, lx, lz); };
+    for (const d of DEV) { const n = ins(d.x, d.z); if (!n) continue; d.x = n[0]; d.z = n[1]; if (d.wn) { const a = D2L(old, d.wn[0], d.wn[1]); d.wn = D2W(p, a[0], a[1]); } markMoved(d); }
+    for (const q of PROPS) { if (q === p || PCARRY[q.k]) continue; const n = ins(q.x, q.z); if (n) { q.x = n[0]; q.z = n[1]; } }
+    for (const F of FIBS) F.pts.forEach((v, i) => { const n = ins(v[0], v[1]); if (n) F.pts[i] = n; }); };
+  mvTo('balanza', 156, 720, 163, 714.6, { L: 22 }); mvTo('casilla', 161.75, 724.2, 187, 720.8, { name: 'Control de acceso y balanza' });
+  if (!PROPS.some(q => q.id === 'CT-ENT')) { const [x, z] = px(214, 716.5); PROPS.push({ id: 'CT-ENT', type: 'prop', k: 'cartel', seed: 3, x, y: 0, z, yaw: 0, name: 'Empresas del parque' }); } })(pzSeed);
+buildBase = (o => function () { o(); if (BLANK) return; const g = new Geo(), [cx, cz] = px(240.5, 698.5), s = 2.6, R = '#B23A2E', a = 0.62, b = 0.5, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), n0 = g.p.length;
   g.box(-s, -s, -s, s, s, s, R, { top: '#C24A3C', ao: 0.9 }); for (const j of [-1.2, 0, 1.2]) { g.box(-s - 0.05, j - 0.28, -s * 0.7, -s, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); g.box(s, j - 0.28, -s * 0.7, s + 0.05, j + 0.28, s * 0.7, '#7E241C', { ao: 1 }); }
   const rot = (A, i) => { const x = A[i], y = A[i + 1], z = A[i + 2], y1 = y * ca - z * sa, z1 = y * sa + z * ca, x2 = x * cb - y1 * sb, y2 = x * sb + y1 * cb; A[i] = x2; A[i + 1] = y2; A[i + 2] = z1; };
   for (let i = n0; i < g.p.length; i += 3) { rot(g.p, i); rot(g.n, i); g.p[i] += cx; g.p[i + 1] += s * 1.45; g.p[i + 2] += cz; }
