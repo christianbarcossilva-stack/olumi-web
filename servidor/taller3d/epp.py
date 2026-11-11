@@ -100,6 +100,16 @@ def chaleco():
             k = (y * N + x) * 4; px[k:k + 4] = (*c, 1)
     im.pixels = px; im.filepath_raw = os.path.join(os.path.dirname(OUT), 'chaleco_color.png'); im.file_format = 'PNG'; im.save(); im.pack()
     nm.materials.append(material('chaleco', (1, 1, 1), .78, im)); enlazar(o); print('CHALECO', len(nm.vertices), 'v', len(nm.polygons), 'caras')
+    # lo que queda tapado por el chaleco se saca de la ropa de abajo: así, al moverse, la remera no puede asomar a través del chaleco
+    bv = bmesh.new(); bv.from_mesh(nm); arbol = BVHTree.FromBMesh(bv)
+    for r in ropa:
+        if len(torso(r)) < 150 or sum(v.co.z for v in r.data.vertices) / len(r.data.vertices) < hueso('Hips').z + .1: continue    # solo prendas de arriba: el pantalón queda entero
+        b2 = bmesh.new(); b2.from_mesh(r.data); b2.normal_update(); tap = []
+        for f in b2.faces:
+            c = f.calc_center_median(); h = arbol.ray_cast(c + f.normal * .002, f.normal, .09)
+            if h[0] is not None and all(arbol.ray_cast(v.co + f.normal * .002, f.normal, .11)[0] is not None for v in f.verts): tap.append(f)
+        bmesh.ops.delete(b2, geom=tap, context='FACES'); b2.to_mesh(r.data); b2.free(); print('TAPADO', r.name, len(tap), 'caras fuera')
+    bv.free()
 
 # ---------- casco ----------
 def casco():
