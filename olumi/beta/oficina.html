@@ -275,6 +275,7 @@ const SC=new THREE.Scene();{const pm=new THREE.PMREMGenerator(R3);SC.environment
 const ISO=new THREE.OrthographicCamera(-1,1,1,-1,1,400);ISO.position.set(90,90,90);ISO.lookAt(0,0,0);
 const FP=new THREE.PerspectiveCamera(68,1,.05,220);let CAM=ISO;
 const CINE={on:/[?&]cine=1/.test(location.search),t:0,k:0};
+let QCAP=CINE.on?1.25:2,ACTV=0;                 // tope de píxeles según la calidad (ver medir.js) y último momento en que alguien tocó la maqueta
 const WALK={on:false,x:3.5,y:22,yaw:-Math.PI/2,pitch:-.05,ty:-Math.PI/2,tp:-.05,vx:0,vy:0,dist:2.6,third:true,keys:{},joy:[0,0],bob:0};
 function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(innerWidth<700?1.5:2,window.devicePixelRatio||1);cv.width=r.width*dpr;cv.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);VW=r.width;VH=r.height;
   const x0=-2,y0=-2,x1=W+2,y1=29.6;const spanX=((x1-y0)-(x0-y1))*COS,spanY=((x1+y1)-(x0+y0))*SIN+3.8;sc=Math.min(VW/(spanX*1.04),VH/(spanY*1.08));
@@ -282,7 +283,7 @@ function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(innerWidth<700
   // encuadre de la maqueta: el punto del piso que queda en el centro de la pantalla es el que se mira; la vista se puede girar, acercar y desplazar
   const k=Math.SQRT2*COS*sc,a=(VW/2-ox)/(COS*sc),b=(VH/2-oy)/(SIN*sc);Object.assign(ISO,{left:-VW/2/k,right:VW/2/k,top:VH/2/k,bottom:-VH/2/k});ISO.updateProjectionMatrix();
   VIEW.home=[(a+b)/2,(b-a)/2];if(!VIEW.moved){VIEW.tx=VIEW.cx=VIEW.home[0];VIEW.ty=VIEW.cy=VIEW.home[1]}camIso(1);
-  FP.aspect=VW/VH;FP.updateProjectionMatrix();R3.setPixelRatio(CINE.on?Math.min(dpr,1.25):dpr);R3.setSize(VW,VH,false)}   // de fondo en una web, menos píxeles: cuida la memoria (Safari)
+  FP.aspect=VW/VH;FP.updateProjectionMatrix();R3.setPixelRatio(Math.min(dpr,QCAP));R3.setSize(VW,VH,false)}   // de fondo en una web, menos píxeles: cuida la memoria (Safari)
 const VIEW={tx:13,ty:9,cx:13,cy:9,yaw:Math.PI/4,yawT:Math.PI/4,zoom:1,zoomT:1,moved:false,home:[13,9]};
 function camIso(k=1){VIEW.cx+=(VIEW.tx-VIEW.cx)*k;VIEW.cy+=(VIEW.ty-VIEW.cy)*k;VIEW.yaw+=(VIEW.yawT-VIEW.yaw)*k;VIEW.zoom+=(VIEW.zoomT-VIEW.zoom)*k;
   const c=Math.SQRT2/Math.sqrt(3),D=90;ISO.position.set(VIEW.cx+Math.cos(VIEW.yaw)*c*D,D/Math.sqrt(3),VIEW.cy+Math.sin(VIEW.yaw)*c*D);ISO.lookAt(VIEW.cx,0,VIEW.cy);
@@ -666,7 +667,12 @@ const nvI=(x,y)=>[Math.max(0,Math.min(NV.nx-1,Math.round((x-NV.x0)/NV.c))),Math.
 const nvFree=(i,j)=>i>=0&&j>=0&&i<NV.nx&&j<NV.ny&&!NV.g[j*NV.nx+i];
 function nvNear(i,j){if(nvFree(i,j))return[i,j];for(let r=1;r<10;r++)for(let a=-r;a<=r;a++)for(const [u,v] of [[i+a,j-r],[i+a,j+r],[i-r,j+a],[i+r,j+a]])if(nvFree(u,v))return[u,v];return[i,j]}
 function nvSight(a,b){const n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let k=1;k<n;k++){const i=Math.round(a[0]+(b[0]-a[0])*k/n),j=Math.round(a[1]+(b[1]-a[1])*k/n);if(!nvFree(i,j))return false}return true}
-function route(x,y,tx,ty){const key=LAYV+'|'+S.desks.length;if(NV.key!==key){NV.key=key;navBuild()}
+function navReady(){const key=LAYV+'|'+S.desks.length;if(NV.key!==key){NV.key=key;navBuild()}}
+const nvFreeAt=(x,y)=>{const [i,j]=nvI(x,y);return nvFree(i,j)};
+// evitar: puntos [x,y] donde hay alguien parado; el camino los rodea. Devuelve null si no hay camino.
+function route(x,y,tx,ty,evitar){navReady();const g0=NV.g;if(evitar&&evitar.length){NV.g=g0.slice();for(const [ex,ey] of evitar){const [ei,ej]=nvI(ex,ey);for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(a*a+b*b<=5){const u=ei+a,v=ej+b;if(u>=0&&v>=0&&u<NV.nx&&v<NV.ny)NV.g[v*NV.nx+u]=1}}}
+  try{return route0(x,y,tx,ty)}finally{NV.g=g0}}
+function route0(x,y,tx,ty){
   const s=nvNear(...nvI(x,y)),t=nvNear(...nvI(tx,ty)),nx=NV.nx,N=nx*NV.ny,G=new Float32Array(N).fill(1e9),F=new Int32Array(N).fill(-1),C=new Uint8Array(N),open=[];
   const h=(i,j)=>{const dx=Math.abs(i-t[0]),dy=Math.abs(j-t[1]);return Math.max(dx,dy)+.414*Math.min(dx,dy)};
   const push=(k,f)=>{open.push([f,k]);let n=open.length-1;while(n>0){const p=(n-1)>>1;if(open[p][0]<=open[n][0])break;[open[p],open[n]]=[open[n],open[p]];n=p}};
@@ -675,7 +681,7 @@ function route(x,y,tx,ty){const key=LAYV+'|'+S.desks.length;if(NV.key!==key){NV.
   while(open.length&&it++<20000){const [,k]=pop();if(k===t0)break;if(C[k])continue;C[k]=1;const i=k%nx,j=(k-i)/nx;
     for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(!di&&!dj)continue;const u=i+di,v=j+dj;if(!nvFree(u,v)||(di&&dj&&(!nvFree(i+di,j)||!nvFree(i,j+dj))))continue;
       const q=v*nx+u,g2=G[k]+(di&&dj?1.414:1);if(g2<G[q]){G[q]=g2;F[q]=k;push(q,g2+h(u,v))}}}
-  if(F[t0]<0&&t0!==s0)return[];      // sin camino: va derecho, como antes
+  if(F[t0]<0&&t0!==s0)return null;   // sin camino
   const cells=[];for(let k=t0;k>=0&&k!==s0;k=F[k])cells.push([k%nx,(k-k%nx)/nx]);cells.reverse();
   const out=[];let a=s;for(let m=0;m<cells.length;m++){const nxt=cells[m+1];if(!nxt||!nvSight(a,nxt)){out.push(cells[m]);a=cells[m]}}
   out.pop();return out.map(([i,j])=>[NV.x0+i*NV.c,NV.y0+j*NV.c])}
@@ -701,7 +707,7 @@ const DOORS=DOORDEF.map(([ax,ay,bx,by,t,inn])=>{const g=new THREE.Group(),len=Ma
     B(l,MAT.steel,len-.16,-.06,1.0,.12,.12,.03);const p=new THREE.Group();p.position.set(ax,0,ay);p.rotation.y=-ang;p.add(l);g.add(p);out.push({l:p,kind:'swing',ang,side})}
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});BLD.add(g);
   const near2=(x,y)=>PART.some(p=>p[4]==='s'&&(Math.hypot(p[0]-x,p[1]-y)<.05||Math.hypot(p[2]-x,p[3]-y)<.05));
-  g.userData={cx:(ax+bx)/2,cy:(ay+by)/2,len,walk,solid:near2(ax,ay)||near2(bx,by),open:0,leaves:out};return g});
+  g.userData={cx:(ax+bx)/2,cy:(ay+by)/2,dx:ux,dy:uy,len,walk,solid:near2(ax,ay)||near2(bx,by),open:0,leaves:out};return g});
 function doorsStep(dt){const who=S.people.filter(p=>!p.inVan).map(p=>[p.x,p.y]);if(WALK.on)who.push([WALK.x,WALK.y]);if(CINE.on)who.push([FP.position.x,FP.position.z]);
   for(const g of DOORS){const u=g.userData;g.visible=WALK.on||CINE.on||!u.walk&&!u.solid;if(!u.leaves.length)continue;
     const near=who.some(([x,y])=>Math.hypot(x-u.cx,y-u.cy)<Math.max(1.5,u.len*.6+.9));u.open+=((near?1:0)-u.open)*(1-Math.exp(-dt*(near?7:3)));const o=u.open*u.open*(3-2*u.open);
@@ -749,7 +755,9 @@ function mkVan(v,k){const g=new THREE.Group(),b=new THREE.Group();g.add(b);const
     [[-.62],[.68]].forEach(([x])=>{const t=new THREE.Mesh(new THREE.TorusGeometry(.26,.08,10,24),M('tire',{color:'#161618',roughness:.9}));t.position.set(x,.34,0);b.add(t)});Hh=1.5}
   else{L=3.6;RB(paint,-1.8,1.8,.3,.95,1.56,.18);RB(glass,-.95,.75,.9,1.42,1.38,.2);RB(paint,-.9,.68,1.36,1.46,1.32,.05);sideWin(-.85,.6,.98,1.36,.68);
     lights(1.8,-1.8,.6,.7);wheel(-1.15,-.7,.32);wheel(-1.15,.7,.32);wheel(1.2,-.7,.32);wheel(1.2,.7,.32);Hh=1.8}
-  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});return{g,beacon,Hh,L}}
+  // todo lo que no se mueve se une por material (una camioneta: de unas 25 piezas a menos de 10); la baliza queda aparte, con su propio material, para que parpadee solo la suya
+  [glass,head,tail,chrome].forEach(m=>m.userData.nc=1);if(beacon){b.remove(beacon);beacon.material=beacon.material.clone();beacon.receiveShadow=true}
+  const mb=merge(b);g.remove(b);g.add(mb);if(beacon)g.add(beacon);return{g,beacon,Hh,L}}
 function van3(v,dt){const k=v.kind||vehKind(v.model),key=k+(v.col||'')+S.name;let o=VEH.get(v.id);
   if(!o||o.key!==key){if(o)ACT.remove(o.g);o=Object.assign(mkVan(v,k),{key,h:-Math.PI/2,px:null,py:null});VEH.set(v.id,o);ACT.add(o.g)}o.seen=1;
   const cx=v.x+2.5,cy=v.y+1.4;const show=!!S.built&&!(v.out&&!v.anim)&&cx>-2.6&&cx<W+2.6;o.g.visible=show;if(!show){o.px=null;return null}
@@ -765,47 +773,50 @@ const pkey=(p,L)=>p.role+p.virtual+p.ag+L.skin+L.hair+L.style+(L.top||'');
 // Mira hacia +x; el ancho de hombros va en z. Las geometrías se comparten entre todas las personas.
 const PG={};const pg=(k,f)=>PG[k]||(PG[k]=f());
 const capG=(r,l,cs=4,rs=12)=>pg('c'+r+l,()=>new THREE.CapsuleGeometry(r,l,cs,rs));
+// varias piezas rígidas en una sola malla con el color en cada vértice: una llamada de dibujo en vez de una por detalle
+function bake(key,parts){return pg(key,()=>{const gs=parts.map(([geo,c,x=0,y=0,z=0,rz=0])=>{const t=geo.index?geo.toNonIndexed():geo.clone();if(rz)t.rotateZ(rz);t.translate(x,y,z);for(const k of Object.keys(t.attributes))if(k!=='position'&&k!=='normal')t.deleteAttribute(k);
+      const col=new THREE.Color(c),n=t.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++){a[i*3]=col.r;a[i*3+1]=col.g;a[i*3+2]=col.b}t.setAttribute('color',new THREE.BufferAttribute(a,3));return t});
+    const out=mergeGeometries(gs);gs.forEach(x=>x.dispose());return out})}
+const BLOB=()=>BLOB.m||(BLOB.m=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,31);g.addColorStop(0,'rgba(0,0,0,.5)');g.addColorStop(.55,'rgba(0,0,0,.2)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);
+  return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2})})());
 function mkPerson(p){const L=fullLook(p),col=ROLES[p.role][1],tec=p.role==='tecnico',ger=p.role==='gerencia';const g=new THREE.Group();
   const vm=p.virtual?new THREE.MeshStandardMaterial({color:p.ag==='ada'?'#5e8cff':'#8c6dff',emissive:p.ag==='ada'?'#0a84ff':'#7c5cff',emissiveIntensity:.5,transparent:true,opacity:.78,roughness:.4}):null;
   const m=(c,r=.78)=>vm||M('c'+c+r,{color:c,roughness:r});
   const mesh=(geo,mat,x=0,y=0,z=0)=>{const o=new THREE.Mesh(geo,mat);o.position.set(x,y,z);return o};
   const grp=(par,x,y,z)=>{const o=new THREE.Group();o.position.set(x,y,z);par.add(o);return o};
-  const top=L.top||col,skin=m(L.skin,.55),pants=m(L.pants,.85),shoe=m(tec?'#5a3a24':'#1d1c1a',.45),shirt=m(top,.8);
-  const hip=grp(g,0,.95,0);
+  const top=L.top||col,cs=L.skin,ch=L.hair,skin=m(cs,.55),pants=m(L.pants,.85),shoe=m(tec?'#5a3a24':'#1d1c1a',.45),shirt=m(top,.8),pv=vm||M('pv',{vertexColors:true,roughness:.74});
+  const hip=grp(g,0,.95,0),S1=(o,sh=true)=>{o.castShadow=sh;return o};
   // cadera y piernas: muslo → rodilla → tobillo con zapato
-  hip.add(mesh(pg('pel',()=>new RoundedBoxGeometry(.2,.16,.34,3,.07)),pants,0,-.02,0));
-  const leg=s=>{const th=grp(hip,0,-.06,s*.092);th.add(mesh(capG(.072,.3),pants,0,-.2,0));const kn=grp(th,0,-.42,0);kn.add(mesh(capG(.058,.3),pants,0,-.19,0));
-    const an=grp(kn,0,-.4,0);an.add(mesh(pg('shoe',()=>new RoundedBoxGeometry(.24,.085,.1,3,.035)),shoe,.05,-.03,0));return{th,kn,an}};
+  hip.add(S1(mesh(pg('pel',()=>new RoundedBoxGeometry(.2,.16,.34,3,.07)),pants,0,-.02,0)));
+  const leg=s=>{const th=grp(hip,0,-.06,s*.092);th.add(S1(mesh(capG(.072,.3),pants,0,-.2,0)));const kn=grp(th,0,-.42,0);kn.add(S1(mesh(capG(.058,.3),pants,0,-.19,0)));
+    const an=grp(kn,0,-.4,0);an.add(S1(mesh(pg('shoe',()=>new RoundedBoxGeometry(.24,.085,.1,3,.035)),shoe,.05,-.03,0),false));return{th,kn,an}};
   const lL=leg(-1),lR=leg(1);
-  // torso: cintura y pecho (respira), cuello y cabeza que mira
+  // torso (respira) y cabeza (mira): cada uno es UNA sola malla con el color en los vértices, en vez de una pieza por detalle
   const chest=grp(hip,0,.06,0);
   // torso con forma: hombros anchos, cintura más fina, pecho un poco adelante
   const torG=pg('tor',()=>{const t=new THREE.CapsuleGeometry(.15,.28,8,20),P=t.attributes.position;for(let i=0;i<P.count;i++){const y=P.getY(i),u=Math.min(1,Math.max(0,(y+.12)/.36)),w=.92+.42*u*u*(3-2*u)-.18*Math.max(0,(y-.2)/.12);
       P.setZ(i,P.getZ(i)*w);P.setX(i,P.getX(i)*(.7+.08*u)+(y>.02&&y<.22?.012:0))}t.computeVertexNormals();return t});
-  const tor=mesh(torG,shirt,0,.27,0);chest.add(tor);
-  chest.add(mesh(pg('belt',()=>{const t=new THREE.CylinderGeometry(.155,.155,.045,20);t.scale(.72,1,1.0);return t}),m(tec?'#2b2a28':'#3a332d',.6),0,.06,0));
-  [-1,1].forEach(s=>chest.add(mesh(pg('dlt',()=>new THREE.SphereGeometry(.062,14,10)),shirt,0,.47,s*.2)));
-  if(ger){chest.add(mesh(pg('col',()=>new THREE.ConeGeometry(.07,.16,3).rotateZ(Math.PI)),m('#f5f5f7',.6),.105,.43,0))}
-  if(tec)[.18,.33].forEach(y=>chest.add(mesh(pg('vest',()=>{const t=new THREE.CapsuleGeometry(.158,.0,4,16);t.scale(.74,.16,1.24);return t}),vm||M('refl',{color:'#e8e8e6',emissive:'#ffffff',emissiveIntensity:.2,roughness:.3}),0,y,0)));
-  chest.add(mesh(pg('neck',()=>new THREE.CylinderGeometry(.045,.052,.12,12)),skin,0,.56,0));chest.add(mesh(pg('collar',()=>new THREE.TorusGeometry(.06,.016,6,18).rotateX(Math.PI/2)),shirt,0,.52,0));
+  chest.add(S1(new THREE.Mesh(bake('ch'+top+cs+p.role,[[torG,top,0,.27,0],[pg('belt',()=>{const t=new THREE.CylinderGeometry(.155,.155,.045,20);t.scale(.72,1,1.0);return t}),tec?'#2b2a28':'#3a332d',0,.06,0],
+    ...[-1,1].map(s=>[pg('dlt',()=>new THREE.SphereGeometry(.062,14,10)),top,0,.47,s*.2]),
+    ...(ger?[[pg('col',()=>new THREE.ConeGeometry(.07,.16,3).rotateZ(Math.PI)),'#f5f5f7',.105,.43,0]]:[]),
+    ...(tec?[.18,.33].map(y=>[pg('vest',()=>{const t=new THREE.CapsuleGeometry(.158,.0,4,16);t.scale(.74,.16,1.24);return t}),'#f0f0ee',0,y,0]):[]),
+    [pg('neck',()=>new THREE.CylinderGeometry(.045,.052,.12,12)),cs,0,.56,0],[pg('collar',()=>new THREE.TorusGeometry(.06,.016,6,18).rotateX(Math.PI/2)),top,0,.52,0]]),pv)));
   const head=grp(chest,0,.66,0);
-  head.add(mesh(pg('head',()=>{const t=new THREE.SphereGeometry(.105,24,18);t.scale(.96,1.14,.9);return t}),skin,0,.04,0));
-  head.add(mesh(pg('nose',()=>new THREE.SphereGeometry(.022,8,6).scale(1,1.3,.8)),skin,.1,.03,0));
-  [-1,1].forEach(s=>{head.add(mesh(pg('ear',()=>new THREE.SphereGeometry(.024,8,6).scale(.5,1,1)),skin,0,.04,s*.094));head.add(mesh(pg('eye',()=>new THREE.SphereGeometry(.011,8,6)),m('#1d1c1a',.3),.093,.06,s*.036));head.add(mesh(pg('brow',()=>new THREE.BoxGeometry(.008,.008,.03)),m(L.hair,.9),.098,.085,s*.037))});
-  head.add(mesh(pg('mouth',()=>new THREE.BoxGeometry(.006,.006,.03)),m('#8a4b3c',.6),.1,-.005,0));
-  if(tec){head.add(mesh(pg('helm',()=>new THREE.SphereGeometry(.125,22,10,0,Math.PI*2,0,Math.PI/2)),m('#f2f0ea',.35),0,.075,0));head.add(mesh(pg('brim',()=>new THREE.CylinderGeometry(.14,.14,.012,24)),m('#e6e3dc',.35),.03,.08,0))}
-  else{head.add(mesh(pg('hair',()=>new THREE.SphereGeometry(.113,22,14,0,Math.PI*2,0,Math.PI*.52)),m(L.hair,.9),-.012,.07,0)).rotation.z=.28;
-    if(L.style===1)head.add(mesh(pg('long',()=>new RoundedBoxGeometry(.09,.26,.22,2,.045)),m(L.hair,.9),-.075,-.06,0));
-    if(L.style===2)head.add(mesh(pg('bun',()=>new THREE.SphereGeometry(.05,12,10)),m(L.hair,.9),-.09,.15,0))}
+  head.add(S1(new THREE.Mesh(bake('hd'+cs+ch+L.style+tec,[[pg('head',()=>{const t=new THREE.SphereGeometry(.105,24,18);t.scale(.96,1.14,.9);return t}),cs,0,.04,0],[pg('nose',()=>new THREE.SphereGeometry(.022,8,6).scale(1,1.3,.8)),cs,.1,.03,0],
+    ...[-1,1].flatMap(s=>[[pg('ear',()=>new THREE.SphereGeometry(.024,8,6).scale(.5,1,1)),cs,0,.04,s*.094],[pg('eye',()=>new THREE.SphereGeometry(.011,8,6)),'#1d1c1a',.093,.06,s*.036],[pg('brow',()=>new THREE.BoxGeometry(.008,.008,.03)),ch,.098,.085,s*.037]]),
+    [pg('mouth',()=>new THREE.BoxGeometry(.006,.006,.03)),'#8a4b3c',.1,-.005,0],
+    ...(tec?[[pg('helm',()=>new THREE.SphereGeometry(.125,22,10,0,Math.PI*2,0,Math.PI/2)),'#f2f0ea',0,.075,0],[pg('brim',()=>new THREE.CylinderGeometry(.14,.14,.012,24)),'#e6e3dc',.03,.08,0]]
+      :[[pg('hair',()=>new THREE.SphereGeometry(.113,22,14,0,Math.PI*2,0,Math.PI*.52)),ch,-.012,.07,0,.28],...(L.style===1?[[pg('long',()=>new RoundedBoxGeometry(.09,.26,.22,2,.045)),ch,-.075,-.06,0]]:[]),...(L.style===2?[[pg('bun',()=>new THREE.SphereGeometry(.05,12,10)),ch,-.09,.15,0]]:[])])]),pv)));
   // brazos: hombro → codo → muñeca con mano
-  const arm=s=>{const sh=grp(chest,0,.47,s*.205);sh.add(mesh(capG(.05,.22),shirt,0,-.14,0));const el=grp(sh,0,-.29,0);el.add(mesh(capG(.042,.2),tec||ger?shirt:skin,0,-.12,0));
-    const wr=grp(el,0,-.25,0);wr.add(mesh(pg('hand',()=>new RoundedBoxGeometry(.05,.09,.075,2,.022)),skin,0,-.04,0));return{sh,el,wr}};
+  const arm=s=>{const sh=grp(chest,0,.47,s*.205);sh.add(S1(mesh(capG(.05,.22),shirt,0,-.14,0)));const el=grp(sh,0,-.29,0);el.add(S1(mesh(capG(.042,.2),tec||ger?shirt:skin,0,-.12,0),false));
+    const wr=grp(el,0,-.25,0);wr.add(S1(mesh(pg('hand',()=>new RoundedBoxGeometry(.05,.09,.075,2,.022)),skin,0,-.04,0),false));return{sh,el,wr}};
   const aL=arm(-1),aR=arm(1);
-  const box=mesh(pg('box',()=>new RoundedBoxGeometry(.3,.28,.36,2,.02)),MAT.box,.34,.2,0);chest.add(box);
+  const box=S1(mesh(pg('box',()=>new RoundedBoxGeometry(.3,.28,.36,2,.02)),MAT.box,.34,.2,0));chest.add(box);
   let star=null;if(p.virtual){star=new THREE.Mesh(new THREE.OctahedronGeometry(.13),new THREE.MeshStandardMaterial({color:p.ag==='ada'?'#0a84ff':'#7c5cff',emissive:p.ag==='ada'?'#0a84ff':'#7c5cff',emissiveIntensity:1.2}));star.position.y=2.05;g.add(star)}
   const ring=new THREE.Mesh(pg('ring',()=>new THREE.RingGeometry(.4,.47,32).rotateX(-Math.PI/2)),new THREE.MeshBasicMaterial({color:'#1d1d1f'}));ring.position.y=.135;g.add(ring);
-  g.traverse(o=>{if(o.isMesh&&o!==ring){o.castShadow=true}});
-  return{g,hip,chest,head,lL,lR,aL,aR,box,star,ring,seed:(hsh(p.id||p.name||'x')%997)/97,h:-Math.PI/2,key:pkey(p,L)}}
+  // sombra de apoyo: un disco suave bajo los pies, para que nadie parezca flotar
+  let blob=null;if(!p.virtual){blob=new THREE.Mesh(pg('blob',()=>new THREE.PlaneGeometry(.8,.64).rotateX(-Math.PI/2)),BLOB());blob.position.y=.008;blob.renderOrder=2;g.add(blob)}
+  return{g,hip,chest,head,lL,lR,aL,aR,box,star,ring,blob,seed:(hsh(p.id||p.name||'x')%997)/97,h:-Math.PI/2,key:pkey(p,L)}}
 // poses: caminar (rodilla que se dobla al ir atrás, brazos opuestos con codo), sentado escribiendo (manos quietas sobre el teclado), con una caja, quieto (respira)
 const lerpR=(o,v,k)=>{o.rotation.z+=(v-o.rotation.z)*k};
 function pose(o,mode,sw,dt){const k=Math.min(1,dt*10),t=T+o.seed,br=Math.sin(t*1.6)*.012;
@@ -828,12 +839,13 @@ function pose(o,mode,sw,dt){const k=Math.min(1,dt*10),t=T+o.seed,br=Math.sin(t*1
 function person3(p,dt){let o=PPL.get(p.id);const key=pkey(p,fullLook(p));if(!o||o.key!==key){if(o)ACT.remove(o.g);o=mkPerson(p);PPL.set(p.id,o);ACT.add(o.g)}o.seen=1;
   o.g.visible=!p.inVan&&!!S.built&&!(WALK.on&&APP&&p.id===S.me);if(!o.g.visible)return null;
   const walk=p.tx!=null,d=deskOf(p),sit=!walk&&!p.carry&&!p.virtual&&d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25;
-  let x=p.x,y=p.y,h=o.h;
-  if(walk){const dx=p.tx-p.x,dy=p.ty-p.y;if(Math.hypot(dx,dy)>.02)h=Math.atan2(dy,dx)}
+  let x=p.x,y=p.y,h=o.h;const anda=walk&&(p.v==null||p.v>.14);
+  if(walk){const dx=p.vx??p.tx-p.x,dy=p.vy??p.ty-p.y;if(Math.hypot(dx,dy)>.15)h=Math.atan2(dy,dx)}
   if(sit){const [ax,ay]=rot(-.02,.52,d.r||0);x=(d.cx??d.x+.9)+ax;y=(d.cy??d.y+.8)+ay;h=-Math.PI/2+(d.r||0)}
-  o.h=sit?h:angTo(o.h,h,Math.min(1,dt*9));o.g.position.set(x,(p.virtual?.08+Math.sin(T*2)*.04:0)+(x>=0&&x<=W&&y>=0&&y<=Hb?.12:.012),y);o.g.rotation.y=-o.h;
-  o.carry=!!p.carry;pose(o,sit?'sit':walk?'walk':'idle',walk?p.ph:0,dt);
-  o.box.visible=!!p.carry;if(o.star){o.star.rotation.y=T*1.5}
+  const kk=1-Math.exp(-dt*(sit?9:22));if(o.px==null||Math.hypot(x-o.px,y-o.py)>3){o.px=x;o.py=y}else{o.px+=(x-o.px)*kk;o.py+=(y-o.py)*kk}x=o.px;y=o.py;
+  o.h=angTo(o.h,h,Math.min(1,dt*(sit?7:8)));o.g.position.set(x,(p.virtual?.08+Math.sin(T*2)*.04:0)+(x>=0&&x<=W&&y>=0&&y<=Hb?.12:.012),y);o.g.rotation.y=-o.h;
+  o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);
+  o.box.visible=!!p.carry;if(o.blob){o.blob.visible=!sit;o.blob.material.opacity=DARK?.75:.55}if(o.star){o.star.rotation.y=T*1.5}
   o.ring.visible=!!(sel&&sel.k==='person'&&sel.id===p.id);o.ring.material.color.set(DARK?'#f5f5f7':'#1d1d1f');
   return{x,y,z:sit?1.3:1.75}}
 function actors(dt){VEH.forEach(o=>o.seen=0);PPL.forEach(o=>o.seen=0);
@@ -929,11 +941,51 @@ function drawFX(){for(let i=FX.length-1;i>=0;i--){const f=FX[i];const k=(T-f.t0)
   else if(f.kind==='plan'){ctx.fillStyle='#fff';ctx.strokeStyle=Z('#1e1f23');ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(-s,-s*1.2,s*1.8,s*2.4,3);ctx.fill();ctx.stroke();ctx.strokeStyle=Z('#3a7bd5');ctx.strokeRect(-s*.6,-s*.7,s,s*.8);ctx.beginPath();ctx.moveTo(-s*.6,s*.4);ctx.lineTo(s*.4,s*.4);ctx.stroke()}
   else{ctx.fillStyle=Z('#f5b800');ctx.beginPath();ctx.arc(0,0,s*.8,0,7);ctx.fill();ctx.fillStyle=Z('#8a6500');ctx.font=`700 ${s}px -apple-system,BlinkMacSystemFont,Inter,sans-serif`;ctx.textAlign='center';ctx.fillText('$',0,s*.35)}
   ctx.restore()}}
-// ---------- movimiento ----------
+// ---------- movimiento: cada uno por su camino, sin atravesar a nadie ----------
+// Las personas se esquivan (cada una por su derecha), no se paran dos en el mismo lugar, siguen de atrás al que va
+// adelante y, si alguien les corta el paso, buscan otro camino. Arrancan y frenan de a poco, como al caminar.
 const deskOf=p=>S.desks.find(d=>d.id===p.desk)||S.desks[0];
-function goTo(p,x,y,then){p.path=[...route(p.x,p.y,x,y).map(([x,y])=>({x,y})),{x,y,then}];next(p)}
-function next(p){const q=p.path[0];if(!q){p.tx=null;return}p.tx=q.x;p.ty=q.y}
-function step(dt){S.people.forEach(p=>{if(p.tx==null||p.inVan)return;const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy),v=1.6*dt;p.ph+=dt*11;if(Math.abs(dx-dy)>.01)p.dir=dx-dy>0?1:-1;if(d<=v){p.x=p.tx;p.y=p.ty;const q=p.path.shift();p.tx=null;if(q&&q.then)q.then();next(p)}else{p.x+=dx/d*v;p.y+=dy/d*v}});
+const PR=.24,VMAX=1.5,MOV={fant:0,cede:0,esp:0};   // radio de una persona (m), paso normal (m/s) y contadores para medir
+const sitting=p=>{if(p.tx!=null||p.carry||p.virtual||p.inVan)return false;const d=deskOf(p);return!!d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25};
+const destOf=q=>q.path&&q.path.length?q.path[q.path.length-1]:q;
+// un lugar libre cerca del punto pedido: que se pueda pisar y que nadie lo ocupe ni vaya hacia ahí
+function libre(p,x,y){navReady();const ok=(a,b)=>nvFreeAt(a,b)&&!S.people.some(q=>q!==p&&!q.inVan&&!sitting(q)&&Math.hypot(destOf(q).x-a,destOf(q).y-b)<PR*2.8);
+  if(ok(x,y))return[x,y];for(let r=.6;r<=2.4;r+=.6)for(let k=0;k<8;k++){const a=k*Math.PI/4+r,u=x+Math.cos(a)*r,v=y+Math.sin(a)*r;if(ok(u,v))return[u,v]}return[x,y]}
+function goTo(p,x,y,then){const d=deskOf(p);if(!d||Math.hypot(x-(d.x+.2),y-(d.y+1.1))>.05)[x,y]=libre(p,x,y);
+  p.path=[...(route(p.x,p.y,x,y)||[]).map(([x,y])=>({x,y})),{x,y,then}];p.stuck=0;next(p)}
+function next(p){const q=p.path[0];if(!q){p.tx=null;p.v=0;return}p.tx=q.x;p.ty=q.y}
+// otro camino rodeando a los que están parados (si no hay, se queda con el que tenía)
+function rodear(p){const f=p.path[p.path.length-1];if(!f)return;const par=S.people.filter(q=>q!==p&&!q.inVan&&!sitting(q)&&q.tx==null&&Math.hypot(q.x-f.x,q.y-f.y)>PR*3).map(q=>[q.x,q.y]);
+  const r=route(p.x,p.y,f.x,f.y,par);if(r){p.path=[...r.map(([x,y])=>({x,y})),f];next(p)}}
+// puertas angostas: se pasa de a uno por sentido; el que llega segundo espera afuera (si ya está adentro, termina de pasar)
+function puertaLibre(p,ux,uy){for(const g of DOORS){const u=g.userData;if(u.len>1.6)continue;const dx=u.cx-p.x,dy=u.cy-p.y,d=Math.hypot(dx,dy);
+    if(d>1.5||dx*ux+dy*uy<=0||Math.abs(ux*u.dx+uy*u.dy)>.75)continue;const o=u.paso;
+    if(o&&o.p!==p&&T<o.t&&o.ux*ux+o.uy*uy<-.3&&!o.p.inVan&&Math.hypot(o.p.x-u.cx,o.p.y-u.cy)<1.6)return d<.7;
+    u.paso={p,ux,uy,t:T+1.1}}return true}
+const hayAlguien=(p,x,y,r)=>S.people.some(q=>q!==p&&!q.inVan&&!sitting(q)&&Math.hypot(q.x-x,q.y-y)<r);
+function step(dt){const P=S.people;navReady();
+  for(const p of P){if(p.tx==null||p.inVan)continue;const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy),fin=p.path.length<=1;
+    if(d<=Math.max((p.v||VMAX)*dt,.03)){p.x=p.tx;p.y=p.ty;const q=p.path.shift();p.tx=null;if(q&&q.then)q.then();next(p);continue}
+    const ux=dx/d,uy=dy/d,rx=uy,ry=-ux,fan=T<(p.ghost||0);let sp=fin?Math.min(VMAX,.35+d*2.2):VMAX,sx=0,sy=0,tope=null,esp=false;
+    if(T<(p.ced||0)){const cx=p.x+(-ux*.45+rx*.8)*dt,cy=p.y+(-uy*.45+ry*.8)*dt;if(nvFreeAt(cx,cy)&&!hayAlguien(p,cx,cy,PR*1.8)){p.x=cx;p.y=cy;p.ph+=dt*6}p.v=0;continue}   // cede el paso: un paso atrás y a su derecha
+    if(!fan&&(p.espT||0)<6&&!puertaLibre(p,ux,uy)){sp=0;esp=true;p.espT=(p.espT||0)+dt;MOV.esp+=dt}else if(!esp)p.espT=Math.max(0,(p.espT||0)-dt);
+    if(!fan)for(const q of P){if(q===p||q.inVan||sitting(q))continue;const ex=q.x-p.x,ey=q.y-p.y,e=Math.hypot(ex,ey);if(e>1.25||e<1e-4)continue;
+      const fwd=ex*ux+ey*uy,lat=ux*ey-uy*ex;
+      if(fwd>0&&Math.abs(lat)<.6){const w=1-e/1.25,qd=q.tx==null?0:Math.hypot(q.tx-q.x,q.ty-q.y),igual=qd>0&&((q.tx-q.x)*ux+(q.ty-q.y)*uy)/qd>.5;
+        if(igual)sp=Math.min(sp,VMAX*Math.max(0,(e-.55)/.6));                 // va adelante en el mismo sentido: lo sigue sin pisarlo
+        else{const s=Math.abs(lat)<.1?1:lat>0?1:-1;sx+=rx*s*w*1.7;sy+=ry*s*w*1.7;if(q.tx==null&&e<.75)sp=Math.min(sp,VMAX*.6)}}   // de frente o parado: lo esquiva
+      if(e<PR*2.3){const k=(PR*2.3-e)*7;sx-=ex/e*k;sy-=ey/e*k}}
+    p.v=(p.v||0)+(sp-(p.v||0))*Math.min(1,dt*(sp<(p.v||0)?9:5));
+    let vx=ux*p.v+sx,vy=uy*p.v+sy;const vm=Math.hypot(vx,vy);if(vm>VMAX*1.25){vx*=VMAX*1.25/vm;vy*=VMAX*1.25/vm}
+    let nx=p.x+vx*dt,ny=p.y+vy*dt;if(!nvFreeAt(nx,ny)){nx=p.x+ux*p.v*dt;ny=p.y+uy*p.v*dt}                // el desvío daba contra algo: sigue por su camino
+    if(!fan)for(const q of P){if(q===p||q.inVan||sitting(q))continue;const a=Math.hypot(q.x-nx,q.y-ny);if(a<PR*1.9&&a<Math.hypot(q.x-p.x,q.y-p.y)){tope=q;break}}
+    // de frente y sin lugar para esquivarse: cede uno (siempre el mismo de los dos) y el otro pasa
+    if(tope&&tope.tx!=null&&!(T<(tope.ced||0))&&(tope.tx-tope.x)*ux+(tope.ty-tope.y)*uy<0&&(p.stuck||0)>.35&&String(p.id)>String(tope.id)){p.ced=T+.9;MOV.cede++}
+    const adv=tope?0:Math.hypot(nx-p.x,ny-p.y);if(!tope){if(adv>.002){p.vx=(nx-p.x)/dt;p.vy=(ny-p.y)/dt}p.x=nx;p.y=ny}else p.v*=.5;
+    p.ph+=dt*11*Math.min(1.2,adv/(VMAX*dt||1));if(Math.abs(dx-dy)>.01)p.dir=dx-dy>0?1:-1;
+    // trabado: primero busca otro camino; si de verdad no hay, pasa
+    p.stuck=esp?(p.stuck||0):adv<VMAX*dt*.25?(p.stuck||0)+dt:Math.max(0,(p.stuck||0)-dt*2);
+    if(p.stuck>.9&&T>(p.reT||0)){p.reT=T+1.6;rodear(p)}if(p.stuck>5){p.ghost=T+1.5;p.stuck=0;MOV.fant++}}
   S.vans.forEach(v=>{if(v.anim){const a=v.anim;const k=Math.min(1,(T-a.t0)/a.dur);v.x=a.x0+(a.x1-a.x0)*k;v.y=a.y0+(a.y1-a.y0)*k;if(k>=1){v.anim=null;a.done&&a.done()}}})}
 function say(p,t,s=3){p.say=t;p.sayT=T+s}
 function wander(){const free=S.people.filter(p=>p.tx==null&&!p.busy&&!p.inVan&&!p.virtual);if(!free.length)return;const p=free[Math.floor(Math.random()*free.length)];const d=deskOf(p);
@@ -973,13 +1025,16 @@ function evPres(){const g=byRole('gerencia')[0];if(!g)return;const d=deskOf(g);s
 function evPlan(){const p=byRole('tecnico')[0]||S.people[0];if(!p)return;const d=deskOf(p);shoot('plan',{x:d.x+.9,y:d.y+.4},()=>{say(p,'📐 plano',2.5);log('📐','#30b0c7',pick(CLI)+' mandó su plano','La maqueta 3D se armó sola · lista para presupuestar')})}
 const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
-function frame(now){if(CINE.pausa){frame.last=now;return requestAnimationFrame(frame)}T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
+// 60 cuadros por segundo como máximo (aunque la pantalla dé 120) y 30 cuando nadie la está tocando: la maqueta abierta no calienta el equipo
+function frame(now){requestAnimationFrame(frame);if(CINE.pausa){frame.last=now;return}
+  frame.lim=WALK.on||ED.on||CINE.on||BUILD<1||now-ACTV<2500?15:31;if(now-(frame.last||0)<frame.lim)return;
+  T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
   if(TAB!=='armar'&&S.built){if(!APP&&(!CINE.on||CINE.orbit)&&T-evT>5.5){evT=T;EVS[evi++%EVS.length]()}if(T-wT>2.2){wT=T;wander()}}
   const dk=themeNow();if(dk!==DARK||!frame.th){DARK=dk;frame.th=1;setTheme()}
   if(BUILD<1)BUILD=Math.min(1,BUILD+dt*.55);
   if(WALK.on)walkStep(dt);
   sync3D(dt);R3.render(SC,CAM);
-  ctx.clearRect(0,0,VW,VH);hits=[];overlay();drawFX();requestAnimationFrame(frame)}
+  ctx.clearRect(0,0,VW,VH);hits=[];overlay();drawFX()}
 // ---------- cine: la web de Olumi mueve la cámara con el scroll (?embed=1&cine=1) ----------
 // La página manda {cine:t} con t de 0 a 1 y {cineEv:'wa'|'mail'|'pres'|'plan'|'van'} al entrar a cada parte de la historia.
 // Tomas: [t, cámara x,y,altura, mira x,y,altura, lente]. Entre una y otra se pasa suave (frena en cada toma).
@@ -1085,7 +1140,7 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
   ['grass','pav','asph','park','slab','conc','terr','tile','cwall','green','wood','door'].forEach(k=>{if(MAT[k]){MAT[k].map=null;MAT[k].needsUpdate=true}});
   for(const k in C)if(MAT[k])MAT[k].color.set(C[k]);
   MAT.glass.color.set('#e4ece9');MAT.wood.roughness=.7;MAT.mull.metalness=.2;MAT.galv.metalness=.25;MAT.blue.metalness=.1;MAT.red.metalness=0;
-  SUNL.shadow.radius=6;SUNL.shadow.blurSamples=16;R3.shadowMap.type=THREE.VSMShadowMap;SUNL.shadow.bias=-.0006;
+  SUNL.shadow.radius=6;SUNL.shadow.blurSamples=16;R3.shadowMap.type=THREE.VSMShadowMap;SUNL.shadow.bias=-.0006;SUNL.shadow.intensity=.72;   // sombras más claras: se lee como maqueta, no como manchas en el piso
   const st0=setTheme;setTheme=function(){st0();const d=DARK;
     HEMI.color.set(d?'#3c4258':'#ffffff');HEMI.groundColor.set(d?'#1d1b19':'#ece6dc');HEMI.intensity=d?.2:.9;
     SUNL.color.set(d?'#b4c0ff':'#fff8ef');SUNL.intensity=d?.3:2.7;SC.environmentIntensity=d?.06:.3;R3.toneMappingExposure=d?1.1:1.02;
@@ -1093,7 +1148,10 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
     MAT.asph.color.set(d?'#3e3c39':'#c9c4bc');MAT.grass.color.set(d?'#4a5245':'#dce1d3');MAT.park.color.set(d?'#4a4743':'#dcd7cf')};
   // líneas de maqueta de arquitecto: el borde de cada pared, vidrio y losa en grafito fino
   const EDGE=new THREE.LineBasicMaterial({color:'#2b2a28',transparent:true,opacity:.28,depthWrite:false});
-  const edges=g=>{const L=[];g.traverse(o=>{if(o.isMesh&&!o.userData.edged&&o.material!==MAT.glass&&o.material!==MAT.frost){o.userData.edged=1;[].concat(o.material).forEach(m=>{if(!m.polygonOffset){m.polygonOffset=true;m.polygonOffsetFactor=1;m.polygonOffsetUnits=1}});const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry,28),EDGE);e.matrixAutoUpdate=false;e.matrix.copy(o.matrix);L.push([o.parent,e])}});L.forEach(([p,e])=>p.add(e))};
+  // las líneas de todas las piezas de un mismo grupo van en un solo dibujo (antes, una línea por pieza)
+  const edges=g=>{const por=new Map();g.traverse(o=>{if(o.isMesh&&!o.userData.edged&&o.material!==MAT.glass&&o.material!==MAT.frost){o.userData.edged=1;[].concat(o.material).forEach(m=>{if(!m.polygonOffset){m.polygonOffset=true;m.polygonOffsetFactor=1;m.polygonOffsetUnits=1}});
+      o.updateMatrix();const e=new THREE.EdgesGeometry(o.geometry,28).applyMatrix4(o.matrix);(por.get(o.parent)||por.set(o.parent,[]).get(o.parent)).push(e)}});
+    por.forEach((a,p)=>{const l=new THREE.LineSegments(a.length>1?mergeGeometries(a):a[0],EDGE);if(a.length>1)a.forEach(x=>x.dispose());p.add(l)})};
   edges(BLD);
   const st1=setTheme;setTheme=function(){st1();EDGE.color.set(DARK?'#000000':'#2b2a28');EDGE.opacity=DARK?.45:.28};
   // carteles: cápsulas blancas con línea fina (de día) o grafito (de noche), letra más liviana
@@ -1103,6 +1161,34 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
     ctx.fillStyle=DARK?'#f4f1ec':'#191817';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y+.5);ctx.textBaseline='alphabetic'};
   addEventListener('message',e=>{const t=(e.data||{}).tema;if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t}});
 }
+
+// ---------- fluidez: la maqueta se cuida sola ----------
+// Si el equipo no llega a 40 cuadros por segundo durante 3 segundos seguidos, baja un escalón de calidad (píxeles y sombras) y lo recuerda en ese dispositivo.
+// Escalones: 0 completa · 1 sombras más livianas y menos píxeles · 2 además las sombras se rehacen cuadro por medio · 3 mínima. ?calidad=0..3 la fija a mano.
+// No se cambia el tipo de sombra en marcha (deja manchas): solo su tamaño, su suavizado y cada cuánto se rehace.
+const Q={n:0,mal:0,bien:0,fijo:false,t0:performance.now()};
+function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE.on?1.25:2,[2,1.5,1.25,1][n]);const sh=SUNL.shadow,tam=n>=3?512:n>=1||innerWidth<700||CINE.on?1024:2048;
+  if(sh.mapSize.x!==tam){sh.mapSize.set(tam,tam);for(const k of ['map','mapPass'])if(sh[k]){sh[k].dispose();sh[k]=null}}
+  if(sh.blurSamples>4)sh.blurSamples=n>=1?8:16;
+  Q.salto=n>=2;R3.shadowMap.autoUpdate=!Q.salto;R3.shadowMap.needsUpdate=true;fit();if(guardar)try{localStorage.setItem('olumi.ofi.q',String(n))}catch(e){}}
+{const u=(location.search.match(/[?&]calidad=([0-3])/)||[])[1];let g=null;try{g=localStorage.getItem('olumi.ofi.q')}catch(e){}if(u!=null){Q.fijo=true;calidad(+u)}else if(g>0)calidad(+g)}
+['pointermove','pointerdown','wheel','keydown','touchstart'].forEach(k=>addEventListener(k,()=>{ACTV=performance.now()},{passive:true}));
+// ---------- medir: rendimiento con números, no a ojo. ?medir=1 muestra los cuadros por segundo y lo que se dibuja ----------
+{const M={n:0,t0:performance.now(),fps:0,el:null},r0=R3.render.bind(R3);
+  R3.render=(s,c)=>{if(Q.salto&&(Q.k=!Q.k))R3.shadowMap.needsUpdate=true;r0(s,c);M.n++;const t=performance.now();if(t-M.t0>=1000){M.fps=Math.round(M.n*1000/(t-M.t0));M.n=0;M.t0=t;
+    // el objetivo es 60 al usarla y 30 en reposo: se compara contra eso
+    if(!Q.fijo&&document.visibilityState==='visible'&&t-Q.t0>6000){const obj=frame.lim>20?30:60;if(M.fps<obj*.66){Q.bien=0;if(++Q.mal>=3&&Q.n<3){Q.mal=0;calidad(Q.n+1,true)}}else{Q.mal=0;if(M.fps>=obj*.95&&Q.n>0&&++Q.bien>=30&&!Q.subio){Q.subio=true;Q.bien=0;calidad(Q.n-1,true)}}}if(M.el)M.el.textContent=`${M.fps} cuadros/s · calidad ${Q.n} · ${R3.info.render.calls} dibujos · ${Math.round(R3.info.render.triangles/1000)} mil triángulos`}};
+  window.__ofi=()=>({fps:M.fps,calidad:Q.n,dibujos:R3.info.render.calls,triangulos:R3.info.render.triangles,geometrias:R3.info.memory.geometries,texturas:R3.info.memory.textures,personas:S.people.length,atraviesa:MOV.fant,cede:MOV.cede,esperaPuerta:+MOV.esp.toFixed(1),trabado:+Math.max(0,...S.people.map(p=>p.tx!=null?p.stuck||0:0)).toFixed(1),
+    cerca:(()=>{const a=S.people.filter(p=>!p.inVan&&!sitting(p));let m=9;for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)m=Math.min(m,Math.hypot(a[i].x-a[j].x,a[i].y-a[j].y));return+m.toFixed(2)})()});
+  // pruebas de choque: todos al mismo punto, o cada uno al escritorio de otro (se cruzan en pasillos y puertas)
+  window.__ofi.juntar=(x,y)=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>goTo(p,x??SPOTS.cafe.x,y??SPOTS.cafe.y));
+  window.__ofi.cruzar=()=>{const a=S.people.filter(p=>!p.inVan&&!p.virtual);a.forEach((p,i)=>{const d=deskOf(a[(i+1)%a.length]);goTo(p,d.x+.2,d.y+1.7)})};
+  window.__ofi.volver=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)});
+  // cuántas piezas dibuja cada parte de la escena (para saber dónde conviene unir)
+  window.__ofi.partes=()=>{const n=g=>{let c=0;const rec=(o,v)=>{v=v&&o.visible;if(v&&(o.isMesh||o.isLineSegments||o.isLine))c++;o.children.forEach(x=>rec(x,v))};rec(g,true);return c};return{edificio:n(BLD),muebles:n(FURN),actores:n(ACT),total:n(SC),personas:PPL.size,vehiculos:VEH.size}};
+  window.__ofi.gente=()=>S.people.map(p=>{const o=PPL.get(p.id),d=deskOf(p);return[p.n||p.id,sitting(p)?'sentado':p.tx!=null?'camina':'quieto',o?+o.h.toFixed(2):null,d?+(-Math.PI/2+(d.r||0)).toFixed(2):null]});
+  window.__ofi.quietos=()=>S.people.filter(p=>!p.inVan).every(p=>p.tx==null);
+  if(/[?&]medir=1/.test(location.search)){M.el=document.createElement('div');M.el.style.cssText='position:absolute;left:12px;bottom:12px;z-index:9;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.62);color:#fff;font:600 12px ui-monospace,Menlo,monospace;pointer-events:none';stage.appendChild(M.el)}}
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
 function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
@@ -1124,7 +1210,7 @@ Object.assign(ICO,{chat:'<path d="M20 11.5a8 8 0 0 1-11.7 7.1L4 20l1.4-4.1A8 8 0
 const FIC={'💬':'chat','✉':'mail','🚐':'van','✓':'check','$':'coin','📐':'plan','📦':'box','⬇':'down','☕':'cup','📣':'mega','📅':'cal','✦':'star'};
 const fic=e=>FIC[e]?svg(FIC[e]):esc(e);
 const AREAS={rec:{menu:'Bandeja',ic:'inbox',col:'#34c759',sub:'Los WhatsApp, correos y tickets que entran a la empresa.'},
-  adm:{menu:'Clientes',ic:'doc',col:'#0a84ff',sub:'Clientes, presupuestos, facturas y cobros.'},
+  adm:{menu:'Ventas',ic:'doc',col:'#0a84ff',sub:'CRM, clientes, presupuestos, facturas y cobros.'},
   ger:{menu:'Reportes',ic:'chart',col:'#bf5af2',sub:'Cómo viene la empresa hoy, en números.'},
   tec:{menu:'Trabajos',ic:'wrench',col:'#ff9f0a',sub:'Técnicos, visitas, tickets asignados y relevamientos.'},
   dep:{menu:'Inventario',ic:'box',col:'#a2845e',sub:'Stock, entrada de mercadería y pedidos de materiales para cada técnico.'},
@@ -1178,7 +1264,7 @@ function areaHtml(k){const a=AREAS[k];let h=`<button class="back" data-act="back
     return h+`<label class="fld"><span>Para</span><select id="f_pt">${ts.map(t=>`<option value="${t.id}" ${t.busy||t.inVan?'disabled':''}>${esc(t.n)}${t.inVan?' · en la calle':t.busy?' · ocupado':''}</option>`).join('')||'<option value="">No hay técnicos</option>'}</select></label>
       <div class="list">${Object.entries(PROD).map(([q,pp])=>`<div class="li"><span class="grow">${pp.n}<small>hay ${S.stock[q].q} ${pp.u==='m'?'m':'u'}</small></span><div class="stp"><button data-act="q-:${q}" aria-label="Menos">−</button><span id="q_${q}">${PEDQ[q]||0}${pp.u==='m'?' m':''}</span><button data-act="q+:${q}" aria-label="Más">+</button></div></div>`).join('')}</div>
       <div class="acts">${btn('ped','Preparar pedido','pri')}</div><p class="msg" id="m_ped" hidden></p><p class="hint" style="margin-top:12px">El técnico pasa por el depósito, lo lleva a la camioneta y el stock se mueve solo: sale del depósito y queda en la camioneta.</p>`}
-  const acts=APP?{rec:[['go:bandeja','Abrir la Bandeja','pri'],['new:tk','Nuevo ticket','']],adm:[['go:clientes','Abrir Clientes','pri'],['new:pres','Nuevo presupuesto',''],['go:facturacion','Facturación','']],ger:[['go:reportes','Ver reportes','pri'],['go:hoy','Lo urgente de hoy','']],tec:[['go:tickets','Ver tickets','pri'],['go:calendario','Calendario de técnicos',''],['goped','Preparar pedido de materiales',''],['new:rel','Nuevo relevamiento','']],coc:[['go:ajustes','Equipo y roles','pri']],sal:[['go:calendario','Ver el calendario','pri'],['go:agenda','Seguimientos','']],est:[['new:van','Sumar vehículo','pri'],['go:inventario','Camionetas y stock','']]}[k]||[]:{rec:[['wa','Simular un WhatsApp','pri'],['mail','Simular un correo',''],['nav:Bandeja','Abrir la Bandeja','']],
+  const acts=APP?{rec:[['go:bandeja','Abrir la Bandeja','pri'],['go:tickets','Tickets',''],['new:tk','Nuevo ticket','']],adm:[['go:pipeline','CRM: ventas en curso','pri'],['go:clientes','Clientes',''],['go:presupuestos','Presupuestos',''],['new:pres','Nuevo presupuesto',''],['go:facturacion','Facturación','']],ger:[['go:reportes','Ver reportes','pri'],['go:pipeline','Ventas y pronóstico',''],['go:hoy','Lo urgente de hoy','']],tec:[['go:tickets','Ver tickets','pri'],['go:calendario','Calendario de técnicos',''],['go:trabajos','Historial de trabajos',''],['goped','Preparar pedido de materiales',''],['new:rel','Nuevo relevamiento','']],coc:[['go:ajustes','Equipo y roles','pri'],['go:personal','Fichas del personal','']],sal:[['go:calendario','Ver el calendario','pri'],['go:agenda','Seguimientos','']],est:[['go:vivo','Verlos en el mapa','pri'],['new:van','Sumar vehículo',''],['go:inventario','Camionetas y stock','']]}[k]||[]:{rec:[['wa','Simular un WhatsApp','pri'],['mail','Simular un correo',''],['nav:Bandeja','Abrir la Bandeja','']],
     adm:[['mail','Simular un correo','pri'],['nav:Presupuestos','Nuevo presupuesto',''],['nav:Cobros','Ver cobros pendientes','']],
     ger:[['nav:Reportes','Reporte del día','pri'],['nav:Ajustes › Equipo','Roles y permisos','']],
     tec:[['disp','Mandar un técnico a un ticket','pri'],['goped','Preparar pedido de materiales',''],['plan','Nuevo relevamiento','']],
