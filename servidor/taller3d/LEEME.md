@@ -11,6 +11,7 @@ Cómo se hacen las personas (y después autos y objetos) que usan las maquetas. 
 
 ## Pasos (sin pantalla)
 1. `blender -b --python persona.py -- fichas/of-h.json salida/of-h.blend` — arma la persona desde su ficha (cuerpo, rasgos, piel, pelo, ropa, esqueleto tipo Mixamo).
+1b. (opcional) `blender -b salida/tec-h.blend --python epp.py -- salida/tec-h-epp.blend blanco` — suma casco de obra (blanco, amarillo, azul o naranja) y chaleco reflectivo. El chaleco sale del torso del cuerpo y se separa lo justo para quedar por fuera de la ropa.
 2. `blender -b salida/of-h.blend --python foto.py -- salida/of-h.png [cara]` — foto de control (Cycles, sin placa de video).
 3. `blender -b salida/of-h.blend --python exportar.py -- salida/of-h-crudo.glb 14000` — saca ayudantes y lo que tapa la ropa, baja a ~15.000 triángulos, materiales simples.
 4. `python3 glb_liviano.py salida/of-h-crudo.glb salida/of-h.glb 1024 512` — texturas a JPEG (PNG si tienen transparencia); queda en ~1,4 MB.
@@ -23,3 +24,5 @@ Cómo se hacen las personas (y después autos y objetos) que usan las maquetas. 
 - La ropa es de una sola cara: hay que apagar "backface culling" o los cuellos desaparecen.
 - En la web, lo transparente va con recorte (`alphaTest`), no con mezcla.
 - El reposo viene con brazos en A y codos doblados: el adaptador (`avatar.js` en la oficina) los lleva a colgar rectos antes de aplicar las poses.
+- Para medir el cuerpo (casco, chaleco) hay que fijar antes los rasgos (`TargetService.bake_targets`): las coordenadas crudas son las del molde base, no las de la persona.
+- El mameluco tiene bolsillos gruesos que atraviesan el chaleco: el técnico con chaleco va con remera polo y pantalón de trabajo.

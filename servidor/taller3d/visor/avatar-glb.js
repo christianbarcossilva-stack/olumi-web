@@ -22,6 +22,12 @@ export function avatarGLB(scene, { alto = 1.75 } = {}) {
   const down = (s, A = 'Arm', Bn = 'ForeArm') => { const a = wpos(s + A), b = wpos(s + Bn), d = b.sub(a).normalize(); d.applyQuaternion(q().copy(inner.getWorldQuaternion(q())).invert()); const sg = s === 'Left' ? 1 : -1; return q().setFromUnitVectors(d, new THREE.Vector3(sg * .16, -1, .02).normalize()) };
   const R0 = { Left: down('Left'), Right: down('Right') };
   const R1 = { Left: down('Left', 'ForeArm', 'Hand'), Right: down('Right', 'ForeArm', 'Hand') };   // el antebrazo en reposo suele venir doblado: se lleva a recto
+  // manos relajadas: cada dedo se curva un poco hacia la palma (en reposo la palma mira hacia abajo)
+  const C = {}, mano = {}, pm = n => wpos(n).applyQuaternion(q().copy(inner.getWorldQuaternion(q())).invert());
+  for (const S of ['Left', 'Right']) { if (!B[S + 'HandIndex1'] || !B[S + 'HandPinky1'] || !B[S + 'HandMiddle1']) continue;
+    const n = pm(S + 'HandIndex1').sub(pm(S + 'HandPinky1')).cross(pm(S + 'HandMiddle1').sub(pm(S + 'Hand'))).normalize(); if (n.y > 0) n.negate();
+    for (const F of ['Index', 'Middle', 'Ring', 'Pinky']) { let d = null; for (let j = 1; j <= 3; j++) { const nm = S + 'Hand' + F + j, nx = S + 'Hand' + F + (j + 1); if (!B[nm]) continue;
+        if (B[nx]) d = pm(nx).sub(pm(nm)).normalize(); if (!d) continue; C[nm] = aa(d.clone().cross(n).normalize(), .3 * j + (F === 'Pinky' ? .1 : 0)); mano[nm] = S + 'Hand' } } }
   const o = { g, hip: J(), chest: J(), head: J(), lL: { th: J(), kn: J(), an: J() }, lR: { th: J(), kn: J(), an: J() }, aL: { sh: J(), el: J() }, aR: { sh: J(), el: J() }, bones: B, alto };
   o.hip.position.y = .95;
   const W = {}, order = []; let top = B.Hips; while (top.parent && top.parent.isBone) top = top.parent; (function walk(b) { if (b.isBone) order.push(b); b.children.forEach(walk) })(top);
@@ -38,7 +44,7 @@ export function avatarGLB(scene, { alto = 1.75 } = {}) {
     }
     for (const b of order) { const n = nameOf.get(b), p = b.parent && b.parent.isBone ? nameOf.get(b.parent) : null;
       // sin giro propio: hereda el del padre (manos, dedos, columna baja)
-      if (!D[n]) D[n] = p ? D[p] : q();
+      if (!D[n]) D[n] = C[n] ? D[mano[n]].clone().multiply(C[n]) : p ? D[p] : q();
       const w = D[n].clone().multiply(rest[n]); W[n] = w;
       if (p) b.quaternion.copy(W[p].clone().invert().multiply(w)); else b.quaternion.copy(restL[n]).multiply(rest[n].clone().invert().multiply(D[n]).multiply(rest[n])) }
     B.Hips.position.copy(hipRest); B.Hips.position.y += (o.hip.position.y - .95) * (alto / 1.75) / k;

@@ -856,7 +856,7 @@ function person3(p,dt){let o=PPL.get(p.id);const key=pkey(p,fullLook(p));if(!o||
   if(sit){if(p.sit){x=p.sit.x;y=p.sit.y;h=p.sit.h}else{const [ax,ay]=rot(-.02,.52,d.r||0);x=(d.cx??d.x+.9)+ax;y=(d.cy??d.y+.8)+ay;h=-Math.PI/2+(d.r||0)}}
   const kk=1-Math.exp(-dt*(sit?9:22));if(o.px==null||Math.hypot(x-o.px,y-o.py)>3){o.px=x;o.py=y}else{o.px+=(x-o.px)*kk;o.py+=(y-o.py)*kk}x=o.px;y=o.py;
   o.h=angTo(o.h,h,Math.min(1,dt*(sit?7:8)));o.g.position.set(x,(p.virtual&&!sit?.08+Math.sin(T*2)*.04:0)+(x>=0&&x<=W&&y>=0&&y<=Hb?.12:.012),y);o.g.rotation.y=-o.h;
-  o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);if(o.sync)o.sync();
+  o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);if(o.sync){avNat(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0);o.sync()}
   o.box.visible=!!p.carry;if(o.blob){o.blob.visible=!sit;o.blob.material.opacity=DARK?.75:.55}if(o.star){o.star.rotation.y=T*1.5}
   o.ring.visible=!!(sel&&sel.k==='person'&&sel.id===p.id);o.ring.material.color.set(DARK?'#f5f5f7':'#1d1d1f');
   return{x,y,z:sit?1.3:1.75}}
@@ -899,7 +899,7 @@ const ME={o:null,key:''};
 function meStep(dt){const p0=APP&&S.me?S.people.find(p=>p.id===S.me):null,b0=p0||{id:'__me',role:'gerencia',look:lookOf('Vos','gerencia')},b={...b0,look:{...b0.look,...(MYLOOK||{})}},key=b.id+b.role+b.look.skin+b.look.hair+b.look.style+(b.look.top||'')+(avOn()?1:0);
   if(!ME.o||ME.key!==key){if(ME.o)ACT.remove(ME.o.g);ME.o=mkPerson({...b,virtual:false});ME.key=key;ME.o.h=WALK.yaw;ACT.add(ME.o.g)}const o=ME.o;o.g.visible=WALK.on&&WALK.third&&(WALK.camD||9)>1.05;if(!o.g.visible)return;
   const inB=WALK.x>=0&&WALK.x<=W&&WALK.y>=0&&WALK.y<=Hb;o.g.position.set(WALK.x,inB?.12:.012,WALK.y);if(USO.me)o.h=angTo(o.h,WALK.yaw+Math.PI,Math.min(1,dt*8));else if(WALK.moving)o.h=angTo(o.h,WALK.moveAng,Math.min(1,dt*10));o.g.rotation.y=-o.h;
-  o.carry=false;pose(o,WALK.moving?'walk':'idle',WALK.bob,dt);if(o.sync)o.sync();o.box.visible=false;o.ring.visible=false}
+  o.carry=false;pose(o,WALK.moving?'walk':'idle',WALK.bob,dt);if(o.sync){avNat(o,WALK.moving?'walk':'idle',WALK.bob);o.sync()}o.box.visible=false;o.ring.visible=false}
 // pantalla completa mientras se recorre o se edita; al salir se vuelve a la página donde estabas
 let FULLW=false;
 function fullSync(){const want=WALK.on||ED.on;if(want===FULLW)return;FULLW=want;
@@ -1297,16 +1297,33 @@ const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0
     // brazos y antebrazos: del reposo (en A o en T, con el codo algo doblado) a colgar rectos al costado
     const down=(s,a,b)=>{const d=wpos(s+b).sub(wpos(s+a)).normalize().applyQuaternion(inv);return q().setFromUnitVectors(d,new THREE.Vector3((s==='Left'?1:-1)*.14,-1,.03).normalize())};
     const R0={Left:down('Left','Arm','ForeArm'),Right:down('Right','Arm','ForeArm')},R1={Left:down('Left','ForeArm','Hand'),Right:down('Right','ForeArm','Hand')};
+    // manos relajadas: cada dedo se curva un poco hacia la palma (en reposo la palma mira hacia abajo)
+    const C={},mano={},pm=n=>wpos(n).applyQuaternion(inv);
+    for(const S of ['Left','Right']){if(!B[S+'HandIndex1']||!B[S+'HandPinky1']||!B[S+'HandMiddle1'])continue;const n=pm(S+'HandIndex1').sub(pm(S+'HandPinky1')).cross(pm(S+'HandMiddle1').sub(pm(S+'Hand'))).normalize();if(n.y>0)n.negate();
+      for(const F of ['Index','Middle','Ring','Pinky']){let d=null;for(let j=1;j<=3;j++){const nm=S+'Hand'+F+j,nx=S+'Hand'+F+(j+1);if(!B[nm])continue;if(B[nx])d=pm(nx).sub(pm(nm)).normalize();if(!d)continue;C[nm]=aa(d.clone().cross(n).normalize(),.3*j+(F==='Pinky'?.1:0));mano[nm]=S+'Hand'}}}
     const o={g,hip:J(),chest:J(),head:J(),lL:{th:J(),kn:J(),an:J()},lR:{th:J(),kn:J(),an:J()},aL:{sh:J(),el:J()},aR:{sh:J(),el:J()}};o.hip.position.y=.95;
     let top=B.Hips;while(top.parent&&top.parent.isBone)top=top.parent;const order=[];(function walk(b){if(b.isBone)order.push(b);b.children.forEach(walk)})(top);
     const nameOf=new Map(Object.entries(B).map(([n,b])=>[b,n])),W={};
     o.sync=()=>{const D={},sp=aa(Y,o.chest.rotation.y).multiply(fx(o.chest.rotation.z));D.Spine1=sp;D.Spine2=sp;D.Neck=sp;D.Head=sp.clone().multiply(aa(Y,o.head.rotation.y)).multiply(fx(o.head.rotation.z));
       for(const [S,l,a] of [['Left',o.lL,o.aL],['Right',o.lR,o.aR]]){const t=l.th.rotation.z,kn=t+l.kn.rotation.z;D[S+'UpLeg']=fx(t);D[S+'Leg']=fx(kn);D[S+'Foot']=fx(kn+l.an.rotation.z);D[S+'ToeBase']=D[S+'Foot'];
         const up=sp.clone().multiply(aa(Y,(S==='Left'?1:-1)*(a.sh.rotation.x||0))).multiply(fx(a.sh.rotation.z));D[S+'Shoulder']=sp;D[S+'Arm']=up.clone().multiply(R0[S]);D[S+'ForeArm']=up.clone().multiply(fx(a.el.rotation.z)).multiply(R1[S])}
-      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n])D[n]=p?D[p]:q();const w=D[n].clone().multiply(rest[n]);W[n]=w;
+      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n])D[n]=C[n]?D[mano[n]].clone().multiply(C[n]):p?D[p]:q();const w=D[n].clone().multiply(rest[n]);W[n]=w;
         if(p)b.quaternion.copy(W[p].clone().invert().multiply(w));else b.quaternion.copy(restL[n])}
       B.Hips.position.copy(hipRest);B.Hips.position.y+=(o.hip.position.y-.95)*(alto/1.75)/k};
     return o}})();
+// movimiento más natural para los avatares con esqueleto: rodillas que se doblan al pasar la pierna, pies planos al apoyar,
+// codos siempre algo doblados (más cuando el brazo va adelante), cadera que acompaña el paso y manos relajadas
+function avNat(o,mode,sw){
+  if(mode==='walk'){const s=Math.sin(sw),A=.4,kL=Math.max(0,Math.cos(sw+.6))**1.3,kR=Math.max(0,-Math.cos(sw+.6))**1.3;
+    const leg=(l,sg,k)=>{const th=sg*s*A+k*.2,kn=-(.09+k*1.02);l.th.rotation.z=th;l.kn.rotation.z=kn;l.an.rotation.z=(1-k)*-(th+kn)+k*.12};
+    leg(o.lL,1,kL);leg(o.lR,-1,kR);o.hip.position.y=.95-.07*s*s-.006;
+    o.chest.rotation.z=-.06;o.chest.rotation.y=s*.1;o.head.rotation.y=-s*.08;o.head.rotation.z=.03;
+    if(!o.carry){o.aL.sh.rotation.z=-s*.33-.04;o.aR.sh.rotation.z=s*.33-.04;o.aL.el.rotation.z=.4+Math.max(0,-s)*.5;o.aR.el.rotation.z=.4+Math.max(0,s)*.5}
+    else{o.aL.sh.rotation.z=o.aR.sh.rotation.z=.55;o.aL.el.rotation.z=o.aR.el.rotation.z=1.15}return}
+  if(mode==='sit'){o.lL.kn.rotation.z+=(-1.52-o.lL.kn.rotation.z)*.2;o.lR.kn.rotation.z+=(-1.52-o.lR.kn.rotation.z)*.2;o.lL.an.rotation.z+=(.1-o.lL.an.rotation.z)*.2;o.lR.an.rotation.z+=(.1-o.lR.an.rotation.z)*.2;return}
+  // quieto: brazos sueltos con el codo apenas doblado y rodillas sin trabar
+  for(const a of [o.aL,o.aR])if(!o.carry){a.el.rotation.z+=(.3-a.el.rotation.z)*.12;a.sh.rotation.z+=(-.02-a.sh.rotation.z)*.12}
+  for(const l of [o.lL,o.lR]){l.kn.rotation.z+=(-.09-l.kn.rotation.z)*.12;l.an.rotation.z+=(-(l.th.rotation.z+l.kn.rotation.z)-l.an.rotation.z)*.3}}
 // qué modelo le toca a cada persona: el que eligió en su ficha (look.avatar) o, si no, por rol y nombre
 const AV_H=/^(luca|joshua|nicola|elias|matias|tobias|isaias|jeremias|josema|borja|garcia|andrea)$/;
 function avPick(p){const want=p.look&&p.look.avatar;if(want&&AV.mod[want])return want;const n=(String(p.name||p.n||'').trim().split(/\s+/)[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),fem=/a$/.test(n)&&!AV_H.test(n);
