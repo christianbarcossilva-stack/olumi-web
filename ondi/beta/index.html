@@ -251,8 +251,13 @@ const IC = {
   full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   ped: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>',
-  ref: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>'
+  ref: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
+  sim: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg>'
 };
+// Simulación: clientes inventados (no son de nadie, no usan equipos reales y no se guardan). Sus maquetas se arman solas en maqueta.html.
+const SIMS = [{ id: 'parque', n: 'Parque Logístico Norte', d: 'Ruta 1, km 24 · 8 galpones con andenes', r: 'Logística' },
+  { id: 'frigorifico', n: 'Frigorífico del Este', d: 'Camino de las Tropas 4300 · planta de frío, despacho y depósito', r: 'Alimentos' },
+  { id: 'barraca', n: 'Barraca Central', d: 'Av. de los Constructores 1820 · salón de ventas y depósito', r: 'Comercio' }];
 // marcas: las de nube se conectan con una clave; las demás, con el agente Ondi en la red del cliente
 const BRANDS = [
   { k: 'unifi', n: 'Ubiquiti UniFi', c: '#1F6FEB', ab: 'UI', via: 'Nube', ready: true, what: 'Switches, Wi-Fi, gateways y consolas.', how: 'Clave de API de unifi.ui.com (Site Manager).',
@@ -387,20 +392,22 @@ async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { bo
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
-  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
+  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
   if (S.super) navItems.push(['super', 'Unity Tech', IC.shield]);
   const cur = S.view === 'site' ? 'clientes' : S.view;
   const nav = navItems.map(([k, n, ic]) => `<button data-nav="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic}<span>${n}</span></button>`).join('');
   const who = staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
   const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
+  if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
   $('#root').innerHTML = `<div class="app"><aside class="side">${logo()}
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
-    <main id="main">${S.falta ? faltaView() : S.view === 'super' ? superView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
+  if (S.view === 'sim' && S.sim && staff() && !S.falta) mountSim();
   if (S.modal === 'newsite') { const f = $('#ns_name'); if (f) f.focus(); }
 }
 function faltaView() { return `<div class="wrap"><div class="head"><div><h1>Falta preparar la base</h1><p>La cuenta funciona, pero en Supabase todavía no están las tablas de Ondi.</p></div></div>
@@ -490,6 +497,14 @@ function modalView() {
       <div class="acts"><button class="btn pri" type="submit">Crear el cliente</button><button class="btn" type="button" data-do="closemodal">Cancelar</button></div></form></div></div>`;
   return ''; }
 
+function simView() { const s = SIMS.find(x => x.id === S.sim);
+  if (s) return `<div class="wrap wide"><button class="crumb" data-sim="">${IC.back}Simulación</button><div class="head"><div><h1>${esc(s.n)}</h1><p>${esc(s.d)}. <b>Cliente inventado</b>: nada de lo que ves es real y lo que cambies no se guarda.</p></div>
+    <div class="acts"><button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button></div></div><div class="maq" id="maqbox"></div></div>`;
+  return `<div class="wrap"><div class="head"><div><h1>Simulación</h1><p>Clientes inventados para mostrar Ondi o practicar. No son clientes tuyos, no usan equipos reales y lo que cambies no se guarda.</p></div></div>
+    <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
+function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
+  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=25" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -517,7 +532,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=24" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=25" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -828,7 +843,7 @@ document.addEventListener('change', async e => {
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
   if (t.dataset.repopen) { const h = t.dataset.repopen; S.rep[h] = 'cargando'; render(); fn({ accion: 'consola', hostId: h }).then(r => { S.rep[h] = repInit(r); render(); }).catch(er => { S.rep[h] = { error: errTxt(er) }; render(); }); return; }
   if (t.dataset.repsug) { const R = S.rep[t.dataset.repsug], cli = s => (R.sitios.find(x => x.siteId === s) || {}).cliente || ''; R.equipos.forEach(d => { R.sel[d.mac] = cli(d.sugerido); }); render(); return; }
   if (t.dataset.repsave) { const h = t.dataset.repsave, R = S.rep[h]; if (!R || R.saving) return; const asig = {}; R.clientes.forEach(c => { asig[c.id] = []; }); R.equipos.forEach(d => { const v = R.sel[d.mac]; if (v && asig[v]) asig[v].push(d.mac); }); R.saving = true; render();
@@ -840,7 +855,8 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (t.dataset.sact) { const r = await SB.rpc('ondi_super_empresa', { o: t.dataset.sact, nuevo_plan: null, activa: t.dataset.v === '1', nota: null }); if (r.error) throw r.error; S.sp = null; render(); return; }
     if (t.dataset.snota) { const e2 = S.sp.empresas.find(x => x.org_id === t.dataset.snota), n = prompt('Nota interna sobre ' + (e2 ? e2.name : 'la empresa') + ':', (e2 && e2.notas) || ''); if (n === null) return; const r = await SB.rpc('ondi_super_empresa', { o: t.dataset.snota, nuevo_plan: null, activa: null, nota: n }); if (r.error) throw r.error; S.sp = null; render(); return; }
     if (t.dataset.srej) { const r = await SB.rpc('ondi_super_asignar', { sol: +t.dataset.srej, o: null, s: null, nuevo: null }); if (r.error) throw r.error; toast('Solicitud rechazada'); S.sp = null; render(); return; } } catch (er) { toast(errTxt(er)); return; }
-  if (t.dataset.nav) { S.view = t.dataset.nav; S.site = null; if (S.view === 'super') S.sp = null; if (S.view === 'pedidos' || S.view === 'ayuda') S.ped = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
+  if ('sim' in t.dataset) { S.sim = t.dataset.sim || null; render(); scrollTo(0, 0); return; }
+  if (t.dataset.nav) { S.view = t.dataset.nav; S.site = null; S.sim = null; if (S.view === 'super') S.sp = null; if (S.view === 'pedidos' || S.view === 'ayuda') S.ped = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
   if (t.dataset.site) return openSite(t.dataset.site, t.dataset.sitetab);
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.manForm = null; render(); return; }
   if (t.dataset.atab) { S.atab = t.dataset.atab; render(); return; }

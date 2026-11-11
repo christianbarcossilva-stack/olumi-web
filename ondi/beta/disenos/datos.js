@@ -2,7 +2,7 @@
 const D = {
   inst: 'Instalaciones Demo', user: 'Christian',
   clientes: [
-    { id: 'pln', n: 'Parque Logístico Norte', dir: 'Ruta 1 km 24 · 9 naves', base: 'polo', eq: { wifi: [31, 1], cam: [18, 0], sw: [7, 0], gw: [2, 0] }, up: [99.9, 99.8, 100, 100, 99.7, 100, 99.2] },
+    { id: 'pln', n: 'Parque Logístico Norte', dir: 'Ruta 1 km 24 · 8 naves', base: 'polo', eq: { wifi: [31, 1], cam: [18, 0], sw: [7, 0], gw: [2, 0] }, up: [99.9, 99.8, 100, 100, 99.7, 100, 99.2] },
     { id: 'hca', n: 'Hotel Costa Azul', dir: 'Rambla 2140 · 6 pisos', eq: { wifi: [14, 0], cam: [12, 2], sw: [4, 0], gw: [1, 0] }, up: [100, 99.1, 98.4, 100, 99.9, 97.8, 96.5] },
     { id: 'fde', n: 'Frigorífico del Este', dir: 'Camino Carrasco 6300', eq: { wifi: [9, 0], cam: [11, 0], sw: [3, 0], gw: [1, 0] }, up: [100, 100, 100, 100, 100, 100, 100] },
     { id: 'cla', n: 'Colegio Las Acacias', dir: 'Av. Italia 4410', eq: { wifi: [11, 0], cam: [6, 0], sw: [2, 0, 1], gw: [1, 0] }, up: [100, 100, 99.6, 99.8, 100, 99.9, 99.4] },
@@ -42,8 +42,8 @@ D.tema = (clave, porDefecto) => { const h = document.documentElement; let t = po
   return () => { t = h.dataset.theme === 'dark' ? 'light' : 'dark'; h.dataset.theme = t; try { localStorage.setItem(clave, t); } catch (e) {} return t; }; };
 /* Maqueta 3D real (la pública, sin nombres reales) dentro de un iframe */
 D.maqueta = (cont, c, { limpio = true, orbita = false, cerca = 1 } = {}) => {
-  window.__ondiMaqueta = { state: null, role: 'cli', park: c.n, installer: D.inst, base: c.base === 'polo' ? 'polo' : 'vacia', generica: c.base !== 'polo', canTicket: false, save() {}, savePlano() {}, juego() {} };
-  cont.innerHTML = ''; const f = document.createElement('iframe'); f.src = '../maqueta.html?v=24'; f.title = 'Maqueta 3D de ' + c.n; f.setAttribute('allow', 'fullscreen'); f.style.cssText = 'border:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .9s';
+  window.__ondiMaqueta = { state: null, role: 'cli', park: c.n, installer: D.inst, base: 'vacia', demo: c.base === 'polo' ? 'parque' : undefined, generica: c.base !== 'polo', canTicket: false, save() {}, savePlano() {}, juego() {} };
+  cont.innerHTML = ''; const f = document.createElement('iframe'); f.src = '../maqueta.html?v=25'; f.title = 'Maqueta 3D de ' + c.n; f.setAttribute('allow', 'fullscreen'); f.style.cssText = 'border:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .9s';
   f.onload = () => { try { const d = f.contentDocument, s = d.createElement('style');
       if (limpio) s.textContent = '.topbar,.kpiwrap,.dock,.controls,.panel,.camview,.editbar,.vignette,.roview,.toast,#labels .poi,#labels .street,#labels .chip{display:none!important}';
       d.head.appendChild(s); } catch (e) {}

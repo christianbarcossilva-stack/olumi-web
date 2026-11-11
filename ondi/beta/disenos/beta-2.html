@@ -164,20 +164,21 @@ function indice() { $('#ncli').textContent = String(D.clientes.length).padStart(
 const nube = (x, y, r) => { const n = 11; let d = ''; for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, px = x + r * Math.cos(a), py = y + r * .8 * Math.sin(a); d += i ? ` A${r * .32} ${r * .32} 0 0 1 ${px.toFixed(1)} ${py.toFixed(1)}` : `M${px.toFixed(1)} ${py.toFixed(1)}`; } return d; };
 const tri = (x, y, n) => `<polygon class="tri" points="${x},${y - 11} ${x + 11},${y + 8} ${x - 11},${y + 8}"/><text class="trin" x="${x}" y="${y + 5}">${n}</text>`;
 /* plano del parque (de ejemplo) y de un edificio genérico */
-const PARQUE = { box: [40, 210, 790, 1110], naves: [['Nave 7', 75, 228, 232, 315], ['Nave 6', 75, 228, 315, 407], ['Nave 5', 75, 228, 407, 464], ['Nave 4', 75, 228, 464, 562], ['Nave 2', 68, 210, 562, 677], ['Nave 8', 270, 410, 297, 462], ['Nave 1', 270, 390, 547, 670], ['Nave 9', 442, 615, 260, 355], ['Nave 10', 597, 765, 693, 997]],
-  otros: [[300, 388, 727, 900], [400, 537, 705, 905], [132, 212, 745, 897], [178, 265, 917, 1097], [256, 292, 510, 540]],
-  calles: ['M45 700 H772', 'M45 712 H772', 'M236 232 V682', 'M248 232 V682', 'M425 270 V700', 'M437 270 V700', 'M575 712 V1000', 'M587 712 V1000', 'M45 727 L230 702'],
-  cerco: 'M45 739 L45 1100 L772 1100 L772 676 L648 676 L648 238 L608 148 L258 18 L45 18 Z' };
+/* plano del parque inventado (el mismo de la maqueta de simulación); no copia ningún predio real */
+const PARQUE = { box: [40, 210, 790, 1110], naves: [['Nave 1', 73, 393, 721, 804], ['Nave 2', 437, 643, 721, 804], ['Nave 3', 73, 393, 566, 663], ['Nave 4', 437, 757, 566, 663], ['Nave 5', 73, 393, 444, 547], ['Nave 6', 437, 595, 444, 547], ['Nave 7', 73, 393, 304, 386], ['Nave 8', 437, 757, 304, 386]],
+  otros: [[673, 747, 808, 826]],
+  calles: ['M409 312 V878', 'M421 312 V878', 'M73 686 H757', 'M73 698 H757', 'M73 409 H757', 'M73 421 H757', 'M73 556 H757', 'M45 872 H785', 'M45 884 H785'],
+  cerco: 'M403 836 L55 836 L55 290 L775 290 L775 836 L427 836' };
 function planoParque(c) { const x0 = 40, x1 = 790, y0 = 10, y1 = 1110, s = Math.min(760 / (y1 - y0), 610 / (x1 - x0)), ox = (800 - (y1 - y0) * s) / 2, oy = (640 - (x1 - x0) * s) / 2 + 6,
     P = (x, y) => [ox + (y - y0) * s, oy + (x1 - x) * s], ns = 'vector-effect="non-scaling-stroke"';
   let g = `<g transform="matrix(0 ${-s} ${s} 0 ${ox - s * y0} ${oy + s * x1})">`;
-  g += `<path class="fence" d="${PARQUE.cerco}" ${ns}/>` + PARQUE.calles.map(d => `<path class="road" d="${d}" ${ns}/>`).join('') + `<circle class="road" cx="242" cy="688" r="14" ${ns}/>`;
+  g += `<path class="fence" d="${PARQUE.cerco}" ${ns}/>` + PARQUE.calles.map(d => `<path class="road" d="${d}" ${ns}/>`).join('') + `<circle class="road" cx="415" cy="824" r="8" ${ns}/>`;
   g += PARQUE.otros.map(([a, b, c2, d]) => `<rect class="bld2" x="${a}" y="${c2}" width="${b - a}" height="${d - c2}" ${ns}/>`).join('');
   g += PARQUE.naves.map(([n, a, b, c2, d]) => `<rect class="bld" x="${a}" y="${c2}" width="${b - a}" height="${d - c2}" ${ns}/>`).join('') + '</g>';
   g += PARQUE.naves.map(([n, a, b, c2, d]) => { const [x, y] = P((a + b) / 2, (c2 + d) / 2); return `<text class="nm" x="${x}" y="${y + 4}">${n.toUpperCase()}</text>`; }).join('');
   for (const [n, a, b, c2, d] of PARQUE.naves) for (let i = 0; i < 4; i++) { const [x, y] = P(a + (b - a) * (.2 + .6 * (i % 2)), c2 + (d - c2) * (.25 + .5 * (i > 1))); g += `<circle class="ap" cx="${x}" cy="${y}" r="3.4"/>`; }
-  for (const q of [[45, 300], [45, 450], [45, 600], [100, 1100], [400, 1100], [700, 1100], [772, 800], [648, 400], [430, 90], [150, 18]]) { const [x, y] = P(...q); g += `<path class="cm" d="M${x - 4} ${y - 4} l9 4 l-9 4z"/>`; }
-  const [ax, ay] = P(300, 585), tx = 150, ty = 92;
+  for (const q of [[55, 400], [55, 560], [55, 720], [200, 836], [432, 850], [640, 836], [775, 700], [775, 430], [560, 290], [250, 290]]) { const [x, y] = P(...q); g += `<path class="cm" d="M${x - 4} ${y - 4} l9 4 l-9 4z"/>`; }
+  const [ax, ay] = P(300, 610), tx = 150, ty = 92;
   g += `<circle class="dn" cx="${ax}" cy="${ay}" r="4"/><path class="cloud" d="${nube(ax, ay, 26)}"/>${tri(ax + 26, ay - 26, 1)}
     <path class="lead" d="M${ax - 22} ${ay - 18} L${tx + 250} ${ty + 34} H${tx}"/><text class="note" x="${tx + 4}" y="${ty}">AP Entrepiso Y-04 sin señal</text><text class="note2" x="${tx + 4}" y="${ty + 20}" id="n1t"></text>`;
   g += `<g transform="translate(40 600)"><circle r="16" class="road"/><path d="M-13 0 L4 -5 L0 0 L4 5Z" fill="var(--ink)"/><text class="na" x="-30" y="4" text-anchor="middle">N</text></g>

@@ -567,7 +567,9 @@ const $ = s => document.querySelector(s);
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const narrow = () => innerWidth < 760;
 // dentro de la app de Ondi (misma web): la app pasa el armado guardado, el rol y el nombre del parque, y recibe cada cambio
-const HOST = (() => { try { return window.parent !== window && window.parent.__ondiMaqueta || null; } catch (e) { return null; } })();
+const HOST = (() => { try { const h = window.parent !== window && window.parent.__ondiMaqueta; if (h) return h; } catch (e) {}
+  if (window.ONDI_PRIV) return null; const k = new URLSearchParams(location.search).get('demo') || 'parque', NOM = { parque: 'Parque Logístico Norte', frigorifico: 'Frigorífico del Este', barraca: 'Barraca Central' };
+  return { state: null, role: 'inst', park: NOM[k] || NOM.parque, installer: 'Instalaciones Demo', base: 'vacia', demo: NOM[k] ? k : 'parque', suelta: true, save() {}, savePlano() {} }; })();
 const PARK = (HOST && HOST.park) || 'Parque de ejemplo';
 const BASE = (HOST && HOST.base) || 'polo', BLANK = BASE !== 'polo'; if (BLANK) document.documentElement.classList.add('blank');
 if (HOST) { document.documentElement.classList.add('inapp'); document.title = PARK + ' 3D';
@@ -648,13 +650,14 @@ class Geo {
 /* ---------- motor WebGL2 ---------- */
 const VS = `#version 300 es
 layout(location=0) in vec3 aP; layout(location=1) in vec3 aN; layout(location=2) in vec4 aC; layout(location=3) in vec2 aT;
-uniform mat4 uVP; uniform mat4 uM; uniform mat4 uL;
-out vec3 vN; out vec4 vC; out vec4 vL; out vec3 vW; out vec2 vT;
-void main(){ vec4 w=uM*vec4(aP,1.0); vW=w.xyz; vN=mat3(uM)*aN; vC=aC; vT=aT; vL=uL*w; gl_Position=uVP*w; }`;
+uniform mat4 uVP; uniform mat4 uM; uniform mat4 uL; uniform mat4 uL2;
+out vec3 vN; out vec4 vC; out vec4 vL; out vec4 vL2; out vec3 vW; out vec2 vT;
+void main(){ vec4 w=uM*vec4(aP,1.0); vW=w.xyz; vN=mat3(uM)*aN; vC=aC; vT=aT; vL=uL*w; vL2=uL2*w; gl_Position=uVP*w; }`;
 const FS = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
-in vec3 vN; in vec4 vC; in vec4 vL; in vec3 vW; in vec2 vT;
+in vec3 vN; in vec4 vC; in vec4 vL; in vec4 vL2; in vec3 vW; in vec2 vT;
 uniform sampler2D uTex; uniform float uTexOn;
+uniform sampler2DShadow uS2; uniform vec4 uSB; uniform vec4 uSB2; uniform float uCas; uniform sampler2D uLM; uniform vec4 uLMc;
 uniform sampler2DShadow uS; uniform vec3 uLd; uniform vec3 uSunC; uniform float uSun; uniform vec3 uSky; uniform vec3 uGnd; uniform float uAmb;
 uniform vec3 uTint; uniform float uTintA; uniform vec3 uClear; uniform float uTexel; uniform vec2 uFade;
 uniform float uReal; uniform vec3 uEye; uniform vec3 uVd; uniform float uPersp; uniform vec3 uHz; uniform vec3 uZen; uniform vec3 uGlass; uniform vec3 uSolar; uniform vec3 uWall; uniform vec3 uRoof;
@@ -663,13 +666,20 @@ float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fra
 float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }
 float fbm(vec2 p){ float s=0.0,a=0.5; for(int i=0;i<3;i++){ s+=a*vn(p); p*=2.03; a*=0.5; } return s; }
 vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
-float sh(float d){ vec3 p=vL.xyz/vL.w*0.5+0.5; if(p.x<0.0||p.x>1.0||p.y<0.0||p.y>1.0||p.z>1.0) return 1.0;
-  float b=0.0006+0.0018*(1.0-d); float s=0.0;
-  float k=uReal>0.5?1.9:1.25; for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) s+=texture(uS, vec3(p.xy+vec2(float(x),float(y))*uTexel*k, p.z-b));
-  return s/9.0; }
+const vec2 PD[12]=vec2[12](vec2(0.2041,0.0000), vec2(-0.2607,0.2388), vec2(0.0399,-0.4547), vec2(0.3286,0.4286), vec2(-0.6030,-0.1067), vec2(0.5712,-0.3634), vec2(-0.1911,0.7107), vec2(-0.3644,-0.7016), vec2(0.7906,0.2887), vec2(-0.8224,0.3395), vec2(0.3965,-0.8472), vec2(0.2930,0.9341));
+// sombra suave: 12 muestras en disco; el sesgo va en metros (según el tamaño del texel y la pendiente)
+float shc(sampler2DShadow S, vec4 L, vec4 B, float tn){ vec3 p=L.xyz/L.w*0.5+0.5; float b=B.x*(0.7+B.y*0.75*tn)+B.z, r=B.w, s=0.0;
+  for(int i=0;i<12;i++) s+=texture(S, vec3(p.xy+PD[i]*r, p.z-b)); return s/12.0; }
+float sh(float d){ vec3 p=vL.xyz/vL.w*0.5+0.5; vec2 q=abs(p.xy-0.5)*2.0; float e=max(q.x,q.y), tn=min(sqrt(max(1.0-d*d,0.0))/max(d,0.05),4.0);
+  bool in1=e<1.0&&p.z<1.0&&p.z>0.0;
+  if(uCas<0.5) return in1?shc(uS,vL,uSB,tn):1.0;
+  if(in1&&e<0.88) return shc(uS,vL,uSB,tn);
+  vec3 p2=vL2.xyz/vL2.w*0.5+0.5; float s2=(p2.x<0.0||p2.x>1.0||p2.y<0.0||p2.y>1.0||p2.z>1.0||p2.z<0.0)?1.0:shc(uS2,vL2,uSB2,tn);
+  if(!in1) return s2; return mix(shc(uS,vL,uSB,tn),s2,smoothstep(0.88,1.0,e)); }
 void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh(d):1.0;
   vec3 hemi=mix(uGnd,uSky,n.y*0.5+0.5);
   vec3 base=uTexOn>0.5 ? texture(uTex,vT).rgb*vC.rgb : vC.rgb;
+  vec3 lamp=vec3(0.0); if(uLMc.a>0.5){ float lm=texture(uLM,vW.xz/1280.0+0.5).r; lamp=uLMc.rgb*lm*lm*(1.0-smoothstep(5.5,9.5,vW.y))*clamp(n.y*0.5+0.55,0.0,1.0); }
   vec3 col;
   if(uReal>0.5){
     float hor=smoothstep(0.55,0.9,n.y);
@@ -685,11 +695,11 @@ void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh
     float glass=1.0-smoothstep(0.015,0.05,distance(vC.rgb,uGlass)), sol=1.0-smoothstep(0.015,0.05,distance(vC.rgb,uSolar)); glass=max(glass,sol*0.8);
     vec3 Hh=normalize(uLd+V); float sp=pow(max(dot(n,Hh),0.0),mix(36.0,260.0,glass))*mix(0.10,1.6,glass)*s*step(0.001,d);
     float fr=pow(1.0-max(dot(n,V),0.0),4.0); vec3 R=reflect(-V,n); vec3 sky=mix(uHz,uZen,pow(clamp(R.y,0.0,1.0),0.55));
-    vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.06,1.0,s));
+    vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.06,1.0,s) + lamp);
     lit=mix(lit, sky*mix(0.55,1.0,s)*0.9, glass*(0.45+0.5*fr)) + sky*fr*0.07*(1.0-glass) + uSunC*sp;
     lit=mix(lit, base*1.15, ch?0.0:vC.a);
     col=aces(lit*1.04);
-  } else { vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s)); col=mix(lit, base*mix(0.72,1.0,s), vC.a); }
+  } else { vec3 lit=base*(hemi*uAmb + uSunC*uSun*d*mix(0.12,1.0,s) + lamp*0.8); col=mix(lit, base*mix(0.72,1.0,s), vC.a); }
   col=mix(col,uTint,uTintA);
   if(uReal>0.5 && uPersp>0.5){ float dist=length(uEye-vW); col=mix(col,uHz,(1.0-exp(-dist*0.0021))*0.92); }
   else { float f=smoothstep(uFade.x,uFade.y,length(vW.xz)); col=mix(col,uReal>0.5?uHz:uClear,f); }
@@ -703,6 +713,30 @@ void main(){ vec3 d=normalize(-uVd+uX*vU.x*uHH.x+uY*vU.y*uHH.y); float t=clamp(d
   vec3 c=mix(uHz,uZen,pow(t,0.42)); float sd=max(dot(d,normalize(uLd)),0.0); c+=uSunC*(pow(sd,900.0)*3.0+pow(sd,10.0)*0.22);
   float cl=smoothstep(0.55,0.85,sin(d.x*7.0+d.z*3.0)*0.5+0.5)*smoothstep(0.03,0.25,t)*(1.0-smoothstep(0.35,0.7,t)); c=mix(c,vec3(1.0)*0.97,cl*0.18);
   if(d.y<0.0) c=mix(uHz,uHz*0.92,clamp(-d.y*4.0,0.0,1.0)); o=vec4(c,1.0); }`;
+const AOK = `float key(float d){ return uPr.x>0.5 ? log2(uPr.z/(uPr.z-d*(uPr.z-uPr.y)))/log2(uPr.z/uPr.y) : d; }`;
+const FSA = `#version 300 es
+precision highp float; in vec2 vU; uniform sampler2D uD; uniform mat4 uIVP; uniform vec4 uPr; uniform vec3 uEye; uniform vec3 uVd; uniform vec2 uPS; out vec4 o;
+ivec2 SZ; vec2 ISZ;
+// posición en el mundo del texel que contiene a uv (siempre desde el centro del texel, para que el piso plano no se oscurezca solo)
+vec4 wd(ivec2 ip){ ip=clamp(ip,ivec2(0),SZ-1); float d=texelFetch(uD,ip,0).r; vec4 p=uIVP*vec4((vec2(ip)+0.5)*ISZ*2.0-1.0, d*2.0-1.0, 1.0); return vec4(p.xyz/p.w,d); }
+${AOK}
+void main(){ SZ=textureSize(uD,0); ISZ=1.0/vec2(SZ); vec2 uv=vU*0.5+0.5; ivec2 ip=ivec2(uv*vec2(SZ)); vec4 c=wd(ip); float d=c.w; if(d>=0.99999){ o=vec4(1.0); return; }
+  vec3 P=c.xyz; vec4 pl=wd(ip-ivec2(1,0)), pr=wd(ip+ivec2(1,0)), pb=wd(ip-ivec2(0,1)), pt=wd(ip+ivec2(0,1));
+  vec3 ax=abs(pl.w-d)<abs(pr.w-d) ? P-pl.xyz : pr.xyz-P, ay=abs(pb.w-d)<abs(pt.w-d) ? P-pb.xyz : pt.xyz-P;
+  vec3 n=normalize(cross(ax,ay)); vec3 V=uPr.x>0.5 ? normalize(uEye-P) : uVd; if(dot(n,V)<0.0) n=-n;
+  float dist=uPr.x>0.5 ? max(dot(uEye-P,uVd),0.1) : 1.0, R=uPr.w; vec2 rad=min(R*uPS/dist, vec2(0.07))*vec2(SZ);
+  ivec2 fc=ivec2(gl_FragCoord.xy)&3; float ig=float((fc.x*5+fc.y*11+((fc.x^fc.y)&1)*8)&15)/16.0, occ=0.0;
+  for(int i=0;i<10;i++){ float fi=float(i)+0.5, r=sqrt(fi/10.0), a=fi*2.39996323+ig*6.2831853; ivec2 sp=ip+ivec2(round(vec2(cos(a),sin(a))*r*rad)); if(sp==ip) continue;
+    vec3 v=wd(sp).xyz-P; float l2=dot(v,v); occ+=max(dot(v,n)-0.035*R,0.0)/(l2+0.02*R*R)*R*(1.0-smoothstep(0.6,2.2,l2/(R*R))); }
+  float ao=clamp(1.0-occ*0.2,0.0,1.0); if(uPr.x>0.5) ao=mix(ao,1.0,smoothstep(60.0,150.0,dist));
+  float k=clamp(key(d),0.0,0.9999)*255.0; o=vec4(ao, floor(k)/255.0, fract(k), 1.0); }`;
+const FSC = `#version 300 es
+precision highp float; in vec2 vU; uniform sampler2D uD; uniform sampler2D uA; uniform vec4 uPr; uniform float uK; out vec4 o;
+${AOK}
+void main(){ vec2 uv=vU*0.5+0.5; float d=texture(uD,uv).r; if(d>=0.99999){ o=vec4(1.0); return; }
+  float k=key(d), th=uPr.x>0.5?260.0:1500.0, s=0.0, w=0.0; ivec2 hs=textureSize(uA,0), b0=ivec2(floor(uv*vec2(hs)-0.5))-1;
+  for(int y=0;y<4;y++) for(int x=0;x<4;x++){ vec4 t=texelFetch(uA,clamp(b0+ivec2(x,y),ivec2(0),hs-1),0); float ww=max(0.0,1.0-abs(t.g+t.b/255.0-k)*th)+0.001; s+=t.r*ww; w+=ww; }
+  o=vec4(vec3(mix(1.0,s/w,uK)),1.0); }`;
 const VSD = `#version 300 es
 layout(location=0) in vec3 aP; uniform mat4 uL; uniform mat4 uM; void main(){ gl_Position=uL*uM*vec4(aP,1.0); }`;
 const FSD = `#version 300 es
@@ -721,7 +755,7 @@ class Renderer {
     this.gl = gl; this.canvas = canvas; this.cache = new Map(); this.ss = shadowSize;
     this.p = compile(gl, VS, FS); this.pd = compile(gl, VSD, FSD); this.pk = compile(gl, VSK, FSK);
     const U = (p, names) => Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)]));
-    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn', 'uReal', 'uEye', 'uVd', 'uPersp', 'uHz', 'uZen', 'uGlass', 'uSolar', 'uWall', 'uRoof']); this.uk = U(this.pk, ['uVd', 'uX', 'uY', 'uHH', 'uHz', 'uZen', 'uLd', 'uSunC']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
+    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn', 'uReal', 'uEye', 'uVd', 'uPersp', 'uHz', 'uZen', 'uGlass', 'uSolar', 'uWall', 'uRoof', 'uL2', 'uS2', 'uSB', 'uSB2', 'uCas', 'uLM', 'uLMc']); this.uk = U(this.pk, ['uVd', 'uX', 'uY', 'uHH', 'uHz', 'uZen', 'uLd', 'uSunC']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
     this.ud = U(this.pd, ['uL', 'uM']);
     this.st = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.st);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, shadowSize, shadowSize);
@@ -752,12 +786,41 @@ class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); this.tcache.set(img, t); return t; }
   overlay(vp, objs) { const gl = this.gl, u = this.u; gl.clear(gl.DEPTH_BUFFER_BIT); gl.useProgram(this.p); gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uTexOn, 0); gl.uniform1f(u.uTintA, 0); gl.uniform2fv(u.uFade, [1e5, 2e5]);
     for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); } gl.bindVertexArray(null); }
+  // textura de sombras extra (nivel lejano) y recursos de la oclusión ambiental: se crean recién cuando hacen falta
+  shTex(size) { const gl = this.gl, t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, size, size);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, t, 0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE); gl.bindFramebuffer(gl.FRAMEBUFFER, null); return { t, fb, size }; }
+  aoInit(w, h) { const gl = this.gl; let A = this.ao;
+    if (!A) { A = this.ao = { w: 0, h: 0, ok: true }; try { A.pa = compile(gl, VSK, FSA); A.pc = compile(gl, VSK, FSC); } catch (e) { A.ok = false; console.warn(e); return A; }
+      const U = (p, names) => Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)])); A.ua = U(A.pa, ['uD', 'uIVP', 'uPr', 'uEye', 'uVd', 'uPS']); A.uc = U(A.pc, ['uD', 'uA', 'uPr', 'uK']); }
+    if (!A.ok || (A.w === w && A.h === h)) return A;
+    if (A.dt) { gl.deleteTexture(A.dt); gl.deleteTexture(A.at); gl.deleteFramebuffer(A.fd); gl.deleteFramebuffer(A.fa); }
+    const tex = (ifmt, fmt, type, tw, th) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, ifmt, tw, th, 0, fmt, type, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+    A.w = w; A.h = h; A.hw = Math.max(1, w >> 1); A.hh2 = Math.max(1, h >> 1);
+    A.dt = tex(gl.DEPTH_COMPONENT24, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, w, h); A.fd = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, A.fd); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, A.dt, 0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE);
+    const okD = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    A.at = tex(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, A.hw, A.hh2); A.fa = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, A.fa); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, A.at, 0);
+    A.ok = okD && gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE; gl.bindFramebuffer(gl.FRAMEBUFFER, null); return A; }
+  // oclusión ambiental: profundidad de la vista → oscurecimiento a media resolución → se multiplica sobre la imagen
+  aoPass(vp, objs, env, V) { const gl = this.gl, w = this.canvas.width, h = this.canvas.height, A = this.aoInit(w, h); if (!A.ok) return; const persp = !!V.persp;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.fd); gl.viewport(0, 0, w, h); gl.clear(gl.DEPTH_BUFFER_BIT); gl.useProgram(this.pd); gl.uniformMatrix4fv(this.ud.uL, false, vp);
+    for (const o of objs) { if (!o.on || o.ghost) continue; const m = this.mesh(o); gl.uniformMatrix4fv(this.ud.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
+    gl.bindVertexArray(null); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+    const pr = [persp ? 1 : 0, V.near || 1, V.far || 3200, persp ? 0.7 : Math.min(4.5, Math.max(0.7, V.hh * 0.011))];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, A.fa); gl.viewport(0, 0, A.hw, A.hh2); gl.useProgram(A.pa); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, A.dt); gl.uniform1i(A.ua.uD, 0);
+    gl.uniformMatrix4fv(A.ua.uIVP, false, M.inv(vp)); gl.uniform4fv(A.ua.uPr, pr); gl.uniform3fv(A.ua.uEye, V.e); gl.uniform3fv(A.ua.uVd, V.d); gl.uniform2fv(A.ua.uPS, [0.5 / V.hw, 0.5 / V.hh]); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(A.pc); gl.uniform1i(A.uc.uD, 0); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, A.at); gl.uniform1i(A.uc.uA, 1); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform4fv(A.uc.uPr, pr); gl.uniform1f(A.uc.uK, (env.real ? 0.85 : 0.6) * (persp ? 0.8 : 1)); gl.enable(gl.BLEND); gl.blendFunc(gl.DST_COLOR, gl.ZERO); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disable(gl.BLEND);
+    gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
   render(vp, objs, env, fade, noTint, V) {
-    const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb); gl.viewport(0, 0, this.ss, this.ss); gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(this.pd); gl.uniformMatrix4fv(this.ud.uL, false, env.lvp);
-    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.6, 3);
-    for (const o of objs) { if (!o.on || o.noShadow) continue; const m = this.mesh(o); gl.uniformMatrix4fv(this.ud.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
+    const gl = this.gl, G = V ? shadowFit(env, V, this.ss) : null, lvp = G ? G.lvp : env.lvp;
+    const drawSh = (L, cull) => { gl.clear(gl.DEPTH_BUFFER_BIT); gl.uniformMatrix4fv(this.ud.uL, false, L);
+      for (const o of objs) { if (!o.on || o.noShadow || (cull && shCull(o, G))) continue; const m = this.mesh(o); gl.uniformMatrix4fv(this.ud.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); } };
+    gl.useProgram(this.pd); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.6, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb); gl.viewport(0, 0, this.ss, this.ss); drawSh(lvp, !!(G && G.R < 600));
+    if (G && G.far) { if (!this.c2) { this.c2 = this.shTex(this.ss >> 1); this.c2n = 0; } if (this.c2n++ % 4 === 0 || this.c2o !== objs) { this.c2o = objs; gl.bindFramebuffer(gl.FRAMEBUFFER, this.c2.fb); gl.viewport(0, 0, this.c2.size, this.c2.size); drawSh(G.lvp2, false); } }
     gl.disable(gl.POLYGON_OFFSET_FILL); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const real = !!env.real, persp = !!(V && V.persp), cc = real ? env.hz : env.clear;
@@ -767,18 +830,48 @@ class Renderer {
     gl.useProgram(this.p); const u = this.u;
     gl.uniform1f(u.uReal, real ? 1 : 0); gl.uniform1f(u.uPersp, persp ? 1 : 0); gl.uniform3fv(u.uEye, V ? V.e : [0, 1000, 0]); gl.uniform3fv(u.uVd, V ? V.d : [0, 1, 0]);
     gl.uniform3fv(u.uHz, env.hz || env.clear); gl.uniform3fv(u.uZen, env.zen || env.clear); gl.uniform3fv(u.uGlass, env.glass || [9, 9, 9]); gl.uniform3fv(u.uSolar, env.solar || [9, 9, 9]); gl.uniform3fv(u.uWall, env.wall || [9, 9, 9]); gl.uniform3fv(u.uRoof, env.roof || [9, 9, 9]);
-    gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniformMatrix4fv(u.uL, false, env.lvp);
+    gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniformMatrix4fv(u.uL, false, lvp);
+    const far = !!(G && G.far && this.c2); gl.uniformMatrix4fv(u.uL2, false, far ? G.lvp2 : lvp); gl.uniform1f(u.uCas, far ? 1 : 0);
+    gl.uniform4fv(u.uSB, G ? G.sb : [1.25 / 2890, 1.3, 0.012 / 2890, 1.3 / this.ss]); gl.uniform4fv(u.uSB2, far ? [G.sb2[0], G.sb2[1], G.sb2[2], G.sb2[1] / this.c2.size] : [0, 1, 0, 0]);
     gl.uniform3fv(u.uLd, env.ld); gl.uniform3fv(u.uSunC, env.sunC); gl.uniform1f(u.uSun, env.sun); gl.uniform3fv(u.uSky, env.sky); gl.uniform3fv(u.uGnd, env.gnd);
     gl.uniform1f(u.uAmb, env.amb); gl.uniform3fv(u.uClear, env.clear); gl.uniform1f(u.uTexel, 1 / this.ss); gl.uniform2fv(u.uFade, fade); gl.uniform3fv(u.uTint, env.tint);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.st); gl.uniform1i(u.uS, 0);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, far ? this.c2.t : this.st); gl.uniform1i(u.uS2, 2);
+    const lm = env.lamp && LMAP.cv ? env.lamp : null; if (lm && this.lmv !== LMAP.v) { this.lmv = LMAP.v; if (!this.lmt) this.lmt = gl.createTexture(); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.lmt); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, LMAP.cv);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
+    gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, lm && this.lmt ? this.lmt : this.tex); gl.uniform1i(u.uLM, 3); gl.uniform4fv(u.uLMc, lm && this.lmt ? [lm[0], lm[1], lm[2], 1] : [0, 0, 0, 0]);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.uTex, 1); gl.activeTexture(gl.TEXTURE0);
     let ot = false; for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.uniform1f(u.uTintA, noTint ? 0 : (o.tintA || 0));
       if (o.texImg) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.texFor(o.texImg)); gl.activeTexture(gl.TEXTURE0); ot = true; gl.uniform1f(u.uTexOn, 1); }
       else { if (ot) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.activeTexture(gl.TEXTURE0); ot = false; } gl.uniform1f(u.uTexOn, o.tex && this.tex ? 1 : 0); }
       gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
     gl.bindVertexArray(null);
+    if (V && this.aoMain && GFX.ao) { try { this.aoPass(vp, objs, env, V); } catch (e) { GFX.ao = false; console.warn(e); } }
   }
 }
+
+/* ---------- gráficos v25: sombras ajustadas a lo que se ve, oclusión ambiental y luz de los focos ---------- */
+const GFX = { ao: (() => { try { return localStorage.getItem('ondi.ao') !== '0'; } catch (e) { return true; } })(), fijo: (() => { try { return localStorage.getItem('ondi.ao') === '1'; } catch (e) { return false; } })(), n: 0, acc: 0, t: 0 };
+const LMAP = { cv: null, v: 0, sig: '' };
+M.inv = m => { const o = new Float32Array(16), a = m, b00 = a[0] * a[5] - a[1] * a[4], b01 = a[0] * a[6] - a[2] * a[4], b02 = a[0] * a[7] - a[3] * a[4], b03 = a[1] * a[6] - a[2] * a[5], b04 = a[1] * a[7] - a[3] * a[5], b05 = a[2] * a[7] - a[3] * a[6],
+    b06 = a[8] * a[13] - a[9] * a[12], b07 = a[8] * a[14] - a[10] * a[12], b08 = a[8] * a[15] - a[11] * a[12], b09 = a[9] * a[14] - a[10] * a[13], b10 = a[9] * a[15] - a[11] * a[13], b11 = a[10] * a[15] - a[11] * a[14];
+  let d = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06; d = d ? 1 / d : 0;
+  o[0] = (a[5] * b11 - a[6] * b10 + a[7] * b09) * d; o[1] = (a[2] * b10 - a[1] * b11 - a[3] * b09) * d; o[2] = (a[13] * b05 - a[14] * b04 + a[15] * b03) * d; o[3] = (a[10] * b04 - a[9] * b05 - a[11] * b03) * d;
+  o[4] = (a[6] * b08 - a[4] * b11 - a[7] * b07) * d; o[5] = (a[0] * b11 - a[2] * b08 + a[3] * b07) * d; o[6] = (a[14] * b02 - a[12] * b05 - a[15] * b01) * d; o[7] = (a[8] * b05 - a[10] * b02 + a[11] * b01) * d;
+  o[8] = (a[4] * b10 - a[5] * b08 + a[7] * b06) * d; o[9] = (a[1] * b08 - a[0] * b10 - a[3] * b06) * d; o[10] = (a[12] * b04 - a[13] * b02 + a[15] * b00) * d; o[11] = (a[9] * b02 - a[8] * b04 - a[11] * b00) * d;
+  o[12] = (a[5] * b07 - a[4] * b09 - a[6] * b06) * d; o[13] = (a[0] * b09 - a[1] * b07 + a[2] * b06) * d; o[14] = (a[13] * b01 - a[12] * b03 - a[14] * b00) * d; o[15] = (a[8] * b03 - a[9] * b01 + a[10] * b00) * d; return o; };
+// Sombras: el mapa se ajusta a lo que se está mirando (de cerca, sombras nítidas); paseando hay un segundo nivel para lo lejano.
+function shadowFit(env, V, ss) { const z = env.ld, x = nrm(cross([0, 1, 0], z)), y = cross(z, x), D = 1400; let c, R, far = false;
+  if (V.persp) { const f = nrm([-V.d[0], 0, -V.d[2]]); R = 80; c = [V.e[0] + f[0] * R * 0.5, 0, V.e[2] + f[2] * R * 0.5]; far = true; }
+  else { const sp = Math.max(0.2, V.d[1]); R = Math.hypot(V.hw, V.hh / sp) + 30; c = [V.e[0] - V.d[0] * D, 0, V.e[2] - V.d[2] * D];
+    if (R >= 600) { R = 640; c = [0, 0, 0]; } else R = 640 / Math.pow(2, Math.floor(Math.log2(640 / R) * 3) / 3); }
+  const fit = (c, R, size) => { const tx = 2 * R / size, cx = Math.round(dot(c, x) / tx) * tx, cy = Math.round(dot(c, y) / tx) * tx, cz = dot(c, z), t = [x[0] * cx + y[0] * cy + z[0] * cz, x[1] * cx + y[1] * cy + z[1] * cz, x[2] * cx + y[2] * cy + z[2] * cz];
+    const n = D - R * 1.3 - 70, f = D + R * 1.3 + 25, rad = Math.min(3.2, Math.max(1.3, 0.13 / tx));
+    return { m: M.mul(M.ortho(-R, R, -R, R, n, f), M.look([t[0] + z[0] * D, t[1] + z[1] * D, t[2] + z[2] * D], t, [0, 1, 0])), sb: [tx / (f - n), rad, 0.012 / (f - n), rad / size], cx, cy }; };
+  const a = fit(c, R, ss), G = { lvp: a.m, sb: a.sb, R, x, y, cx: a.cx, cy: a.cy, far };
+  if (far) { const b = fit([0, 0, 0], 640, ss >> 1); G.lvp2 = b.m; G.sb2 = b.sb; } return G; }
+function shCull(o, G) { const g = o.geo; if (o.dyn || !g || !g.mn || g.mn[0] > g.mx[0]) return false; let c = [(g.mn[0] + g.mx[0]) / 2, (g.mn[1] + g.mx[1]) / 2, (g.mn[2] + g.mx[2]) / 2]; if (o.model) c = M.xf(o.model, c);
+  const r = Math.hypot(g.mx[0] - g.mn[0], g.mx[1] - g.mn[1], g.mx[2] - g.mn[2]) / 2 + 2; return Math.abs(dot(c, G.x) - G.cx) > G.R + r || Math.abs(dot(c, G.y) - G.cy) > G.R + r; }
 
 /* ---------- paletas de la escena ---------- */
 const PAL = {
@@ -791,7 +884,7 @@ const PAL = {
     sunC: [1, .97, .92], sun: .5, sky3: [.88, .92, .95], gnd3: [.78, .78, .76], amb: .7, tint: '#12A8BF' },
   dark: { clear: '#18212A', ground: '#1F2931', grass: '#22332B', site: '#2A353E', apron: '#303B44', road: '#3B4651', mark: '#8A96A1', markY: '#C2A552', walk: '#34404A',
     wall: '#5A6773', base: '#45515C', roof: '#4F5B66', parapet: '#64717D', fascia: '#20282F', door: '#76838E', frame: '#2E3841', glass: '#E2BC6E', glassE: .6, sky: '#4A7486',
-    solar: '#2A4459', hvac: '#6A7682', tree: '#3F6F57', tree2: '#37624D', trunk: '#62513F', fence: '#73808A', pole: '#83909A', lamp: '#FFE3AA', lampE: 1, pool: '#3E4442', dirt: '#33342D',
+    solar: '#2A4459', hvac: '#6A7682', tree: '#3F6F57', tree2: '#37624D', trunk: '#62513F', fence: '#73808A', pole: '#83909A', lamp: '#FFE3AA', lampE: 1, pool: null, dirt: '#33342D',
     cont: ['#34434F', '#4F6B76', '#82503F', '#8F99A0', '#43604F', '#5E6A73'], pallet: '#8C7553', pbase: '#6E5A41',
     cab: ['#242C33', '#CDD5DB', '#4A6D82', '#8995A0'], trailer: '#CFD7DD', tire: '#15191C', fork: '#D4A519', car: ['#5E707D', '#9AA4AB', '#3A454D', '#8C463F', '#B5BDC3'],
     fiber: '#36E2F5', dev: '#BCC6CE', devD: '#27303A', ok: '#3BD08E', warn: '#F2B23A', crit: '#FF5A60', acc: '#2FD3E8', barrier: '#E5484D',
@@ -1281,7 +1374,7 @@ function view(w, h) { if (WALK.on) return walkView(w, h);
   const a = w / h, cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), d = [cp * Math.sin(cam.yaw), sp, cp * Math.cos(cam.yaw)];
   const t = [cam.tx, 0, cam.tz], e = [t[0] + d[0] * 1400, d[1] * 1400, t[2] + d[2] * 1400];
   const z = nrm(d), x = nrm(cross([0, 1, 0], z)), y = cross(z, x), hh = cam.zoom, hw = hh * a;
-  return { vp: M.mul(M.ortho(-hw, hw, -hh, hh, 1, 3200), M.look(e, t, [0, 1, 0])), e, d, x, y, hw, hh };
+  return { vp: M.mul(M.ortho(-hw, hw, -hh, hh, 1, 3200), M.look(e, t, [0, 1, 0])), e, d, x, y, hw, hh, near: 1, far: 3200 };
 }
 function ray(V, px, py, w, h) { const nx = px / w * 2 - 1, ny = 1 - py / h * 2;
   if (V.persp) return { o: V.e.slice(), d: nrm([-V.d[0] + V.x[0] * nx * V.hw + V.y[0] * ny * V.hh, -V.d[1] + V.x[1] * nx * V.hw + V.y[1] * ny * V.hh, -V.d[2] + V.x[2] * nx * V.hw + V.y[2] * ny * V.hh]) };
@@ -1297,7 +1390,7 @@ const canvas = $('#scene');
 function env() {
   const ld = REAL ? nrm([-0.86, 0.82, 0.46]) : nrm([-0.9, 1.05, 0.38]), lp = [ld[0] * 1400, ld[1] * 1400, ld[2] * 1400];
   return { ld, lvp: M.mul(M.ortho(-640, 640, -640, 640, 10, 2900), M.look(lp, [0, 0, 0], [0, 1, 0])), sunC: P.sunC, sun: P.sun, sky: P.sky3, gnd: P.gnd3, amb: P.amb, clear: C(P.clear), tint: C(P.tint),
-    real: REAL, hz: P.hz || C(P.clear), zen: P.zen || C(P.clear), glass: C(P.glass), solar: C(P.solar), wall: C(P.wall), roof: C(P.roof) };
+    real: REAL, lamp: isDark() ? (REAL ? [1.5, 1.1, 0.6] : [1.0, 0.8, 0.5]) : null, hz: P.hz || C(P.clear), zen: P.zen || C(P.clear), glass: C(P.glass), solar: C(P.solar), wall: C(P.wall), roof: C(P.roof) };
 }
 function isDark() { const t = document.documentElement.getAttribute('data-theme'); if (t === 'dark') return true; if (t === 'light') return false; return matchMedia('(prefers-color-scheme: dark)').matches; }
 function buildAll() { P = isDark() ? (REAL ? PAL.darkReal : PAL.dark) : (REAL ? PAL.real : PAL.light); buildBase(); NAVES.forEach(buildNave); buildDevices(); buildFiber(); buildDynamicGeos(); buildProps(); applyLayers(); }
@@ -2740,7 +2833,7 @@ function ticketFor(id) { const n = 2300 + Math.floor(Math.random() * 600), c = p
 const WALK = { on: false, N: null, x: 0, y: 1.7, z: 0, yaw: 0, pitch: 0, fov: 1.2, keys: new Set(), pad: { f: 0, s: 0, v: 0 }, saved: null, lbls: [] };
 function walkF() { const cp = Math.cos(WALK.pitch); return [-Math.sin(WALK.yaw) * cp, Math.sin(WALK.pitch), -Math.cos(WALK.yaw) * cp]; }
 function walkView(w, h) { const f = walkF(), e = [WALK.x, WALK.y, WALK.z], t = [e[0] + f[0], e[1] + f[1], e[2] + f[2]], z = [-f[0], -f[1], -f[2]], x = nrm(cross([0, 1, 0], z)), y = cross(z, x), a = w / h, th = Math.tan(WALK.fov / 2);
-  return { vp: M.mul(M.persp(WALK.fov, a, 0.07, 1600), M.look(e, t, [0, 1, 0])), e, d: z, x, y, hw: th * a, hh: th, persp: true }; }
+  return { vp: M.mul(M.persp(WALK.fov, a, 0.07, 1600), M.look(e, t, [0, 1, 0])), e, d: z, x, y, hw: th * a, hh: th, persp: true, near: 0.07, far: 1600 }; }
 const naveAt = (x, z, y = 1.7) => NAVES.find(N => x > N.x0 + 0.3 && x < N.x1 - 0.3 && z > N.z0 + 0.3 && z < N.z1 - 0.3 && y < N.h);
 function enterWalk(N, at, look) { ctxClose(); popClose(); if (GALV.id) closeGal(); if (!WALK.on) WALK.saved = { ...cam }; tween = null;
   if (!N && at) N = naveAt(at[0], at[1]);
@@ -5035,7 +5128,7 @@ walkView = (o => function (w, h) { if (!TP.on) { TP.near = false; return o(w, h)
   if (N) { e[0] = clamp(e[0], N.x0 + 0.5, N.x1 - 0.5); e[2] = clamp(e[2], N.z0 + 0.5, N.z1 - 0.5); e[1] = Math.min(e[1], N.h - 0.35); }
   e[1] = Math.max(e[1], WALK.y - 1.7 + 0.25); TP.near = Math.hypot(e[0] - head[0], e[2] - head[2]) < 0.75 && Math.abs(e[1] - head[1]) < 0.9;
   const t = [e[0] + f[0], e[1] + f[1], e[2] + f[2]], z = [-f[0], -f[1], -f[2]], x = nrm(cross([0, 1, 0], z)), y = cross(z, x), a = w / h, th = Math.tan(WALK.fov / 2);
-  TP.cam = e; return { vp: M.mul(M.persp(WALK.fov, a, 0.07, 1600), M.look(e, t, [0, 1, 0])), e, d: z, x, y, hw: th * a, hh: th, persp: true }; })(walkView);
+  TP.cam = e; return { vp: M.mul(M.persp(WALK.fov, a, 0.07, 1600), M.look(e, t, [0, 1, 0])), e, d: z, x, y, hw: th * a, hh: th, persp: true, near: 0.07, far: 1600 }; })(walkView);
 function tpSet(on) { TP.on = on; try { localStorage.setItem('ondi.tp', on ? '1' : '0'); } catch (e) {} if (on) TP.d = Math.min(TP.d, 1); if (!on) avHide(); walkHud(); toast(on ? 'Cámara en 3ª persona · la rueda del mouse la acerca o la aleja' : 'Cámara en 1ª persona'); }
 function tpCycle() { if (!TP.on) { TP.want = 4.2; tpSet(true); } else if (TP.want < 6) { TP.want = 8; toast('Cámara lejos'); walkHud(); } else tpSet(false); }
 document.addEventListener('keydown', e => { if (!WALK.on || e.metaKey || e.ctrlKey || e.altKey) return; const t = e.target; if (t.closest && t.closest('input,select,textarea,[contenteditable]')) return; if (e.key.toLowerCase() === 'p') { e.preventDefault(); tpSet(!TP.on); } });
@@ -5104,6 +5197,135 @@ buildNave = (o => function (N) { o(N); if (BLANK || N.id !== 'e10' || !N.docks |
   for (const d of N.docks) lb(d.u - 0.45, d.u + 0.45, 0.32, 0.37, 5.95, 6.45, '#2F6FD6', { ao: 1 });
   ob.version++; })(buildNave);
 
+/* ---------- parques de simulación (clientes inventados): se arman solos con este código y no copian ningún predio real ----------
+   Los usa el bloque "Simulación" de la app, la web y las demos. Nunca se guardan: cada vez se arman igual (azar con semilla). */
+const DEMOS = {
+  parque: { site: [-300, -240, 300, 215], ruta: 250, gate: 205, av: [-222, 205],
+    patios: [{ z: 95, x0: -285, x1: 285, n: 'Patio sur' }, { z: -136, x0: -285, x1: 285, n: 'Patio norte' }], serv: [{ z: -18, x0: -285, x1: 285 }],
+    naves: [['Distribución Austral', 'Consumo masivo', -285, -18, 119, 188, 12, 'N'], ['Fríos del Litoral', 'Alimentos refrigerados', 18, 190, 119, 188, 12, 'N'],
+      ['Moda Express', 'Moda · e-commerce', -285, -18, -10, 71, 13, 'S'], ['Hogar y Limpieza', 'Hogar', 18, 285, -10, 71, 14, 'S'],
+      ['Repuestos del Sur', 'Autopartes', -285, -18, -112, -26, 13, 'N'], ['Bebidas del Río', 'Bebidas', 18, 150, -112, -26, 12, 'N'],
+      ['Electro Centro', 'Electrónica', -285, -18, -228, -160, 13, 'S'], ['Agroinsumos del Este', 'Agro', 18, 285, -228, -160, 12, 'S']],
+    ofi: { x: 246, z: 199, w: 62, d: 15, h: 8.4, n: 'Administración del parque' }, park: { x: 246, z: 152, cols: 22, rows: 2 },
+    patio: { x0: 166, z0: -110, x1: 284, z1: -28 }, home: { tx: 0, tz: -5, yaw: 0.5, pitch: 0.66, zoom: 330 } },
+  frigorifico: { site: [-170, -130, 170, 130], ruta: 165, gate: 122, av: [-20, 122],
+    patios: [{ z: 20, x0: -160, x1: 160, n: 'Patio de carga' }], serv: [],
+    naves: [['Planta de frío', 'Cámaras de frío', -160, -16, 44, 112, 11, 'N'], ['Despacho', 'Expedición', 16, 110, 44, 112, 10, 'N'], ['Depósito seco', 'Insumos y envases', -160, 60, -110, -4, 12, 'S']],
+    ofi: { x: 135, z: 70, w: 30, d: 44, h: 7.5, n: 'Oficinas y laboratorio' }, park: { x: 118, z: -60, cols: 14, rows: 2 },
+    patio: { x0: 74, z0: -108, x1: 100, z1: -84 }, home: { tx: 0, tz: 0, yaw: -0.45, pitch: 0.7, zoom: 200 } },
+  barraca: { site: [-110, -90, 110, 95], ruta: 128, gate: 86, av: [-10, 86],
+    patios: [{ z: 22, x0: -100, x1: 100, n: 'Playa de carga' }], serv: [],
+    naves: [['Salón de ventas', 'Atención al público', 14, 100, 46, 82, 8, 'N'], ['Depósito de materiales', 'Hierro, cemento y maderas', -100, 60, -80, -2, 10, 'S']],
+    ofi: null, park: { x: -55, z: 64, cols: 12, rows: 2 }, patio: { x0: -98, z0: 46, x1: -92, z1: 50 }, home: { tx: 0, tz: 0, yaw: 0.4, pitch: 0.72, zoom: 135 } } };
+const DEMO = BLANK && HOST && HOST.demo && DEMOS[HOST.demo] ? DEMOS[HOST.demo] : null;
+const DMO = { t: 4, n: 0, docks: [], in: 64 };
+if (DEMO) document.documentElement.classList.add('demo');
+// piso del predio: explanada, playas de hormigón y calles con sus marcas (sin la grilla de dibujo)
+buildBaseBlank = (o => function () { if (!DEMO) return o(); const g = new Geo(), gg = new Geo(), S = DEMO.site;
+  g.flat(-1600, -1600, 1600, 1600, -0.08, P.grass); gg.flat(S[0], S[1], S[2], S[3], 0, P.site);
+  for (const p of DEMO.patios) gg.flat(p.x0, p.z - 24, p.x1, p.z + 24, 0.014, P.apron);
+  const pk = DEMO.park; if (pk) gg.flat(pk.x - pk.cols * 1.4 - 3, pk.z - 12, pk.x + pk.cols * 1.4 + 3, pk.z + 12, 0.014, P.apron);
+  const ph = OBJID.get('photo'); if (ph) ph.on = false; obj('ground', { geo: gg, layer: 'ground' }); obj('base', { geo: g, layer: 'base' });
+  const r = new Geo(), f = new Geo(); for (const R of ED.roads) { if (!R.pts || R.pts.length < 2) continue; if (R.kind === 'alambrado') fenceGeo(R, f); else roadGeo(R, r); }
+  // líneas de cada andén en el patio
+  for (const N of NAVES) for (const d of N.docks || []) for (const s of [-2.5, 2.5]) { const a = NP(N, d.u + s, 0.6), b = NP(N, d.u + s, 17); r.strip([a, b], 0.14, 0.05, P.markY); }
+  obj('roads', { geo: r, layer: 'ground', noShadow: true }); obj('fences', { geo: f, layer: 'base' }); })(buildBaseBlank);
+roadLines = (o => function () { if (!DEMO) return o(); return ED.roads.filter(R => R.pub && R.kind !== 'alambrado').map(R => R.pts.map(p => [p[0], p[1]])); })(roadLines);
+// recorridos: de la ruta al andén (marcha atrás al final) y la vuelta. Se circula por la derecha.
+const dmoCourt = N => N.wall + N.n[1] * 24;
+function dmoIn(d, fromW) { const S = DEMO, N = d.nave, zc = dmoCourt(N), zr = S.ruta, w = d.x < 0, zl = zc + (w ? -3 : 3), q = (x, z, sp, o) => Object.assign({ x, z, sp }, o), pts = [];
+  pts.push(fromW ? q(-640, zr + 3, 13) : q(640, zr - 3, 13), fromW ? q(-13, zr + 3, 9) : q(15, zr - 3, 9), q(2.6, zr - 9, 5), q(2.6, S.gate + 3, 4, { wait: 1.6 }), q(2.6, zc + 13, 8));
+  if (w) pts.push(q(-7, zl, 5), q(d.x - 15, zl, 7)); else pts.push(q(8, zl, 5), q(d.x + 15, zl, 7));
+  pts.push(q(d.x + (w ? -4 : 4), N.wall + N.n[1] * 20, 3, { rev: true }), q(d.x, d.z, 2.4, { rev: true, ev: 'dock' })); return pts; }
+function dmoOut(d) { const S = DEMO, N = d.nave, zc = dmoCourt(N), zr = S.ruta, w = d.x < 0, zl = zc + (w ? 3 : -3), q = (x, z, sp, o) => Object.assign({ x, z, sp }, o), pts = [];
+  pts.push(q(d.x, N.wall + N.n[1] * 17.5, 3), q(d.x + (w ? 8 : -8), zl, 4.5)); if (w) pts.push(q(-10, zl, 7), q(-2.6, zc + 12, 5)); else pts.push(q(7, zl, 7), q(-2.6, zc + 7, 5));
+  const toW = (DMO.n++ % 2) === 0; pts.push(q(-2.6, S.gate - 4, 8), q(-2.6, S.gate + 6, 4, { wait: 1.2 }), q(-2.6, zr - 10, 5));
+  if (toW) pts.push(q(-14, zr - 3, 8), q(-640, zr - 3, 13, { ev: 'gone' })); else pts.push(q(4, zr + 3, 6), q(18, zr + 3, 8), q(640, zr + 3, 13, { ev: 'gone' })); return pts; }
+arrivePath = (o => function (d, f) { return DEMO ? dmoIn(d, f) : o(d, f); })(arrivePath);
+leavePath = (o => function (d) { if (!DEMO) return o(d); if (d.occ) d.occ = null; return dmoOut(d); })(leavePath);
+function dmoTruck(d, parked) { const n = DMO.n++, id = 'dt-' + n, v = { id, kind: 'dt', n: n + 60, hl: 8.4, hw: 1.25, state: 'arriving', wait: 0, dock: d, plate: plate() }; d.occ = v;
+  if (parked) Object.assign(v, { x: d.x, z: d.z, head: d.head, state: 'parked', dwell: 1e9, path: [], idx: 0 });
+  else { const fw = n % 2 === 0; v.path = dmoIn(d, fw); v.idx = 1; v.x = v.path[0].x; v.z = v.path[0].z; v.head = fw ? 0 : Math.PI; }
+  obj(id, { geo: truckGeo(n), layer: 'log', on: false, kind: 'veh' }); VEH.push(v); return v; }
+vehEvent = (o => function (v, ev) { o(v, ev); if (DEMO && v.kind === 'dt' && ev === 'dock') { v.dwell = 1e9; DMO.in++; } })(vehEvent);
+// de a poco: cada tanto sale un camión de su andén o entra uno nuevo; nunca más de tres maniobrando a la vez
+stepTraffic = (o => function (dt) { o(dt); if (!DEMO || RM) return; DMO.t -= dt; if (DMO.t > 0) return; DMO.t = 5 + Math.random() * 6;
+  const T = VEH.filter(v => v.kind === 'dt'), est = T.filter(v => v.state === 'parked'); if (T.length - est.length >= 3) return;
+  if (est.length > DMO.docks.length * 0.22 && (Math.random() < 0.5 || est.length > DMO.docks.length * 0.36)) { est[Math.floor(Math.random() * est.length)].dwell = 0; return; }
+  const free = DMO.docks.filter(d => !d.occ); if (!free.length) return;
+  if (VEH.some(v => v.state !== 'idle' && [-640, 640].some(x => Math.hypot(v.x - x, v.z - DEMO.ruta) < 40))) return; dmoTruck(free[Math.floor(Math.random() * free.length)], false); })(stepTraffic);
+// el furgón de la instaladora también llega por la portería hasta el galpón del equipo
+sendVan = (o => function (id, n) { if (!DEMO) return o(id, n); const p = entPos(id); if (!p || !NAVES.length) return; const e = entity(id);
+  let N = e && e.d && e.d.nave ? naveById(e.d.nave) : null; if (!N) N = NAVES.slice().sort((a, b) => Math.hypot(a.cx - p[0], a.cz - p[2]) - Math.hypot(b.cx - p[0], b.cz - p[2]))[0];
+  const vid = 'pv-' + (DMO.n++), d = fakeDock(N, 7), v = { id: vid, kind: 'phitel', n: 50 + DMO.n, hl: 3.05, hw: 1.05, state: 'arriving', wait: 0, dock: d, plate: plate(), ticket: n, target: id, tp: p };
+  v.path = dmoIn(d, true); v.path.splice(-3, 3, { x: d.x + (d.x < 0 ? -6 : 6), z: dmoCourt(N) + (d.x < 0 ? -3 : 3), sp: 6 }, { x: d.x, z: d.z, sp: 3, ev: 'dock' }); v.idx = 1; v.x = v.path[0].x; v.z = v.path[0].z; v.head = 0; VEH.push(v);
+  obj(vid, { geo: vanGeo('#FFFFFF', '#2B333B', true), layer: 'log', on: false, kind: 'veh', texImg: brandTex(), tex: true });
+  v.lbl = addLabel(`<span class="vanlbl">${escH(INST)} · OL-${n}</span>`, () => [v.x, 3.6, v.z], 'log', null); v.lbl.maxZoom = 320; log('info', `Ticket OL-${n}: técnico de ${INST} en camino a ${N.full}`, id); })(sendVan);
+function demoStart() { const S = DEMO, R = seeded(77), si = S.site, zr = S.ruta, cnt = {};
+  const P2 = (k, x, z, yaw = 0, o) => { const p = mkProp(k); cnt[k] = (cnt[k] || 0) + 1; Object.assign(p, { x, z, y: 0, yaw, seed: Math.floor(R() * 97) }, o); addAnyRaw(p); return p; };
+  // calles: la ruta, la entrada, la avenida, los patios de maniobra y la calle de servicio; alambrado con el hueco de la portería
+  ED.roads.push({ id: 'CL-1', name: 'Ruta', w: 14, pts: [[-900, zr], [900, zr]], pub: 1, ds: 12, dl: 5 }, { id: 'CL-2', w: 13, pts: [[0, zr], [0, S.gate]], sq: 1, dash: false },
+    { id: 'CL-3', name: 'Avenida central', w: 11, pts: [[0, S.gate], [0, S.av[0]]], sq: 1 });
+  S.patios.forEach((p, i) => ED.roads.push({ id: 'CL-P' + i, name: p.n, w: 15, pts: [[p.x0, p.z], [p.x1, p.z]], sq: 1, dash: false }));
+  S.serv.forEach((p, i) => ED.roads.push({ id: 'CL-S' + i, name: 'Calle de servicio', w: 8, pts: [[p.x0, p.z], [p.x1, p.z]], sq: 1 }));
+  ED.roads.push({ id: 'AL-1', kind: 'alambrado', pts: [[-10, si[3]], [si[0], si[3]], [si[0], si[1]], [si[2], si[1]], [si[2], si[3]], [10, si[3]]] });
+  // galpones
+  S.naves.forEach(([name, rubro, x0, x1, z0, z1, h, face], i) => { const N = { id: 'n' + (i + 1), code: 'N' + (i + 1), name, rubro, x0, x1, z0, z1, h, face, custom: true }; prepNave(N); NAVES.push(N); DMO.docks.push(...N.docks); });
+  rebuildBlank(); NAVES.forEach(N => { buildNave(N); chipFor(N); });
+  // portería, barreras, oficinas, estacionamiento y verde
+  P2('porteria', -9.5, S.gate + 1, Math.PI / 2, { name: 'Portería' }); P2('barrera', 5.6, S.gate + 4, Math.PI / 2); P2('barrera', -5.6, S.gate - 2, -Math.PI / 2);
+  if (S.ofi) P2('edif', S.ofi.x, S.ofi.z, 0, { w: S.ofi.w, d: S.ofi.d, h: S.ofi.h, pisos: 2, hvac: 2, marq: 1, name: S.ofi.n });
+  if (S.park) P2('parking', S.park.x, S.park.z, 0, { cols: S.park.cols, rows: S.park.rows, occ: 0.72, name: 'Estacionamiento' });
+  P2('arboleda', (si[0] - 34) / 2, si[3] + 12, 0, { n: Math.floor((-34 - si[0]) / 13), sp: 13 }); P2('arboleda', (si[2] + 34) / 2, si[3] + 12, 0, { n: Math.floor((si[2] - 34) / 13), sp: 13 });
+  P2('arboleda', si[0] - 9, (si[1] + si[3]) / 2, Math.PI / 2, { n: Math.floor((si[3] - si[1]) / 16), sp: 16 }); P2('arboleda', (si[0] + si[2]) / 2, si[1] - 9, 0, { n: Math.floor((si[2] - si[0]) / 16), sp: 16 });
+  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) P2('palm', s * (16 + i * 7), S.gate + 22, R() * 6);
+  // columnas de luz: avenida, patios y fondo
+  for (let z = S.gate - 14, k = 0; z > S.av[0] + 6; z -= 38, k++) { const blocked = S.patios.some(p => Math.abs(z - p.z) < 12); if (!blocked) P2('lamp', k % 2 ? 7.4 : -7.4, z, k % 2 ? Math.PI : 0, { h: 10 }); }
+  for (const p of S.patios) { for (const sx of [-1, 1]) for (const sz of [-1, 1]) P2('lamp', sx * 8.6, p.z + sz * 11, sx > 0 ? Math.PI : 0, { h: 12 }); P2('lamp', p.x0 + 2, p.z, 0, { h: 12 }); P2('lamp', p.x1 - 2, p.z, Math.PI, { h: 12 }); }
+  if (S.park) for (const dx of [-1, 1]) P2('lamp', S.park.x + dx * S.park.cols * 0.8, S.park.z, Math.PI / 2, { h: 8 });
+  // patio de contenedores, tanques y pallets
+  const Y = S.patio; if (Y && Y.x1 - Y.x0 > 30) { for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) if (R() < 0.85) { const c = P2('cont', Y.x0 + 12 + i * 3.4, Y.z0 + 12 + j * 13.4, Math.PI / 2); if (R() < 0.4) { const c2 = P2('cont', c.x, c.z, Math.PI / 2); c2.y = 2.6; refreshAny(c2); } }
+    P2('tanque', Y.x1 - 16, Y.z0 + 18, 0, { r: 6.5, h: 11 }); P2('tanque', Y.x1 - 16, Y.z0 + 38, 0, { r: 5, h: 9 }); P2('palletz', Y.x0 + 50, Y.z1 - 20, 0, { cols: 6, rows: 5 }); }
+  else if (Y) P2('tanque', (Y.x0 + Y.x1) / 2, (Y.z0 + Y.z1) / 2, 0, { r: 6, h: 9 });
+  // red: rack principal, un rack por galpón unido por fibra, Wi-Fi y cámaras
+  const D = (d) => { addAnyRaw(Object.assign({ status: 'ok', y: 0, yaw: 0, custom: true }, d)); }, pad2 = n => String(n).padStart(2, '0'); let ap = 0, cm = 0;
+  const core = S.ofi ? [S.ofi.x - S.ofi.w / 2 + 4, S.ofi.z] : NP(NAVES[0], 8, -4);
+  D({ id: 'RK-01', type: 'rack', kind: 'Rack principal · core y firewall', x: core[0], z: core[1], admin: true, loc: S.ofi ? S.ofi.n + ' · sala técnica' : NAVES[0].full + ' · sala técnica' });
+  D({ id: 'C-' + pad2(++cm), type: 'cam', kind: 'LPR · lectura de matrículas', mount: 'pole', x: 8.5, z: S.gate + 9, yaw: -Math.PI / 2, loc: 'Portería · carril de entrada' });
+  NAVES.forEach((N, i) => { const w = N.cx < 0, rx = w ? N.x1 - 2.2 : N.x0 + 2.2, rz = N.wall - N.n[1] * 4, sgn = N.n[1];
+    D({ id: 'RK-N' + (i + 1), type: 'wr', kind: 'Rack de pared 9U', u: 9, y: 1.3, x: rx, z: rz, yaw: w ? -Math.PI / 2 : Math.PI / 2, nave: N.id, loc: N.full + ' · rack del galpón' });
+    FIBS.push({ id: 'FO-' + pad2(i + 1), hilos: 12, pts: [[core[0], core[1]], [core[0], S.gate - 8], [w ? -9 : 9, S.gate - 8], [w ? -9 : 9, rz], [rx, rz]], from: 'RK-01', to: 'RK-N' + (i + 1) });
+    const nx = Math.max(2, Math.round(N.L / 62)); for (let a = 0; a < nx; a++) for (const fr of [0.3, 0.72]) { const [x, z] = NP(N, N.L * (a + 0.5) / nx, -N.D * fr);
+      D({ id: 'AP-' + pad2(++ap), type: 'ap', kind: 'UniFi U6 Pro', x, z, y: N.h - 0.9, mount: 'ceiling', nave: N.id, cli: 6 + Math.floor(R() * 30), loc: N.full + ' · pasillo ' + (a * 2 + (fr > 0.5 ? 2 : 1)) }); }
+    { const [x, z] = NP(N, N.L / 2, 0.3); D({ id: 'AP-' + pad2(++ap), type: 'ap', kind: 'UniFi U7 Outdoor', x, z, y: 7.2, yaw: sgn > 0 ? 0 : Math.PI, nave: N.id, cli: 4 + Math.floor(R() * 12), cine: i === 3 || NAVES.length < 4 && i === 0, loc: N.full + ' · fachada de andenes' }); }
+    for (const u of [9, N.L - 9]) { const [x, z] = NP(N, u, 0.25); D({ id: 'C-' + pad2(++cm), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'wall', x, z, y: N.h - 1.6, yaw: (sgn > 0 ? -Math.PI / 2 : Math.PI / 2) + (u < 20 ? -0.5 : 0.5) * sgn, nave: N.id, loc: N.full + ' · andenes' }); } });
+  for (const p of S.patios) for (const x of [p.x0 + 4, p.x1 - 4]) D({ id: 'C-' + pad2(++cm), type: 'cam', kind: 'Domo PTZ 25x', mount: 'pole', x, z: p.z, yaw: x < 0 ? 0 : Math.PI, loc: p.n + ' · columna' });
+  // camiones: una parte ya está en su andén
+  DMO.docks.forEach((d, i) => { if (R() < 0.3) dmoTruck(d, true); });
+  buildFiber(); fiberLabels(); setTimeout(() => flyTo(S.home, 1.6), 300); }
+// números de arriba y carteles de cada galpón con los camiones de la simulación
+tick = (o => function () { o(); if (!DEMO) return; const T = VEH.filter(v => v.kind === 'dt'), est = T.filter(v => v.state === 'parked');
+  $('#kTr').innerHTML = T.length + ' <em>en tránsito ' + (T.length - est.length) + '</em>'; $('#kDk').innerHTML = est.length + ' <em>de ' + DMO.docks.length + '</em>'; $('#kIn').textContent = String(DMO.in);
+  for (const N of NAVES) { const el = N.chip && N.chip.el, sp = el && el.querySelector('span'); if (sp) sp.textContent = `${N.code} · ${N.docks.filter(d => d.occ && d.occ.state === 'parked').length}/${N.docks.length} andenes`; } })(tick);
+genericStart = (o => function () { if (DEMO && !NAVES.length) { try { demoStart(); } catch (e) { console.warn('demo', e); } return; } o(); })(genericStart);
+
+/* ---------- gráficos v25 (2): luz de los focos de noche y control de calidad automático ----------
+   De noche, cada foco y cada andén dejan un charco de luz cálida en el piso y en lo que tienen cerca (un mapa de luz visto desde arriba, que se rehace cuando se mueve un foco).
+   La oclusión ambiental se apaga sola si el equipo no la mueve con soltura. */
+function lmapBuild() { if (!isDark()) return; const L = [];
+  for (const p of PROPS) if (p.k === 'lamp') { const w = M.xf(propModel(p), [2.1, 0, 0]); L.push([w[0], w[2], 24, 1]); }
+  if (!BLANK) for (const [X, Y] of [[44, 716], [44, 735], [76, 714.4]]) { const [a, b] = px(X, Y); L.push([a + 1.4, b, 22, 1]); }
+  for (const N of NAVES) for (const d of (N.docks || [])) { const [a, b] = NP(N, d.u, 4.5); L.push([a, b, 11, 0.55]); }
+  const sig = L.map(l => Math.round(l[0]) + ',' + Math.round(l[1])).join(';'); if (sig === LMAP.sig && LMAP.cv) return; LMAP.sig = sig;
+  const S = 1024, k = S / 1280, cv = LMAP.cv || (LMAP.cv = document.createElement('canvas')); cv.width = cv.height = S; const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.globalCompositeOperation = 'lighter';
+  for (const [x, z, r, a] of L) { const cx = (x + 640) * k, cy = (z + 640) * k, rr = r * k, gr = g.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(0.4, 'rgba(255,255,255,' + a * 0.5 + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(cx - rr, cy - rr, rr * 2, rr * 2); }
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; for (const N of NAVES) g.fillRect((N.x0 + 2 + 640) * k, (N.z0 + 2 + 640) * k, (N.x1 - N.x0 - 4) * k, (N.z1 - N.z0 - 4) * k);
+  LMAP.v++; }
+buildAll = (o => function () { o(); try { lmapBuild(); } catch (e) { console.warn(e); } })(buildAll);
+tick = (o => function () { o(); try { lmapBuild(); } catch (e) {} })(tick);
+frame = (o => function (now) { if (GFX.ao && !GFX.fijo) { const d = now - GFX.t; GFX.t = now; if (d < 400 && !document.hidden) { GFX.n++; if (GFX.n > 40) GFX.acc += d; if (GFX.n >= 130) { if (GFX.acc / 90 > 38) GFX.ao = false; GFX.n = 40; GFX.acc = 0; } } } o(now); })(frame);
+
 /* ---------- modo cine para la web (?embed=1&cine=1&estilo=estudio) ----------
    La página manda {cine:t} (0 a 1, según el scroll), {cineEv:'caida'|'van'|'ok'}, {tema:'light'|'dark'} y {cinePausa:bool}.
    Sin interfaz: solo la maqueta, las alertas y el furgón. Estilo "estudio": maqueta de arquitecto en papel cálido (de noche, ventanas encendidas). */
@@ -5126,7 +5348,9 @@ if (CINE.embed) { document.documentElement.classList.add('embed');
   document.head.appendChild(st); }
 if (CINE.on) { for (const d of DEV) d.status = 'ok'; FOLLOW = false; }
 // tomas de la cámara (ortográfica, como una maqueta de arquitecto); en celular, más lejos y centradas
-const CSH = [
+const CSH = DEMO ? [{ t: 0, tx: 0, tz: -5, yaw: 0.5, pitch: 0.6, zoom: 330 }, { t: 0.16, tx: 60, tz: 96, yaw: 0.66, pitch: 0.66, zoom: 160 }, { t: 0.32, tx: 150, tz: 80, yaw: 0.98, pitch: 0.5, zoom: 36 },
+  { t: 0.48, tx: 132, tz: 92, yaw: 1.32, pitch: 0.8, zoom: 100 }, { t: 0.64, tx: 50, tz: 150, yaw: 0.52, pitch: 0.74, zoom: 215 }, { t: 0.78, tx: 142, tz: 88, yaw: 2.1, pitch: 0.36, zoom: 78 },
+  { t: 0.9, tx: 0, tz: 0, yaw: -0.55, pitch: 0.56, zoom: 330 }, { t: 1, tx: 0, tz: 0, yaw: -0.9, pitch: 0.92, zoom: 430 }] : [
   { t: 0, tx: -110, tz: 40, yaw: 0.42, pitch: 0.6, zoom: 470 },
   { t: 0.16, tx: -260, tz: 10, yaw: 0.62, pitch: 0.68, zoom: 205 },
   { t: 0.32, tx: -258, tz: 30, yaw: 0.98, pitch: 0.5, zoom: 38 },
@@ -5138,11 +5362,11 @@ const CSH = [
 function cineCam(t) { let a = CSH[0], b = CSH[CSH.length - 1];
   for (let i = 0; i < CSH.length - 1; i++) if (t >= CSH[i].t && t <= CSH[i + 1].t) { a = CSH[i]; b = CSH[i + 1]; break; }
   const u = b.t > a.t ? clamp((t - a.t) / (b.t - a.t), 0, 1) : 0, s = u * u * (3 - 2 * u), L = k => a[k] + (b[k] - a[k]) * s, n = narrow();
-  return { tx: n ? L('tx') + 30 : L('tx'), tz: L('tz'), yaw: L('yaw'), pitch: L('pitch'), zoom: L('zoom') * (n ? 1.55 : 1) }; }
+  return { tx: n && !DEMO ? L('tx') + 30 : L('tx'), tz: L('tz'), yaw: L('yaw'), pitch: L('pitch'), zoom: L('zoom') * (n ? 1.55 : 1) }; }
 function cinePin(id, on) { const L = CINE.pins[id]; if (L) { rmLabel(L); delete CINE.pins[id]; }
   if (on) CINE.pins[id] = addLabel(`<button class="pin crit" aria-label="Alerta ${id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg></button>`,
     () => { const p = entPos(id); return p ? [p[0], p[1] + 2.2, p[2]] : [0, -999, 0]; }, 'red', id, 'pin'); }
-function cineEv(ev) { const d = DEV.find(x => x.id === 'AP-11') || DEV.find(x => x.type === 'ap'); if (!d) return;
+function cineEv(ev) { const d = DEV.find(x => x.cine) || DEV.find(x => x.id === 'AP-11') || DEV.find(x => x.type === 'ap'); if (!d) return;
   if (ev === 'caida' && d.status !== 'crit') { d.status = 'crit'; devObj(d); devTag(d); cinePin(d.id, true); }
   if (ev === 'van') { if (d.status !== 'crit') cineEv('caida'); if (!VEH.some(v => v.kind === 'phitel' && v.state !== 'idle')) sendVan(d.id, 143); }
   if (ev === 'ok' && d.status !== 'ok') { d.status = 'ok'; devObj(d); devTag(d); cinePin(d.id, false); } }
@@ -5159,11 +5383,11 @@ if (CINE.on) {
 }
 
 /* ---------- arranque ---------- */
-try { main = new Renderer(canvas, narrow() ? 2048 : 4096); } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
+try { main = new Renderer(canvas, narrow() ? 2048 : 4096); main.aoMain = true; } catch (e) { $('#fallback').hidden = false; console.warn(e); return; }
 if (BLANK) PHOTO.src = (HOST && HOST.plano) || '';
 edLoad(); initSim(); if (BLANK && PHOTO.src) { LAYERS.foto = true; const lb = document.querySelector('.lay[data-l="foto"]'); if (lb) lb.setAttribute('aria-pressed', 'true'); }
 buildAll(); makeLabels(); ENV = env(); resize(); setRole(ROLE); initBlankUI(); initEd3d(); initGame();
-if (BLANK) { const nt = document.querySelector('.note'); if (nt) nt.textContent = 'Escala real en metros. Subí un plano o una foto como base y dibujá los galpones, las calles y los equipos encima.';
+if (BLANK) { const nt = document.querySelector('.note'); if (nt) nt.textContent = DEMO ? 'Simulación: un cliente inventado para mostrar Ondi. Nada de lo que ves es real y lo que cambies no se guarda.' : 'Escala real en metros. Subí un plano o una foto como base y dibujá los galpones, las calles y los equipos encima.';
   const fl = document.querySelector('.lay[data-l="foto"]'); if (fl) [...fl.childNodes].forEach(n => { if (n.nodeType === 3 && /Foto/.test(n.textContent)) n.textContent = n.textContent.replace(/Foto aérea/, 'Plano de base'); });
   fl && fl.querySelectorAll('span').forEach(sp => { if (/Foto aérea/.test(sp.textContent)) sp.textContent = 'Plano de base'; });
   if (HOST && HOST.start === 'plano' && canEdit() && !PHOTO.src) setTimeout(() => { setEdit(true); setTool('plano'); }, 600); }
