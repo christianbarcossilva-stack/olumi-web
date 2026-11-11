@@ -1,0 +1,6 @@
+// foto del visor con el mismo motor que la oficina (three r169). uso: node foto.js salida.png "m=a.glb,b.glb&p=idle,walk,sit" [ancho alto]
+const {chromium}=require('playwright'),fs=require('fs'),path=require('path');const [out,qs='',w='1300',h='820']=process.argv.slice(2);
+const DIRS=[__dirname,'/home/claude/olumi-web/olumi/beta/lib','/home/claude/taller3d/salida'];
+(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});const p=await b.newPage({viewport:{width:+w,height:+h}});p.on('pageerror',e=>console.log('ERR',e.message));p.on('console',m=>{if(m.type()==='error')console.log('console:',m.text().slice(0,300))});
+ await p.route('**/*',r=>{const u=new URL(r.request().url());const n=decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname);for(const d of DIRS){const f=path.join(d,n);if(fs.existsSync(f))return r.fulfill({body:fs.readFileSync(f),contentType:n.endsWith('.html')?'text/html':n.endsWith('.js')?'text/javascript':'application/octet-stream'})}r.fulfill({status:404,body:''})});
+ await p.goto('http://visor.test/?'+qs);await p.waitForFunction('window.__ok',null,{timeout:120000}).catch(e=>console.log('sin respuesta'));console.log(await p.evaluate('window.__ok'));await p.screenshot({path:out});await b.close()})();

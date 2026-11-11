@@ -780,7 +780,7 @@ function van3(v,dt){const k=v.kind||vehKind(v.model),key=k+(v.col||'')+S.name;le
 // ---------- personas 3D ----------
 // el aspecto completo: lo que falte (pelo, pantalón) sale del nombre, siempre igual para cada persona
 const fullLook=p=>{const L=lookOf(p.name||p.n||p.id||'',p.role);for(const k in p.look||{})if(p.look[k]!=null)L[k]=p.look[k];return L};
-const pkey=(p,L)=>p.role+p.virtual+p.ag+L.skin+L.hair+L.style+(L.top||'');
+const pkey=(p,L)=>p.role+p.virtual+p.ag+L.skin+L.hair+L.style+(L.top||'')+(avOn()&&!p.virtual?'|'+avPick(p):'');
 // ---------- personas: cuerpo con articulaciones (hombro, codo, muñeca, cadera, rodilla, tobillo, cuello) ----------
 // Mira hacia +x; el ancho de hombros va en z. Las geometrías se comparten entre todas las personas.
 const PG={};const pg=(k,f)=>PG[k]||(PG[k]=f());
@@ -791,7 +791,7 @@ function bake(key,parts){return pg(key,()=>{const gs=parts.map(([geo,c,x=0,y=0,z
     const out=mergeGeometries(gs);gs.forEach(x=>x.dispose());return out})}
 const BLOB=()=>BLOB.m||(BLOB.m=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,31);g.addColorStop(0,'rgba(0,0,0,.5)');g.addColorStop(.55,'rgba(0,0,0,.2)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);
   return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2})})());
-function mkPerson(p){const L=fullLook(p),col=ROLES[p.role][1],tec=p.role==='tecnico',ger=p.role==='gerencia';const g=new THREE.Group();
+function mkPerson(p){if(avOn()&&!p.virtual){const o=mkPersonGLB(p);if(o)return o}const L=fullLook(p),col=ROLES[p.role][1],tec=p.role==='tecnico',ger=p.role==='gerencia';const g=new THREE.Group();
   const vm=p.virtual?new THREE.MeshStandardMaterial({color:p.ag==='ada'?'#5e8cff':'#8c6dff',emissive:p.ag==='ada'?'#0a84ff':'#7c5cff',emissiveIntensity:.5,transparent:true,opacity:.78,roughness:.4}):null;
   const m=(c,r=.78)=>vm||M('c'+c+r,{color:c,roughness:r});
   const mesh=(geo,mat,x=0,y=0,z=0)=>{const o=new THREE.Mesh(geo,mat);o.position.set(x,y,z);return o};
@@ -856,7 +856,7 @@ function person3(p,dt){let o=PPL.get(p.id);const key=pkey(p,fullLook(p));if(!o||
   if(sit){if(p.sit){x=p.sit.x;y=p.sit.y;h=p.sit.h}else{const [ax,ay]=rot(-.02,.52,d.r||0);x=(d.cx??d.x+.9)+ax;y=(d.cy??d.y+.8)+ay;h=-Math.PI/2+(d.r||0)}}
   const kk=1-Math.exp(-dt*(sit?9:22));if(o.px==null||Math.hypot(x-o.px,y-o.py)>3){o.px=x;o.py=y}else{o.px+=(x-o.px)*kk;o.py+=(y-o.py)*kk}x=o.px;y=o.py;
   o.h=angTo(o.h,h,Math.min(1,dt*(sit?7:8)));o.g.position.set(x,(p.virtual&&!sit?.08+Math.sin(T*2)*.04:0)+(x>=0&&x<=W&&y>=0&&y<=Hb?.12:.012),y);o.g.rotation.y=-o.h;
-  o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);
+  o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);if(o.sync)o.sync();
   o.box.visible=!!p.carry;if(o.blob){o.blob.visible=!sit;o.blob.material.opacity=DARK?.75:.55}if(o.star){o.star.rotation.y=T*1.5}
   o.ring.visible=!!(sel&&sel.k==='person'&&sel.id===p.id);o.ring.material.color.set(DARK?'#f5f5f7':'#1d1d1f');
   return{x,y,z:sit?1.3:1.75}}
@@ -896,10 +896,10 @@ function camDist(D,dx,dy){const B=furnBoxes().concat((actors.v||[]).filter(([,q]
   const L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,wall=(x,y)=>OUTW.concat(PART).some(([ax,ay,bx,by])=>{const vx=bx-ax,vy=by-ay,t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/(vx*vx+vy*vy||1)));return Math.hypot(x-ax-vx*t,y-ay-vy*t)<.22});
   for(let k=.4;k<=D;k+=.1){const x=WALK.x-ux*k,y=WALK.y-uy*k;if(wall(x,y)||B.some(([bx,by,bw,bh])=>x>bx-.2&&x<bx+bw+.2&&y>by-.2&&y<by+bh+.2))return Math.max(.4,k-.25)}return D}
 const ME={o:null,key:''};
-function meStep(dt){const p0=APP&&S.me?S.people.find(p=>p.id===S.me):null,b0=p0||{id:'__me',role:'gerencia',look:lookOf('Vos','gerencia')},b={...b0,look:{...b0.look,...(MYLOOK||{})}},key=b.id+b.role+b.look.skin+b.look.hair+b.look.style+(b.look.top||'');
+function meStep(dt){const p0=APP&&S.me?S.people.find(p=>p.id===S.me):null,b0=p0||{id:'__me',role:'gerencia',look:lookOf('Vos','gerencia')},b={...b0,look:{...b0.look,...(MYLOOK||{})}},key=b.id+b.role+b.look.skin+b.look.hair+b.look.style+(b.look.top||'')+(avOn()?1:0);
   if(!ME.o||ME.key!==key){if(ME.o)ACT.remove(ME.o.g);ME.o=mkPerson({...b,virtual:false});ME.key=key;ME.o.h=WALK.yaw;ACT.add(ME.o.g)}const o=ME.o;o.g.visible=WALK.on&&WALK.third&&(WALK.camD||9)>1.05;if(!o.g.visible)return;
   const inB=WALK.x>=0&&WALK.x<=W&&WALK.y>=0&&WALK.y<=Hb;o.g.position.set(WALK.x,inB?.12:.012,WALK.y);if(USO.me)o.h=angTo(o.h,WALK.yaw+Math.PI,Math.min(1,dt*8));else if(WALK.moving)o.h=angTo(o.h,WALK.moveAng,Math.min(1,dt*10));o.g.rotation.y=-o.h;
-  o.carry=false;pose(o,WALK.moving?'walk':'idle',WALK.bob,dt);o.box.visible=false;o.ring.visible=false}
+  o.carry=false;pose(o,WALK.moving?'walk':'idle',WALK.bob,dt);if(o.sync)o.sync();o.box.visible=false;o.ring.visible=false}
 // pantalla completa mientras se recorre o se edita; al salir se vuelve a la página donde estabas
 let FULLW=false;
 function fullSync(){const want=WALK.on||ED.on;if(want===FULLW)return;FULLW=want;
@@ -1278,6 +1278,52 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
   window.__ofi.grilla=()=>{navReady();const r=[];for(let j=0;j<NV.ny;j++){let l='';for(let i=0;i<NV.nx;i++)l+=NV.g[j*NV.nx+i]?'#':NV.w&&NV.w[j*NV.nx+i]?String.fromCharCode(96+(NV.w[j*NV.nx+i]-1)%26+1):'.';r.push(l)}return{x0:NV.x0,y0:NV.y0,c:NV.c,filas:r,lugares:SPOTS,asientos:S.desks.map(d=>[d.id,d.x+.2,d.y+1.1]),gente:S.people.map(p=>[p.n,+p.x.toFixed(2),+p.y.toFixed(2),p.role,p.virtual?1:0])}};
   window.__ofi.quietos=()=>S.people.filter(p=>!p.inVan).every(p=>p.tx==null);
   if(/[?&]medir=1/.test(location.search)){M.el=document.createElement('div');M.el.style.cssText='position:absolute;left:12px;top:58px;z-index:9;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.62);color:#fff;font:600 12px ui-monospace,Menlo,monospace;pointer-events:none';stage.appendChild(M.el)}}
+
+// ---------- avatares 3D: personas hechas en Blender (GLB con esqueleto), del catálogo ./3d/catalogo.json ----------
+// El modelo expone las mismas articulaciones que el muñeco (hip, chest, head, lL/lR{th,kn,an}, aL/aR{sh,el}); pose() las mueve como siempre
+// y sync() pasa esos ángulos a los huesos. Si el catálogo o un modelo no carga, o la calidad está al mínimo, queda el muñeco.
+const AV={ok:false,mod:{},clone:null};
+const avOn=()=>AV.ok&&Q.n<3;
+const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),q=()=>new THREE.Quaternion(),aa=(ax,a)=>q().setFromAxisAngle(ax,a),J=()=>({rotation:new THREE.Euler(),position:new THREE.Vector3()}),fx=a=>aa(X,-a);
+  // nombres de hueso: admite el esqueleto tipo Mixamo (Hips, LeftUpLeg, LeftArm…) y el "game_engine" de MakeHuman (pelvis, thigh_l, upperarm_l…)
+  const ALIAS={pelvis:'Hips',spine_01:'Spine',spine_02:'Spine1',spine_03:'Spine2',neck_01:'Neck',head:'Head'};for(const [s,S] of [['l','Left'],['r','Right']])Object.assign(ALIAS,{['clavicle_'+s]:S+'Shoulder',['upperarm_'+s]:S+'Arm',['lowerarm_'+s]:S+'ForeArm',['hand_'+s]:S+'Hand',['thigh_'+s]:S+'UpLeg',['calf_'+s]:S+'Leg',['foot_'+s]:S+'Foot',['ball_'+s]:S+'ToeBase'});
+  return function(scene,alto){const g=new THREE.Group(),inner=new THREE.Group();inner.add(scene);g.add(inner);inner.rotation.y=Math.PI/2;scene.updateMatrixWorld(true);
+    const B={};scene.traverse(o=>{if(o.isBone){const n=o.name.replace(/^mixamorig:?/,'');B[ALIAS[n]||n]=o}});if(!B.Hips||!B.LeftUpLeg||!B.LeftArm)return null;
+    const box=new THREE.Box3(),bb=new THREE.Box3();scene.traverse(o=>{if(o.isSkinnedMesh){o.frustumCulled=false;if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();box.union(bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld))}});
+    const k=alto/(box.max.y-box.min.y);scene.scale.setScalar(k);scene.position.y=-box.min.y*k;scene.updateMatrixWorld(true);
+    const inv=scene.getWorldQuaternion(q()).invert(),rest={},restL={},wpos=n=>B[n].getWorldPosition(new THREE.Vector3());
+    for(const n in B){rest[n]=inv.clone().multiply(B[n].getWorldQuaternion(q()));restL[n]=B[n].quaternion.clone()}
+    const hipRest=B.Hips.position.clone();
+    // brazos y antebrazos: del reposo (en A o en T, con el codo algo doblado) a colgar rectos al costado
+    const down=(s,a,b)=>{const d=wpos(s+b).sub(wpos(s+a)).normalize().applyQuaternion(inv);return q().setFromUnitVectors(d,new THREE.Vector3((s==='Left'?1:-1)*.14,-1,.03).normalize())};
+    const R0={Left:down('Left','Arm','ForeArm'),Right:down('Right','Arm','ForeArm')},R1={Left:down('Left','ForeArm','Hand'),Right:down('Right','ForeArm','Hand')};
+    const o={g,hip:J(),chest:J(),head:J(),lL:{th:J(),kn:J(),an:J()},lR:{th:J(),kn:J(),an:J()},aL:{sh:J(),el:J()},aR:{sh:J(),el:J()}};o.hip.position.y=.95;
+    let top=B.Hips;while(top.parent&&top.parent.isBone)top=top.parent;const order=[];(function walk(b){if(b.isBone)order.push(b);b.children.forEach(walk)})(top);
+    const nameOf=new Map(Object.entries(B).map(([n,b])=>[b,n])),W={};
+    o.sync=()=>{const D={},sp=aa(Y,o.chest.rotation.y).multiply(fx(o.chest.rotation.z));D.Spine1=sp;D.Spine2=sp;D.Neck=sp;D.Head=sp.clone().multiply(aa(Y,o.head.rotation.y)).multiply(fx(o.head.rotation.z));
+      for(const [S,l,a] of [['Left',o.lL,o.aL],['Right',o.lR,o.aR]]){const t=l.th.rotation.z,kn=t+l.kn.rotation.z;D[S+'UpLeg']=fx(t);D[S+'Leg']=fx(kn);D[S+'Foot']=fx(kn+l.an.rotation.z);D[S+'ToeBase']=D[S+'Foot'];
+        const up=sp.clone().multiply(aa(Y,(S==='Left'?1:-1)*(a.sh.rotation.x||0))).multiply(fx(a.sh.rotation.z));D[S+'Shoulder']=sp;D[S+'Arm']=up.clone().multiply(R0[S]);D[S+'ForeArm']=up.clone().multiply(fx(a.el.rotation.z)).multiply(R1[S])}
+      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n])D[n]=p?D[p]:q();const w=D[n].clone().multiply(rest[n]);W[n]=w;
+        if(p)b.quaternion.copy(W[p].clone().invert().multiply(w));else b.quaternion.copy(restL[n])}
+      B.Hips.position.copy(hipRest);B.Hips.position.y+=(o.hip.position.y-.95)*(alto/1.75)/k};
+    return o}})();
+// qué modelo le toca a cada persona: el que eligió en su ficha (look.avatar) o, si no, por rol y nombre
+const AV_H=/^(luca|joshua|nicola|elias|matias|tobias|isaias|jeremias|josema|borja|garcia|andrea)$/;
+function avPick(p){const want=p.look&&p.look.avatar;if(want&&AV.mod[want])return want;const n=(String(p.name||p.n||'').trim().split(/\s+/)[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),fem=/a$/.test(n)&&!AV_H.test(n);
+  const c=Object.values(AV.mod).filter(m=>(m.sexo==='m')===fem),r=c.filter(m=>m.rol===(p.role==='tecnico'?'tecnico':'oficina'));const l=r.length?r:c.length?c:Object.values(AV.mod);return l.length?l[hsh(p.id||p.name||'x')%l.length].id:null}
+function mkPersonGLB(p){const md=AV.mod[avPick(p)];if(!md)return null;let o;try{o=avatarGLB(AV.clone(md.scene),(md.alto||1.72)*(1+((hsh((p.id||p.name||'x')+'h')%7)-3)*.006))}catch(e){return null}if(!o)return null;const g=o.g;
+  o.box=new THREE.Mesh(pg('box',()=>new RoundedBoxGeometry(.3,.28,.36,2,.02)),MAT.box);o.box.position.set(.36,1.12,0);o.box.castShadow=true;g.add(o.box);o.star=null;
+  o.ring=new THREE.Mesh(pg('ring',()=>new THREE.RingGeometry(.4,.47,32).rotateX(-Math.PI/2)),new THREE.MeshBasicMaterial({color:'#1d1d1f'}));o.ring.position.y=.135;g.add(o.ring);
+  o.blob=new THREE.Mesh(pg('blob',()=>new THREE.PlaneGeometry(.8,.64).rotateX(-Math.PI/2)),BLOB());o.blob.position.y=.008;o.blob.renderOrder=2;g.add(o.blob);
+  o.seed=(hsh(p.id||p.name||'x')%997)/97;o.h=-Math.PI/2;o.key=pkey(p,fullLook(p));o.glb=true;return o}
+async function avLoad(){try{const base=new URL('./3d/',location.href),r=await fetch(new URL('catalogo.json',base));if(!r.ok)return;const cat=await r.json();
+    const [{GLTFLoader},{clone}]=await Promise.all([import('./lib/GLTFLoader.js'),import('./lib/SkeletonUtils.js')]);const L=new GLTFLoader();AV.clone=clone;
+    await Promise.all((cat.avatares||[]).map(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);g.scene.traverse(o=>{if(!o.isSkinnedMesh)return;const m=o.material;o.castShadow=true;o.receiveShadow=false;
+        // pelo, cejas y pestañas: recorte por transparencia (sin mezcla, que se ordena mal) y visibles de los dos lados
+        if(m&&m.transparent){m.transparent=false;m.alphaTest=.32;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}if(m)m.envMapIntensity=.6});AV.mod[a.id]={...a,scene:g.scene}}catch(e){}}));
+    AV.ok=Object.keys(AV.mod).length>0}catch(e){AV.err=String(e)}}
+try{window.__av=AV}catch(e){}
+avLoad();
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
 function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}

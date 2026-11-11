@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#dfe3e8}canvas{display:block}</style>
+<script>addEventListener('unhandledrejection',e=>{window.__ok='ERROR '+(e.reason&&e.reason.stack||e.reason)});addEventListener('error',e=>{window.__ok='ERROR '+e.message})</script>
+<script type="module">
+import * as THREE from './three.module.min.js';import {RoomEnvironment} from './RoomEnvironment.js';import {GLTFLoader} from './GLTFLoader.js';import {clone} from './SkeletonUtils.js';import {avatarGLB} from './avatar-glb.js';
+const P=new URLSearchParams(location.search),W=innerWidth,H=innerHeight;
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W,H);r.setPixelRatio(1);r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(r.domElement);
+const sc=new THREE.Scene();sc.background=new THREE.Color('#dfe3e8');const pm=new THREE.PMREMGenerator(r);sc.environment=pm.fromScene(new RoomEnvironment(),.04).texture;sc.environmentIntensity=.55;
+const sun=new THREE.DirectionalLight('#fff4e2',2.4);sun.position.set(3,6,4);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-4,right:4,top:4,bottom:-4,near:.5,far:20});sun.shadow.bias=-.0004;sc.add(sun);sc.add(new THREE.HemisphereLight('#eef3ff','#b9b3a8',.5));
+const fl=new THREE.Mesh(new THREE.PlaneGeometry(30,30).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#cfd3d8',roughness:.9}));fl.receiveShadow=true;sc.add(fl);
+const cam=new THREE.PerspectiveCamera(+P.get('fov')||32,W/H,.1,60);
+const RAW=P.get('raw');const files=(P.get('m')||'gen1.glb').split(','),poses=(P.get('p')||'idle,walk,sit').split(','),T0=+P.get('t')||1.3;const L=new GLTFLoader();const out=[];
+const pose=(o,mode,sw,t)=>{const br=Math.sin(t*1.6)*.012;for(const j of [o.chest,o.head,o.lL.th,o.lL.kn,o.lL.an,o.lR.th,o.lR.kn,o.lR.an,o.aL.sh,o.aL.el,o.aR.sh,o.aR.el])j.rotation.set(0,0,0);
+  if(mode==='sit'){o.hip.position.y=.53;o.lL.th.rotation.z=o.lR.th.rotation.z=1.45;o.lL.kn.rotation.z=o.lR.kn.rotation.z=-1.45;o.chest.rotation.z=-.07;o.aL.sh.rotation.z=.38;o.aL.el.rotation.z=1.15;o.aR.sh.rotation.z=.38;o.aR.el.rotation.z=1.15;o.head.rotation.z=-.08;return}
+  if(mode==='walk'){const s=Math.sin(sw);o.hip.position.y=.95+Math.abs(s)*.018;o.lL.th.rotation.z=s*.48;o.lR.th.rotation.z=-s*.48;o.lL.kn.rotation.z=-Math.max(0,-Math.sin(sw-.6))*.75;o.lR.kn.rotation.z=-Math.max(0,Math.sin(sw-.6))*.75;o.lL.an.rotation.z=Math.max(0,-s)*.25;o.lR.an.rotation.z=Math.max(0,s)*.25;o.chest.rotation.z=-.04;o.chest.rotation.y=s*.07;o.head.rotation.y=-s*.05;o.aL.sh.rotation.z=-s*.42;o.aR.sh.rotation.z=s*.42;o.aL.el.rotation.z=.25+Math.max(0,-s)*.35;o.aR.el.rotation.z=.25+Math.max(0,s)*.35;return}
+  o.hip.position.y=.95+br*.3;o.chest.rotation.z=br;o.head.rotation.y=.2;o.aL.sh.rotation.z=.04;o.aR.sh.rotation.z=.04;o.aL.el.rotation.z=.12;o.aR.el.rotation.z=.12};
+let n=0;const tot=files.length*poses.length,gap=+P.get('gap')||1.15;
+for(const f of files){const g=await L.loadAsync(f);let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;o.castShadow=true}});
+  for(const p of poses){const a=avatarGLB(n%poses.length===0&&files.length*poses.length===1?g.scene:clone(g.scene));if(!RAW){pose(a,p,p==='walk'?1.1:0,T0);a.sync()}a.g.position.set((n-(tot-1)/2)*gap,0,0);a.g.rotation.y=-(+P.get('h')||1.0);sc.add(a.g);n++}
+  out.push(f+': '+Math.round(tris)+' tri')}
+const cara=P.get('cara');if(cara){cam.fov=14;cam.updateProjectionMatrix();cam.position.set(1.6,1.72,2.6);cam.lookAt(0,1.62,0)}else{const d=3.4+tot*.72;cam.position.set(d*.22,1.5,d);cam.lookAt(0,.88,0)}
+r.render(sc,cam);window.__ok=out.join(' | ')+' | llamadas '+r.info.render.calls+' | tri '+r.info.render.triangles;
+</script>
