@@ -1244,7 +1244,8 @@ if(ESTUDIO){document.documentElement.classList.add('estudio');
 }
 
 // ---------- fluidez: la maqueta se cuida sola ----------
-// Si el equipo no llega a 40 cuadros por segundo durante 3 segundos seguidos, baja un escalón de calidad (píxeles y sombras) y lo recuerda en ese dispositivo.
+// Si el equipo no llega a dos tercios del objetivo durante 3 segundos seguidos, baja un escalón de calidad (píxeles y sombras) a prueba: si con eso mejora, lo recuerda
+// en ese dispositivo; si no mejora (el freno era otro: ahorro de batería, ventana tapada), vuelve a la calidad de antes. Si después anda sobrado, sube de a un escalón.
 // Escalones: 0 completa · 1 sombras de 1024 y píxeles ×1,5 · 2 píxeles ×1,25 y las sombras se rehacen cuadro por medio · 3 sombras de 512 y píxeles ×1. ?calidad=0..3 la fija a mano.
 // No se cambia el tipo de sombra en marcha (deja manchas): solo su tamaño, su suavizado y cada cuánto se rehace.
 const Q={n:0,mal:0,bien:0,fijo:false,t0:performance.now()};
@@ -1253,11 +1254,16 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
   Q.salto=n>=2;R3.shadowMap.autoUpdate=!Q.salto;R3.shadowMap.needsUpdate=true;fit();if(guardar)try{localStorage.setItem('olumi.ofi.q',String(n))}catch(e){}}
 {const u=(location.search.match(/[?&]calidad=([0-3])/)||[])[1];let g=null;try{g=localStorage.getItem('olumi.ofi.q')}catch(e){}if(u!=null){Q.fijo=true;calidad(+u)}else if(g>0)calidad(+g)}
 ['pointermove','pointerdown','wheel','keydown','touchstart'].forEach(k=>addEventListener(k,()=>{ACTV=performance.now()},{passive:true}));
+// al entrar o salir de recorrer o editar hay un tirón que no cuenta: se espera unos segundos antes de volver a medir
+['b_walk','b_edit','b_wexit','b_vista','edbar'].forEach(id=>{const b=document.getElementById(id);b&&b.addEventListener('click',()=>{Q.t0=performance.now();Q.mal=0})});
 // ---------- medir: rendimiento con números, no a ojo. ?medir=1 muestra los cuadros por segundo y lo que se dibuja ----------
 {const M={n:0,t0:performance.now(),fps:0,el:null},r0=R3.render.bind(R3);
   R3.render=(s,c)=>{if(Q.salto&&(Q.k=!Q.k))R3.shadowMap.needsUpdate=true;r0(s,c);M.n++;const t=performance.now();if(t-M.t0>=1000){M.fps=Math.round(M.n*1000/(t-M.t0));M.n=0;M.t0=t;
     // el objetivo es 60 al usarla y 30 en reposo: se compara contra eso
-    if(!Q.fijo&&document.visibilityState==='visible'&&t-Q.t0>6000){const obj=frame.lim>20?30:60;if(M.fps<obj*.66){Q.bien=0;if(++Q.mal>=3&&Q.n<3){Q.mal=0;calidad(Q.n+1,true)}}else{Q.mal=0;if(M.fps>=obj*.95&&Q.n>0&&++Q.bien>=30&&!Q.subio){Q.subio=true;Q.bien=0;calidad(Q.n-1,true)}}}if(M.el)M.el.textContent=`${M.fps} cuadros/s · calidad ${Q.n} · ${R3.info.render.calls} dibujos · ${Math.round(R3.info.render.triangles/1000)} mil triángulos`}};
+    if(!Q.fijo&&document.visibilityState==='visible'&&t-Q.t0>6000){const obj=frame.lim>20?30:60;
+      if(Q.prueba){if(!--Q.prueba){if(M.fps>=Q.antes*1.15)calidad(Q.n,true);else{calidad(Q.n-1);Q.inutil=true}}}      // ¿sirvió bajar? Si no mejoró, el freno no es el dibujo (ahorro de batería, ventana tapada): vuelve a la calidad de antes y no insiste
+      else if(M.fps<obj*.66){Q.bien=0;if(++Q.mal>=3&&Q.n<3&&!Q.inutil){Q.mal=0;Q.antes=M.fps;Q.prueba=3;calidad(Q.n+1)}}
+      else{Q.mal=0;if(M.fps>=obj*.95&&Q.n>0&&++Q.bien>=30*(1+(Q.sube||0))){Q.sube=(Q.sube||0)+1;Q.bien=0;calidad(Q.n-1,true)}}}if(M.el)M.el.textContent=`${M.fps} cuadros/s · calidad ${Q.n} · ${R3.info.render.calls} dibujos · ${Math.round(R3.info.render.triangles/1000)} mil triángulos`}};
   window.__ofi=()=>({fps:M.fps,calidad:Q.n,dibujos:R3.info.render.calls,triangulos:R3.info.render.triangles,geometrias:R3.info.memory.geometries,texturas:R3.info.memory.textures,personas:S.people.length,atraviesa:MOV.fant,cede:MOV.cede,esperaPuerta:+MOV.esp.toFixed(1),trabado:+Math.max(0,...S.people.map(p=>p.tx!=null?p.stuck||0:0)).toFixed(1),
     cerca:(()=>{const a=S.people.filter(p=>!p.inVan&&!sitting(p));let m=9;for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)m=Math.min(m,Math.hypot(a[i].x-a[j].x,a[i].y-a[j].y));return+m.toFixed(2)})()});
   // pruebas de choque: todos al mismo punto, o cada uno al escritorio de otro (se cruzan en pasillos y puertas)
