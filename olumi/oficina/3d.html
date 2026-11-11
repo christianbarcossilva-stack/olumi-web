@@ -433,8 +433,8 @@ function desk(g,d){const x=d.x,y=d.y;
 function planter(g,x,y,s){B(g,MAT.pot,x-.25,y-.25,0,.5,.5,.45,.05);[[0,0,.72,.36,MAT.leaf1],[-.13,.1,.98,.3,MAT.leaf2],[.15,-.08,1.15,.26,MAT.leaf1],[0,0,1.36,.2,MAT.leaf2]].forEach(([dx,dy,z,r,m])=>SP(g,m,x+dx*s,y+dy*s,z*s,r*s,1,1.15,1))}
 // piezas que se pueden mover: cada una se dibuja alrededor de su centro (x,y en el piso), con su ancho (b[0]) y fondo (b[1])
 const PZ={
-  puesto:{n:'Puesto de trabajo',b:[1.8,1.7],h:.8,top:.74,col:[-.9,-.8,1.8,.9],f:g=>desk(g,{x:-.9,y:-.8})},
-  mostrador:{n:'Mostrador de recepción',b:[2.7,1.7],h:1.06,top:1.05,col:[-1.35,-.85,2.7,1],f:g=>desk(g,{x:-.9,y:-.8,room:'rec'})},
+  puesto:{n:'Puesto de trabajo',b:[1.8,1.7],h:.8,top:.74,col:[-.9,-.8,1.8,.9],sillas:[[-.02,.52,-Math.PI/2]],f:g=>desk(g,{x:-.9,y:-.8})},
+  mostrador:{n:'Mostrador de recepción',b:[2.7,1.7],h:1.06,top:1.05,col:[-1.35,-.85,2.7,1],sillas:[[-.02,.52,-Math.PI/2]],f:g=>desk(g,{x:-.9,y:-.8,room:'rec'})},
   rack:{n:'Estantería de depósito',b:[6,.8],h:2.3,f:g=>{const x0=-3,y=-.4;for(let t=0;t<=3;t++)B(g,MAT.blue,x0+t*1.96,y,0,.08,.8,2.3);
     [.45,1.25,2.05].forEach(z=>{B(g,MAT.orange,x0,y,z,5.96,.06,.1);B(g,MAT.orange,x0,y+.74,z,5.96,.06,.1);if(z<2)B(g,MAT.galv,x0,y,z+.1,5.96,.8,.02)});
     for(let i=0;i<4;i++){const bx=x0+.25+i*1.45;B(g,MAT.box,bx,y+.1,.57,1.0,.6,.45,.02);if(i%2===0)B(g,MAT.box,bx+.1,y+.15,1.37,.8,.5,.38,.02);if(i!==2)B(g,MAT.box,bx+.05,y+.12,.02,.9,.56,.38,.02);if(i!==1)B(g,MAT.box2,bx+.05,y+.1,2.15,.95,.6,.4,.02)}}},
@@ -443,7 +443,7 @@ const PZ={
   heladera:{n:'Heladera',b:[.85,.85],h:2.05,f:g=>B(g,MAT.fridge,-.425,-.425,0,.85,.85,2.05,.04)},
   isla:{n:'Isla con banquetas',b:[2.7,2.1],h:.94,top:.94,col:[-1.35,-.9,2.7,1.3],f:g=>{B(g,MAT.white,-1.3,-.85,0,2.6,1.2,.88,.03);B(g,MAT.oak,-1.35,-.9,.88,2.7,1.3,.06,.02);
     [-.9,-.05,.8].forEach(x=>{CY(g,MAT.steel,x,.8,0,.025,.65,8);CY(g,MAT.fabric,x,.8,.65,.19,.06,16)});B(g,MAT.pend,-1.2,-.35,2.42,2.4,.08,.05,.02);B(g,MAT.led,-1.18,-.33,2.415,2.36,.04,.005)}},
-  reunion:{n:'Mesa de reunión con sillas',b:[3.6,3.4],h:.76,top:.76,col:[-1.8,-.9,3.6,1.8],f:g=>{B(g,MAT.oak,-1.8,-.9,.7,3.6,1.8,.06,.03);[[-1.6,-.7],[1.6,-.7],[-1.6,.7],[1.6,.7]].forEach(([x,y])=>B(g,MAT.steel,x-.03,y-.03,0,.06,.06,.7));
+  reunion:{n:'Mesa de reunión con sillas',b:[3.6,3.4],h:.76,top:.76,col:[-1.8,-.9,3.6,1.8],sillas:[[-1.2,1.35,-Math.PI/2],[0,1.35,-Math.PI/2],[1.2,1.35,-Math.PI/2],[-1.2,-1.3,Math.PI/2],[0,-1.3,Math.PI/2],[1.2,-1.3,Math.PI/2]],f:g=>{B(g,MAT.oak,-1.8,-.9,.7,3.6,1.8,.06,.03);[[-1.6,-.7],[1.6,-.7],[-1.6,.7],[1.6,.7]].forEach(([x,y])=>B(g,MAT.steel,x-.03,y-.03,0,.06,.06,.7));
     [-1.2,0,1.2].forEach(x=>{chair(g,x,1.35);const c=new THREE.Group();chair(c,0,0);c.rotation.y=Math.PI;c.position.set(x,0,-1.3);g.add(c)});B(g,MAT.pend,-1.4,-.1,2.42,2.8,.08,.05,.02);B(g,MAT.led,-1.38,-.08,2.415,2.76,.04,.005)}},
   pantalla:{n:'Pantalla de la sala',b:[1.6,.3],h:2.0,f:g=>{B(g,MAT.steel,-.03,-.03,0,.06,.06,1.1);B(g,MAT.steel,-.3,-.15,0,.6,.3,.03);B(g,MAT.black,-.8,-.03,1.1,1.6,.05,.9,.02);const s=new THREE.Mesh(new THREE.PlaneGeometry(1.52,.82),MAT.dash);s.position.set(0,1.55,.03);g.add(s)}},
   sillon:{n:'Sillón',b:[1.1,.9],h:.8,f:g=>{B(g,MAT.sofa,-.55,-.45,0,1.1,.9,.42,.08);B(g,MAT.sofa,-.55,.25,0,1.1,.2,.8,.06)}},
@@ -656,35 +656,47 @@ cv.addEventListener('click',e=>{if(!ED.on)return;if(ED.ghost){const it=ED.ghost;
   if(ED.swallow||ED.sel){ED.swallow=false;e.stopImmediatePropagation();return}
   if(WALK.on&&!document.pointerLockElement&&!TOUCH){try{const q=cv.requestPointerLock();if(q&&q.catch)q.catch(()=>{})}catch(_){}}e.stopImmediatePropagation()},true);
 
-// ---------- caminos: nadie atraviesa paredes ni muebles; se pasa por las puertas ----------
-// Grilla de 0,25 m con paredes, vidrios y muebles; A* con 8 vecinos y después se estira el camino donde se ve derecho.
-const NV={c:.25,x0:-2,y0:-2,nx:121,ny:127,g:null,key:''};
+// ---------- caminos: nadie atraviesa paredes, muebles, sillas ni camionetas; se pasa por las puertas ----------
+// Grilla de 0,25 m corrida medio casillero (cada pared cae entre dos casilleros: queda justo el lugar del cuerpo y en el pasillo entran dos
+// personas a la par); A* con 8 vecinos y después se estira el camino donde se ve derecho. Los pasos angostos (puertas, pasillos de una
+// sola persona) quedan numerados en NV.w: por ahí se pasa de a uno por sentido (ver movimiento).
+const NV={c:.25,x0:-2.125,y0:-2.125,nx:122,ny:128,g:null,w:null,key:''},PAS=new Map();
+// sillas: la de cada puesto y las de la mesa de reunión. En la grilla están ocupadas (nadie camina por encima de una silla); solo llega el que se sienta
+function sillas(){if(sillas.v!==LAYV){sillas.v=LAYV;sillas.l=[];for(const it of LAY)for(const [lx,ly,h] of pz(it).sillas||[]){const [ax,ay]=rot(lx,ly,it.r);sillas.l.push({x:it.x+ax,y:it.y+ay,h:h+it.r,k:it.k,de:null})}}return sillas.l}
+const vansKey=()=>S.vans.map(v=>v.out||v.anim?'':v.x+','+v.y).join(';');
 function navBuild(){const {c,x0,y0,nx,ny}=NV,g=new Uint8Array(nx*ny),mark=(x,y)=>{const i=Math.round((x-x0)/c),j=Math.round((y-y0)/c);if(i>=0&&j>=0&&i<nx&&j<ny)g[j*nx+i]=1};
   for(const [ax,ay,bx,by] of OUTW.concat(PART)){const L=Math.hypot(bx-ax,by-ay),n=Math.ceil(L/(c/2));for(let k=0;k<=n;k++){const x=ax+(bx-ax)*k/n,y=ay+(by-ay)*k/n;for(const [ox,oy] of [[0,0],[.13,0],[-.13,0],[0,.13],[0,-.13]])mark(x+ox,y+oy)}}
-  for(const [bx,by,bw,bh] of furnBoxes().concat(OBST))for(let x=bx-.1;x<=bx+bw+.1;x+=c/2)for(let y=by-.1;y<=by+bh+.1;y+=c/2)mark(x,y);
-  NV.g=g}
+  const cajas=furnBoxes().concat(OBST,sillas().map(s=>[s.x-.2,s.y-.2,.4,.4]),S.vans.filter(v=>!v.out&&!v.anim).map(v=>[v.x+1.7,v.y-.5,1.6,3.8]));
+  for(const [bx,by,bw,bh] of cajas)for(let x=bx-.1;x<=bx+bw+.1;x+=c/2)for(let y=by-.1;y<=by+bh+.1;y+=c/2)mark(x,y);
+  // pasos angostos: casilleros libres con 3 o menos de ancho; cada tramo unido lleva su número
+  const w=new Uint16Array(nx*ny),ancho=(k,d)=>{let n=1;for(const s of [-d,d])for(let q=k+s,m=0;m<3&&g[q]===0;q+=s,m++)n++;return n};let id=0;
+  for(let j=3;j<ny-3;j++)for(let i=3;i<nx-3;i++){const k=j*nx+i;if(!g[k]&&Math.min(ancho(k,1),ancho(k,nx))<=3)w[k]=65535}
+  for(let k=0;k<w.length;k++)if(w[k]===65535){id++;const st=[k];w[k]=id;while(st.length){const q=st.pop();for(const d of [-1,1,-nx,nx,-nx-1,-nx+1,nx-1,nx+1])if(w[q+d]===65535){w[q+d]=id;st.push(q+d)}}}
+  NV.g=g;NV.w=w;PAS.clear();S.people.forEach(p=>{p.pas=[]})}
 const nvI=(x,y)=>[Math.max(0,Math.min(NV.nx-1,Math.round((x-NV.x0)/NV.c))),Math.max(0,Math.min(NV.ny-1,Math.round((y-NV.y0)/NV.c)))];
 const nvFree=(i,j)=>i>=0&&j>=0&&i<NV.nx&&j<NV.ny&&!NV.g[j*NV.nx+i];
 function nvNear(i,j){if(nvFree(i,j))return[i,j];for(let r=1;r<10;r++)for(let a=-r;a<=r;a++)for(const [u,v] of [[i+a,j-r],[i+a,j+r],[i-r,j+a],[i+r,j+a]])if(nvFree(u,v))return[u,v];return[i,j]}
 function nvSight(a,b){const n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let k=1;k<n;k++){const i=Math.round(a[0]+(b[0]-a[0])*k/n),j=Math.round(a[1]+(b[1]-a[1])*k/n);if(!nvFree(i,j))return false}return true}
-function navReady(){const key=LAYV+'|'+S.desks.length;if(NV.key!==key){NV.key=key;navBuild()}}
+function navReady(){const key=LAYV+'|'+S.desks.length+'|'+vansKey();if(NV.key!==key){NV.key=key;navBuild()}}
 const nvFreeAt=(x,y)=>{const [i,j]=nvI(x,y);return nvFree(i,j)};
 // evitar: puntos [x,y] donde hay alguien parado; el camino los rodea. Devuelve null si no hay camino.
-function route(x,y,tx,ty,evitar){navReady();const g0=NV.g;if(evitar&&evitar.length){NV.g=g0.slice();for(const [ex,ey] of evitar){const [ei,ej]=nvI(ex,ey);for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(a*a+b*b<=5){const u=ei+a,v=ej+b;if(u>=0&&v>=0&&u<NV.nx&&v<NV.ny)NV.g[v*NV.nx+u]=1}}}
+function route(x,y,tx,ty,evitar){navReady();const g0=NV.g;if(evitar&&evitar.length){NV.g=g0.slice();for(const [ex,ey] of evitar){const [ei,ej]=nvI(ex,ey);for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(a*a+b*b<=5){const u=ei+a,v=ej+b;if(u>=0&&v>=0&&u<NV.nx&&v<NV.ny)NV.g[v*NV.nx+u]=1}}const [si,sj]=nvI(x,y);NV.g[sj*NV.nx+si]=g0[sj*NV.nx+si]}
   try{return route0(x,y,tx,ty)}finally{NV.g=g0}}
 function route0(x,y,tx,ty){
-  const s=nvNear(...nvI(x,y)),t=nvNear(...nvI(tx,ty)),nx=NV.nx,N=nx*NV.ny,G=new Float32Array(N).fill(1e9),F=new Int32Array(N).fill(-1),C=new Uint8Array(N),open=[];
+  const s0c=nvI(x,y),t0c=nvI(tx,ty),s=nvNear(...s0c),t=nvNear(...t0c),nx=NV.nx,N=nx*NV.ny,G=new Float32Array(N).fill(1e9),F=new Int32Array(N).fill(-1),C=new Uint8Array(N),open=[];
   const h=(i,j)=>{const dx=Math.abs(i-t[0]),dy=Math.abs(j-t[1]);return Math.max(dx,dy)+.414*Math.min(dx,dy)};
   const push=(k,f)=>{open.push([f,k]);let n=open.length-1;while(n>0){const p=(n-1)>>1;if(open[p][0]<=open[n][0])break;[open[p],open[n]]=[open[n],open[p]];n=p}};
   const pop=()=>{const top=open[0],last=open.pop();if(open.length){open[0]=last;let n=0;for(;;){const l=2*n+1,r=l+1;let m=n;if(l<open.length&&open[l][0]<open[m][0])m=l;if(r<open.length&&open[r][0]<open[m][0])m=r;if(m===n)break;[open[m],open[n]]=[open[n],open[m]];n=m}}return top};
   const s0=s[1]*nx+s[0],t0=t[1]*nx+t[0];G[s0]=0;push(s0,h(...s));let it=0;
-  while(open.length&&it++<20000){const [,k]=pop();if(k===t0)break;if(C[k])continue;C[k]=1;const i=k%nx,j=(k-i)/nx;
+  while(open.length&&it++<30000){const [,k]=pop();if(k===t0)break;if(C[k])continue;C[k]=1;const i=k%nx,j=(k-i)/nx;
     for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(!di&&!dj)continue;const u=i+di,v=j+dj;if(!nvFree(u,v)||(di&&dj&&(!nvFree(i+di,j)||!nvFree(i,j+dj))))continue;
-      const q=v*nx+u,g2=G[k]+(di&&dj?1.414:1);if(g2<G[q]){G[q]=g2;F[q]=k;push(q,g2+h(u,v))}}}
+      const q=v*nx+u,g2=G[k]+(di&&dj?1.414:1)+(NV.w[q]?1.5:0);if(g2<G[q]){G[q]=g2;F[q]=k;push(q,g2+h(u,v))}}}   // un paso angosto cuesta más: si hay un camino amplio parecido, va por ahí
   if(F[t0]<0&&t0!==s0)return null;   // sin camino
   const cells=[];for(let k=t0;k>=0&&k!==s0;k=F[k])cells.push([k%nx,(k-k%nx)/nx]);cells.reverse();
   const out=[];let a=s;for(let m=0;m<cells.length;m++){const nxt=cells[m+1];if(!nxt||!nvSight(a,nxt)){out.push(cells[m]);a=cells[m]}}
-  out.pop();return out.map(([i,j])=>[NV.x0+i*NV.c,NV.y0+j*NV.c])}
+  // si sale de una silla o va a una, primero da el paso al lugar libre de al lado (no corta camino por arriba del mueble)
+  if(t[0]===t0c[0]&&t[1]===t0c[1])out.pop();if(s[0]!==s0c[0]||s[1]!==s0c[1])out.unshift(s);
+  return out.map(([i,j])=>[NV.x0+i*NV.c,NV.y0+j*NV.c])}
 // ---------- puertas: como en una oficina real ----------
 // entrada: corrediza de vidrio automática · salas: puerta de abrir (bisagra en a), abre hacia adentro del ambiente, sin invadir el pasillo
 // técnica: puerta de servicio a las camionetas · depósito: portón seccional que sube · aberturas sin puerta: solo el marco
@@ -707,7 +719,7 @@ const DOORS=DOORDEF.map(([ax,ay,bx,by,t,inn])=>{const g=new THREE.Group(),len=Ma
     B(l,MAT.steel,len-.16,-.06,1.0,.12,.12,.03);const p=new THREE.Group();p.position.set(ax,0,ay);p.rotation.y=-ang;p.add(l);g.add(p);out.push({l:p,kind:'swing',ang,side})}
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});BLD.add(g);
   const near2=(x,y)=>PART.some(p=>p[4]==='s'&&(Math.hypot(p[0]-x,p[1]-y)<.05||Math.hypot(p[2]-x,p[3]-y)<.05));
-  g.userData={cx:(ax+bx)/2,cy:(ay+by)/2,dx:ux,dy:uy,len,walk,solid:near2(ax,ay)||near2(bx,by),open:0,leaves:out};return g});
+  g.userData={cx:(ax+bx)/2,cy:(ay+by)/2,len,walk,solid:near2(ax,ay)||near2(bx,by),open:0,leaves:out};return g});
 function doorsStep(dt){const who=S.people.filter(p=>!p.inVan).map(p=>[p.x,p.y]);if(WALK.on)who.push([WALK.x,WALK.y]);if(CINE.on)who.push([FP.position.x,FP.position.z]);
   for(const g of DOORS){const u=g.userData;g.visible=WALK.on||CINE.on||!u.walk&&!u.solid;if(!u.leaves.length)continue;
     const near=who.some(([x,y])=>Math.hypot(x-u.cx,y-u.cy)<Math.max(1.5,u.len*.6+.9));u.open+=((near?1:0)-u.open)*(1-Math.exp(-dt*(near?7:3)));const o=u.open*u.open*(3-2*u.open);
@@ -838,10 +850,10 @@ function pose(o,mode,sw,dt){const k=Math.min(1,dt*10),t=T+o.seed,br=Math.sin(t*1
   else{lerpR(o.aL.sh,.04,k);lerpR(o.aR.sh,.04,k);lerpR(o.aL.el,.12,k);lerpR(o.aR.el,.12,k)}}
 function person3(p,dt){let o=PPL.get(p.id);const key=pkey(p,fullLook(p));if(!o||o.key!==key){if(o)ACT.remove(o.g);o=mkPerson(p);PPL.set(p.id,o);ACT.add(o.g)}o.seen=1;
   o.g.visible=!p.inVan&&!!S.built&&!(WALK.on&&APP&&p.id===S.me);if(!o.g.visible)return null;
-  const walk=p.tx!=null,d=deskOf(p),sit=!walk&&!p.carry&&!p.virtual&&d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25;
+  const walk=p.tx!=null,d=deskOf(p),sit=!walk&&!p.carry&&!p.virtual&&(p.sit||d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25);
   let x=p.x,y=p.y,h=o.h;const anda=walk&&(p.v==null||p.v>.14);
   if(walk){const dx=p.vx??p.tx-p.x,dy=p.vy??p.ty-p.y;if(Math.hypot(dx,dy)>.15)h=Math.atan2(dy,dx)}
-  if(sit){const [ax,ay]=rot(-.02,.52,d.r||0);x=(d.cx??d.x+.9)+ax;y=(d.cy??d.y+.8)+ay;h=-Math.PI/2+(d.r||0)}
+  if(sit){if(p.sit){x=p.sit.x;y=p.sit.y;h=p.sit.h}else{const [ax,ay]=rot(-.02,.52,d.r||0);x=(d.cx??d.x+.9)+ax;y=(d.cy??d.y+.8)+ay;h=-Math.PI/2+(d.r||0)}}
   const kk=1-Math.exp(-dt*(sit?9:22));if(o.px==null||Math.hypot(x-o.px,y-o.py)>3){o.px=x;o.py=y}else{o.px+=(x-o.px)*kk;o.py+=(y-o.py)*kk}x=o.px;y=o.py;
   o.h=angTo(o.h,h,Math.min(1,dt*(sit?7:8)));o.g.position.set(x,(p.virtual?.08+Math.sin(T*2)*.04:0)+(x>=0&&x<=W&&y>=0&&y<=Hb?.12:.012),y);o.g.rotation.y=-o.h;
   o.carry=!!p.carry;pose(o,sit?'sit':anda?'walk':'idle',anda?p.ph:0,dt);
@@ -942,57 +954,126 @@ function drawFX(){for(let i=FX.length-1;i>=0;i--){const f=FX[i];const k=(T-f.t0)
   else{ctx.fillStyle=Z('#f5b800');ctx.beginPath();ctx.arc(0,0,s*.8,0,7);ctx.fill();ctx.fillStyle=Z('#8a6500');ctx.font=`700 ${s}px -apple-system,BlinkMacSystemFont,Inter,sans-serif`;ctx.textAlign='center';ctx.fillText('$',0,s*.35)}
   ctx.restore()}}
 // ---------- movimiento: cada uno por su camino, sin atravesar a nadie ----------
-// Las personas se esquivan (cada una por su derecha), no se paran dos en el mismo lugar, siguen de atrás al que va
-// adelante y, si alguien les corta el paso, buscan otro camino. Arrancan y frenan de a poco, como al caminar.
+// Como en una oficina de verdad:
+// 1) En lugares amplios cada uno ve venir al otro y se corre con tiempo (por su derecha si viene de frente); al que va adelante lo sigue sin pisarlo.
+// 2) Por una puerta o un paso angosto se pasa de a uno por sentido: el que llega segundo espera afuera y a un costado, sin tapar la salida.
+// 3) Nadie se queda parado en una puerta. Si alguien parado corta el paso, el otro lo rodea; si no hay por dónde, pide permiso y el parado se corre.
+// 4) A la reunión se va a sentarse a la mesa, y nadie camina por encima de una silla ni de una camioneta estacionada.
 const deskOf=p=>S.desks.find(d=>d.id===p.desk)||S.desks[0];
-const PR=.24,VMAX=1.5,MOV={fant:0,cede:0,esp:0};   // radio de una persona (m), paso normal (m/s) y contadores para medir
-const sitting=p=>{if(p.tx!=null||p.carry||p.virtual||p.inVan)return false;const d=deskOf(p);return!!d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25};
+const PR=.24,TOQ=.4,VMAX=1.5,MOV={fant:0,cede:0,esp:0,log:[]};   // radio de una persona (m), lo más cerca que pasan dos (m), paso normal (m/s) y contadores para medir
+const sitting=p=>{if(p.tx!=null||p.carry||p.virtual||p.inVan)return false;if(p.sit)return true;const d=deskOf(p);return!!d&&Math.hypot(p.x-(d.x+.2),p.y-(d.y+1.1))<.25};
+const dePie=q=>!q.inVan&&!sitting(q);
 const destOf=q=>q.path&&q.path.length?q.path[q.path.length-1]:q;
-// un lugar libre cerca del punto pedido: que se pueda pisar y que nadie lo ocupe ni vaya hacia ahí
-function libre(p,x,y){navReady();const ok=(a,b)=>nvFreeAt(a,b)&&!S.people.some(q=>q!==p&&!q.inVan&&!sitting(q)&&Math.hypot(destOf(q).x-a,destOf(q).y-b)<PR*2.8);
-  if(ok(x,y))return[x,y];for(let r=.6;r<=2.4;r+=.6)for(let k=0;k<8;k++){const a=k*Math.PI/4+r,u=x+Math.cos(a)*r,v=y+Math.sin(a)*r;if(ok(u,v))return[u,v]}return[x,y]}
-function goTo(p,x,y,then){const d=deskOf(p);if(!d||Math.hypot(x-(d.x+.2),y-(d.y+1.1))>.05)[x,y]=libre(p,x,y);
-  p.path=[...(route(p.x,p.y,x,y)||[]).map(([x,y])=>({x,y})),{x,y,then}];p.stuck=0;next(p)}
-function next(p){const q=p.path[0];if(!q){p.tx=null;p.v=0;return}p.tx=q.x;p.ty=q.y}
-// otro camino rodeando a los que están parados (si no hay, se queda con el que tenía)
-function rodear(p){const f=p.path[p.path.length-1];if(!f)return;const par=S.people.filter(q=>q!==p&&!q.inVan&&!sitting(q)&&q.tx==null&&Math.hypot(q.x-f.x,q.y-f.y)>PR*3).map(q=>[q.x,q.y]);
-  const r=route(p.x,p.y,f.x,f.y,par);if(r){p.path=[...r.map(([x,y])=>({x,y})),f];next(p)}}
-// puertas angostas: se pasa de a uno por sentido; el que llega segundo espera afuera (si ya está adentro, termina de pasar)
-function puertaLibre(p,ux,uy){for(const g of DOORS){const u=g.userData;if(u.len>1.6)continue;const dx=u.cx-p.x,dy=u.cy-p.y,d=Math.hypot(dx,dy);
-    if(d>1.5||dx*ux+dy*uy<=0||Math.abs(ux*u.dx+uy*u.dy)>.75)continue;const o=u.paso;
-    if(o&&o.p!==p&&T<o.t&&o.ux*ux+o.uy*uy<-.3&&!o.p.inVan&&Math.hypot(o.p.x-u.cx,o.p.y-u.cy)<1.6)return d<.7;
-    u.paso={p,ux,uy,t:T+1.1}}return true}
-const hayAlguien=(p,x,y,r)=>S.people.some(q=>q!==p&&!q.inVan&&!sitting(q)&&Math.hypot(q.x-x,q.y-y)<r);
+const NW=(x,y)=>{const [i,j]=nvI(x,y);return NV.w[j*NV.nx+i]};
+const tiene=(id,p)=>{const m=PAS.get(id);return!!m&&m.has(p)};
+const hayAlguien=(p,x,y,r)=>S.people.some(q=>q!==p&&dePie(q)&&Math.hypot(q.x-x,q.y-y)<r);
+const veo=(ax,ay,bx,by)=>{const n=Math.ceil(Math.hypot(bx-ax,by-ay)/.12);for(let k=1;k<=n;k++)if(!nvFreeAt(ax+(bx-ax)*k/n,ay+(by-ay)*k/n))return false;return true};
+// a cuánto queda un punto del camino que le falta a alguien (los próximos metros)
+function alCamino(q,x,y){if(q.tx==null)return Math.hypot(x-q.x,y-q.y);let ax=q.x,ay=q.y,m=9,L=0;for(const n of q.path){const dx=n.x-ax,dy=n.y-ay,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l)):0;
+    m=Math.min(m,Math.hypot(x-ax-dx*t,y-ay-dy*t));if((L+=Math.sqrt(l))>5)break;ax=n.x;ay=n.y}return m}
+// un lugar libre cerca del punto pedido: que se pueda pisar, que no sea una puerta ni un paso angosto y que nadie lo ocupe ni vaya hacia ahí
+function libre(p,x,y){navReady();const ok=(a,b)=>nvFreeAt(a,b)&&!NW(a,b)&&!S.people.some(q=>q!==p&&dePie(q)&&Math.hypot(destOf(q).x-a,destOf(q).y-b)<PR*2.8);
+  if(ok(x,y))return[x,y];const v0=nvFreeAt(x,y);for(const ver of [1,0])for(let r=.5;r<=5;r+=.5)for(let k=0;k<12;k++){const a=k*Math.PI/6+r,u=x+Math.cos(a)*r,v=y+Math.sin(a)*r;if(ok(u,v)&&(!ver||!v0||veo(x,y,u,v)))return[u,v]}return[x,y]}
+// cada uno por su derecha: corre cada punto intermedio del camino un casillero a su derecha (si hay lugar); así los que van y los que vienen
+// no usan la misma línea en los pasillos ni doblan pegados a la misma esquina
+function carril(p,r,fx,fy){let ax=p.x,ay=p.y;return r.map(([x,y],i)=>{const n=r[i+1]||[fx,fy],dx=n[0]-ax,dy=n[1]-ay,l=Math.hypot(dx,dy)||1,u=x+dy/l*.25,v=y-dx/l*.25;
+    if(!NW(x,y)&&nvFreeAt(u,v)&&!NW(u,v)&&veo(ax,ay,u,v)&&veo(u,v,n[0],n[1])){x=u;y=v}ax=x;ay=y;return{x,y}})}
+const andan=p=>S.people.filter(q=>q!==p&&q.tx!=null&&!q.inVan&&!q.esp&&Math.hypot(q.x-p.x,q.y-p.y)<5);
+const soltar=p=>{for(const id of p.pas||[]){const m=PAS.get(id);m&&m.delete(p)}p.pas=[]};
+function ir(p,x,y,then){soltar(p);if(p.silla){p.silla.de=null;p.silla=null}p.sit=p.apt=null;p.path=[...carril(p,route(p.x,p.y,x,y)||[],x,y),{x,y,then}];p.stuck=0;next(p)}
+// puesto compartido (más personas que escritorios): el primero se sienta y los demás trabajan de pie al lado; nunca dos en la misma silla
+const dueno=p=>{const d=deskOf(p),g=S.people.filter(q=>deskOf(q)===d);return(g.find(q=>!q.virtual)||g[0])===p};
+function alLado(p,d){const k=S.people.filter(q=>deskOf(q)===d&&!dueno(q)).indexOf(p),[ax,ay]=rot((k%2?-1:1)*1.25,.3+Math.floor(k/2)*.9,d.r||0);return p.casa=libre(p,(d.cx??d.x+.9)+ax,(d.cy??d.y+.8)+ay)}
+function enCasa(p){const d=deskOf(p);if(d)[p.x,p.y]=dueno(p)?[d.x+.2,d.y+1.1]:alLado(p,d)}
+const enPuesto=p=>p.tx==null&&(p.sit?false:sitting(p)||!!p.casa&&Math.hypot(p.x-p.casa[0],p.y-p.casa[1])<.3);
+function goTo(p,x,y,then){if(then&&x===SPOTS.puerta.x&&y===SPOTS.puerta.y)return then();   // ya no hace falta pasar por la entrada: el camino elige solo la salida más corta (el técnico carga por el portón)
+  const d=deskOf(p),suyo=d&&Math.hypot(x-(d.x+.2),y-(d.y+1.1))<.05;if(suyo&&!dueno(p))[x,y]=alLado(p,d);else if(!suyo)[x,y]=libre(p,x,y);ir(p,x,y,then)}
+function next(p){const q=p.path[0];if(!q){p.tx=null;p.v=p.vx=p.vy=0;soltar(p);return}p.tx=q.x;p.ty=q.y}
+// el camino de nuevo desde donde está (rodeando a los que están parados, si se pide)
+const largo=(p,pts)=>{let l=0,ax=p.x,ay=p.y;for(const n of pts){l+=Math.hypot(n.x-ax,n.y-ay);ax=n.x;ay=n.y}return l};
+function reruta(p,evitar,extra){const f=p.path[p.path.length-1];if(!f)return false;const r=route(p.x,p.y,f.x,f.y,evitar);if(!r)return false;const c=[...carril(p,r,f.x,f.y),f];
+  if(extra!=null&&largo(p,c)>largo(p,p.path)+extra)return false;p.path=c;next(p);return true}
+const parados=p=>{const f=destOf(p);return S.people.filter(q=>q!==p&&dePie(q)&&(q.tx==null||q.esp)&&Math.hypot(q.x-f.x,q.y-f.y)>PR*3).map(q=>[q.x,q.y])};
+// un lugar al costado, cerca, para dejar pasar a q: libre, fuera de las puertas (y de su boca) y lejos del camino de q.
+// Primero lo busca lejos del camino de todos los que andan cerca; si la zona está llena, alcanza con no estorbar a q
+function aparte(p,q,boca){const A=andan(p);for(const todos of [1,0])for(let r=.5;r<=2.5;r+=.25)for(let k=0;k<12;k++){const a=k*Math.PI/6+r*2,x=p.x+Math.cos(a)*r,y=p.y+Math.sin(a)*r;
+    if(nvFreeAt(x,y)&&!NW(x,y)&&!hayAlguien(p,x,y,todos?PR*2.3:TOQ+.06)&&!(q&&alCamino(q,x,y)<.66)&&!(todos&&A.some(o=>alCamino(o,x,y)<.66))&&!(boca&&Math.hypot(x-boca[1],y-boca[2])<1.05)&&veo(p.x,p.y,x,y))return[x,y]}return null}
+// permiso: el que está parado se corre del camino del que quiere pasar
+function permiso(q,p){if(q.virtual||q.tx!=null)return;const s=aparte(q,p);if(s){say(p,'Permiso',1.4);ir(q,s[0],s[1])}}
+// pasos angostos que tiene por delante (hasta `ver` metros, y los que sigan pegados): [número, x e y de entrada, sentido, a cuánto está]
+function pasos(p,ver){const out=[];let ax=p.x,ay=p.y,rec=0,ult=-9;for(const n of p.path){const L=Math.hypot(n.x-ax,n.y-ay),m=Math.max(1,Math.ceil(L/.12));
+    for(let k=rec?1:0;k<=m;k++){const x=ax+(n.x-ax)*k/m,y=ay+(n.y-ay)*k/m,r=rec+L*k/m,w=NW(x,y);if(w){ult=r;if(!out.some(o=>o[0]===w))out.push([w,x,y,L?(n.x-ax)/L:0,L?(n.y-ay)/L:0,r])}
+      if(r>ver&&r-ult>1.4)return out}
+    rec+=L;ax=n.x;ay=n.y}return out}
 function step(dt){const P=S.people;navReady();
   for(const p of P){if(p.tx==null||p.inVan)continue;const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy),fin=p.path.length<=1;
     if(d<=Math.max((p.v||VMAX)*dt,.03)){p.x=p.tx;p.y=p.ty;const q=p.path.shift();p.tx=null;if(q&&q.then)q.then();next(p);continue}
-    const ux=dx/d,uy=dy/d,rx=uy,ry=-ux,fan=T<(p.ghost||0);let sp=fin?Math.min(VMAX,.35+d*2.2):VMAX,sx=0,sy=0,tope=null,esp=false;
-    if(T<(p.ced||0)){const cx=p.x+(-ux*.45+rx*.8)*dt,cy=p.y+(-uy*.45+ry*.8)*dt;if(nvFreeAt(cx,cy)&&!hayAlguien(p,cx,cy,PR*1.8)){p.x=cx;p.y=cy;p.ph+=dt*6}p.v=0;continue}   // cede el paso: un paso atrás y a su derecha
-    if(!fan&&(p.espT||0)<6&&!puertaLibre(p,ux,uy)){sp=0;esp=true;p.espT=(p.espT||0)+dt;MOV.esp+=dt}else if(!esp)p.espT=Math.max(0,(p.espT||0)-dt);
-    if(!fan)for(const q of P){if(q===p||q.inVan||sitting(q))continue;const ex=q.x-p.x,ey=q.y-p.y,e=Math.hypot(ex,ey);if(e>1.25||e<1e-4)continue;
-      const fwd=ex*ux+ey*uy,lat=ux*ey-uy*ex;
-      if(fwd>0&&Math.abs(lat)<.6){const w=1-e/1.25,qd=q.tx==null?0:Math.hypot(q.tx-q.x,q.ty-q.y),igual=qd>0&&((q.tx-q.x)*ux+(q.ty-q.y)*uy)/qd>.5;
-        if(igual)sp=Math.min(sp,VMAX*Math.max(0,(e-.55)/.6));                 // va adelante en el mismo sentido: lo sigue sin pisarlo
-        else{const s=Math.abs(lat)<.1?1:lat>0?1:-1;sx+=rx*s*w*1.7;sy+=ry*s*w*1.7;if(q.tx==null&&e<.75)sp=Math.min(sp,VMAX*.6)}}   // de frente o parado: lo esquiva
-      if(e<PR*2.3){const k=(PR*2.3-e)*7;sx-=ex/e*k;sy-=ey/e*k}}
+    const ux=dx/d,uy=dy/d,rx=uy,ry=-ux,fan=T<(p.ghost||0);let sp=fin?Math.min(VMAX,.35+d*2.2):VMAX,lat=0,tope=null,neg=null;
+    // puertas y pasos angostos: pide juntos todos los que tiene por delante; si alguno lo usa otro en contra (o hay alguien parado adentro), espera afuera
+    if(!fan){const need=pasos(p,p.aptP?3.2:1.3);for(const id of p.pas||[])if(!need.some(n=>n[0]===id)){const m=PAS.get(id);m&&m.delete(p)}
+      const nue=need.filter(n=>!tiene(n[0],p));
+      for(const n of nue){const m=PAS.get(n[0]);if(m)for(const [q,e] of m){if(q.tx==null||q.inVan){m.delete(q);continue}if(q!==p&&!(Math.hypot(e[0]-n[1],e[1]-n[2])<.7&&e[2]*n[3]+e[3]*n[4]>.5)){neg=n;p.espQ=q;break}}
+        if(!neg){const q=P.find(q=>q!==p&&dePie(q)&&q.tx==null&&NW(q.x,q.y)===n[0]);if(q){neg=n;p.espQ=q}}if(neg)break}
+      if(neg&&(neg[5]<.3||(p.espT||0)>8))neg=null;     // ya está adentro (o esperó demasiado): pasa
+      if(!neg)for(const n of nue){let m=PAS.get(n[0]);if(!m)PAS.set(n[0],m=new Map());m.set(p,[n[1],n[2],n[3],n[4]])}
+      p.pas=need.map(n=>n[0]).filter(id=>tiene(id,p))}
+    // esperando un paso, o corrido a un costado para dejar pasar a otro
+    if(neg||p.apt){const q=neg?p.espQ:p.aptQ;
+      if(neg){p.espT=(p.espT||0)+dt;p.espU=T;p.espN=neg;MOV.esp+=dt;
+        if(q.tx==null){if(p.espT>1.2&&T>(p.reT||0)){p.reT=T+2;reruta(p,parados(p))||permiso(q,p)}}          // alguien parado adentro: lo rodea o le pide permiso
+        else if(!p.apt&&(alCamino(q,p.x,p.y)<.66||Math.hypot(p.x-neg[1],p.y-neg[2])<1)&&(p.apt=aparte(p,q,neg)||aparte(p,q))){p.aptQ=q;p.aptP=1}}   // quedó en la boca o en la salida del que viene: se corre
+      else if(p.aptP||!q||q.tx==null||q.inVan||T>p.aptT||Math.hypot(q.x-p.x,q.y-p.y)>1.2&&(q.x-p.x)*(q.vx||0)+(q.y-p.y)*(q.vy||0)>0){p.apt=null;p.aptP=0;p.esp=false;reruta(p);continue}   // ya pasó: sigue
+      const a=p.apt?Math.hypot(p.apt[0]-p.x,p.apt[1]-p.y):0;p.esp=true;
+      if(a>.05){const st=Math.min(a,VMAX*.8*dt),nx=p.x+(p.apt[0]-p.x)/a*st,ny=p.y+(p.apt[1]-p.y)/a*st;
+        if(!hayAlguien(p,nx,ny,TOQ)){p.vx=(nx-p.x)/(dt||1);p.vy=(ny-p.y)/(dt||1);p.x=nx;p.y=ny;p.v=VMAX*.8;p.ph+=dt*9;continue}}
+      p.v=p.vx=p.vy=0;continue}
+    p.esp=false;p.espT=0;
+    // los demás: al que va adelante lo sigue; al que viene o está parado lo esquiva con tiempo (calcula dónde van a quedar más cerca)
+    if(!fan)for(const q of P){if(q===p||!dePie(q))continue;const ex=q.x-p.x,ey=q.y-p.y,e=Math.hypot(ex,ey);if(e>3.2||e<1e-4)continue;
+      const mv=q.tx!=null&&!q.esp,qx=mv?q.vx||0:0,qy=mv?q.vy||0:0,fwd=ex*ux+ey*uy,la=ex*rx+ey*ry,qf=qx*ux+qy*uy;
+      if(fwd>.2&&Math.abs(la)<.4&&qf>.3){sp=Math.min(sp,Math.max(0,qf+(fwd-.62)*2.5));continue}
+      const wx=qx-ux*VMAX,wy=qy-uy*VMAX,w2=wx*wx+wy*wy,t=w2>1e-3?Math.max(0,-(ex*wx+ey*wy)/w2):0;if(t>1.7)continue;
+      const cx=ex+wx*t,cy=ey+wy*t,c=Math.hypot(cx,cy);if(c>.68)continue;
+      const cl=cx*rx+cy*ry;lat+=(Math.abs(cl)<.07?(T<(p.izq||0)?-1:1):cl>0?-1:1)*(1-t/1.7)*(1-c/.68)*2.6;
+      if(t<.5&&fwd>0&&c<.5)sp=Math.min(sp,VMAX*(.25+t*1.5))}
+    p.lat=(p.lat||0)+(Math.max(-1.2,Math.min(1.2,lat))-(p.lat||0))*Math.min(1,dt*8);
     p.v=(p.v||0)+(sp-(p.v||0))*Math.min(1,dt*(sp<(p.v||0)?9:5));
-    let vx=ux*p.v+sx,vy=uy*p.v+sy;const vm=Math.hypot(vx,vy);if(vm>VMAX*1.25){vx*=VMAX*1.25/vm;vy*=VMAX*1.25/vm}
-    let nx=p.x+vx*dt,ny=p.y+vy*dt;if(!nvFreeAt(nx,ny)){nx=p.x+ux*p.v*dt;ny=p.y+uy*p.v*dt}                // el desvío daba contra algo: sigue por su camino
-    if(!fan)for(const q of P){if(q===p||q.inVan||sitting(q))continue;const a=Math.hypot(q.x-nx,q.y-ny);if(a<PR*1.9&&a<Math.hypot(q.x-p.x,q.y-p.y)){tope=q;break}}
-    // de frente y sin lugar para esquivarse: cede uno (siempre el mismo de los dos) y el otro pasa
-    if(tope&&tope.tx!=null&&!(T<(tope.ced||0))&&(tope.tx-tope.x)*ux+(tope.ty-tope.y)*uy<0&&(p.stuck||0)>.35&&String(p.id)>String(tope.id)){p.ced=T+.9;MOV.cede++}
-    const adv=tope?0:Math.hypot(nx-p.x,ny-p.y);if(!tope){if(adv>.002){p.vx=(nx-p.x)/dt;p.vy=(ny-p.y)/dt}p.x=nx;p.y=ny}else p.v*=.5;
+    let nx=p.x+(ux*p.v+rx*p.lat)*dt,ny=p.y+(uy*p.v+ry*p.lat)*dt;
+    if(!nvFreeAt(nx,ny)){if(p.lat>.3)p.izq=T+1.5;p.lat*=.5;nx=p.x+ux*p.v*dt;ny=p.y+uy*p.v*dt}                                             // el desvío daba contra algo: sigue derecho
+    if(Math.abs(p.lat)>.15)p.corr=1;else if(p.corr){p.corr=0;if(!veo(p.x,p.y,p.tx,p.ty))reruta(p)}                // después de esquivar, si ya no ve su próximo punto, busca el camino de nuevo
+    const choca=(x,y)=>P.find(q=>q!==p&&dePie(q)&&Math.hypot(q.x-x,q.y-y)<TOQ&&Math.hypot(q.x-x,q.y-y)<Math.hypot(q.x-p.x,q.y-p.y));
+    if(!fan&&(tope=choca(nx,ny))){p.topeQ=tope;const o=(tope.x-p.x)*rx+(tope.y-p.y)*ry;                              // no entra: se desliza de costado para pasarlo
+      for(const k of Math.abs(o)<.05?[1,-1]:[o>0?-1:1]){const sx=p.x+rx*k*VMAX*.6*dt,sy=p.y+ry*k*VMAX*.6*dt;if(nvFreeAt(sx,sy)&&!choca(sx,sy)){nx=sx;ny=sy;tope=null;p.lat=k*.6;break}}}
+    const adv=tope?0:Math.hypot(nx-p.x,ny-p.y);
+    if(tope){p.v*=.5;p.vx=p.vy=0}else{p.vx=(nx-p.x)/(dt||1);p.vy=(ny-p.y)/(dt||1);p.x=nx;p.y=ny}
     p.ph+=dt*11*Math.min(1.2,adv/(VMAX*dt||1));if(Math.abs(dx-dy)>.01)p.dir=dx-dy>0?1:-1;
-    // trabado: primero busca otro camino; si de verdad no hay, pasa
-    p.stuck=esp?(p.stuck||0):adv<VMAX*dt*.25?(p.stuck||0)+dt:Math.max(0,(p.stuck||0)-dt*2);
-    if(p.stuck>.9&&T>(p.reT||0)){p.reT=T+1.6;rodear(p)}if(p.stuck>5){p.ghost=T+1.5;p.stuck=0;MOV.fant++}}
+    // trabado: al parado lo rodea (o le pide permiso); de frente y sin lugar, uno se corre a un costado y el otro pasa. Atravesar queda solo como último recurso
+    p.stuck=adv<VMAX*dt*.2?(p.stuck||0)+dt:Math.max(0,(p.stuck||0)-dt*2);
+    if(tope&&p.stuck>.45&&T>(p.reT||0)){p.reT=T+1;
+      if(tope.tx==null){if(p.stuck>1.4||!reruta(p,parados(p)))permiso(tope,p)}
+      else if(tope.esp){if(tope.apt&&!tope.aptP&&T-(tope.aptD||0)>2.5)tope.apt=null;                                  // el que se corrió ya esperó bastante: que siga caminando (parado estorba más)
+        else{const s=tope.aptP?aparte(tope,p,tope.espN)||aparte(tope,p):aparte(tope,p);if(s){if(!tope.apt){tope.aptQ=p;tope.aptT=T+2;tope.aptD=T}tope.apt=s}else if(!reruta(p,parados(p),6)&&!tope.aptP)tope.apt=null}}
+      else if((tope.tx-tope.x)*ux+(tope.ty-tope.y)*uy<=0){let y=String(p.id)>String(tope.id)?p:tope,o=y===p?tope:p;if(reruta(y,parados(y).concat([[o.x,o.y]]),3)){y.stuck=0;MOV.cede++}
+        else{let s=aparte(y,o);if(!s){[y,o]=[o,y];s=aparte(y,o)}if(s){y.apt=s;y.aptQ=o;y.aptT=T+2;y.aptD=T;y.aptP=0;MOV.cede++}}}}
+    if(p.stuck>2&&!p.logd){p.logd=1;MOV.anota(p,'trabado')}if(p.stuck<.2)p.logd=0;
+    if(p.stuck>6){p.ghost=T+1.5;p.stuck=0;MOV.fant++;MOV.anota(p,'atraviesa')}}
   S.vans.forEach(v=>{if(v.anim){const a=v.anim;const k=Math.min(1,(T-a.t0)/a.dur);v.x=a.x0+(a.x1-a.x0)*k;v.y=a.y0+(a.y1-a.y0)*k;if(k>=1){v.anim=null;a.done&&a.done()}}})}
+// para medir: qué pasó cada vez que alguien quedó trabado más de 2 segundos (lo lee la prueba de vida)
+MOV.anota=(p,que)=>{const f=destOf(p),q=p.topeQ,r=v=>+(+v).toFixed(2);MOV.log.push({que,t:r(T),quien:p.n||p.id,en:[r(p.x),r(p.y)],va:[r(p.tx),r(p.ty)],fin:[r(f.x),r(f.y)],paso:NW(p.x,p.y),
+  tope:q?{quien:q.n||q.id,en:[r(q.x),r(q.y)],estado:sitting(q)?'sentado':q.tx==null?'quieto':q.esp?'espera a '+(q.espQ&&(q.espQ.n||q.espQ.id)):'camina',fin:[r(destOf(q).x),r(destOf(q).y)]}:null,espera:p.espQ&&T-(p.espU||0)<1?p.espQ.n:undefined});if(MOV.log.length>40)MOV.log.shift()};
 function say(p,t,s=3){p.say=t;p.sayT=T+s}
-function wander(){const free=S.people.filter(p=>p.tx==null&&!p.busy&&!p.inVan&&!p.virtual);if(!free.length)return;const p=free[Math.floor(Math.random()*free.length)];const d=deskOf(p);
-  const r=Math.random();const back=()=>setTimeout(()=>goTo(p,d.x+.2,d.y+1.1),2500+Math.random()*2500);
-  if(r<.4){goTo(p,SPOTS.cafe.x+Math.random(),SPOTS.cafe.y+Math.random(),()=>{say(p,'☕',2);back()})}
-  else if(r<.7&&p.role!=='recepcion'){goTo(p,SPOTS.reunion.x+Math.random()*1.5,SPOTS.reunion.y+Math.random(),()=>{say(p,'Reunión',2);back()})}
-  else if(p.role==='tecnico'){goTo(p,SPOTS.deposito.x,SPOTS.deposito.y,()=>{say(p,'📦 material',2);back()})}}
+// el café se toma frente a la mesada (no en el paso de la cocina); a la reunión se va a sentarse: la silla libre con el camino más corto
+function alCafe(p,then){const m=LAY.find(i=>i.k==='mesada');if(!m)return goTo(p,SPOTS.cafe.x+Math.random(),SPOTS.cafe.y+Math.random(),then);const [ax,ay]=rot((Math.random()-.5)*3,1.1,m.r);goTo(p,m.x+ax,m.y+ay,then)}
+function aReunion(p,then){let s=null,bl=1e9;for(const c of sillas()){if(c.k!=='reunion'||c.de&&c.de!==p)continue;const r=route(p.x,p.y,c.x,c.y);if(!r)continue;
+    let l=0,ax=p.x,ay=p.y;for(const [x,y] of r){l+=Math.hypot(x-ax,y-ay);ax=x;ay=y}l+=Math.hypot(c.x-ax,c.y-ay);if(l<bl){bl=l;s=c}}
+  if(!s)return goTo(p,SPOTS.reunion.x+Math.random()*1.5,SPOTS.reunion.y+Math.random(),then);ir(p,s.x,s.y,()=>{p.sit=s;then&&then()});s.de=p;p.silla=s}
+function wander(){const gente=S.people.filter(p=>!p.inVan&&!p.virtual&&!p.busy),free=gente.filter(p=>p.tx==null);
+  if(!free.length||gente.filter(p=>!enPuesto(p)).length>=Math.max(2,Math.round(gente.length/3)))return;   // la mayoría trabaja en su puesto: de a ratos alguno va por un café, a una reunión o al depósito
+  const p=free[Math.floor(Math.random()*free.length)],d=deskOf(p),r=Math.random();
+  const back=ms=>setTimeout(()=>{if(!p.busy&&p.tx==null&&!p.inVan)goTo(p,d.x+.2,d.y+1.1)},(ms||2500)+Math.random()*2500);   // vuelve solo si sigue libre: si mientras tanto salió a un trabajo, no lo interrumpe
+  if(r<.4)alCafe(p,()=>{say(p,'☕',2);back(4000)});
+  else if(r<.7&&p.role!=='recepcion')aReunion(p,()=>{say(p,'Reunión',2);back(6000)});
+  else if(p.role==='tecnico')goTo(p,SPOTS.deposito.x,SPOTS.deposito.y,()=>{say(p,'📦 material',2);back()})}
 // ---------- eventos de la empresa ----------
 const CLI=['Barraca Norte','Clínica Sur','Estudio Gómez','Colegio del Parque','Depósito Logístico','Hotel Rambla','Farmacia Central','Edificio Torre Sur'];
 const feed=[];let tk=151,pr=232,pm=41;
@@ -1185,9 +1266,11 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
   window.__ofi.volver=()=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)});
   // cuántas piezas dibuja cada parte de la escena (para saber dónde conviene unir)
   window.__ofi.partes=()=>{const n=g=>{let c=0;const rec=(o,v)=>{v=v&&o.visible;if(v&&(o.isMesh||o.isLineSegments||o.isLine))c++;o.children.forEach(x=>rec(x,v))};rec(g,true);return c};return{edificio:n(BLD),muebles:n(FURN),actores:n(ACT),total:n(SC),personas:PPL.size,vehiculos:VEH.size}};
-  window.__ofi.gente=()=>S.people.map(p=>{const o=PPL.get(p.id),d=deskOf(p);return[p.n||p.id,sitting(p)?'sentado':p.tx!=null?'camina':'quieto',o?+o.h.toFixed(2):null,d?+(-Math.PI/2+(d.r||0)).toFixed(2):null]});
+  window.__ofi.gente=()=>S.people.map(p=>{const o=PPL.get(p.id),d=deskOf(p);return[p.n||p.id,sitting(p)?(p.sit?'en reunión':'sentado'):p.tx!=null?(p.esp?'espera':'camina'):'quieto',o?+o.h.toFixed(2):null,d?+(-Math.PI/2+(d.r||0)).toFixed(2):null,+p.x.toFixed(2),+p.y.toFixed(2)]});
+  window.__ofi.trabas=()=>MOV.log;
+  window.__ofi.grilla=()=>{navReady();const r=[];for(let j=0;j<NV.ny;j++){let l='';for(let i=0;i<NV.nx;i++)l+=NV.g[j*NV.nx+i]?'#':NV.w&&NV.w[j*NV.nx+i]?String.fromCharCode(96+(NV.w[j*NV.nx+i]-1)%26+1):'.';r.push(l)}return{x0:NV.x0,y0:NV.y0,c:NV.c,filas:r,lugares:SPOTS,asientos:S.desks.map(d=>[d.id,d.x+.2,d.y+1.1]),gente:S.people.map(p=>[p.n,+p.x.toFixed(2),+p.y.toFixed(2),p.role,p.virtual?1:0])}};
   window.__ofi.quietos=()=>S.people.filter(p=>!p.inVan).every(p=>p.tx==null);
-  if(/[?&]medir=1/.test(location.search)){M.el=document.createElement('div');M.el.style.cssText='position:absolute;left:12px;bottom:12px;z-index:9;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.62);color:#fff;font:600 12px ui-monospace,Menlo,monospace;pointer-events:none';stage.appendChild(M.el)}}
+  if(/[?&]medir=1/.test(location.search)){M.el=document.createElement('div');M.el.style.cssText='position:absolute;left:12px;top:58px;z-index:9;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.62);color:#fff;font:600 12px ui-monospace,Menlo,monospace;pointer-events:none';stage.appendChild(M.el)}}
 // ---------- HUD y panel ----------
 const hud=document.getElementById('hud');
 function renderHud(){const me=APP&&S.me&&S.people.find(p=>p.id===S.me);hud.innerHTML=(me?`<button class="chip mechip" data-me><span class="medot" style="background:${(ROLES[me.role]||['','#8e8e93'])[1]}"></span><b>Vos</b>${esc(me.n)}</button>`:'')+`<span class="chip"><span class="live"></span><b>${S.people.filter(p=>!p.virtual).length}</b>personas</span>${S.people.some(p=>p.virtual)?`<span class="chip"><b style="color:#7c5cff">✦ ${S.people.filter(p=>p.virtual).length}</b>virtuales</span>`:''}<span class="chip"><b>${S.vans.filter(v=>v.out).length}</b>en la calle</span><span class="chip"><b>${S.counts.wa+S.counts.mail}</b>mensajes hoy</span><span class="chip"><b>${S.counts.tk}</b>tickets</span>`}
@@ -1274,7 +1357,7 @@ function areaHtml(k){const a=AREAS[k];let h=`<button class="back" data-act="back
 function refreshArea(){if(!AREA||TAB!=='vivo')return;const el=document.getElementById('areaLive');if(el)el.innerHTML=areaLive(AREA)}
 function openArea(k){AREA=k;if(k==='dep')DEPV='stock';OPENVAN=null;TAB='vivo';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab==='vivo'));hidePop();renderBody();if(innerWidth<980)document.querySelector('.panel').scrollIntoView({behavior:'smooth',block:'start'})}
 let toastT;function toast(m){const el=document.getElementById('toast');el.textContent=m;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2800)}
-function gather(ppl,spot,label,ms){ppl.forEach((p,i)=>{if(p.busy||p.inVan)return;p.busy=1;goTo(p,spot.x+(i%3)*.7,spot.y+Math.floor(i/3)*.7,()=>{say(p,label,2.5);setTimeout(()=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1,()=>{p.busy=0})},ms)})})}
+function gather(ppl,spot,label,ms){ppl.forEach((p,i)=>{if(p.busy||p.inVan)return;p.busy=1;(spot===SPOTS.reunion?aReunion:(p,f)=>goTo(p,spot.x+(i%3)*.7,spot.y+Math.floor(i/3)*.7,f))(p,()=>{say(p,label,2.5);setTimeout(()=>{const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1,()=>{p.busy=0})},ms)})})}
 function renderBody(){
   if(TAB==='vivo'&&AREA){body.innerHTML=areaHtml(AREA);return}
   if(TAB==='vivo'){body.innerHTML=`<h2>Tu empresa.</h2><p class="sub">Cada área es una parte del menú. Tocala acá o en la maqueta.</p><div class="apps">${Object.entries(AREAS).map(([k,a])=>`<button class="app" data-area="${k}"><span class="sq" style="background-color:${a.col}">${svg(a.ic)}</span><span>${a.menu}</span></button>`).join('')}</div><h2 style="font-size:19px">Ahora mismo.</h2><p class="sub" style="margin-bottom:12px">Mensajes que llegan, técnicos que salen y vuelven.</p><div class="feed">${feed.map(e=>`<div class="ev"${e.open?` data-feed="${esc(e.open)}" role="button" tabindex="0"`:''}><span class="ic" style="background-color:${e.col}">${fic(e.ic)}</span><div><div class="hd"><b>${esc(e.b)}</b><time>${esc(e.t)}</time></div><span class="t">${esc(e.s)}</span></div></div>`).join('')||'<p class="hint">En unos segundos empieza a moverse…</p>'}</div>`;return}
@@ -1364,7 +1447,7 @@ function applyData(d){
   S.people.forEach(p=>{const v=S.vans.find(q=>q.driver===p.id);
     if(p.out&&!p.inVan){if(SEEN===null||!v){p.inVan=true;if(v){v.out=true;v.y=40}}else if(!p.busy){p.busy=1;const d0=deskOf(p);goTo(p,SPOTS.puerta.x,SPOTS.puerta.y,()=>goTo(p,v.x+1.4,v.y+1.9,()=>{p.inVan=true;v.out=true;p.busy=0;v.anim={t0:T,dur:2.6,x0:v.x,y0:v.y,x1:v.x,y1:26.2,done:()=>{v.anim={t0:T,dur:3.5,x0:v.x,y0:26.2,x1:W+10,y1:26.2,done:()=>{v.y=40}}}}}))}}
     else if(!p.out&&p.inVan){p.inVan=false;if(v&&v.out){v.out=false;v.anim={t0:T,dur:3,x0:-8,y0:26.2,x1:2+v.slot*4.2,y1:26.2,done:()=>{v.anim={t0:T,dur:2,x0:v.x,y0:26.2,x1:v.x,y1:21.4}}};p.x=SPOTS.estac.x;p.y=SPOTS.estac.y}else{p.x=SPOTS.puerta.x;p.y=SPOTS.puerta.y}const dk=deskOf(p);goTo(p,dk.x+.2,dk.y+1.1)}});
-  S.people.forEach(p=>{if(p.nuevo){p.nuevo=false;const dk=deskOf(p);goTo(p,dk.x+.2,dk.y+1.1,()=>say(p,'¡Hola!',2))}else if(SEEN===null&&!p.inVan){const dk=deskOf(p);p.x=dk.x+.2;p.y=dk.y+1.1}});
+  S.people.forEach(p=>{if(p.nuevo){p.nuevo=false;const dk=deskOf(p);goTo(p,dk.x+.2,dk.y+1.1,()=>say(p,'¡Hola!',2))}else if(SEEN===null&&!p.inVan){enCasa(p)}});
   S.counts=Object.assign({mail:0,wa:0,tk:0,pres:0},d.counts||{});S.hoy=d.hoy||[];S.peds=d.peds||[];
   // lo que pasa: lo nuevo llega volando a su área
   const items=(d.feed||[]).slice(0,12);
