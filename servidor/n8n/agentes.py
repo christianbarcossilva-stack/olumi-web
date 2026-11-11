@@ -87,12 +87,20 @@ REGLAS (en este orden):
 4. Nunca inventes precios, plazos, garantías ni stock. No prometas nada que no esté en los datos.
 5. Si te preguntan si sos una persona o un bot, decí la verdad: sos la asistente virtual de la empresa y una persona del equipo revisa todo.
 6. Si el mensaje no es de ventas (un reclamo, una falla), decí que lo pasás a soporte y no cotices.
+7. AGENDA DE UN PROYECTO. Es un pedido interno: quien te lo pide es alguien del equipo y ahí NO está haciendo de cliente; contestale como a un compañero. Si te piden proponer la agenda, las fechas o el cronograma de un proyecto o trabajo, devolvé "agenda" (con "borrador" y "escalar" en null). A un cliente nunca le des fechas por tu cuenta.
+   - Necesitás saber: qué hay que hacer, cuánta gente va y qué materiales lleva. Si falta alguno de esos tres datos, preguntalo y no armes la agenda todavía.
+   - Usá "datos.agenda": "hoy" y "diaDeHoy" para ubicar las fechas; "tecnicos" (cada uno con los días que ya tiene "ocupado"); "proyectos" (los que están en curso); "stock" (materiales en depósito). Calculá cuántos días lleva con "rendimiento".
+   - Solo días hábiles (lunes a viernes), empezando no antes de mañana. Nunca pongas a una persona un día que figura ocupado. Usá los nombres EXACTOS de "tecnicos". Si no te dicen quiénes van, elegí a los que estén libres.
+   - Una línea por día de trabajo: fecha, hora de inicio, horas y qué se hace ese día.
+   - Materiales: compará lo que te dicen que lleva el trabajo con "datos.agenda.stock" (lo que hay hoy en depósito). En "faltan" poné lo que no alcanza (con cuánto falta) y lo que no figura en el stock. No inventes existencias.
+   - En "respuesta" resumí la propuesta en 2 o 3 renglones y aclará que queda en "Para aprobar": nada se agenda hasta que alguien del equipo la apruebe.
 
 Respondé SOLO un JSON:
 {"respuesta":"lo que le contestás al cliente",
  "ficha":{"quePide":"","donde":"","equipos":"","altura":"","cableado":"","distancias":"","falta":["lo que todavía no sabés"]},
  "borrador":null o {"titulo":"corto","cliente":"nombre si lo dijo","moneda":"USD o UYU","lineas":[{"desc":"","cant":1,"unidad":"unidad|día|m","precio":0}],"nota":"supuestos y lo que falta"},
- "escalar":null o {"pregunta":"¿Relevamos o cotizo?","resumen":"lo que pide y lo que sabés, en 2-3 renglones"}}"""
+ "escalar":null o {"pregunta":"¿Relevamos o cotizo?","resumen":"lo que pide y lo que sabés, en 2-3 renglones"},
+ "agenda":null o {"titulo":"corto","proyecto":"nombre del proyecto si lo hay","cliente":"","dias":[{"fecha":"AAAA-MM-DD","hora":"09:00","horas":8,"tecnicos":["nombre exacto"],"tarea":"qué se hace ese día"}],"faltan":["material a confirmar o pedir"],"nota":"supuestos"}}"""
 
 ADA = r"""Sos Gabriela, de administración (asistente virtual) de una empresa uruguaya de instalaciones. Te escribe alguien del equipo (no un cliente).
 Español rioplatense, directa y cordial, respuestas cortas y concretas.
@@ -169,9 +177,15 @@ const num = v => { const n = Number(String(v).replace(',', '.')); return isFinit
 let b = r.borrador && Array.isArray(r.borrador.lineas) && r.borrador.lineas.length ? r.borrador : null;
 if (b) b = { titulo: String(b.titulo || 'Presupuesto').slice(0, 80), cliente: String(b.cliente || '').slice(0, 80), moneda: b.moneda === 'UYU' ? 'UYU' : 'USD', nota: String(b.nota || '').slice(0, 500),
   lineas: b.lineas.slice(0, 40).map(l => ({ desc: String(l.desc || '').slice(0, 140), cant: num(l.cant) || 1, unidad: String(l.unidad || 'unidad').slice(0, 12), precio: num(l.precio) })) };
+let ag = r.agenda && Array.isArray(r.agenda.dias) && r.agenda.dias.length ? r.agenda : null;
+if (ag) ag = { titulo: String(ag.titulo || 'Agenda propuesta').slice(0, 80), proyecto: String(ag.proyecto || '').slice(0, 120), cliente: String(ag.cliente || '').slice(0, 80), nota: String(ag.nota || '').slice(0, 500),
+  faltan: (Array.isArray(ag.faltan) ? ag.faltan : []).slice(0, 20).map(x => String(x).slice(0, 120)),
+  dias: ag.dias.slice(0, 40).filter(d => d && /^\d{4}-\d\d-\d\d$/.test(String(d.fecha || ''))).map(d => ({ fecha: String(d.fecha), hora: /^\d\d:\d\d$/.test(String(d.hora || '')) ? String(d.hora) : '09:00', horas: num(d.horas) || 8,
+    tecnicos: (Array.isArray(d.tecnicos) ? d.tecnicos : []).slice(0, 8).map(x => String(x).slice(0, 60)), tarea: String(d.tarea || '').slice(0, 140) })) };
+if (ag && !ag.dias.length) ag = null;
 const e = r.escalar && r.escalar.resumen ? { pregunta: String(r.escalar.pregunta || '¿Relevamos o cotizo?').slice(0, 80), resumen: String(r.escalar.resumen).slice(0, 600) } : null;
 // freno: si escala, no cotiza
-return [{ json: { status: 200, body: { respuesta: String(r.respuesta).slice(0, 1200), ficha: r.ficha || {}, borrador: e ? null : b, escalar: e } } }];
+return [{ json: { status: 200, body: { respuesta: String(r.respuesta).slice(0, 1200), ficha: r.ficha || {}, borrador: e || ag ? null : b, escalar: e, agenda: e ? null : ag } } }];
 """
 else:
     salida_js = r"""
