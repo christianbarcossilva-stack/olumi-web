@@ -240,6 +240,30 @@ a.btn,label.btn{box-sizing:border-box;display:inline-flex;align-items:center;jus
 .gad.ok .btn{min-height:32px;padding:4px 12px}
 .gad.muted{padding:8px 10px;font-size:13px}
 /* fin 1.51g */
+/* 1.51h */
+.mfa{max-width:720px}
+.mfa .actions{margin:12px 0 0}
+.mfa-on{display:flex;gap:12px;align-items:flex-start}
+.mfa-ok{flex:none;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--good,#30a46c) 18%,transparent);color:var(--good,#30a46c)}
+.mfa-alta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 22px;align-items:start}
+.mfa-alta>*:not(.mfa-qr){grid-column:2}
+.mfa-qr{grid-row:1 / span 5;padding:10px;border-radius:16px;background:#fff;border:1px solid var(--line);line-height:0}
+.mfa-qr img{display:block;width:184px;height:184px;image-rendering:pixelated}
+.mfa-pasos{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.45}
+.mfa-pasos .btn{margin:4px 0}
+.mfa-cod{font-family:var(--f-mono,ui-monospace,monospace);font-size:22px!important;letter-spacing:.3em;text-align:center;max-width:220px}
+.mfa-clave summary{cursor:pointer;color:var(--muted);font-size:13px}
+.mfa-clave code{display:inline-block;margin-top:6px;padding:6px 10px;border-radius:8px;background:var(--surface-2);font-size:14px;letter-spacing:.06em;user-select:all;word-break:break-all}
+.mfa-chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;cursor:pointer}
+.mfa-chk input{width:18px;height:18px;margin:2px 0 0;flex:none}
+.mfa-reset{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px}
+.mfa-reset .fld{flex:1 1 220px;margin:0}
+.mfa-obl{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(0 0 0 / .45);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mfa-obl-c{width:min(640px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:24px;border-radius:22px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);border:1px solid var(--line);box-shadow:0 24px 70px rgb(0 0 0 / .35)}
+.mfa-obl-c h2{margin:0 0 6px}
+@media (max-width:699px){.mfa-alta{grid-template-columns:minmax(0,1fr)}.mfa-alta>*:not(.mfa-qr){grid-column:1}.mfa-qr{grid-row:auto;justify-self:center}.mfa-cod{max-width:none}}
+.mfa-add{margin:8px 0!important;color:var(--acc-ink,#1d1d1f)!important}
+/* fin 1.51h */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1789,6 +1813,7 @@ function vAjustesRaw(){
     ${has('marca')?`<div class="fondoprev">${CFG.fondo?.id?`<img src="${esc(blobUrl(CFG.fondo.id))}" alt="Fondo actual">`:'<span class="hint">Sin imagen de fondo: se usa el gris liso.</span>'}${AS?`<label class="btn upl">${CFG.fondo?.id?'Cambiar fondo':'Imagen de fondo'}<input type="file" accept="image/png,image/jpeg,image/webp" data-up="fondo"></label>${CFG.fondo?.id?'<button class="btn ghost" data-act="rmfondo">Quitar fondo</button>':''}`:''}<span class="hint" style="flex-basis:100%">Una foto de la empresa o de una obra, suave, detrás de las pantallas. Se ve atenuada para que el texto se lea bien.</span></div>`:''}<div class="grid">${CFGF.map(f=>fld(f,v[f.k],'s_')).join('')}</div><div class="tools" style="margin-top:14px;justify-content:flex-end"><button class="btn pri" data-act="savecfg">Guardar ajustes</button></div></div>
   `:`<div class="vhead"><div><h1>Ajustes</h1><p class="sub">Tu cuenta, el equipo y cómo se ve Olumi en este dispositivo.</p></div></div>`}${pedidoAjustesHtml()}
   ${isBoss()?cfeAjustesHtml():''}
+  ${mfaAjustesHtml()}
   ${equipoHtml()}
   ${apHtml()}
   ${canMoney()?`<div class="vhead" style="margin-top:34px"><div><h1>Exportar</h1><p class="sub">Archivos CSV que abren en Excel</p></div></div>
@@ -3754,6 +3779,91 @@ async function agAdjAct(k,arg,el){
 document.addEventListener('change',e=>{const s=e.target;if(!s||!s.dataset)return;const k=s.dataset.gadest||s.dataset.gadtipo;if(!k)return;
   AGGS[k]={...(AGGS[k]||{}),[s.dataset.gadest?'dest':'tipo']:s.value};const m=D.agentes_chat&&D.agentes_chat[k];const box=document.getElementById('gad_'+k);if(m&&box)box.outerHTML=agGuardarHtml({...m,id:k})});
 /* === fin 1.51g === */
+/* === 1.51h · doble verificación === */
+/* Doble verificación (código de 6 números de la app Contraseñas del iPhone o de Google Authenticator).
+   Cada persona la activa en Ajustes → Seguridad escaneando un QR. Al entrar en otro equipo, Olumi pide el código.
+   La empresa puede pedirla a dueños y administradores. El dueño puede quitársela a alguien que perdió el teléfono. */
+const MFA={cargado:false,cargando:false,factores:[],alta:null,err:'',ocupado:false};
+const mfaApi=()=>SB&&SB.auth&&SB.auth.mfa;
+const mfaActiva=()=>MFA.factores.some(f=>f.status==='verified');
+const mfaTactil=()=>{try{return matchMedia('(pointer:coarse)').matches}catch(e){return false}};
+const mfaPide=()=>!!CFG.mfaJefes&&['owner','admin'].includes(ROLE)&&!SOPORTE;
+async function mfaCarga(){if(MFA.cargando||!mfaApi())return;MFA.cargando=true;
+  try{const {data,error}=await mfaApi().listFactors();if(!error){MFA.factores=(data&&data.all)||[];MFA.cargado=true}}catch(e){}
+  MFA.cargando=false;mfaPinta()}
+async function mfaPaso(){const api=mfaApi();if(!api||!api.getAuthenticatorAssuranceLevel)return true;
+  try{const {data,error}=await api.getAuthenticatorAssuranceLevel();if(error||!data)return true;
+    if(data.nextLevel==='aal2'&&data.currentLevel!=='aal2'){showAuth('mfa');return false}}catch(e){}
+  return true}
+function mfaAuthHtml(err){return`<h2>Código de verificación</h2><p class="muted">Tu cuenta tiene doble verificación. Abrí la app Contraseñas del iPhone (o la app de códigos que usaste) y escribí los 6 números de Olumi.</p>
+  <form data-form="mfa" class="authform"><label class="fld" for="a_mfa"><span>Código</span><input id="a_mfa" class="mfa-cod" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required></label>${err}<button class="btn pri" type="submit">Entrar</button></form>
+  <p class="hint" style="text-align:center;margin-top:14px">¿Perdiste el teléfono? Pedile al dueño de tu empresa que te quite la doble verificación desde Ajustes → Seguridad. <button type="button" class="btn ghost" data-act="logout">Entrar con otra cuenta</button></p>`}
+async function mfaVerificar(){const code=(($('#a_mfa')||{}).value||'').replace(/\D/g,'');
+  if(code.length!==6)throw new Error('Escribí los 6 números del código.');
+  const {data,error}=await mfaApi().listFactors();if(error)throw error;const f=(data.totp||[])[0];if(!f)throw new Error('No encontramos tu doble verificación. Probá entrar de nuevo.');
+  const r=await mfaApi().challengeAndVerify({factorId:f.id,code});if(r.error)throw new Error(/invalid|incorrect|verification/i.test(r.error.message||'')?'El código no es correcto o ya cambió. Mirá el que está ahora en el teléfono.':(r.error.message||'No se pudo verificar.'));
+  MFA.cargado=false;await boot()}
+const mfaFecha=f=>{try{return new Date(f.updated_at||f.created_at).toLocaleDateString('es-UY',{day:'numeric',month:'long',year:'numeric'})}catch(e){return''}};
+function mfaBoxHtml(){
+  if(!mfaApi())return'<p class="muted" style="margin:0">La doble verificación no está disponible en esta vista.</p>';
+  if(!MFA.cargado){mfaCarga();return'<p class="muted" style="margin:0">Cargando…</p>'}
+  const err=MFA.err?`<p class="err" role="alert">${esc(MFA.err)}</p>`:'';
+  if(MFA.alta){const a=MFA.alta,sec=String(a.secret||'').replace(/(.{4})/g,'$1 ').trim();
+    return`<div class="mfa-alta"><div class="mfa-qr">${a.qr?`<img src="${esc(a.qr)}" alt="Código QR para la doble verificación de Olumi" width="184" height="184">`:''}</div>
+      <ol class="mfa-pasos">
+        <li>${mfaTactil()?`Si estás en el teléfono que vas a usar:<br><a class="btn pri mfa-add" href="${esc(a.uri)}">Agregar en este teléfono</a><br>Si no, abrí la cámara del iPhone y apuntá al código.`:'Abrí la cámara del iPhone y apuntá al código. Tocá el aviso que aparece y elegí guardarlo en Contraseñas.'}</li>
+        <li>En Android usá Google Authenticator → <b>+</b> → Escanear un código QR.</li>
+        <li>Escribí acá los 6 números que aparecen para Olumi.</li></ol>
+      <label class="fld"><span>Código</span><input id="mfa_cod" class="mfa-cod" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
+      <details class="mfa-clave"><summary>¿No podés escanear? Usá esta clave</summary><code>${esc(sec)}</code></details>
+      ${err}<div class="actions"><button type="button" class="btn pri" data-mfa="confirmar"${MFA.ocupado?' disabled':''}>Confirmar y activar</button><button type="button" class="btn ghost" data-mfa="cancelar">Cancelar</button></div></div>`}
+  if(mfaActiva()){const f=MFA.factores.find(x=>x.status==='verified');
+    return`<div class="mfa-on"><span class="mfa-ok" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16"><path d="m3.5 8.3 3 3 6-6.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Doble verificación activada</b><p class="muted" style="margin:2px 0 0">Desde el ${esc(mfaFecha(f))}. Al entrar en otro equipo, Olumi te pide el código del teléfono.</p></div></div>
+      ${err}<div class="actions"><button type="button" class="btn ghost danger" data-mfa="baja">Desactivar</button></div>`}
+  return`<p style="margin:0 0 10px">Además de la contraseña, al entrar en un equipo nuevo Olumi te pide un código de 6 números que cambia cada 30 segundos y solo está en tu teléfono. Si alguien consigue tu contraseña, igual no puede entrar.</p>
+    ${mfaPide()?'<p class="hint" style="margin:0 0 10px"><b>Tu empresa la pide</b> para dueños y administradores.</p>':''}${err}<div class="actions"><button type="button" class="btn pri" data-mfa="alta"${MFA.ocupado?' disabled':''}>Activar doble verificación</button></div>`}
+function mfaEmpresaHtml(){if(!isBoss()||SOPORTE||readonly)return'';
+  const ms=Object.values(MEMBERS).filter(m=>m.user_id!==ME&&!['cliente','pendiente'].includes(m.role)).sort((a,b)=>(a.display_name||'').localeCompare(b.display_name||'','es'));
+  return`<div class="panel mfa" style="margin-top:12px"><h3 style="margin:0 0 6px">Para toda la empresa</h3>
+    <label class="mfa-chk"><input type="checkbox" data-mfa="pedir"${CFG.mfaJefes?' checked':''}><span>Pedir doble verificación a dueños y administradores. Hasta que la activen, Olumi les muestra cómo hacerlo cada vez que entran.</span></label>
+    ${ms.length?`<div class="mfa-reset"><label class="fld"><span>Si alguien perdió el teléfono</span><select id="mfa_quien">${opts([['','Elegí a la persona'],...ms.map(m=>[m.user_id,m.display_name||m.email||''])],'')}</select></label><button type="button" class="btn" data-mfa="reset">Quitarle la doble verificación</button></div><p class="hint" style="margin:6px 0 0">Después la vuelve a activar desde su teléfono nuevo.</p>`:''}</div>`}
+function mfaAjustesHtml(){return`<div class="vhead" style="margin-top:34px"><div><h1>Seguridad</h1><p class="sub">Doble verificación para entrar a Olumi</p></div></div><div class="panel mfa" id="mfaBox">${mfaBoxHtml()}</div>${mfaEmpresaHtml()}`}
+function mfaPinta(){const b=document.getElementById('mfaBox');if(b)b.innerHTML=mfaBoxHtml();const o=document.getElementById('mfaObl');if(o){const x=o.querySelector('.mfa-obl-box');if(x)x.innerHTML=mfaBoxHtml();if(mfaActiva()&&!MFA.alta)o.remove()}}
+async function mfaAlta(){const api=mfaApi();MFA.err='';MFA.ocupado=true;mfaPinta();
+  try{const {data:l}=await api.listFactors();for(const f of ((l&&l.all)||[]).filter(f=>f.status!=='verified'))await api.unenroll({factorId:f.id}).catch(()=>{});
+    const {data,error}=await api.enroll({factorType:'totp',friendlyName:'Olumi '+new Date().toISOString().slice(0,16),issuer:'Olumi'});if(error)throw error;
+    MFA.alta={id:data.id,qr:data.totp&&data.totp.qr_code,secret:data.totp&&data.totp.secret,uri:data.totp&&data.totp.uri}}
+  catch(e){MFA.err=/disabled|not enabled|mfa_totp_enroll/i.test(e&&e.message||'')?'La doble verificación todavía no está prendida en el servidor.':'No se pudo empezar. Probá de nuevo.'}
+  MFA.ocupado=false;mfaPinta();setTimeout(()=>document.getElementById('mfa_cod')?.focus(),50)}
+async function mfaConfirmar(){if(MFA.ocupado)return;const code=((document.getElementById('mfa_cod')||{}).value||'').replace(/\D/g,'');MFA.err='';
+  if(code.length!==6){MFA.err='Escribí los 6 números que muestra el teléfono.';mfaPinta();return}
+  MFA.ocupado=true;try{const r=await mfaApi().challengeAndVerify({factorId:MFA.alta.id,code});if(r.error)throw r.error;MFA.alta=null;MFA.cargado=false;toast('Doble verificación activada');await mfaCarga()}
+  catch(e){MFA.err='El código no es correcto o ya cambió. Probá con el que está ahora en el teléfono.'}
+  MFA.ocupado=false;mfaPinta()}
+async function mfaBaja(el){if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Desactivar? Tocá de nuevo';return}armed=null;MFA.err='';
+  try{for(const f of MFA.factores.filter(f=>f.status==='verified')){const r=await mfaApi().unenroll({factorId:f.id});if(r.error)throw r.error}toast('Doble verificación desactivada');MFA.cargado=false;await mfaCarga()}
+  catch(e){MFA.err=/aal2|insufficient/i.test((e&&(e.code||e.message))||'')?'Para desactivarla, cerrá sesión y volvé a entrar con el código. Después probá de nuevo.':'No se pudo desactivar.';mfaPinta()}}
+async function mfaReset(el){const uid_=(document.getElementById('mfa_quien')||{}).value;if(!uid_){toast('Elegí a la persona.');return}
+  if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=`¿Quitársela a ${personName(uid_)}? Tocá de nuevo`;return}armed=null;el.disabled=true;
+  try{const tk=await agToken();const r=await fetch(CFGX.supabaseUrl+'/functions/v1/mfa-reset',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tk},body:JSON.stringify({org:ORG,user:uid_})});
+    if(r.status===404)throw new Error('Falta prender esta función en el servidor.');const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'No se pudo.');
+    toast(j.quitados?`Listo: ${personName(uid_)} ya puede entrar solo con su contraseña`:`${personName(uid_)} no tenía doble verificación`)}
+  catch(e){toast(e.message||'No se pudo.')}finally{el.disabled=false;el.textContent=el.dataset.orig||'Quitarle la doble verificación';el.classList.remove('arm')}}
+async function mfaPedir(chk){try{await saveCfg({...CFG,mfaJefes:!!chk.checked});toast(chk.checked?'Se la va a pedir a dueños y administradores':'Ya no se la pide')}catch(e){chk.checked=!chk.checked;handleErr(e)}}
+let MFA_OBL_T=0;
+async function mfaRevisaObligatoria(){if(!mfaPide()||document.getElementById('mfaObl')||!mfaApi()||mode!=='live')return;
+  if(!MFA.cargado){await mfaCarga();if(!MFA.cargado)return}if(mfaActiva())return;
+  const o=document.createElement('div');o.id='mfaObl';o.className='mfa-obl';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-labelledby','mfaOblT');
+  o.innerHTML=`<div class="mfa-obl-c"><h2 id="mfaOblT">Activá la doble verificación</h2><p class="muted">${esc(CFG.nombre||(ORGINFO&&ORGINFO.name)||'Tu empresa')} la pide para dueños y administradores. Lleva un minuto.</p><div class="mfa-obl-box">${mfaBoxHtml()}</div><p class="hint" style="margin-top:12px"><button type="button" class="btn ghost" data-act="logout">Cerrar sesión</button></p></div>`;
+  document.body.append(o)}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-mfa]');if(!b||b.type==='checkbox')return;const k=b.dataset.mfa;
+  if(k==='alta')mfaAlta();else if(k==='confirmar')mfaConfirmar();else if(k==='cancelar'){const id=MFA.alta&&MFA.alta.id;MFA.alta=null;MFA.err='';mfaPinta();if(id)mfaApi().unenroll({factorId:id}).catch(()=>{})}
+  else if(k==='baja')mfaBaja(b);else if(k==='reset')mfaReset(b)});
+document.addEventListener('change',e=>{const c=e.target;if(c&&c.dataset&&c.dataset.mfa==='pedir')mfaPedir(c)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='mfa_cod'){e.preventDefault();mfaConfirmar()}});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('mfa-cod')){const v=t.value.replace(/\D/g,'').slice(0,6);if(v!==t.value)t.value=v;if(v.length===6&&t.id==='mfa_cod')mfaConfirmar()}});
+setInterval(()=>{if(++MFA_OBL_T%2===0)mfaRevisaObligatoria()},2500);
+/* === fin 1.51h === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -7461,6 +7571,8 @@ function renderAuth(){
     body=`<h2>Elegí tu contraseña</h2><p class="muted">Con esta contraseña vas a entrar a Olumi desde la app o la web.</p><form data-form="setpass" class="authform"><label class="fld" for="a_pass"><span>Contraseña nueva</span><input id="a_pass" type="password" autocomplete="new-password" minlength="6" required></label>${err}<button class="btn pri" type="submit">Guardar y entrar</button></form>`;
   }else if(authMode==='pedido'||authMode==='pedidook'){
     body=pedidoHtml();
+  }else if(authMode==='mfa'){
+    body=mfaAuthHtml(err);
   }else if(authMode==='config'){
     body=`<h2>Falta conectar el servidor</h2><p class="muted">Completá el archivo <b>www/config.js</b> con la URL y la clave pública de tu proyecto de Supabase.</p>`;
   }
@@ -7485,6 +7597,7 @@ document.addEventListener('submit',async e=>{
   try{
     const k=f.dataset.form;
     if(k==='pedido'){await pedidoSend();return}
+    if(k==='mfa'){await mfaVerificar();return}
     if(k==='forgot'){const {error}=await SB.auth.resetPasswordForEmail($('#a_email').value.trim(),{redirectTo:PORTAL_URL});if(error)throw error;authMode='sent';renderAuth();return}
     if(k==='setpass'){const {error}=await SB.auth.updateUser({password:$('#a_pass').value});if(error)throw error;PASSDONE=true;history.replaceState(null,'',location.pathname);await boot();return}
     if(k==='login'){const {error}=await SB.auth.signInWithPassword({email:$('#a_email').value.trim(),password:$('#a_pass').value});if(error)throw error;await boot()}
@@ -7567,6 +7680,7 @@ async function boot(){
   if(!session){clearTimeout(slowT);showAuth('login');return}
   ME=session.user.id;
   if(/type=(invite|recovery)/.test(AUTHHASH)&&!PASSDONE){clearTimeout(slowT);showAuth('setpass');return}
+  if(!await mfaPaso()){clearTimeout(slowT);return}
   try{const {data:nc}=await SB.rpc('claim_invites');if(nc>0){const r=await SB.from('members').select('org_id,created_at').eq('user_id',ME).order('created_at',{ascending:false}).limit(1);const nw=(r.data||[])[0];if(nw)lsSet('olumi.org',nw.org_id)}}catch(e){}
   let {data:mems,error}=await SB.from('members').select('org_id,role,orgs(name,join_code)').eq('user_id',ME);
   if(error&&netErr(error)){const c=lsJ('olumi.mems.'+ME);if(c&&c.length){mems=c;error=null;OFF.stale=true}}
