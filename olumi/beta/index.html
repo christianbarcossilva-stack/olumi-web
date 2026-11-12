@@ -191,6 +191,22 @@ a.btn,label.btn{box-sizing:border-box;display:inline-flex;align-items:center;jus
 .pdfok-b{display:flex;gap:8px}.pdfok-b .btn{flex:1}.pdfok-b .btn.pri{flex:1.6}
 .pdfok-x{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:0;background:var(--surface-2);color:var(--muted);font-size:14px;cursor:pointer}
 /* fin 1.51e */
+/* 1.51f */
+@media (max-width:699px){
+  #sheet .sh-f.pie-m{flex-wrap:nowrap;position:relative;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+  #sheet .sh-f.pie-m>.btn{flex:0 0 auto}
+  #sheet .sh-f.pie-m>.btn.pri{min-width:112px}
+  #sheet .sh-f.pie-sin-cancelar>[data-act="close"]{display:none}
+  .pie-mas{display:inline-flex;align-items:center;gap:6px}
+  .pie-mas svg{fill:currentColor}
+  .pie-menu{position:absolute;right:12px;bottom:calc(100% + 8px);z-index:5;display:flex;flex-direction:column;min-width:220px;max-width:calc(100% - 24px);padding:6px;border-radius:16px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);border:1px solid var(--line);box-shadow:0 16px 40px rgb(0 0 0 / .24)}
+  .pie-menu[hidden]{display:none}
+  html #sheet .pie-menu>.btn{justify-content:flex-start;width:100%;border:0;background:none;border-radius:10px;box-shadow:none;padding:11px 12px;min-height:44px;font-weight:500;white-space:normal;text-align:left}
+  html #sheet .pie-menu>.btn:hover,html #sheet .pie-menu>.btn:active{background:var(--surface-2)}
+  html #sheet .pie-menu>.btn.danger{color:var(--bad);order:9;margin-top:5px;position:relative}
+  html #sheet .pie-menu>.btn.danger::before{content:"";position:absolute;left:12px;right:12px;top:-3px;border-top:1px solid var(--line)}
+}
+/* fin 1.51f */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -3562,6 +3578,42 @@ function pdfListo(name,u8){
   setTimeout(()=>{if(box.isConnected)cierra()},60000);
 }
 /* === fin 1.51e === */
+/* === 1.51f · pie de las fichas en un renglón === */
+/* Pie de las fichas en el teléfono: un solo renglón. Sin «Cancelar» (la ✕ de arriba hace lo mismo)
+   y, si no entran, lo que no es Guardar pasa al menú «Más». En la computadora queda como siempre. */
+const PIE_MQ=matchMedia('(max-width:699px)');let PIE_OCUP=false;
+function pieMenuCierra(f){const m=f&&f.querySelector('.pie-menu');if(m){m.hidden=true;f.querySelector('.pie-mas')?.setAttribute('aria-expanded','false')}}
+function pieRestaura(f){const m=f.querySelector('.pie-menu'),mas=f.querySelector('.pie-mas');if(m){const ref=mas||f.querySelector('.btn.pri');[...m.children].forEach(b=>ref?ref.before(b):f.append(b));m.remove()}if(mas)mas.remove();f.classList.remove('pie-m','pie-con-mas')}
+function pieAjusta(){
+  const sh=document.getElementById('sheet');const f=sh&&sh.querySelector(':scope > .sh-f');if(!f||PIE_OCUP)return;
+  PIE_OCUP=true;
+  try{
+    const abierto=f.querySelector('.pie-menu')&&!f.querySelector('.pie-menu').hidden;
+    pieRestaura(f);if(!PIE_MQ.matches)return;
+    const x=sh.querySelector('.sh-h [data-act="close"]');f.classList.add('pie-m');f.classList.toggle('pie-sin-cancelar',!!x);
+    if(f.scrollWidth<=f.clientWidth+1)return;
+    const pri=f.querySelector('.btn.pri');
+    const sec=[...f.children].filter(b=>b.matches('button,a.btn,label.btn')&&!b.classList.contains('pri')&&!(x&&b.dataset.act==='close')&&b.offsetParent!==null);
+    if(!sec.length)return;
+    const mas=document.createElement('button');mas.type='button';mas.className='btn pie-mas';mas.setAttribute('aria-haspopup','menu');mas.setAttribute('aria-expanded','false');
+    mas.innerHTML='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>Más';
+    const menu=document.createElement('div');menu.className='pie-menu';menu.setAttribute('role','menu');menu.hidden=!abierto;
+    sec.forEach(b=>{b.setAttribute('role','menuitem');menu.append(b)});
+    (pri||f.lastElementChild).before(mas);f.append(menu);f.classList.add('pie-con-mas');mas.setAttribute('aria-expanded',String(abierto));
+  }finally{setTimeout(()=>{PIE_OCUP=false},0)}
+}
+let PIE_RAF=0;const piePide=()=>{cancelAnimationFrame(PIE_RAF);PIE_RAF=requestAnimationFrame(pieAjusta)};
+document.addEventListener('click',e=>{
+  const sh=document.getElementById('sheet');const f=sh&&sh.querySelector(':scope > .sh-f');if(!f)return;
+  const mas=e.target.closest&&e.target.closest('.pie-mas');
+  if(mas){e.preventDefault();e.stopPropagation();const m=f.querySelector('.pie-menu');if(m){m.hidden=!m.hidden;mas.setAttribute('aria-expanded',String(!m.hidden))}return}
+  const it=e.target.closest&&e.target.closest('.pie-menu > *');
+  if(it){setTimeout(()=>{if(!it.classList.contains('arm'))pieMenuCierra(f)},60);return}
+  if(!(e.target.closest&&e.target.closest('.pie-menu')))pieMenuCierra(f);
+},true);
+{const mira=()=>{const sh=document.getElementById('sheet');if(sh)new MutationObserver(()=>{if(!PIE_OCUP)piePide()}).observe(sh,{childList:true,subtree:true,characterData:true})};document.getElementById('sheet')?mira():document.addEventListener('DOMContentLoaded',mira)}
+addEventListener('resize',piePide);PIE_MQ.addEventListener&&PIE_MQ.addEventListener('change',piePide);
+/* === fin 1.51f === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
