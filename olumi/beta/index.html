@@ -122,6 +122,9 @@ body.cal-drag{cursor:grabbing;-webkit-user-select:none;user-select:none}
   .cg[style*="--n:7"] .ce b{white-space:normal;overflow-wrap:anywhere}
   .cg[style*="--n:7"] .cg-chip{padding:2px 3px;font-size:10px}
 }
+
+.calh{margin:0 0 10px;font-size:15px;font-weight:650}
+ul.pasos{list-style:disc}
 /* fin 1.50 */
 </style>
 <script src="config.js"></script>
@@ -2479,7 +2482,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.50',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.51',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -2872,7 +2875,7 @@ const m2hm=m=>{m=Math.max(0,Math.min(1439,Math.round(m)));return String(Math.flo
 const calDurTxt=m=>m<60?m+' min':qty(Math.round(m/15)/4)+' h';
 const calMedio=()=>{const h=new Date();h.setHours(12,0,0,0);return h};
 const calSel=()=>`<select id="calV" data-ch="calV" aria-label="Vista">${opts([['dia','Día'],['3dias','3 días'],['semana','Semana'],['quincena','Quincena'],['mes','Mes']],CALV)}</select>`;
-const calImpBtn=()=>calMueve()?'<button class="btn" data-new="calimp">Traer de Google</button>':'';
+const calImpBtn=()=>!readonly?'<button class="btn" data-new="calimp">Conectar calendarios</button>':'';
 
 function calVista(v){
   const antes=CALV,hoy=calMedio(),base=calStart?new Date(calStart):hoy;CALV=v;try{lsSet('crm.calv',v)}catch(e){}
@@ -2899,8 +2902,8 @@ function calDatos(days){
   }
   const d0=days[0],dn=days[days.length-1];
   for(const e of arr('eventos')){
-    if(!e.fecha||(calTec&&e.de!==calTec))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
-    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:e.titulo||'Evento',sub:(e.tentativo?'Tentativo'+(e.lugar?' · ':''):'')+(e.lugar||''),col:calCol(e,null),tent:!!e.tentativo};
+    if(!e.fecha||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
+    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:e.titulo||'Evento',sub:[e.tentativo?'Tentativo':'',e.privado?'Privado':'',e.lugar||''].filter(Boolean).join(' · '),col:calCol(e,null),tent:!!e.tentativo};
     if(ini==null){for(const d of days)if(d>=e.fecha&&d<=fin)out[d].a.push(it)}else if(set.has(e.fecha))out[e.fecha].t.push(it);
   }
   return out;
@@ -3034,7 +3037,7 @@ document.addEventListener('contextmenu',e=>{if(CALDR.el&&CALDR.tactil)e.preventD
 /* --- eventos propios --- */
 const EVF=()=>[{k:'titulo',l:'Título',w:'full',ph:'Ej.: Reunión con el contador'},{k:'fecha',l:'Fecha',t:'date'},{k:'hora',l:'Hora',t:'time'},
   {k:'duracion',l:'Duración (horas)',t:'number',step:'0.25'},{k:'todoDia',l:'Todo el día',t:'checkbox'},{k:'hasta',l:'Hasta (si dura varios días)',t:'date'},
-  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'de',l:'De quién es',t:'person'},{k:'etiqueta',l:'Etiqueta de color',t:'select',o:[['','Sin etiqueta'],...calEts().map(e=>[e.id,e.n])]},{k:'tentativo',l:'Tentativo (queda en gris)',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
+  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'de',l:'De quién es',t:'person'},{k:'etiqueta',l:'Etiqueta de color',t:'select',o:[['','Sin etiqueta'],...calEts().map(e=>[e.id,e.n])]},{k:'tentativo',l:'Tentativo (queda en gris)',t:'checkbox'},{k:'privado',l:'Privado (solo lo ves vos)',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
 function sheetEv(id,p){
   const e=id?{...D.eventos[id]}:{fecha:p.date||today(),hora:p.hora||'09:00',duracion:1,de:ME||''};e.todoDia=!e.hora;
   return sheetFrame('Evento',id?(e.titulo||'Evento'):'Nuevo evento',`<div class="grid">${EVF().map(f=>fld(f,e[f.k])).join('')}</div>${e.origen==='google'?'<p class="hint" style="margin-top:10px">Vino de Google Calendar. Lo que cambies acá no cambia en Google.</p>':''}<p class="err" id="shErr" hidden></p>`,{del:!!id});
@@ -3043,9 +3046,9 @@ async function saveEv(){
   const v=readForm(EVF()),er=$('#shErr');if(!v.titulo||!v.fecha){er.textContent=!v.titulo?'Ponele un título al evento.':'Elegí la fecha.';er.hidden=false;return}
   const base=SH.id?{...D.eventos[SH.id]}:{creado:Date.now()},e={...base,...v};
   if(v.todoDia){e.hora='';e.duracion=0;if(!e.hasta||e.hasta<=e.fecha)delete e.hasta}else{e.hora=e.hora||'09:00';e.duracion=Math.max(.25,n0(e.duracion)||1);delete e.hasta}
-  delete e.todoDia;await put('eventos',SH.id||uid(),e);toast('Evento guardado');closeSheet();
+  delete e.todoDia;if(e.privado)e.de=ME||e.de;await put('eventos',SH.id||uid(),e);toast('Evento guardado');closeSheet();
 }
-const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||(calTec&&e.de!==calTec))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
+const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
   for(const d of days)if(d>=e.fecha&&d<=fin)(o[d]=o[d]||[]).push(e)}
   for(const d in o)o[d].sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));return o};
 const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''} title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
@@ -3153,11 +3156,13 @@ async function zipLeer(buf){
 const icsGoogle=()=>arr('eventos').filter(e=>e.origen==='google');
 function sheetCalImp(){
   ICS=null;const ya=icsGoogle().length;
-  return sheetFrame('Calendario','Traer de Google Calendar',`<ol class="pasos"><li>En una computadora abrí <b>calendar.google.com</b>, tocá la rueda de arriba a la derecha → <b>Configuración</b> → <b>Importar y exportar</b> → <b>Exportar</b>. Se baja un archivo .zip.</li><li>Elegí ese archivo acá abajo (el .zip tal cual, o los .ics que trae adentro).</li><li>Revisá la lista, destildá lo que no quieras y tocá Importar.</li></ol>
+  feedCarga().then(()=>{const b=$('#feedBox');if(b)b.innerHTML=feedHtml()});
+  return sheetFrame('Calendario','Conectar calendarios',`<h3 class="calh">Ver Olumi en el calendario de tu teléfono</h3><div id="feedBox">${feedHtml()}</div>
+    <details class="more" id="icsDet" style="margin-top:18px"><summary>Traer lo de Google Calendar a Olumi (una sola vez)</summary><ol class="pasos" style="margin-top:12px"><li>En una computadora abrí <b>calendar.google.com</b>, tocá la rueda de arriba a la derecha → <b>Configuración</b> → <b>Importar y exportar</b> → <b>Exportar</b>. Se baja un archivo .zip.</li><li>Elegí ese archivo acá abajo (el .zip tal cual, o los .ics que trae adentro).</li><li>Revisá la lista, destildá lo que no quieras y tocá Importar.</li></ol>
     <div class="actions"><label class="btn upl">Elegir el archivo de Google<input type="file" data-ics accept=".ics,.zip,text/calendar,application/zip" multiple></label></div>
     <div id="icsOut"></div>
-    ${ya?`<p class="hint" style="margin-top:14px">Ya hay ${pl(ya,'evento traído','eventos traídos')} de Google. Si volvés a importar no se duplican: se actualizan. <button class="btn ghost danger" data-act="icsquitar">Quitarlos</button></p>`:''}
-    <p class="err" id="shErr" hidden></p>`,{saveLabel:'Importar'});
+    ${ya?`<p class="hint" style="margin-top:14px">Ya hay ${pl(ya,'evento traído','eventos traídos')} de Google. Si volvés a importar no se duplican: se actualizan. <button class="btn ghost danger" data-act="icsquitar">Quitarlos</button></p>`:''}</details>
+    <p class="err" id="shErr" hidden></p>`,{saveLabel:'Listo'});
 }
 function icsLista(){const t=today(),desde=ICS.modo==='todo'?'0000':ICS.modo==='anio'?dMas(t,-365):t;return ICS.evs.filter(e=>(e.hasta||e.fecha)>=desde&&!ICS.calOff.has(e.cal))}
 function icsBoton(){const b=$('#sheet [data-act=save]');if(!b||!ICS)return;const n=icsLista().filter(e=>!ICS.off.has(e.id)).length;b.textContent=n?`Importar ${pl(n,'evento','eventos')}`:'Nada para importar';b.disabled=!n}
@@ -3185,7 +3190,7 @@ document.addEventListener('change',async e=>{
   }catch(x){o.innerHTML=`<p class="note" style="margin-top:12px">No pude leer ese archivo${x&&x.message==='zip-metodo'?': descomprimí el .zip y elegí los .ics que trae adentro':''}.</p>`}
 });
 async function saveCalImp(){
-  if(!ICS){toast('Elegí primero el archivo de Google');return}
+  if(!ICS){closeSheet();return}
   const L=icsLista().filter(e=>!ICS.off.has(e.id));if(!L.length)return;const de=ICS.de||ME||'',b=$('#sheet [data-act=save]');let n=0,nuevos=0;
   for(let i=0;i<L.length;i+=6){
     await Promise.all(L.slice(i,i+6).map(async e=>{const {id,cal,...x}=e,prev=D.eventos[id];if(!prev)nuevos++;await put('eventos',id,{...(prev||{creado:Date.now()}),...x,calendario:cal,origen:'google',de:prev&&prev.de?prev.de:de});n++}));
@@ -3208,6 +3213,17 @@ async function calAct(k,el,arg){
   if(k==='calqdel'){const o=calqDoc();if(!o)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Eliminar? Tocá de nuevo';return true}armed=null;try{await remove(o.col,o.id)}catch(x){handleErr(x)}calqCierra();toast('Eliminado');sr();return true}
   if(k==='cetadd'){cetLee();CET.push({id:uid(),n:'',c:CETPAL[CET.length%CETPAL.length]});$('#cetL').innerHTML=cetFilas();const i=document.querySelectorAll('.cetr input[type=text]');if(i.length)i[i.length-1].focus();return true}
   if(k==='cetrm'){cetLee();CET.splice(+arg,1);$('#cetL').innerHTML=cetFilas();return true}
+  if(k==='feedon'||k==='feednew'||k==='feedoff'||k==='feedalc'||k==='feedcopy'){
+    const pinta=()=>{const b=$('#feedBox');if(b)b.innerHTML=feedHtml()},mio={user_id:ME,org_id:ORG};
+    if(k==='feedcopy'){try{await navigator.clipboard.writeText(feedDir());toast('Dirección copiada')}catch(e){const i=$('#feedTxt');if(i){i.hidden=false;i.value=feedDir();i.focus();i.select()}}return true}
+    if((k==='feednew'||k==='feedoff')&&armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=k==='feedoff'?'¿Apagar? Tocá de nuevo':'La anterior deja de andar. Tocá de nuevo';return true}
+    armed=null;el.disabled=true;
+    try{
+      if(k==='feedoff'){const r=await SB.from('cal_tokens').delete().match(mio);if(r&&r.error)throw r.error;FEED.tok=null;toast('Listo: esa dirección ya no muestra nada')}
+      else if(k==='feedalc'){const r=await SB.from('cal_tokens').update({alcance:arg}).match(mio);if(r&&r.error)throw r.error;FEED.alc=arg}
+      else{const tok=feedLlave(),r=await SB.from('cal_tokens').upsert({...mio,token:tok,alcance:FEED.alc||'mio'},{onConflict:'user_id,org_id'});if(r&&r.error)throw r.error;FEED.tok=tok;toast(k==='feednew'?'Dirección nueva: volvé a agregarla en tu teléfono':'Dirección creada')}
+    }catch(x){toast('No se pudo. Probá de nuevo en un rato.')}
+    pinta();return true}
   if(k==='icsmodo'){if(ICS){ICS.modo=arg;icsPinta()}return true}
   if(k==='icsquitar'){
     if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Quitar todos? Tocá de nuevo';return true}
@@ -3264,6 +3280,30 @@ document.addEventListener('change',async e=>{
   calqPinta();
 });
 document.addEventListener('keydown',e=>{if(!CQ)return;if(e.key==='Escape'){calqCierra();return}if(e.key==='Enter'&&e.target.closest&&e.target.closest('.cq')&&e.target.tagName==='INPUT'){e.preventDefault();e.target.blur()}});
+
+/* --- Olumi en el calendario del teléfono: cada persona tiene una dirección propia (función "agenda" del servidor) que el iPhone, Google Calendar u Outlook leen solos --- */
+const FEED={tok:null,alc:'mio',listo:false,falta:false,demo:false};
+const feedLlave=()=>{const b=new Uint8Array(30);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')};
+const feedDir=()=>String(CFGX.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/agenda?t='+FEED.tok;
+async function feedCarga(){
+  FEED.falta=false;FEED.demo=false;
+  if(mode!=='live'||!SB||!ME||!ORG){FEED.demo=true;FEED.listo=true;return}
+  try{const r=await SB.from('cal_tokens').select('token,alcance').eq('user_id',ME).eq('org_id',ORG);if(r.error)FEED.falta=true;else{const f=(r.data||[])[0];FEED.tok=f?f.token:null;FEED.alc=f?f.alcance:'mio'}}catch(e){FEED.falta=true}
+  FEED.listo=true;
+}
+function feedHtml(){
+  if(!FEED.listo)return'<p class="hint">Cargando…</p>';
+  if(FEED.demo)return'<p class="hint">Esto se prende cuando entrás con tu cuenta.</p>';
+  if(FEED.falta)return'<p class="note">Todavía no está prendido en el servidor: falta correr la actualización «calendario-1.51» en Supabase.</p>';
+  if(!FEED.tok)return`<p class="hint" style="margin:0 0 12px">Tus trabajos, seguimientos y eventos de Olumi aparecen en el calendario de tu teléfono, al lado de tu Google Calendar, y se actualizan solos.</p><div class="actions"><button class="btn pri" data-act="feedon">Crear mi dirección</button></div>`;
+  const d=feedDir(),w=d.replace(/^https?:/,'webcal:');
+  return`<div class="actions"><a class="btn pri" href="${esc(w)}">Agregar al calendario del iPhone</a><button class="btn" data-act="feedcopy">Copiar la dirección</button></div>
+    <input type="text" id="feedTxt" readonly hidden aria-label="Dirección de tu calendario" style="margin-top:8px">
+    ${isLead()?`<div class="seg" role="group" aria-label="Qué mostrar" style="margin-top:12px">${[['mio','Solo lo mío'],['equipo','Todo el equipo']].map(([k,n])=>`<button type="button" class="${FEED.alc===k?'on':''}" data-act="feedalc:${k}">${n}</button>`).join('')}</div>`:''}
+    <ul class="pasos" style="margin-top:12px"><li><b>iPhone o Mac:</b> tocá «Agregar al calendario del iPhone» y después «Suscribirse».</li><li><b>Google Calendar</b> (Android o computadora): copiá la dirección y pegala en «Otros calendarios» → «+» → «Desde URL».</li></ul>
+    <p class="hint">El teléfono la vuelve a leer cada tanto, no al instante. La dirección es una llave: quien la tenga puede ver ese calendario (solo ver). Si se te escapó, cambiala.</p>
+    <div class="actions"><button class="btn ghost" data-act="feednew">Cambiar la dirección</button><button class="btn ghost danger" data-act="feedoff">Apagar</button></div>`;
+}
 /* === fin 1.50 === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
