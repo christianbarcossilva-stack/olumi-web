@@ -264,6 +264,7 @@ const BRANDS = [
     steps: ['Entrá a <b>unifi.ui.com</b> con la cuenta que administra a tus clientes.', 'Abrí <b>API</b> (abajo a la izquierda) y tocá <b>Create API Key</b>.', 'Copiala (UniFi la muestra una sola vez), pegala acá y tocá <b>Guardar</b>.'] },
   { k: 'meraki', n: 'Cisco Meraki', c: '#5B9F3A', ab: 'MK', via: 'Nube', ready: true, what: 'Switches, Wi-Fi, firewalls y cámaras MV.', how: 'Clave de API del Dashboard de Meraki.',
     steps: ['Entrá a <b>dashboard.meraki.com</b>.', 'En <b>Organización → API y webhooks</b> activá el acceso por API.', 'En <b>Mi perfil → Claves de API</b> generá una, pegala acá y tocá <b>Guardar</b>.'] },
+  { k: 'sonoff', n: 'Sonoff (eWeLink)', c: '#1479C9', ab: 'SO', via: 'Nube', prep: true, what: 'Sensores de puerta, movimiento, temperatura, agua y humo; enchufes y llaves.', how: 'Se autoriza una vez la cuenta de eWeLink donde están los equipos. No se instala nada en el cliente: Ondi los lee desde afuera y solo mira, no prende ni apaga nada.' },
   { k: 'tplink', n: 'TP-Link Omada y VIGI', c: '#2BA6A0', ab: 'TP', via: 'Nube o agente', what: 'Switches, Wi-Fi, routers y cámaras VIGI.', how: 'Omada Cloud (Open API) o el agente en la red local.' },
   { k: 'mikrotik', n: 'MikroTik', c: '#293239', ab: 'MT', via: 'Agente', what: 'Routers, switches y enlaces.', how: 'API REST de RouterOS 7, desde el agente.' },
   { k: 'cisco', n: 'Cisco Catalyst y Business', c: '#049FD9', ab: 'CS', via: 'Agente', what: 'Switches y routers.', how: 'SNMP v2c o v3, desde el agente.' },
@@ -274,7 +275,7 @@ const BRANDS = [
 ];
 const BR = Object.fromEntries(BRANDS.map(b => [b.k, b]));
 const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
-const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', otro: 'Otro' };
+const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
 const BASES = { generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], vacia: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos.'], plano: ['Desde un plano o una foto', 'Subís un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'El parque logístico completo de la demo, para mostrar cómo queda.'] };
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
 let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
@@ -545,10 +546,11 @@ async function savePlano(st, url) { if (!siteEd()) return; MAQ.plano = url; setS
 window.addEventListener('beforeunload', e => { if (/Guardando/.test(S.maqSave)) { e.preventDefault(); e.returnValue = ''; } });
 
 /* equipos: nube + cargados a mano */
-const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Esperando el agente'] };
-const estPill = e => { const x = EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
-const EQT = { cam: 'Cámaras', sw: 'Switches', ap: 'Wi-Fi', gw: 'Routers y gateways', otro: 'Otros' };
-function eqTipo(d) { if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw', ap: 'ap', router: 'gw' }[d.tipo] || 'otro';
+const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Esperando el agente'], abierta: ['warn', 'Abierta'], cerrada: ['ok', 'Cerrada'] };
+const VIVO = ['online', 'en_linea', 'abierta', 'cerrada'];
+const estPill = (e, m) => { const x = e === 'sin_dato' && BR[m] && BR[m].prep ? ['off', 'Sin conexión todavía'] : EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
+const EQT = { cam: 'Cámaras', sw: 'Switches', ap: 'Wi-Fi', gw: 'Routers y gateways', sen: 'Sensores', otro: 'Otros' };
+function eqTipo(d) { if (/^sensor_/.test(d.tipo || '')) return 'sen'; if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw', ap: 'ap', router: 'gw' }[d.tipo] || 'otro';
   const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
   if (/protect|camera|cámara|camara|bullet|dome|domo|turret|\bg[345]\b|^mv\d|nvr/.test(t)) return 'cam';
   if (/usw|switch|^ms\d|flex mini|\bus-?\d/.test(t)) return 'sw';
@@ -567,7 +569,7 @@ function enlazarAqui(st) { const ks = CLOUD.filter(k => claveDe('', k)); if (!S.
 function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M = S.man[st.id];
   if (!E) { setTimeout(() => loadEq(st), 0); return '<div class="card empty">Trayendo los equipos…</div>'; }
   const loc = new Map(((S.maqExt || {})[st.id] || []).map(x => [x.uid, x]));
-  const all = [...E.list.map(d => ({ ...d, uid: (d.marca || 'unifi') + ':' + (d.mac || d.id) })), ...(M || []).map(d => ({ uid: 'man:' + d.id, tipo: d.tipo, nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))]
+  const all = [...E.list.map(d => ({ ...d, uid: (d.marca || 'unifi') + ':' + (d.mac || d.id) })), ...(M || []).map(d => ({ uid: 'man:' + d.id, tipo: d.tipo, nombre: d.nombre, modelo: [BR[d.marca] ? BR[d.marca].n : d.marca, d.modelo].filter(Boolean).join(' · '), ip: d.ip || '', mac: '', marca: d.marca, estado: d.estado, version: '', origen: 'A mano · ' + (TIPOS[d.tipo] || d.tipo), visto: d.visto }))]
     .map(d => ({ ...d, cat: eqTipo(d), lugar: loc.has(d.uid) ? loc.get(d.uid).lugar : '' }));
   const errs = E.errs.map(x => `<div class="err" style="margin-bottom:8px">${esc(BR[x.k].n)}: ${esc(x.m)}</div>`).join('') + (E.avisos || []).map(m => `<div class="warnbox" style="margin-bottom:8px">${esc(m)}</div>`).join('');
   const enlazar = !l.length && staff() ? enlazarAqui(st) : '';
@@ -576,7 +578,7 @@ function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M 
   const lugares = [...new Set(all.map(d => d.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), sinU = all.filter(d => !d.lugar).length;
   let tab = S.eqTab || ''; if (tab && tab !== '__sin' && !lugares.includes(tab)) tab = ''; const f = S.eqF || '', q = (S.eqQ || '').trim().toLowerCase();
   const inTab = all.filter(d => !tab || (tab === '__sin' ? !d.lugar : d.lugar === tab)), rows = inTab.filter(d => (!f || d.cat === f) && (!q || [d.nombre, d.modelo, d.ip, d.mac].join(' ').toLowerCase().includes(q)));
-  const on = inTab.filter(d => ['online', 'en_linea'].includes(d.estado)).length, off = inTab.filter(d => ['offline', 'caido'].includes(d.estado)).length;
+  const on = inTab.filter(d => VIVO.includes(d.estado)).length, off = inTab.filter(d => ['offline', 'caido'].includes(d.estado)).length;
   const cnt = c => inTab.filter(d => d.cat === c).length, cats = Object.keys(EQT).filter(c => cnt(c));
   sorted(rows);
   const tabsH = `<div class="eqtabs" role="tablist" aria-label="Lugares">${[['', 'Todos', all.length], ...lugares.map(x => [x, x, all.filter(d => d.lugar === x).length]), ...(sinU && lugares.length ? [['__sin', 'Sin ubicar en la maqueta', sinU]] : [])].map(([v, n, c]) => `<button role="tab" aria-selected="${tab === v}" data-eqtab="${esc(v)}">${esc(n)} <span>${c}</span></button>`).join('')}</div>`;
@@ -587,7 +589,7 @@ function equiposView() { const st = S.site, l = linksOf(st), E = S.eq[st.id], M 
     <div class="card"><div class="pad" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:6px"><h2 style="margin:0">Equipos</h2><span class="acts"><span class="muted" style="font-size:13px">${l.length ? 'Leído ' + ago(E.at) : ''}</span><button class="btn sm" data-do="eqref">${IC.ref}Actualizar</button></span></div>
     <div class="pad" style="padding-top:0">${filt}</div>
     <div class="tscroll"><table><thead><tr><th>Estado</th><th>Nombre</th><th>Tipo</th><th>Lugar</th><th>Modelo</th><th>IP</th><th>Origen</th><th>Firmware</th></tr></thead><tbody>
-    ${rows.map(d => `<tr><td>${estPill(d.estado)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(EQT[d.cat])}</td><td>${d.lugar ? esc(d.lugar) : '<span class="muted">Sin ubicar</span>'}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td>${esc(d.origen || '')}</td><td>${esc(d.version || '')}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No hay equipos con ese filtro.</td></tr>'}
+    ${rows.map(d => `<tr><td>${estPill(d.estado, d.marca)}</td><td><b>${esc(d.nombre)}</b>${d.consola ? ' <span class="tag">consola</span>' : ''}</td><td>${esc(EQT[d.cat])}</td><td>${d.lugar ? esc(d.lugar) : '<span class="muted">Sin ubicar</span>'}</td><td>${esc(d.modelo)}</td><td class="mono">${esc(d.ip)}</td><td>${esc(d.origen || '')}</td><td>${esc(d.version || '')}${d.actualizar ? ' <span class="tag">hay versión nueva</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No hay equipos con ese filtro.</td></tr>'}
     </tbody></table></div></div>`; }
 function sorted(rows) { const w = d => ['offline', 'caido'].includes(d.estado) ? 0 : ['alerting', 'atencion'].includes(d.estado) ? 1 : 2; rows.sort((a, b) => w(a) - w(b) || String(a.nombre).localeCompare(String(b.nombre), 'es')); }
 async function loadMan(st) { const r = await SB.from('ondi_equipos').select('*').eq('org_id', st.org_id).eq('site_id', st.id).order('nombre'); if (r.error) { if (faltaSQL(r.error)) S.falta11 = true; S.man[st.id] = []; } else S.man[st.id] = r.data || []; return S.man[st.id]; }
@@ -626,9 +628,9 @@ function integView() { const st = S.site, M = S.man[st.id], F = S.manForm;
       <label class="fld">IP en la red del cliente <small>(opcional)</small><input id="mf_ip" maxlength="60" value="${esc(F.ip || '')}" placeholder="192.168.1.20"></label><label class="fld">Ubicación <small>(opcional)</small><input id="mf_ubic" maxlength="120" value="${esc(F.ubicacion || '')}"></label></div>
       <div class="acts"><button class="btn pri" type="submit">${F.id ? 'Guardar' : 'Agregar el equipo'}</button><button class="btn" type="button" data-do="mancancel">Cancelar</button></div></form>` : '';
   const list = (M || []).map(d => `<div><span><b>${esc(d.nombre)}</b><br><span class="muted" style="font-size:13px">${esc([BR[d.marca] ? BR[d.marca].n : d.marca, TIPOS[d.tipo] || d.tipo, d.modelo, d.ip].filter(Boolean).join(' · '))}</span></span>
-      <span class="acts">${estPill(d.estado)}${editor() ? `<button class="btn sm" data-manedit="${esc(d.id)}">Cambiar</button><button class="btn sm danger ${S.armed === 'man:' + d.id ? 'arm' : ''}" data-mandel="${esc(d.id)}">${S.armed === 'man:' + d.id ? '¿Seguro?' : 'Borrar'}</button>` : ''}</span></div>`).join('');
+      <span class="acts">${estPill(d.estado, d.marca)}${editor() ? `<button class="btn sm" data-manedit="${esc(d.id)}">Cambiar</button><button class="btn sm danger ${S.armed === 'man:' + d.id ? 'arm' : ''}" data-mandel="${esc(d.id)}">${S.armed === 'man:' + d.id ? '¿Seguro?' : 'Borrar'}</button>` : ''}</span></div>`).join('');
   return `${falta11()}<div class="grid2" style="align-items:start"><div style="display:grid;gap:18px">${CLOUD.map(k => cloudBlock(st, k)).join('')}</div>
-    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell se leen con el agente Ondi instalado en la red del cliente. Cargalos acá y, cuando el agente esté andando, se ponen en vivo solos.</p>
+    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell se leen con el agente Ondi instalado en la red del cliente. Cargalos acá y, cuando el agente esté andando, se ponen en vivo solos. Los <b>Sonoff</b> (sensores de puerta y el resto de la línea) no necesitan agente: se leen desde la nube de eWeLink.</p>
       ${M === undefined ? '<p class="muted">Cargando…</p>' : list ? `<div class="ppl">${list}</div>` : '<p class="muted">Todavía no cargaste equipos.</p>'}
       ${editor() && !F ? `<p style="margin-top:12px"><button class="btn pri" data-do="manadd">${IC.plus}Agregar equipo</button></p>` : ''}${form}</div></div>`; }
 
@@ -717,7 +719,7 @@ function repInit(r) { const sel = {}, hay = r.equipos.some(d => d.asignado), cli
   r.equipos.forEach(d => { sel[d.mac] = hay ? d.asignado || '' : cli(d.sugerido); }); r.sel = sel; return r; }
 function marcasView() { return `<p class="muted" style="margin:0">Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
   <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k];
-    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${b.via}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : '<span class="pill off">Con agente</span>'}</header>
+    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${b.via}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : b.prep ? '<span class="pill warn">En preparación</span>' : '<span class="pill off">Con agente</span>'}</header>
       <p>${b.what} ${b.how}</p>
       ${b.ready ? `${k ? `<p>Clave cargada · termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}</p>` : ''}
         ${admin() ? `<form class="inline" data-do-f="keyorg" data-k="${b.k}"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave de API'}<input id="ko-${b.k}" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
@@ -725,7 +727,7 @@ function marcasView() { return `<p class="muted" style="margin:0">Las claves que
           ${k ? sitiosOrgBlock(b.k) : ''}
           ${T && T !== 'cargando' ? (T.error ? `<div class="err">${esc(T.error)}</div>` : `<div class="okmsg">Conectado: ${T.consolas} ${b.k === 'meraki' ? 'organizaci' + (T.consolas === 1 ? 'ón' : 'ones') : 'consola' + (T.consolas === 1 ? '' : 's')} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}
           <details><summary class="muted" style="cursor:pointer;font-size:13.5px">Cómo sacar la clave</summary><ol class="how">${b.steps.map(x => `<li>${x}</li>`).join('')}</ol></details>` : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}`
-      : `<p class="muted" style="font-size:13px">Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
+      : `<p class="muted" style="font-size:13px">${b.prep ? 'Falta enlazar la cuenta de eWeLink para ver el estado en vivo (abierta o cerrada, batería, última señal). ' : ''}Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
     <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:var(--accent)">AG</span><div><h3>Agente Ondi</h3><span class="via">En la red del cliente</span></div></div><span class="pill warn">En preparación</span></header>
       <p>Un programa chico que va en una mini PC, una Raspberry o un servidor del cliente. Lee los equipos de la red local (SNMP, ONVIF, ISAPI, API de MikroTik y Dahua) y manda el estado a Ondi cada minuto, sin abrir puertos.</p></div></div>`; }
 function avisosView() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return '<div class="card empty">Cargando…</div>'; }
@@ -826,6 +828,7 @@ document.addEventListener('submit', async e => { const f = e.target.closest('[da
 document.addEventListener('input', e => { if (e.target.id === 'alq') { S.alF.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#alq'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} } return; }
   if (e.target.id === 'eqq') { S.eqQ = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#eqq'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} } } });
 document.addEventListener('change', async e => {
+  if (e.target.id === 'mf_marca') { const t = $('#mf_tipo'); if (t && e.target.value === 'sonoff' && !/^sensor_|^enchufe$/.test(t.value)) t.value = 'sensor_puerta'; return; }
   if (e.target.dataset && e.target.dataset.alf) { S.alF[e.target.dataset.alf] = e.target.dataset.alf === 'd' ? +e.target.value : e.target.value; render(); return; }
   if (e.target.id === 'ctxsel' || e.target.id === 'ctxsel2') { S.ctx = S.ctxs.find(c => c.key === e.target.value) || S.ctx; ls.set('ondi.ctx', S.ctx.key); history.replaceState(null, '', location.pathname); await loadCtx(); }
   if (e.target.dataset.arol) { const st = S.site, r = await SB.rpc('ondi_set_rol', { o: st.org_id, s: st.id, u: e.target.dataset.arol, nuevo: e.target.value }); if (r.error) { toast(errTxt(r.error)); return; } const a = (S.acc.list || []).find(x => x.user_id === e.target.dataset.arol); if (a) a.rol = e.target.value; toast('Permiso cambiado'); return; }
