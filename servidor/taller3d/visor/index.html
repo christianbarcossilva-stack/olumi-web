@@ -4,7 +4,7 @@
 // Visor del taller: dibuja avatares con el mismo motor (three r169) y el MISMO núcleo de movimiento que la oficina (avatar-core.js).
 // ?m=a.glb,b.glb  &p=idle,walk0.10,walk0.35,sit,tecla  (walkN = fracción del ciclo del paso)  &h=giro  &lado=1 (de costado)  &silla=1
 import * as THREE from './three.module.min.js';import {RoomEnvironment} from './RoomEnvironment.js';import {GLTFLoader} from './GLTFLoader.js';import {clone} from './SkeletonUtils.js';
-const {avatarGLB,avPose,AV_GES}=new Function('THREE',await (await fetch('avatar-core.js')).text()+';return {avatarGLB,avPose,AV_GES}')(THREE);
+const {avatarGLB,avPose,AV_GES,avMat}=new Function('THREE',await (await fetch('avatar-core.js')).text()+';return {avatarGLB,avPose,AV_GES,avMat}')(THREE);
 const P=new URLSearchParams(location.search),W=innerWidth,H=innerHeight;
 const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W,H);r.setPixelRatio(1);r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(r.domElement);
 const sc=new THREE.Scene();sc.background=new THREE.Color('#dfe3e8');const pm=new THREE.PMREMGenerator(r);sc.environment=pm.fromScene(new RoomEnvironment(),.04).texture;sc.environmentIntensity=.55;
@@ -14,11 +14,13 @@ const caja=(w,h,d,x,y,z,c,par)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,
 const cam=new THREE.PerspectiveCamera(+P.get('fov')||30,W/H,.1,60);
 const files=(P.get('m')||'of-h.glb').split(','),poses=(P.get('p')||'idle,walk0.1,sit').split(','),L=new GLTFLoader(),out=[];
 let n=0;const tot=files.length*poses.length,gap=+P.get('gap')||1.05,rot=P.get('lado')?0:(+P.get('h')||1.0);
-for(const f of files){const g=await L.loadAsync(f);let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;o.castShadow=true;const m=o.material;if(m&&m.transparent){m.transparent=false;m.alphaTest=.32;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}}});
+for(const f of files){const g=await L.loadAsync(f);let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}});avMat(g.scene,+P.get('tex')||0);
   for(const p of poses){const a=avatarGLB(clone(g.scene),+P.get('alto')||1.74),grp=new THREE.Group();grp.add(a.g);
     const [p0,sem]=p.split('@'),gs=p0.startsWith('g:')?p0.split(':'):null,sit=p0==='sit'||p0==='tecla',md=sit?'sit':p0.startsWith('walk')?'walk':'idle';if(sem)a.seed=+sem;   // idle@3.7 = otra persona (otra semilla) · g:saludo:1.2 = gesto a los 1,2 s
     if(md==='walk'){a.gd=(+p0.slice(4)||0)*2*.33*a.an.alto;a.mix=1}if(gs)a.ges={id:gs[1],dur:AV_GES[gs[1]].dur,t0:1.3-(+gs[2]||1)};
-    for(let i=0;i<80;i++)avPose(a,md,.05,{t:1.3,teclado:p0==='tecla'?{d:.36,h:.755}:null});a.sync();
+    if(p0.startsWith('para')){// para0.3 = venía caminando y hace 0,3 s que frenó (para ver cómo vuelve al reposo)
+      let x=0,t=0;for(let i=0;i<70;i++){x+=1.3/30;t+=1/30;avPose(a,'walk',1/30,{x,y:0,t})}for(let i=0;i<Math.round((+p0.slice(4)||0)*30);i++){t+=1/30;avPose(a,'idle',1/30,{x,y:0,t})}a.sync()}
+    else{for(let i=0;i<80;i++)avPose(a,md,.05,{t:1.3,teclado:p0==='tecla'?{d:.36,h:.755}:null});a.sync()}
     if(sit&&P.get('silla')!=='0'){// la misma silla y el mismo escritorio de la oficina (medidas de scene.js), con la persona mirando hacia +x
       caja(.52,.08,.52,0,.43,0,'#3b3f46',grp);caja(.08,.55,.48,-.24,.745,0,'#3b3f46',grp);caja(.06,.39,.06,0,.195,0,'#8a8f98',grp);
       if(p==='tecla'){caja(.9,.04,1.8,.24+.45,.72,0,'#c9a877',grp);caja(.15,.015,.48,.36,.7475,0,'#f2f2f2',grp);caja(.03,.36,.58,.24+.75,.74+.36,-.3,'#111',grp)}}

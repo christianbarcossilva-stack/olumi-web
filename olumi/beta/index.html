@@ -83,7 +83,28 @@ body.cal-drag{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .cg-nuevo{position:absolute;left:1px;right:2px;box-sizing:border-box;border-radius:7px;background:color-mix(in srgb,var(--accent) 16%,transparent);border:1.5px solid var(--accent);pointer-events:none;z-index:2;font-family:var(--f-mono);font-size:10.5px;padding:2px 5px;color:var(--fg);overflow:hidden}
 .cg-menu{position:fixed;z-index:60;display:flex;gap:6px;align-items:center;padding:6px 6px 6px 12px;border-radius:12px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.2)}
 .cg-menu span{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
-.mev.evx,.ev.evx{border-left-color:#6d5efc}
+.mev.evx,.ev.evx{border-left-color:var(--ec,#6d5efc)}
+.ce.tent,.cg-chip.tent{--ec:var(--muted);color:var(--muted);border-left-style:dashed;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 20%,transparent) 0 5px,transparent 5px 11px),linear-gradient(var(--surface),var(--surface)),var(--bg)}
+.ev.tent,.mev.tent{--ec:var(--muted);border-left-style:dashed;color:var(--muted)}
+.cg-ley{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.cg-ley span{display:inline-flex;align-items:center;gap:6px}.cg-ley i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.cg-ley .tent i{background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 4px);border:1px dashed var(--muted);box-sizing:border-box}
+.cq{position:fixed;z-index:70;box-sizing:border-box;width:min(392px,calc(100vw - 16px));padding:14px;border-radius:18px;grid-template-columns:minmax(0,1fr);background:linear-gradient(var(--surface),var(--surface)),var(--bg);border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.3);display:grid;gap:10px;color:var(--fg)}
+.cq-h{display:flex;gap:8px;align-items:center}
+.cq-dot{width:12px;height:12px;border-radius:4px;flex:none}
+.cq input.cq-t{flex:1;min-width:0;font-weight:650;font-size:16px;border:0;border-radius:0;background:none;box-shadow:none;padding:4px 2px;border-bottom:1.5px solid transparent}
+.cq input.cq-t:hover{border-bottom-color:var(--line)}.cq input.cq-t:focus{outline:0;border-bottom-color:var(--accent)}
+.cq-s{font-size:12.5px;color:var(--muted);margin-top:-6px;padding-left:20px}
+.cq>*{min-width:0}.cq-r{display:flex;gap:6px;align-items:center}.cq-r input{flex:1 1 0;min-width:0;width:0;padding:7px 6px;font-size:13.5px}.cq-r input[type=date]{flex:1.35 1 0}.cq-r span{color:var(--muted);font-size:13px}
+.cq-e{display:flex;flex-wrap:wrap;gap:6px}
+.cq-e button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:none;border-radius:999px;padding:5px 10px;font-size:12.5px;font-weight:600;color:var(--fg);cursor:pointer}
+.cq-e button i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.cq-e button.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.cq-e button.ed{border-style:dashed;color:var(--muted);font-weight:500}
+.cq-tent{display:flex;gap:8px;align-items:center;font-size:13.5px;cursor:pointer}.cq-tent input{width:18px;height:18px;margin:0;flex:none}
+.cq-f{display:flex;gap:6px;align-items:center}.cq-f .sp{flex:1}
+.cetr{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:8px}
+@media (max-width:699px){.cq{left:8px!important;right:8px;top:auto!important;bottom:calc(88px + env(safe-area-inset-bottom,0px));width:auto}}
 .pasos{margin:0 0 14px;padding-left:20px;display:grid;gap:7px;font-size:14px;line-height:1.45}
 .icsc{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px}
 .icsl{max-height:36vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
@@ -1911,7 +1932,7 @@ async function onUpload(inp){
 function monday(d){const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 function evHtml(j){
   const t=j.ticketId&&D.tickets[j.ticketId],p=t?tkPrio(t):4;
-  return`<div class="ev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style="--ec:${PRC[p]}"><span class="h">${esc(j.hora||'')}${j.estado==='terminado'&&n0(j.horasMO)?` · ${qty(j.horasMO)} h reales`:j.duracion?` · ${qty(j.duracion)} h`:''}${j.estado==='terminado'?' · ✓':''}</span><b>${esc(jCli(j)||j.titulo||'Trabajo')}</b><span class="muted">${esc(j.titulo||'')}</span> ${(j.tecnicos||[]).map(av).join('')}</div>`;
+  return`<div class="ev${j.estado==='terminado'?' done':''}${j.tentativo?' tent':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style="--ec:${calCol(j,p)}"><span class="h">${esc(j.hora||'')}${j.estado==='terminado'&&n0(j.horasMO)?` · ${qty(j.horasMO)} h reales`:j.duracion?` · ${qty(j.duracion)} h`:''}${j.estado==='terminado'?' · ✓':''}</span><b>${esc(jCli(j)||j.titulo||'Trabajo')}</b><span class="muted">${esc(j.titulo||'')}</span> ${(j.tecnicos||[]).map(av).join('')}</div>`;
 }
 /* 1.27: calendario por período */
 let CALV=(()=>{const d=innerWidth<700?'3dias':'semana';try{return lsGet('crm.calv')||d}catch(e){return d}})();
@@ -1931,21 +1952,21 @@ function vCalLista(){
     <select id="calTec" data-ch="calTec" aria-label="Filtrar por técnico"><option value="">Todos los técnicos</option>${opts(peopleOpts().slice(1),calTec)}</select>${calImpBtn()}</div></div>`;
   if(CALV==='mes'){const m=mesRef.getMonth();return head+`<div class="month"><div class="mh">${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<span>${x}</span>`).join('')}</div><div class="mg">${days.map(d=>{const dd=new Date(d+'T12:00');const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));const da=acts.filter(a=>a.fecha.slice(0,10)===d);
       return`<section class="mday${d===t?' today':''}${dd.getMonth()!==m?' other':''}" data-date="${d}"><div class="mdh"><b data-act="mday:${d}" role="button" tabindex="0">${dd.getDate()}</b>${!readonly?`<button class="madd" data-new="trab" data-date="${d}" aria-label="Nuevo trabajo el ${fdate(d)}">+</button>`:''}</div>
-        ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style=""--ec:${PRC[p]}" title="${esc((j.hora||'')+' '+(jCli(j)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(jCli(j)||j.titulo||'Trabajo')}</div>`}).join('')}
+        ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}${j.tentativo?' tent':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style="--ec:${calCol(j,p)}" title="${esc((j.hora||'')+' '+(jCli(j)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(jCli(j)||j.titulo||'Trabajo')}</div>`}).join('')}
         ${da.slice(0,2).map(a=>`<div class="mev fu" role="button" tabindex="0" data-open="act:${a.id}" draggable="${calMueve()}" data-cal="a:${a.id}">${esc(a.fecha.slice(11,16))} ${esc(a.titulo||'')}</div>`).join('')}
         ${calMevs(evsL[d])}${dj.length>4?`<div class="mmore">+${dj.length-4} más</div>`:''}</section>`}).join('')}</div></div>
-    <p class="hint" style="margin-top:12px">Tocá el número de un día para ver esa semana por horas. Para reprogramar, arrastrá el trabajo a otro día. El color marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4.</p>`}
+    <p class="hint" style="margin-top:12px">Tocá el número de un día para ver esa semana por horas. Para reprogramar, arrastrá el trabajo a otro día.</p>${calLeyenda()}`}
   return head+`<div class="week${CALV==='quincena'?' q2':''}">${days.map((d,i)=>{
     const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')),da=acts.filter(a=>a.fecha.slice(0,10)===d);
     const dn=new Date(d+'T12:00').toLocaleDateString('es-UY',{weekday:'long'});
     return`<section class="day${d===t?' today':''}${i%7>4?' off':''}${!dj.length&&!da.length&&!(evsL[d]||[]).length?' noev':''}" data-date="${d}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
       <div class="dayb">${dj.map(evHtml).join('')}${da.map(a=>`<div class="ev fu" role="button" tabindex="0" data-open="act:${a.id}" draggable="${calMueve()}" data-cal="a:${a.id}"><span class="h">${esc(a.fecha.slice(11,16))} · seguimiento</span><b>${esc(a.titulo||'')}</b></div>`).join('')}${calEvsDia(evsL[d])}</div>
       <button class="dayadd" data-new="trab" data-date="${d}">+ Trabajo</button></section>`}).join('')}</div>
-    <p class="hint" style="margin-top:12px">El color del borde marca la prioridad del ticket: naranja P1, marrón P2, azul P3, gris P4. Cada trabajo tiene un botón para copiarlo a Google Calendar. Para reprogramar, arrastrá el trabajo a otro día.</p>`;
+    <p class="hint" style="margin-top:12px">Cada trabajo tiene un botón para copiarlo a Google Calendar. Para reprogramar, arrastrá el trabajo a otro día.</p>${calLeyenda()}`;
 }
 function jobCard(j){
   const c=D.clientes[j.clienteId],t=j.ticketId&&D.tickets[j.ticketId];
-  return`<article class="job${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="${repTec()?'rep':'trab'}:${j.id}"><span class="hr">${esc(j.hora||'--:--')}${j.fecha&&j.fecha<today()?`<br><small class="muted">${fdate(j.fecha)}</small>`:''}</span><h3>${esc(c?.nombre||j.clienteNombre||j.titulo||'Trabajo')}</h3><span>${t?prChip(tkPrio(t)):''} <span class="tag ${j.estado==='terminado'?'t-ok':j.estado==='en_curso'?'t-warn':'t-acc'}">${esc(TRE.find(e=>e[0]===j.estado)?.[1]||'Programado')}</span></span>
+  return`<article class="job${j.estado==='terminado'?' done':''}" role="button" tabindex="0" data-open="${repTec()?'rep':'trab'}:${j.id}"><span class="hr">${esc(j.hora||'--:--')}${j.fecha&&j.fecha<today()?`<br><small class="muted">${fdate(j.fecha)}</small>`:''}</span><h3>${esc(c?.nombre||j.clienteNombre||j.titulo||'Trabajo')}</h3><span>${t?prChip(tkPrio(t)):''} ${j.tentativo?'<span class="tag t-none">Tentativo</span> ':''}<span class="tag ${j.estado==='terminado'?'t-ok':j.estado==='en_curso'?'t-warn':'t-acc'}">${esc(TRE.find(e=>e[0]===j.estado)?.[1]||'Programado')}</span></span>
     <span class="sub2">${esc([j.titulo,j.obra||c?.direccion].filter(Boolean).join(' · '))}${(j.fotos||[]).length?` · ${j.fotos.length} foto${j.fotos.length>1?'s':''}`:''}</span></article>`;
 }
 function vCampo(){const t=lsGet('olumi.md')||'dia';
@@ -2136,7 +2157,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp};
+  const fns={crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -2412,7 +2433,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -2869,7 +2890,7 @@ function calDatos(days){
   for(const j of arr('trabajos')){
     if(!set.has(j.fecha)||(calTec&&!(j.tecnicos||[]).includes(calTec)))continue;
     const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4,ini=hm2m(j.hora),done=j.estado==='terminado';
-    out[j.fecha][ini==null?'a':'t'].push({k:'j',id:j.id,open:'trab:'+j.id,ini,dur:Math.max(15,Math.round((n0(j.duracion)||1)*60)),tit:jCli(j)||j.titulo||'Trabajo',sub:(done&&n0(j.horasMO)?qty(j.horasMO)+' h reales'+(j.titulo?' · ':''):'')+(j.titulo||''),col:p<4?PRC[p]:'var(--s-nuevo)',done,fijo:done});
+    out[j.fecha][ini==null?'a':'t'].push({k:'j',id:j.id,open:'trab:'+j.id,ini,dur:Math.max(15,Math.round((n0(j.duracion)||1)*60)),tit:jCli(j)||j.titulo||'Trabajo',sub:(j.tentativo?'Tentativo · ':'')+(done&&n0(j.horasMO)?qty(j.horasMO)+' h reales'+(j.titulo?' · ':''):'')+(j.titulo||''),col:calCol(j,p),tent:!!j.tentativo,done,fijo:done});
   }
   for(const a of arr('actividades')){
     if(a.hecha||!a.fecha)continue;const f=a.fecha.slice(0,10);if(!set.has(f)||(calTec&&a.responsable!==calTec))continue;
@@ -2879,7 +2900,7 @@ function calDatos(days){
   const d0=days[0],dn=days[days.length-1];
   for(const e of arr('eventos')){
     if(!e.fecha||(calTec&&e.de!==calTec))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
-    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:e.titulo||'Evento',sub:e.lugar||''};
+    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:e.titulo||'Evento',sub:(e.tentativo?'Tentativo'+(e.lugar?' · ':''):'')+(e.lugar||''),col:calCol(e,null),tent:!!e.tentativo};
     if(ini==null){for(const d of days)if(d>=e.fecha&&d<=fin)out[d].a.push(it)}else if(set.has(e.fecha))out[e.fecha].t.push(it);
   }
   return out;
@@ -2897,7 +2918,7 @@ function calCols(list){
 function calBloque(it){
   const dur=Math.min(it.dur,1440-it.ini),alto=Math.max(22,dur/60*CGH-2),mueve=calMueve()&&!it.fijo;
   const hs=m2hm(it.ini)+' – '+(it.ini+dur>=1440?'24:00':m2hm(it.ini+dur));
-  return`<div class="ce${it.fu?' fu':''}${it.done?' done':''}${alto<34?' corto':alto>70?' alto':''}" role="button" tabindex="0" data-open="${it.open}"${mueve?` data-ce="${it.k}:${it.id}"`:''} data-ini="${it.ini}" data-dur="${dur}" style="top:${it.ini/60*CGH}px;height:${alto}px;left:calc(${it.c/it.n*100}% + 1px);width:calc(${100/it.n}% - 3px)${it.col?`;--ec:${it.col}`:''}" title="${esc(it.tit+' · '+hs)}"><b>${esc(it.tit)}${it.done?' ✓':''}</b><span class="t">${hs}${it.sub&&it.sub!==it.tit?' · '+esc(it.sub):''}</span>${mueve?'<i class="ce-rs" aria-hidden="true"></i>':''}</div>`;
+  return`<div class="ce${it.fu?' fu':''}${it.tent?' tent':''}${it.done?' done':''}${alto<34?' corto':alto>70?' alto':''}" role="button" tabindex="0" data-ref="${it.open}" data-act="calq:${it.k}:${it.id}"${mueve?` data-ce="${it.k}:${it.id}"`:''} data-ini="${it.ini}" data-dur="${dur}" style="top:${it.ini/60*CGH}px;height:${alto}px;left:calc(${it.c/it.n*100}% + 1px);width:calc(${100/it.n}% - 3px)${it.col?`;--ec:${it.col}`:''}" title="${esc(it.tit+' · '+hs)}"><b>${esc(it.tit)}${it.done?' ✓':''}</b><span class="t">${hs}${it.sub&&it.sub!==it.tit?' · '+esc(it.sub):''}</span>${mueve?'<i class="ce-rs" aria-hidden="true"></i>':''}</div>`;
 }
 function vCalGrid(){
   if(!calStart)calStart=CALV==='semana'?monday(new Date()):calMedio();
@@ -2911,11 +2932,11 @@ function vCalGrid(){
     <select id="calTec" data-ch="calTec" aria-label="Filtrar por persona"><option value="">Todo el equipo</option>${opts(peopleOpts().slice(1),calTec)}</select>${calImpBtn()}</div></div>`;
   const DN=['dom','lun','mar','mié','jue','vie','sáb'];
   const cab=days.map(d=>{const x=new Date(d+'T12:00');return`<div class="cg-dh${d===t?' hoy':''}" role="button" tabindex="0" data-act="calday:${d}" aria-label="${dl(d)} ${x.getDate()}"><span>${DN[x.getDay()]}</span><b>${x.getDate()}</b></div>`}).join('');
-  const all=days.some(d=>X[d].a.length)?`<div class="cg-all"><div class="cg-gut"><span>Todo el día</span></div>${days.map(d=>`<div class="cg-ac">${X[d].a.map(it=>`<div class="cg-chip${it.fu?' fu':''}${it.done?' done':''}" role="button" tabindex="0" data-open="${it.open}"${it.col?` style="--ec:${it.col}"`:''} title="${esc(it.tit)}">${esc(it.tit)}</div>`).join('')}</div>`).join('')}</div>`:'';
+  const all=days.some(d=>X[d].a.length)?`<div class="cg-all"><div class="cg-gut"><span>Todo el día</span></div>${days.map(d=>`<div class="cg-ac">${X[d].a.map(it=>`<div class="cg-chip${it.fu?' fu':''}${it.tent?' tent':''}${it.done?' done':''}" role="button" tabindex="0" data-open="${it.open}"${it.col?` style="--ec:${it.col}"`:''} title="${esc(it.tit)}">${esc(it.tit)}</div>`).join('')}</div>`).join('')}</div>`:'';
   const horas=[...Array(23)].map((_,i)=>`<span style="top:${(i+1)*CGH}px">${String(i+1).padStart(2,'0')}:00</span>`).join('');
   const cols=days.map(d=>`<div class="cg-col${d===t?' hoy':''}" data-cgd="${d}">${calCols(X[d].t).map(calBloque).join('')}${d===t?'<i class="cg-now" id="cgNow"></i>':''}</div>`).join('');
   return head+`<div class="cg" id="calGrid" style="--n:${n};--ch:${CGH}px"><div class="cg-sc" id="calSc"><div class="cg-top"><div class="cg-head"><div class="cg-gut"></div>${cab}</div>${all}</div><div class="cg-body"><div class="cg-gut cg-hs">${horas}</div>${cols}</div></div></div>
-    <p class="hint" style="margin-top:12px">${readonly?'':'Tocá un hueco para agendar. '}${calMueve()?'Para mover algo, arrastralo (en el teléfono, mantenelo apretado un momento); para cambiar cuánto dura, estirá el borde de abajo. ':''}Azul: trabajos (naranja o amarillo si el ticket apura). Violeta: eventos. Punteado: seguimientos.</p>`;
+    <p class="hint" style="margin-top:12px">${readonly?'':'Tocá un hueco para agendar. '}${calMueve()?'Para mover algo, arrastralo (en el teléfono, mantenelo apretado un momento); para cambiar cuánto dura, estirá el borde de abajo. ':''}Un toque abre la edición rápida.</p>${calLeyenda()}`;
 }
 function vCal(){return CALG()?vCalGrid():vCalLista()}
 
@@ -2935,9 +2956,11 @@ window.addEventListener('resize',()=>{calAlto()});
 setInterval(calAhora,60000);
 
 /* tocar un hueco: qué agendar a esa hora */
+function calCierraNuevoYQ(){calCierraNuevo();calqCierra()}
 function calCierraNuevo(){document.querySelectorAll('.cg-nuevo,.cg-menu').forEach(x=>x.remove())}
 document.addEventListener('click',e=>{
   if(Date.now()-CALDR.fin<450){e.stopPropagation();e.preventDefault();return}
+  if(CQ&&!(e.target.closest&&(e.target.closest('.cq')||e.target.closest('.ce')))){calqCierra();if(e.target.closest&&e.target.closest('.cg-col')){e.stopPropagation();return}}
   const habia=document.querySelector('.cg-menu');if(habia){if(e.target.closest&&e.target.closest('.cg-menu'))setTimeout(calCierraNuevo,0);else calCierraNuevo()}
   const col=e.target.closest&&e.target.closest('.cg-col');if(!col||e.target!==col||readonly||habia)return;
   const r=col.getBoundingClientRect(),m=Math.max(0,Math.min(23*60,Math.floor((e.clientY-r.top)/CGH*2)*30)),h=m2hm(m),d=col.dataset.cgd;
@@ -2949,7 +2972,7 @@ document.addEventListener('click',e=>{
 
 /* --- arrastrar para mover y estirar para cambiar la duración --- */
 function calDrIni(){
-  const s=CALDR;if(!s.el||s.on)return;s.on=true;s.el.classList.add(s.rs?'est':'mov');document.body.classList.add('cal-drag');calCierraNuevo();
+  const s=CALDR;if(!s.el||s.on)return;calqCierra();s.on=true;s.el.classList.add(s.rs?'est':'mov');document.body.classList.add('cal-drag');calCierraNuevo();
   try{if(s.tactil&&navigator.vibrate)navigator.vibrate(8)}catch(e){}
   s.tick=setInterval(()=>{const sc=document.getElementById('calSc');if(!sc||!s.on)return;const r=sc.getBoundingClientRect(),top=r.top+(sc.querySelector('.cg-top')||{offsetHeight:0}).offsetHeight;
     const v=s.y<top+36?-12:s.y>r.bottom-36?12:0;if(v){sc.scrollTop+=v;calDrMueve()}},30);
@@ -3011,7 +3034,7 @@ document.addEventListener('contextmenu',e=>{if(CALDR.el&&CALDR.tactil)e.preventD
 /* --- eventos propios --- */
 const EVF=()=>[{k:'titulo',l:'Título',w:'full',ph:'Ej.: Reunión con el contador'},{k:'fecha',l:'Fecha',t:'date'},{k:'hora',l:'Hora',t:'time'},
   {k:'duracion',l:'Duración (horas)',t:'number',step:'0.25'},{k:'todoDia',l:'Todo el día',t:'checkbox'},{k:'hasta',l:'Hasta (si dura varios días)',t:'date'},
-  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'de',l:'De quién es',t:'person'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
+  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'de',l:'De quién es',t:'person'},{k:'etiqueta',l:'Etiqueta de color',t:'select',o:[['','Sin etiqueta'],...calEts().map(e=>[e.id,e.n])]},{k:'tentativo',l:'Tentativo (queda en gris)',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
 function sheetEv(id,p){
   const e=id?{...D.eventos[id]}:{fecha:p.date||today(),hora:p.hora||'09:00',duracion:1,de:ME||''};e.todoDia=!e.hora;
   return sheetFrame('Evento',id?(e.titulo||'Evento'):'Nuevo evento',`<div class="grid">${EVF().map(f=>fld(f,e[f.k])).join('')}</div>${e.origen==='google'?'<p class="hint" style="margin-top:10px">Vino de Google Calendar. Lo que cambies acá no cambia en Google.</p>':''}<p class="err" id="shErr" hidden></p>`,{del:!!id});
@@ -3025,8 +3048,8 @@ async function saveEv(){
 const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||(calTec&&e.de!==calTec))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
   for(const d of days)if(d>=e.fecha&&d<=fin)(o[d]=o[d]||[]).push(e)}
   for(const d in o)o[d].sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));return o};
-const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx" role="button" tabindex="0" data-open="ev:${e.id}" title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
-const calEvsDia=l=>(l||[]).map(e=>`<div class="ev evx" role="button" tabindex="0" data-open="ev:${e.id}"><span class="h">${e.hora?esc(e.hora)+(e.duracion?` · ${qty(e.duracion)} h`:''):'Todo el día'}</span><b>${esc(e.titulo||'Evento')}</b>${e.lugar?`<span class="muted">${esc(e.lugar)}</span>`:''}</div>`).join('');
+const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''} title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
+const calEvsDia=l=>(l||[]).map(e=>`<div class="ev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''}><span class="h">${e.tentativo?'Tentativo · ':''}${e.hora?esc(e.hora)+(e.duracion?` · ${qty(e.duracion)} h`:''):'Todo el día'}</span><b>${esc(e.titulo||'Evento')}</b>${e.lugar?`<span class="muted">${esc(e.lugar)}</span>`:''}</div>`).join('');
 
 /* --- traer de Google Calendar: leer el archivo .ics (o el .zip que baja Google) --- */
 let ICS=null;
@@ -3177,6 +3200,14 @@ async function calAct(k,el,arg){
     if(+arg===0){const h=calMedio();calStart=CALV==='semana'?monday(h):h}else{const d=new Date(calStart||calMedio());d.setDate(d.getDate()+(+arg<0?-n:n));calStart=d}
     sr();return true}
   if(k==='calday'){calStart=new Date(arg+'T12:00');CALV='dia';try{lsSet('crm.calv',CALV)}catch(e){}CALSC=null;sr();return true}
+  if(k==='calq'){const [kk,id]=String(arg).split(':');if(!calMueve()){openSheet(kk==='j'?(repTec()?'rep':'trab'):kk==='a'?'act':'ev',id);return true}if(CQ&&CQ.k===arg){calqCierra();return true}calqAbre(arg,el);return true}
+  if(k==='calqx'){calqCierra();return true}
+  if(k==='calqet'){const o=calqDoc();if(o){await calqGuarda({etiqueta:o.x.etiqueta===arg?'':arg});calqPinta()}return true}
+  if(k==='calqfull'){const o=calqDoc();calqCierra();if(o)openSheet(o.k==='j'?'trab':o.k==='a'?'act':'ev',o.id);return true}
+  if(k==='calqets'){calqCierra();openSheet('calet');return true}
+  if(k==='calqdel'){const o=calqDoc();if(!o)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Eliminar? Tocá de nuevo';return true}armed=null;try{await remove(o.col,o.id)}catch(x){handleErr(x)}calqCierra();toast('Eliminado');sr();return true}
+  if(k==='cetadd'){cetLee();CET.push({id:uid(),n:'',c:CETPAL[CET.length%CETPAL.length]});$('#cetL').innerHTML=cetFilas();const i=document.querySelectorAll('.cetr input[type=text]');if(i.length)i[i.length-1].focus();return true}
+  if(k==='cetrm'){cetLee();CET.splice(+arg,1);$('#cetL').innerHTML=cetFilas();return true}
   if(k==='icsmodo'){if(ICS){ICS.modo=arg;icsPinta()}return true}
   if(k==='icsquitar'){
     if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Quitar todos? Tocá de nuevo';return true}
@@ -3184,6 +3215,55 @@ async function calAct(k,el,arg){
     toast(`${pl(n,'evento quitado','eventos quitados')} del Calendario`);closeSheet();sr();return true}
   return false;
 }
+
+/* --- etiquetas de color (por importancia, por cuadrilla… las define cada empresa) y tentativos --- */
+const CALET0=[{id:'alta',n:'Importante',c:'#e5484d'},{id:'media',n:'Normal',c:'#0091ff'},{id:'baja',n:'Puede esperar',c:'#30a46c'}],CETPAL=['#e5484d','#f76b15','#ffb224','#30a46c','#0091ff','#6d5efc','#d6409f','#8b8d98'];
+function calEts(){return Array.isArray(CFG.calEtiquetas)&&CFG.calEtiquetas.length?CFG.calEtiquetas:CALET0}
+function calEt(x){return x&&x.etiqueta?calEts().find(e=>e.id===x.etiqueta)||null:null}
+/* color de un trabajo o evento: tentativo → gris; con etiqueta → el de la etiqueta; si no, la prioridad del ticket (p) o el azul de los trabajos */
+function calCol(x,p){const e=calEt(x);return x&&x.tentativo?'var(--muted)':e&&/^#[0-9a-f]{6}$/i.test(e.c)?e.c:p==null?'':p<4?PRC[p]:'var(--s-nuevo)'}
+function calLeyenda(){return`<div class="cg-ley"><span style="--c:var(--s-nuevo)"><i></i>Trabajo</span><span style="--c:var(--urg)"><i></i>Ticket urgente</span><span style="--c:#6d5efc"><i></i>Evento</span>${calEts().map(e=>`<span style="--c:${esc(e.c)}"><i></i>${esc(e.n)}</span>`).join('')}<span class="tent" style="--c:var(--muted)"><i></i>Tentativo</span></div>`}
+let CET=null;
+function cetLee(){if(!CET)return;document.querySelectorAll('.cetr').forEach((r,i)=>{if(CET[i]){CET[i].c=r.querySelector('input[type=color]').value;CET[i].n=r.querySelector('input[type=text]').value.trim()}})}
+function cetFilas(){return CET.map((e,i)=>`<div class="cetr"><input type="color" value="${esc(e.c)}" aria-label="Color"><input type="text" value="${esc(e.n)}" placeholder="Ej.: Cuadrilla López" aria-label="Nombre de la etiqueta"><button type="button" class="btn ghost" data-act="cetrm:${i}" aria-label="Quitar">✕</button></div>`).join('')}
+function sheetCalEt(){CET=calEts().map(e=>({...e}));
+  return sheetFrame('Calendario','Etiquetas de color',`<p class="hint" style="margin:0 0 12px">Ponele nombre a cada color: por importancia, por cuadrilla, por tipo de trabajo. Después se eligen tocando cualquier cosa del Calendario.</p><div id="cetL">${cetFilas()}</div><button type="button" class="btn" data-act="cetadd">+ Agregar etiqueta</button><p class="err" id="shErr" hidden></p>`)}
+async function saveCalEt(){cetLee();const l=CET.filter(e=>e.n).map(e=>({id:e.id||uid(),n:e.n,c:e.c}));await saveCfg({...CFG,calEtiquetas:l});toast('Etiquetas guardadas');closeSheet();sr()}
+
+/* --- edición rápida: un toque sobre algo del calendario abre una tarjeta chica para cambiar título, hora, color y tentativo --- */
+let CQ=null;
+function calqDoc(){if(!CQ)return null;const [k,id]=CQ.k.split(':'),col=k==='j'?'trabajos':k==='a'?'actividades':'eventos',x=D[col][id];return x?{k,id,col,x}:null}
+function calqCierra(){const d=document.getElementById('calQ');if(d)d.remove();CQ=null}
+function calqAbre(key,el){
+  calCierraNuevo();calqCierra();CQ={k:key};const r=el?el.getBoundingClientRect():{left:innerWidth/2,right:innerWidth/2,top:innerHeight/3};
+  const d=document.createElement('div');d.className='cq';d.id='calQ';d.setAttribute('role','dialog');d.setAttribute('aria-label','Edición rápida');document.body.appendChild(d);calqPinta();if(!CQ)return;
+  const w=d.offsetWidth,h=d.offsetHeight;let x=r.right+8;if(x+w>innerWidth-8)x=r.left-w-8;if(x<8)x=Math.max(8,Math.min(innerWidth-w-8,r.left));
+  d.style.left=x+'px';d.style.top=Math.max(8,Math.min(innerHeight-h-8,r.top))+'px';
+}
+function calqPinta(){
+  const d=document.getElementById('calQ'),o=calqDoc();if(!d||!o){calqCierra();return}const {k,x}=o;
+  const fecha=(x.fecha||'').slice(0,10),hora=k==='a'?(x.fecha||'').slice(11,16):(x.hora||''),ini=hm2m(hora),dur=Math.round((n0(x.duracion)||(k==='a'?.5:1))*60),fin=ini==null?'':m2hm(Math.min(1439,ini+dur));
+  const tk=k==='j'&&x.ticketId&&D.tickets[x.ticketId],col=k==='a'?'var(--muted)':calCol(x,k==='j'?(tk?tkPrio(tk):4):null)||'#6d5efc';
+  const sub=k==='j'?[jCli(x),(x.tecnicos||[]).map(t=>personName(t).replace(' (vos)','')).join(', ')].filter(Boolean).join(' · '):k==='a'?(TK[x.tipo]||'Seguimiento'):(x.lugar||'');
+  d.innerHTML=`<div class="cq-h"><i class="cq-dot" style="background:${col}"></i><input class="cq-t" id="cq_t" type="text" value="${esc(x.titulo||'')}" placeholder="${k==='j'?'Qué trabajo es':'Título'}" aria-label="Título"><button class="x" data-act="calqx" aria-label="Cerrar">✕</button></div>
+    ${sub?`<div class="cq-s">${esc(sub)}</div>`:''}
+    <div class="cq-r"><input type="date" id="cq_f" value="${esc(fecha)}" aria-label="Fecha"><input type="time" id="cq_h" value="${esc(hora)}" step="900" aria-label="Empieza"><span>a</span><input type="time" id="cq_h2" value="${fin}" step="900" aria-label="Termina"></div>
+    ${k!=='a'?`<div class="cq-e" role="group" aria-label="Etiqueta de color">${calEts().map(e=>`<button type="button" class="${x.etiqueta===e.id?'on':''}" style="--c:${esc(e.c)}" data-act="calqet:${esc(e.id)}" aria-pressed="${x.etiqueta===e.id}"><i></i>${esc(e.n)}</button>`).join('')}${isLead()?'<button type="button" class="ed" data-act="calqets">Editar…</button>':''}</div>
+    <label class="cq-tent"><input type="checkbox" id="cq_tent"${x.tentativo?' checked':''}><span><b>Tentativo</b> · queda en gris hasta confirmarlo</span></label>`:''}
+    <div class="cq-f">${k==='e'?'<button class="btn ghost danger" data-act="calqdel">Eliminar</button>':''}<span class="sp"></span><button class="btn" data-act="calqfull">Abrir ficha</button><button class="btn pri" data-act="calqx">Listo</button></div>`;
+}
+async function calqGuarda(p){const o=calqDoc();if(!o)return;try{await put(o.col,o.id,{...o.x,...p,...(o.k==='j'?{actualizado:Date.now()}:{})})}catch(e){handleErr(e)}sr()}
+document.addEventListener('change',async e=>{
+  const t=e.target;if(!t||!t.id||!t.id.startsWith('cq_')||!CQ)return;const o=calqDoc();if(!o)return;const {k,x}=o;
+  if(t.id==='cq_t'){await calqGuarda({titulo:t.value.trim()});return}
+  if(t.id==='cq_tent'){await calqGuarda({tentativo:t.checked});calqPinta();toast(t.checked?'Quedó como tentativo':'Confirmado');return}
+  const f=$('#cq_f').value||(x.fecha||'').slice(0,10),h=$('#cq_h').value,a=hm2m(h),b=hm2m($('#cq_h2').value),antes=n0(x.duracion)||(k==='a'?.5:1);
+  const dur=t.id==='cq_h2'&&a!=null&&b!=null?Math.max(15,b-a)/60:antes;
+  if(k==='a')await calqGuarda({fecha:f+'T'+(h||'09:00'),duracion:dur});
+  else{const p={fecha:f,hora:h,duracion:h?dur:(k==='e'?0:dur)};if(k==='j'&&f!==x.fecha){p.movidoDe=x.fecha;p.movidoEn=Date.now()}await calqGuarda(p)}
+  calqPinta();
+});
+document.addEventListener('keydown',e=>{if(!CQ)return;if(e.key==='Escape'){calqCierra();return}if(e.key==='Enter'&&e.target.closest&&e.target.closest('.cq')&&e.target.tagName==='INPUT'){e.preventDefault();e.target.blur()}});
 /* === fin 1.50 === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;

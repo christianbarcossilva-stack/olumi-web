@@ -1373,10 +1373,12 @@ const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0
     const down=(S,a,b)=>q().setFromUnitVectors(pm(S+b).sub(pm(S+a)).normalize(),new THREE.Vector3(sg(S)*.1,-1,.02).normalize());
     const R0={Left:down('Left','Arm','ForeArm'),Right:down('Right','Arm','ForeArm')},R1={Left:down('Left','ForeArm','Hand'),Right:down('Right','ForeArm','Hand')};
     // manos: normal de la palma en reposo (para girar la muñeca) y dedos relajados, cada uno curvado un poco hacia la palma
-    const C={},mano={},PAL={};
+    const C={},mano={},PAL={},TH={},PUNO=[0,1.3,2.85,3.7],PULG=[.6,.0];
     for(const S of ['Left','Right']){if(!B[S+'HandIndex1']||!B[S+'HandPinky1']||!B[S+'HandMiddle1'])continue;const n=pm(S+'HandIndex1').sub(pm(S+'HandPinky1')).cross(pm(S+'HandMiddle1').sub(pm(S+'Hand'))).normalize();{const ac=new THREE.Vector3();for(const F of ['Index','Middle','Ring','Pinky']){const a1=B[S+'Hand'+F+'1'],a2=B[S+'Hand'+F+'2'],a3=B[S+'Hand'+F+'3'];if(a1&&a2&&a3){const d1=pm(S+'Hand'+F+'2').sub(pm(S+'Hand'+F+'1')),d2=pm(S+'Hand'+F+'3').sub(pm(S+'Hand'+F+'2'));ac.add(d1.clone().cross(d2).cross(d1).normalize().multiplyScalar(d1.clone().normalize().cross(d2.clone().normalize()).length()))}}
         AN['curva'+S]=+ac.length().toFixed(3);if(ac.length()>.05?n.dot(ac)<0:n.y>0)n.negate()}PAL[S]=n;
-      for(const F of ['Index','Middle','Ring','Pinky']){let d=null;for(let j=1;j<=3;j++){const nm=S+'Hand'+F+j,nx=S+'Hand'+F+(j+1);if(!B[nm])continue;if(B[nx])d=pm(nx).sub(pm(nm)).normalize();if(!d)continue;C[nm]=aa(d.clone().cross(n).normalize(),.2*j+(F==='Pinky'?.08:0));mano[nm]=S+'Hand'}}}
+      for(const F of ['Index','Middle','Ring','Pinky']){let d=null;for(let j=1;j<=3;j++){const nm=S+'Hand'+F+j,nx=S+'Hand'+F+(j+1);if(!B[nm])continue;if(B[nx])d=pm(nx).sub(pm(nm)).normalize();if(!d)continue;C[nm]={ax:d.clone().cross(n).normalize(),a:.2*j+(F==='Pinky'?.08:0),j,S};mano[nm]=S+'Hand'}}
+      /* pulgar: se abre girando en el plano de la palma, alejándose de los otros dedos (para el "me gusta") */
+      if(B[S+'HandThumb1']&&B[S+'HandThumb2']){const dT=pm(S+'HandThumb2').sub(pm(S+'HandThumb1')),dF=pm(S+'HandMiddle1').sub(pm(S+'Hand')),sgn=Math.sign(dF.clone().cross(dT).dot(n))||1;for(let j=1;j<=3;j++)if(B[S+'HandThumb'+j]){TH[S+'HandThumb'+j]={ax:n.clone(),sg:sgn,ej:dT.clone().normalize().cross(n).normalize(),j,S};mano[S+'HandThumb'+j]=S+'Hand'}}}
     const o={g,an:AN,bones:B,hip:J(),chest:J(),head:J(),lL:{th:J(),kn:J(),an:J(),ab:0,yw:0},lR:{th:J(),kn:J(),an:J(),ab:0,yw:0},hipS:0,roll:0,aL:{sh:J(),el:J(),in:0,palma:0},aR:{sh:J(),el:J(),in:0,palma:0},hipY:null,hipX:0};o.hip.position.y=.95;
     let top=B.Hips;while(top.parent&&top.parent.isBone)top=top.parent;const order=[];(function walk(b){if(b.isBone)order.push(b);b.children.forEach(walk)})(top);
     const nameOf=new Map(Object.entries(B).map(([n,b])=>[b,n])),W={},DN=new THREE.Vector3(0,-1,0),v1=new THREE.Vector3(),v2=new THREE.Vector3(),v3=new THREE.Vector3(),v4=new THREE.Vector3();
@@ -1384,12 +1386,16 @@ const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0
       for(const [S,l,a] of [['Left',o.lL,o.aL],['Right',o.lR,o.aR]]){const t=l.th.rotation.z,kn=t+l.kn.rotation.z,yq=aa(Y,sg(S)*(l.yw||0)),lq=yq.clone().multiply(aa(Z,l.ab||0));     // ab: la pierna se abre o se cierra desde la cadera; yw: la punta del pie gira hacia afuera
         D[S+'UpLeg']=lq.clone().multiply(fx(t)).multiply(LG[S]);D[S+'Leg']=lq.multiply(fx(kn)).multiply(LG[S]);D[S+'Foot']=yq.multiply(fx(kn+l.an.rotation.z)).multiply(LG[S]);D[S+'ToeBase']=D[S+'Foot'];
         // brazo: abre o cierra (in > 0 lo trae hacia el centro), sube hacia adelante y dobla el codo; la muñeca gira para dejar la palma hacia el cuerpo (0) o hacia abajo (1)
-        const up=sp.clone().multiply(aa(Y,sg(S)*((a.sh.rotation.x||0)-(a.in||0)))).multiply(fx(a.sh.rotation.z));D[S+'Shoulder']=sp;D[S+'Arm']=up.clone().multiply(R0[S]);
+        const up=sp.clone().multiply(aa(Y,sg(S)*((a.sh.rotation.x||0)-(a.in||0)))).multiply(fx(a.sh.rotation.z));/* ritmo del hombro: cuando el brazo sube, la clavícula sube con él (un tercio del camino); si no, el brazo parece salirse del hombro */
+        const cla=Math.min(.42,Math.max(0,Math.abs(a.sh.rotation.z)-.7)*.2);D[S+'Shoulder']=cla>.001?sp.clone().multiply(aa(Z,sg(S)*cla)):sp;D[S+'Arm']=up.clone().multiply(R0[S]);
         let fo=up.clone().multiply(fx(a.el.rotation.z)).multiply(R1[S]);
         if(PAL[S]){const f=v1.copy(pm0[S]).applyQuaternion(fo).normalize(),n=v2.copy(PAL[S]).applyQuaternion(fo),pf=a.pf||0,want=v3.set(-sg(S)*(1-(a.palma||0))*(1-pf),-(a.palma||0),pf-.15*(1-(a.palma||0))*(1-pf)).normalize();      // pf: palma hacia adelante (saludar)
           n.addScaledVector(f,-n.dot(f)).normalize();want.addScaledVector(f,-want.dot(f));if(want.lengthSq()>1e-4){want.normalize();const ang=Math.atan2(v4.crossVectors(n,want).dot(f),n.dot(want));fo=aa(f,ang).multiply(fo)}}
         D[S+'ForeArm']=fo}
-      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n])D[n]=C[n]?D[mano[n]].clone().multiply(C[n]):p?D[p]:q();const w=D[n].clone().multiply(rest[n]);W[n]=w;
+      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n]){const c=C[n],th=TH[n];
+          if(c){const pu=(c.S==='Left'?o.aL:o.aR).puno||0;D[n]=D[mano[n]].clone().multiply(aa(c.ax,c.a+(PUNO[c.j]-c.a)*pu))}
+          else if(th){const pg=(th.S==='Left'?o.aL:o.aR).pulgar||0;D[n]=pg>.001?D[mano[n]].clone().multiply(aa(th.ax,th.sg*pg*PULG[0])).multiply(aa(th.ej,pg*PULG[1]*(th.j-1))):D[mano[n]]}
+          else D[n]=p?D[p]:q()}const w=D[n].clone().multiply(rest[n]);W[n]=w;
         if(p)b.quaternion.copy(W[p].clone().invert().multiply(w));else b.quaternion.copy(restL[n]).multiply(rest[n].clone().invert()).multiply(w)}
       // cadera: altura de la articulación (hipY, en metros desde el piso) o, si no se dio, la del muñeco; y corrimiento hacia adelante (hipX)
       B.Hips.position.copy(hipRest);B.Hips.position.y+=(o.hipY!=null?o.hipY-AN.hipH:(o.hip.position.y-.95)*(alto/1.75))/k;B.Hips.position.z+=(o.hipX||0)/k;B.Hips.position.x+=(o.hipS||0)/k};
@@ -1414,7 +1420,7 @@ function avPose(o,mode,dt,c){c=c||{};const A=o.an,k=Math.min(1,dt*9),t=(c.t||0)+
     for(const [a,s] of [[o.aL,1],[o.aR,-1]]){let wx,wy,inn,pal;
       if(c.teclado){const ty=Math.sin(t*(s>0?3.1:2.7)+s)*.008,mouse=ms&&s<0;wx=c.teclado.d-A.hand*.62+(mouse?.03:0)-A.shZ-o.hipX;wy=shy-(c.teclado.h+.045+ty);inn=mouse?-.22:(A.shX-.105)/Math.max(.2,wx);pal=1}
       else{wx=A.Lt*.5-A.shZ-o.hipX;wy=shy-(o.hipY+.105*A.alto/1.75);inn=(A.shX-.1)/Math.max(.2,wx)*.6;pal=.9}
-      const [sh,el]=av2(A.La,A.Lf,wx,wy,-1);to(a.sh,sh);to(a.el,el);a.in+=(inn-a.in)*k;a.palma+=(pal-a.palma)*k;a.sh.rotation.x=0;a.pf=0}
+      const [sh,el]=av2(A.La,A.Lf,wx,wy,-1);to(a.sh,sh);to(a.el,el);a.in+=(inn-a.in)*k;a.palma+=(pal-a.palma)*k;a.sh.rotation.x=0;a.pf=0;a.puno=0;a.pulgar=0}
     o.head.rotation.z+=((c.teclado?.1:.02)+Math.sin(t*.5)*.03-o.head.rotation.z)*k;o.head.rotation.y+=((ms?-.14:Math.sin(t*.23)*.08)-o.head.rotation.y)*k;return}
   // de pie: la postura de descanso y el paso se mezclan (mix), así arrancar y frenar no da saltos y al parar se vuelve sola al reposo
   const a175=A.alto/1.75,sd=o.seed||0,fr=x=>x-Math.floor(x),ph=(o.gd||0)/(2*paso),s2=Math.sin(ph*2*Math.PI)*mix,cL=Math.cos(ph*2*Math.PI)*mix,q=1-mix,k2=Math.min(1,dt*10);
@@ -1436,25 +1442,33 @@ function avPose(o,mode,dt,c){c=c||{};const A=o.an,k=Math.min(1,dt*9),t=(c.t||0)+
   for(const [l,s,x,y,psi,lat,yw] of pie){const dy=o.hipY+cad(s)-A.footH-y,d=dl(s,lat),[th,kn]=av2(A.Lt,A.Ls,x,Math.hypot(dy,d),1);
     l.th.rotation.z=th;l.kn.rotation.z=Math.min(kn,-.04);l.an.rotation.z=psi-(th+l.kn.rotation.z);l.ab=Math.atan2(d,dy)-s*ab0;l.yw=yw}
   o.chest.rotation.z+=((-.035*mix+br*.008)-o.chest.rotation.z)*k;o.chest.rotation.y=cL*.09;o.chest.rotation.x=-o.roll*.7;o.head.rotation.x=o.roll*.35;
-  // gesto en curso (saludar, hablar, pensar, mirar la hora, estirarse): entra y sale suave, y al terminar el cuerpo vuelve a lo que estaba haciendo
+  // gesto en curso (saludar, hablar, pensar, mirar la hora, me gusta): entra y sale suave, y al terminar el cuerpo vuelve a lo que estaba haciendo
   let G=null,ge=0,gt=0;if(o.ges){const g=o.ges;if(g.t0==null)g.t0=c.t||0;gt=(c.t||0)-g.t0;if(gt>=g.dur||!AV_GES[g.id])o.ges=null;else{G=AV_GES[g.id];ge=avSm(0,.32,gt)*(1-avSm(g.dur-.4,g.dur,gt))}}
   const gh=G&&G.cabeza?G.cabeza(gt):null,hy0=mix>.3?-cL*.07:Math.sin(t*.3)*.22+Math.sin(t*.071+sd)*.12,hz0=mix>.3?.02:Math.sin(t*.21)*.04;
   o.head.rotation.y+=((gh?hy0+(gh[0]-hy0)*ge:hy0)-o.head.rotation.y)*k;o.head.rotation.z+=((gh?hz0+(gh[1]-hz0)*ge:hz0)-o.head.rotation.z)*k;
   if(G&&G.pecho)o.chest.rotation.z+=G.pecho*ge*k;
   for(const [a,s] of [[o.aL,1],[o.aR,-1]]){
-    if(o.carry){a.sh.rotation.x=0;to(a.sh,.5);to(a.el,1.2);a.in+=(.25-a.in)*k;a.palma+=(.2-a.palma)*k;a.pf=0;continue}
+    if(o.carry){a.sh.rotation.x=0;to(a.sh,.5);to(a.el,1.2);a.in+=(.25-a.in)*k;a.palma+=(.2-a.palma)*k;a.pf=0;a.puno=0;a.pulgar=0;continue}
     // brazos: al caminar acompañan el paso; quietos cuelgan sueltos, el del lado del peso apenas más atrás
-    const sw=-s*cL;let v=[mix*(sw*.3-.03)+q*(-.015-s*o.pw*.03+br*.006),0,mix*(.44+Math.max(0,sw)*.42)+q*(.3-s*o.pw*.04+.06*fr(sd*(s>0?4.1:6.7))),0,0,0],kk=.5;
+    const sw=-s*cL;let v=[mix*(sw*.3-.03)+q*(-.015-s*o.pw*.03+br*.006),0,mix*(.44+Math.max(0,sw)*.42)+q*(.3-s*o.pw*.04+.06*fr(sd*(s>0?4.1:6.7))),0,0,0,0,0],kk=.5;
     const gv=G&&G.brazo?G.brazo(gt,s):null;if(gv){v=v.map((x,i)=>x+((gv[i]||0)-x)*ge);kk=Math.min(1,dt*12)}
-    to(a.sh,v[0],kk);a.sh.rotation.x+=(v[1]-a.sh.rotation.x)*kk;to(a.el,v[2],kk);a.in+=(v[3]-a.in)*k;a.palma+=(v[4]-a.palma)*k;a.pf=(a.pf||0)+(v[5]-(a.pf||0))*k}}
-// gestos: brazo(t, lado) devuelve [subir adelante, abrir al costado, doblar el codo, cerrar al centro, palma abajo, palma al frente] (lado +1 izquierdo, −1 derecho; null = ese brazo sigue en lo suyo)
+    to(a.sh,v[0],kk);a.sh.rotation.x+=(v[1]-a.sh.rotation.x)*kk;to(a.el,v[2],kk);a.in+=(v[3]-a.in)*k;a.palma+=(v[4]-a.palma)*k;a.pf=(a.pf||0)+(v[5]-(a.pf||0))*k;a.puno=(a.puno||0)+(v[6]-(a.puno||0))*kk;a.pulgar=(a.pulgar||0)+(v[7]-(a.pulgar||0))*kk}}
+// gestos: brazo(t, lado) devuelve [subir adelante, abrir al costado, doblar el codo, cerrar al centro, palma abajo, palma al frente, cerrar el puño, abrir el pulgar] (lado +1 izquierdo, −1 derecho; null = ese brazo sigue en lo suyo)
 // y cabeza(t) = [girar, bajar]. Para sumar uno alcanza con agregarlo acá.
 const AV_GES={
   saludo:{dur:2.4,brazo:(t,s)=>s<0?[1.5,1.05+Math.sin(t*9)*.16,1.55+Math.sin(t*9)*.22,0,0,1]:null,cabeza:t=>[0,-.03]},
   hablar:{dur:2.8,brazo:(t,s)=>[.36+Math.sin(t*3.7+s)*.07,.12,1.2+Math.sin(t*5.1+s*1.4)*.2,.1,.35,0],cabeza:t=>[Math.sin(t*2.1)*.06,.03+Math.sin(t*4.3)*.03]},
   pensar:{dur:3.6,brazo:(t,s)=>s<0?[.5,0,2.22,.62,0,0]:[.3,0,1.5,.75,.6,0],cabeza:t=>[.12,.1]},
   hora:{dur:2.8,brazo:(t,s)=>s>0?[.42,0,1.42,.78,1,0]:null,cabeza:t=>[.32,.36]},
-  estirar:{dur:3.2,brazo:(t,s)=>[2.75,.3,.3,0,0,0],cabeza:t=>[0,-.2],pecho:.09}};
+  like:{dur:2.6,brazo:(t,s)=>s<0?[.5+Math.sin(t*7)*.04*Math.exp(-t*1.2),.1,1.5,.32,0,0,1,1]:null,cabeza:t=>[-.1,.03+Math.sin(t*6)*.03*Math.exp(-t)]}};
+// materiales de una persona recién cargada: piel y ropa opacas y con sombra; pelo y ojos recortados (con borde suave si hay antialias);
+// cejas y pestañas mezcladas (así se ven pelos y no un trazo negro). lado = tamaño máximo de textura (en teléfonos conviene 1024).
+function avMat(scene,lado){const hecho=new Set();scene.traverse(o=>{if(!o.isMesh)return;const m=o.material;o.castShadow=true;if(!m)return;const n=(m.name||'')+' '+(o.name||'');
+  if(/brow|lash/i.test(n)){m.transparent=true;m.alphaTest=.03;m.depthWrite=false;m.side=THREE.DoubleSide;m.polygonOffset=true;m.polygonOffsetFactor=-1;m.polygonOffsetUnits=-1;o.castShadow=false}
+  else if(m.transparent||m.alphaTest>0){m.transparent=false;m.alphaTest=m.alphaTest>0?m.alphaTest:.32;m.alphaToCoverage=true;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}
+  if(/body/i.test(n)){m.roughness=.62;m.envMapIntensity=.5}
+  if(m.map&&!hecho.has(m.map)){hecho.add(m.map);m.map.anisotropy=4;const im=m.map.image;
+    if(lado&&im&&Math.max(im.width,im.height)>lado&&typeof document!=='undefined'){const k=lado/Math.max(im.width,im.height),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);m.map.image=c;m.map.needsUpdate=true}}})}
 function avGesto(o,id,dur){if(!o||!AV_GES[id]||o.ges&&o.ges.id===id)return;o.ges={id,dur:dur||AV_GES[id].dur,t0:null}}
 
 // ---------- avatares 3D: personas hechas en Blender (GLB con esqueleto), del catálogo ./3d/catalogo.json ----------
@@ -1491,9 +1505,10 @@ function mkVehGLB(v,md){try{const g=new THREE.Group(),b=new THREE.Group(),col=v.
     if(md.cartel){const c=md.cartel,h=c.h,w=Math.min(c.w,h*5.33),nt=new THREE.MeshStandardMaterial({map:nameTex(S.name,vehCols(v.col).dark),transparent:true,roughness:.5});
       [-1,1].forEach(s=>{const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),nt);p.position.set(c.x+ad,c.y,s*c.z);if(s<0)p.rotation.y=Math.PI;g.add(p)})}
     return{g,beacon:null,Hh:(md.alto||1.8)+.15,L:md.largo||4.6}}catch(e){return null}}
-// gestos en la oficina: quien habla acompaña con las manos, quien está parado un rato mira la hora, piensa o se estira, y cuando pasás caminando cerca te saludan.
-// En el recorrido, tu avatar hace los suyos con las teclas 1 a 5.
-const AV_TECLA={Digit1:'saludo',Digit2:'hablar',Digit3:'pensar',Digit4:'hora',Digit5:'estirar'},AV_RATO=['hora','pensar','hora','estirar','pensar'];
+// gestos en la oficina: quien habla acompaña con las manos, quien está parado un rato mira la hora o piensa, y cuando pasás caminando cerca te saludan.
+// En el recorrido, tu avatar hace los suyos con las teclas 1 a 5 (la 5 es el pulgar arriba).
+const AV_TECLA={Digit1:'saludo',Digit2:'hablar',Digit3:'pensar',Digit4:'hora',Digit5:'like'},AV_RATO=['hora','pensar','hora','pensar','hora'];
+const AV_TEX=(()=>{try{return matchMedia('(pointer:coarse)').matches?1024:0}catch(e){return 0}})();   /* en teléfonos las texturas grandes se achican al cargar */
 function avGestos(o,p,md,x,y){if(md==='sit'||o.carry||o.ges)return;
   if(p.say&&T<p.sayT){avGesto(o,'hablar',Math.max(1.6,Math.min(3.2,p.sayT-T)));return}
   if(WALK.on&&T>(o.salT||0)&&Math.hypot(x-WALK.x,y-WALK.y)<2.3){o.salT=T+45;avGesto(o,'saludo');return}
@@ -1502,9 +1517,8 @@ function avGestos(o,p,md,x,y){if(md==='sit'||o.carry||o.ges)return;
 async function avLoad(){try{const base=new URL('./3d/',location.href),r=await fetch(new URL('catalogo.json',base));if(!r.ok)return;const cat=await r.json();
     const [{GLTFLoader},{clone}]=await Promise.all([import('./lib/GLTFLoader.js'),import('./lib/SkeletonUtils.js')]);const L=new GLTFLoader();AV.clone=clone;
     (cat.vehiculos||[]).forEach(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);AV.veh[a.id]={...a,re:a.modelo?new RegExp(a.modelo,'i'):null,scene:g.scene}}catch(e){}});
-    await Promise.all((cat.avatares||[]).map(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);g.scene.traverse(o=>{if(!o.isSkinnedMesh)return;const m=o.material;o.castShadow=true;o.receiveShadow=false;
-        // pelo, cejas y pestañas: recorte por transparencia (sin mezcla, que se ordena mal) y visibles de los dos lados
-        if(m&&m.transparent){m.transparent=false;m.alphaTest=.32;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}if(m)m.envMapIntensity=.6});AV.mod[a.id]={...a,scene:g.scene}}catch(e){}}));
+    await Promise.all((cat.avatares||[]).map(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);avMat(g.scene,AV_TEX);   /* piel y ropa opacas, pelo recortado con borde suave, cejas y pestañas mezcladas (avatar-core.js) */
+        g.scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.receiveShadow=false;if(o.material)o.material.envMapIntensity=.6});AV.mod[a.id]={...a,scene:g.scene}}catch(e){}}));
     AV.ok=Object.keys(AV.mod).length>0}catch(e){AV.err=String(e)}}
 try{window.__av=AV}catch(e){}
 avLoad();
