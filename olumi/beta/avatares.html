@@ -1,0 +1,198 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
+<title>Avatares y vehículos · Olumi</title>
+<style>
+:root{--bg:#eef0f3;--ink:#16181d;--mut:#6b7280;--card:rgba(255,255,255,.82);--line:rgba(20,24,32,.1);--on:#16181d}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+header{position:fixed;left:0;top:0;padding:calc(16px + env(safe-area-inset-top)) 20px 0;pointer-events:none}
+h1{margin:0;font-size:20px;font-weight:650;letter-spacing:-.01em}header p{margin:3px 0 0;color:var(--mut);font-size:13px}
+#nombre{position:fixed;right:20px;top:calc(18px + env(safe-area-inset-top));font-size:13px;color:var(--mut);text-align:right;pointer-events:none;max-width:46vw}
+#panel{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(880px,calc(100vw - 20px));background:var(--card);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid var(--line);border-radius:20px;padding:10px 12px;box-shadow:0 10px 34px rgba(16,24,40,.12)}
+.fila{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 0}.fila::-webkit-scrollbar{display:none}
+.fila+.fila{border-top:1px solid var(--line);margin-top:4px;padding-top:8px}
+.rot{flex:none;width:74px;font-size:12px;color:var(--mut)}
+button{flex:none;font:inherit;font-size:13.5px;color:var(--ink);background:rgba(20,24,32,.055);border:0;border-radius:999px;padding:7px 13px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,transform .1s}
+button:hover{background:rgba(20,24,32,.1)}button:active{transform:scale(.97)}button[aria-pressed=true]{background:var(--on);color:#fff}
+button:focus-visible{outline:2px solid #2f6fd0;outline-offset:2px}
+.sep{flex:none;width:1px;height:20px;background:var(--line);margin:0 4px}
+.col{width:28px;height:28px;padding:0;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}.col[aria-pressed=true]{box-shadow:0 0 0 2px var(--on)}
+#aviso{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);color:var(--mut);font-size:14px;text-align:center;max-width:80vw}
+@media(min-width:760px){#f-quien{flex-wrap:wrap;overflow:visible}}
+@media(max-width:560px){h1{font-size:18px}.rot{display:none}#nombre{display:none}}
+</style></head><body>
+<canvas id="c" aria-label="Vista 3D: arrastrá para girar"></canvas>
+<header><h1>Avatares y vehículos</h1><p>Versión de prueba · arrastrá para girar, rueda o pellizco para acercar</p></header>
+<div id="nombre"></div><div id="aviso">Cargando…</div>
+<div id="panel" hidden>
+  <div class="fila" id="f-quien"><span class="rot">Modelo</span></div>
+  <div class="fila" id="f-hace"><span class="rot">Qué hace</span></div>
+</div>
+<script type="module">
+// Demostración de los modelos del catálogo (olumi/beta/3d): personas con el mismo núcleo de movimiento de la oficina y vehículos con su color.
+// Se arma con olumi-app/scripts/avatares.py, que copia adentro el núcleo (oficina-3d/avatar-core.js): una sola fuente.
+import * as THREE from './lib/three.module.min.js';import {RoomEnvironment} from './lib/RoomEnvironment.js';
+const $=s=>document.querySelector(s),aviso=t=>{$('#aviso').textContent=t;$('#aviso').hidden=!t};
+try{
+const {GLTFLoader}=await import('./lib/GLTFLoader.js'),{clone}=await import('./lib/SkeletonUtils.js');
+const {avatarGLB,avPose,avGesto,AV_GES}=(function(THREE){
+// ---------- avatares 3D · núcleo (sin nada propio de la oficina: lo usan la oficina y el visor del taller) ----------
+// avatarGLB(escena, alto): prepara un modelo GLB con esqueleto (nombres tipo Mixamo o "game_engine" de MakeHuman) y devuelve la persona:
+//   .g (grupo que se ubica y gira; mira hacia +x como el muñeco), las articulaciones que se pueden mover (hip, chest, head, lL/lR, aL/aR),
+//   .an (medidas del cuerpo, en metros) y .sync() (pasa las articulaciones a los huesos).
+// avPose(o, modo, dt, c): mueve esas articulaciones con anatomía: al caminar los pies siguen una pisada (apoyan planos, no patinan) y las
+//   rodillas salen de la geometría de la pierna; sentado, la cadera queda sobre el asiento, los pies en el piso y las manos llegan al teclado.
+const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),Z=new THREE.Vector3(0,0,1),q=()=>new THREE.Quaternion(),aa=(ax,a)=>q().setFromAxisAngle(ax,a),J=()=>({rotation:new THREE.Euler(),position:new THREE.Vector3()}),fx=a=>aa(X,-a);
+  const ALIAS={pelvis:'Hips',spine_01:'Spine',spine_02:'Spine1',spine_03:'Spine2',neck_01:'Neck',head:'Head'};for(const [s,S] of [['l','Left'],['r','Right']])Object.assign(ALIAS,{['clavicle_'+s]:S+'Shoulder',['upperarm_'+s]:S+'Arm',['lowerarm_'+s]:S+'ForeArm',['hand_'+s]:S+'Hand',['thigh_'+s]:S+'UpLeg',['calf_'+s]:S+'Leg',['foot_'+s]:S+'Foot',['ball_'+s]:S+'ToeBase'});
+  return function(scene,alto){const g=new THREE.Group(),inner=new THREE.Group();inner.add(scene);g.add(inner);inner.rotation.y=Math.PI/2;scene.updateMatrixWorld(true);
+    const B={};scene.traverse(o=>{if(o.isBone){const n=o.name.replace(/^mixamorig:?/,'');B[ALIAS[n]||n]=o}});if(!B.Hips||!B.LeftUpLeg||!B.LeftLeg||!B.LeftFoot||!B.LeftArm||!B.LeftForeArm||!B.LeftHand)return null;
+    const box=new THREE.Box3(),bb=new THREE.Box3();scene.traverse(o=>{if(o.isSkinnedMesh){o.frustumCulled=false;if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();box.union(bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld))}});
+    const k=alto/(box.max.y-box.min.y);scene.scale.setScalar(k);scene.position.y=-box.min.y*k;scene.updateMatrixWorld(true);
+    // todo lo que sigue se mide en el "espacio del modelo": x = su izquierda, y = arriba, z = adelante, en metros
+    const inv=scene.getWorldQuaternion(q()).invert(),rest={},restL={},pm=n=>B[n].getWorldPosition(new THREE.Vector3()).applyQuaternion(inv);
+    for(const n in B){rest[n]=inv.clone().multiply(B[n].getWorldQuaternion(q()));restL[n]=B[n].quaternion.clone()}
+    const hipRest=B.Hips.position.clone(),sg=S=>S==='Left'?1:-1;
+    // piernas: el molde viene parado con las piernas abiertas y los pies hacia afuera; se llevan a caer derechas, con la punta apenas abierta
+    const LG={},AN={alto};
+    for(const S of ['Left','Right']){const h=pm(S+'UpLeg'),a=pm(S+'Foot'),t=B[S+'ToeBase']?pm(S+'ToeBase'):a.clone().add(Z),f=t.clone().sub(a),l=a.clone().sub(h);
+      const yaw=sg(S)*.07-Math.atan2(f.x,f.z),lat=Math.atan2(sg(S)*.085*alto/1.75-h.x,-l.y)-Math.atan2(l.x,-l.y);LG[S]=aa(Z,lat).multiply(aa(Y,yaw))}
+    {const h=pm('LeftUpLeg'),kn=pm('LeftLeg'),a=pm('LeftFoot'),s=pm('LeftArm'),e=pm('LeftForeArm'),w=pm('LeftHand'),t=B.LeftToeBase?pm('LeftToeBase'):a;
+      Object.assign(AN,{hipW:Math.abs(h.x),lat0:.085*alto/1.75,Lt:h.distanceTo(kn),Ls:kn.distanceTo(a),hipH:h.y,footH:a.y,toe:Math.hypot(t.z-a.z,t.x-a.x),La:s.distanceTo(e),Lf:e.distanceTo(w),shY:s.y-h.y,shZ:s.z-h.z,shX:Math.abs(s.x),hand:B.LeftHandMiddle1?pm('LeftHandMiddle1').distanceTo(w)*2.1:.17})}
+    // brazos y antebrazos: del reposo (en A, con el codo algo doblado) a colgar rectos al costado
+    const down=(S,a,b)=>q().setFromUnitVectors(pm(S+b).sub(pm(S+a)).normalize(),new THREE.Vector3(sg(S)*.1,-1,.02).normalize());
+    const R0={Left:down('Left','Arm','ForeArm'),Right:down('Right','Arm','ForeArm')},R1={Left:down('Left','ForeArm','Hand'),Right:down('Right','ForeArm','Hand')};
+    // manos: normal de la palma en reposo (para girar la muñeca) y dedos relajados, cada uno curvado un poco hacia la palma
+    const C={},mano={},PAL={};
+    for(const S of ['Left','Right']){if(!B[S+'HandIndex1']||!B[S+'HandPinky1']||!B[S+'HandMiddle1'])continue;const n=pm(S+'HandIndex1').sub(pm(S+'HandPinky1')).cross(pm(S+'HandMiddle1').sub(pm(S+'Hand'))).normalize();{const ac=new THREE.Vector3();for(const F of ['Index','Middle','Ring','Pinky']){const a1=B[S+'Hand'+F+'1'],a2=B[S+'Hand'+F+'2'],a3=B[S+'Hand'+F+'3'];if(a1&&a2&&a3){const d1=pm(S+'Hand'+F+'2').sub(pm(S+'Hand'+F+'1')),d2=pm(S+'Hand'+F+'3').sub(pm(S+'Hand'+F+'2'));ac.add(d1.clone().cross(d2).cross(d1).normalize().multiplyScalar(d1.clone().normalize().cross(d2.clone().normalize()).length()))}}
+        AN['curva'+S]=+ac.length().toFixed(3);if(ac.length()>.05?n.dot(ac)<0:n.y>0)n.negate()}PAL[S]=n;
+      for(const F of ['Index','Middle','Ring','Pinky']){let d=null;for(let j=1;j<=3;j++){const nm=S+'Hand'+F+j,nx=S+'Hand'+F+(j+1);if(!B[nm])continue;if(B[nx])d=pm(nx).sub(pm(nm)).normalize();if(!d)continue;C[nm]=aa(d.clone().cross(n).normalize(),.2*j+(F==='Pinky'?.08:0));mano[nm]=S+'Hand'}}}
+    const o={g,an:AN,bones:B,hip:J(),chest:J(),head:J(),lL:{th:J(),kn:J(),an:J(),ab:0,yw:0},lR:{th:J(),kn:J(),an:J(),ab:0,yw:0},hipS:0,roll:0,aL:{sh:J(),el:J(),in:0,palma:0},aR:{sh:J(),el:J(),in:0,palma:0},hipY:null,hipX:0};o.hip.position.y=.95;
+    let top=B.Hips;while(top.parent&&top.parent.isBone)top=top.parent;const order=[];(function walk(b){if(b.isBone)order.push(b);b.children.forEach(walk)})(top);
+    const nameOf=new Map(Object.entries(B).map(([n,b])=>[b,n])),W={},DN=new THREE.Vector3(0,-1,0),v1=new THREE.Vector3(),v2=new THREE.Vector3(),v3=new THREE.Vector3(),v4=new THREE.Vector3();
+    o.sync=()=>{const D={},sp=aa(Y,o.chest.rotation.y).multiply(aa(Z,o.chest.rotation.x||0)).multiply(fx(o.chest.rotation.z));D.Hips=aa(Z,o.roll||0);D.Spine1=sp;D.Spine2=sp;D.Neck=sp;D.Head=sp.clone().multiply(aa(Y,o.head.rotation.y)).multiply(aa(Z,o.head.rotation.x||0)).multiply(fx(o.head.rotation.z));
+      for(const [S,l,a] of [['Left',o.lL,o.aL],['Right',o.lR,o.aR]]){const t=l.th.rotation.z,kn=t+l.kn.rotation.z,yq=aa(Y,sg(S)*(l.yw||0)),lq=yq.clone().multiply(aa(Z,l.ab||0));     // ab: la pierna se abre o se cierra desde la cadera; yw: la punta del pie gira hacia afuera
+        D[S+'UpLeg']=lq.clone().multiply(fx(t)).multiply(LG[S]);D[S+'Leg']=lq.multiply(fx(kn)).multiply(LG[S]);D[S+'Foot']=yq.multiply(fx(kn+l.an.rotation.z)).multiply(LG[S]);D[S+'ToeBase']=D[S+'Foot'];
+        // brazo: abre o cierra (in > 0 lo trae hacia el centro), sube hacia adelante y dobla el codo; la muñeca gira para dejar la palma hacia el cuerpo (0) o hacia abajo (1)
+        const up=sp.clone().multiply(aa(Y,sg(S)*((a.sh.rotation.x||0)-(a.in||0)))).multiply(fx(a.sh.rotation.z));D[S+'Shoulder']=sp;D[S+'Arm']=up.clone().multiply(R0[S]);
+        let fo=up.clone().multiply(fx(a.el.rotation.z)).multiply(R1[S]);
+        if(PAL[S]){const f=v1.copy(pm0[S]).applyQuaternion(fo).normalize(),n=v2.copy(PAL[S]).applyQuaternion(fo),pf=a.pf||0,want=v3.set(-sg(S)*(1-(a.palma||0))*(1-pf),-(a.palma||0),pf-.15*(1-(a.palma||0))*(1-pf)).normalize();      // pf: palma hacia adelante (saludar)
+          n.addScaledVector(f,-n.dot(f)).normalize();want.addScaledVector(f,-want.dot(f));if(want.lengthSq()>1e-4){want.normalize();const ang=Math.atan2(v4.crossVectors(n,want).dot(f),n.dot(want));fo=aa(f,ang).multiply(fo)}}
+        D[S+'ForeArm']=fo}
+      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n])D[n]=C[n]?D[mano[n]].clone().multiply(C[n]):p?D[p]:q();const w=D[n].clone().multiply(rest[n]);W[n]=w;
+        if(p)b.quaternion.copy(W[p].clone().invert().multiply(w));else b.quaternion.copy(restL[n]).multiply(rest[n].clone().invert()).multiply(w)}
+      // cadera: altura de la articulación (hipY, en metros desde el piso) o, si no se dio, la del muñeco; y corrimiento hacia adelante (hipX)
+      B.Hips.position.copy(hipRest);B.Hips.position.y+=(o.hipY!=null?o.hipY-AN.hipH:(o.hip.position.y-.95)*(alto/1.75))/k;B.Hips.position.z+=(o.hipX||0)/k;B.Hips.position.x+=(o.hipS||0)/k};
+    const pm0={Left:pm('LeftHand').sub(pm('LeftForeArm')).normalize(),Right:pm('RightHand').sub(pm('RightForeArm')).normalize()};
+    return o}})();
+
+// dos huesos en un plano (muslo–pierna o brazo–antebrazo): ángulos para que la punta llegue a (dx hacia adelante, dy hacia abajo)
+// devuelve [a, b]: a = giro del primer hueso desde colgar (adelante +), b = flexión del segundo; dobla = +1 la articulación va hacia adelante (rodilla), -1 hacia atrás (codo)
+function av2(L1,L2,dx,dy,dobla){let d=Math.hypot(dx,dy);const m=(L1+L2)*.999,n=Math.abs(L1-L2)*1.02+.001;if(d>m){dx*=m/d;dy*=m/d;d=m}if(d<n){d=n}
+  const a1=Math.atan2(dx,dy),al=Math.acos(Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)))),be=Math.acos(Math.max(-1,Math.min(1,(L1*L1+L2*L2-d*d)/(2*L1*L2))));return[a1+dobla*al,-dobla*(Math.PI-be)]}
+const avSm=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+function avPose(o,mode,dt,c){c=c||{};const A=o.an,k=Math.min(1,dt*9),t=(c.t||0)+(o.seed||0),br=Math.sin(t*1.6),L=A.Lt+A.Ls,to=(j,v,kk)=>{j.rotation.z+=(v-j.rotation.z)*(kk==null?k:kk)};
+  // distancia caminada → fase del paso (los pies no patinan: un paso mide lo que se avanzó)
+  if(c.x!=null){if(o.lx!=null&&mode==='walk'){const d=Math.hypot(c.x-o.lx,c.y-o.ly);if(d<.3)o.gd=(o.gd||0)+d}o.lx=c.x;o.ly=c.y}else if(mode==='walk')o.gd=(o.gd||0)+(c.v||1.2)*dt;
+  const paso=.33*A.alto,TR=1.24*paso,mix=o.mix=(o.mix||0)+((mode==='walk'?1:0)-(o.mix||0))*Math.min(1,dt*7);
+  if(mode==='sit'){const asiento=c.asiento==null?.47:c.asiento,hy=asiento+.088*A.alto/1.75;o.hipY=o.hipY==null?hy:o.hipY+(hy-o.hipY)*k;o.hipX+=(-.03-o.hipX)*k;o.roll+=(0-o.roll)*k;o.hipS+=(0-o.hipS)*k;o.chest.rotation.x=-o.roll*.7;o.head.rotation.x=o.roll*.35;o.ges=null;
+    // piernas: muslos sobre el asiento y pies apoyados en el piso, un poco adelante de la rodilla
+    for(const [l,s] of [[o.lL,1],[o.lR,-1]]){const [th,kn]=av2(A.Lt,A.Ls,A.Lt*.94+.05+s*.012,o.hipY-A.footH,1);to(l.th,th);to(l.kn,kn);to(l.an,-(th+kn));l.ab+=(0-l.ab)*k;l.yw+=(0-l.yw)*k}
+    o.chest.rotation.z+=(-.03+br*.006-o.chest.rotation.z)*k;o.chest.rotation.y+=(0-o.chest.rotation.y)*k;
+    // brazos: al teclado (si hay) con las palmas hacia abajo; si no, las manos descansan sobre los muslos
+    const shy=o.hipY+A.shY,ms=!!c.teclado&&Math.sin(t*.37)>.6;
+    for(const [a,s] of [[o.aL,1],[o.aR,-1]]){let wx,wy,inn,pal;
+      if(c.teclado){const ty=Math.sin(t*(s>0?3.1:2.7)+s)*.008,mouse=ms&&s<0;wx=c.teclado.d-A.hand*.62+(mouse?.03:0)-A.shZ-o.hipX;wy=shy-(c.teclado.h+.045+ty);inn=mouse?-.22:(A.shX-.105)/Math.max(.2,wx);pal=1}
+      else{wx=A.Lt*.5-A.shZ-o.hipX;wy=shy-(o.hipY+.105*A.alto/1.75);inn=(A.shX-.1)/Math.max(.2,wx)*.6;pal=.9}
+      const [sh,el]=av2(A.La,A.Lf,wx,wy,-1);to(a.sh,sh);to(a.el,el);a.in+=(inn-a.in)*k;a.palma+=(pal-a.palma)*k;a.sh.rotation.x=0;a.pf=0}
+    o.head.rotation.z+=((c.teclado?.1:.02)+Math.sin(t*.5)*.03-o.head.rotation.z)*k;o.head.rotation.y+=((ms?-.14:Math.sin(t*.23)*.08)-o.head.rotation.y)*k;return}
+  // de pie: la postura de descanso y el paso se mezclan (mix), así arrancar y frenar no da saltos y al parar se vuelve sola al reposo
+  const a175=A.alto/1.75,sd=o.seed||0,fr=x=>x-Math.floor(x),ph=(o.gd||0)/(2*paso),s2=Math.sin(ph*2*Math.PI)*mix,cL=Math.cos(ph*2*Math.PI)*mix,q=1-mix,k2=Math.min(1,dt*10);
+  // reposo: el peso va sobre una pierna (la otra afloja la rodilla y esa cadera baja) y cada tanto cambia de lado; cada persona se para un poco distinto
+  const per=10+fr(sd*.61)*8,lado=(Math.floor(t/per+fr(sd*.37))%2?1:-1)*(fr(sd*.83)>.5?1:-1);o.pw=o.pw==null?lado:o.pw+(lado-o.pw)*Math.min(1,dt*1.5);
+  const ancho=(.078+.02*fr(sd*2.3))*a175,adel=(.012+.03*fr(sd*1.7))*(fr(sd*3.3)>.5?1:-1),punta=.05+.08*fr(sd*5.1);
+  const rollQ=q*o.pw*.075+s2*.035,hsQ=(q*o.pw*.034+s2*.014)*a175;o.roll+=(rollQ-o.roll)*k2;o.hipS+=(hsQ-o.hipS)*k2;
+  let hy=A.hipH-.0075*q-.022*mix+br*.002;const pie=[],yFin=.55*A.toe*.8;
+  for(const [l,s,off] of [[o.lL,1,0],[o.lR,-1,.5]]){const u=((ph+off)%1+1)%1;let x,y=0,psi=0;
+    if(u<.62){const w=u/.62;x=TR*(.46-w);psi=.24*(1-avSm(0,.14,w))-.55*avSm(.72,1,w)**1.5;y=Math.max(0,-psi)*A.toe*.8}      // apoyo: el pie va hacia atrás; al final levanta el talón
+    else{const w=(u-.62)/.38,e=avSm(0,1,w);x=TR*(-.54+e);y=yFin*(1-e)+.07*Math.sin(Math.PI*w)**.9;psi=-.55+.79*avSm(.15,1,w)}   // vuelo: el pie pasa despegado del piso
+    // caminando los pies caen casi en una línea (unos 8 cm entre uno y otro); quieto, al ancho de la cadera y con la punta algo abierta
+    const libre=Math.max(0,-s*o.pw)*q;pie.push([l,s,x*mix+s*adel*q,y*mix+libre*.012,psi*mix-libre*.1,s*(.05*a175*mix+ancho*q),punta*q])}
+  // la cadera baja lo justo para que ninguna pierna tenga que estirarse del todo (cada cadera sube o baja con el ladeo de la pelvis)
+  const cad=s=>s*o.roll*A.hipW,dl=(s,lat)=>lat-(s*A.hipW+o.hipS);
+  for(const [l,s,x,y,psi,lat] of pie){const m=Math.sqrt(Math.max(.01,(L*.9985)**2-x*x-dl(s,lat)**2))+A.footH+y-cad(s);if(m<hy)hy=m}
+  o.hipY=o.hipY==null?hy:o.hipY+(hy-o.hipY)*Math.min(1,dt*18);o.hipX+=(0-o.hipX)*k;
+  const ab0=Math.atan2(A.lat0-A.hipW,A.hipH-A.footH);
+  for(const [l,s,x,y,psi,lat,yw] of pie){const dy=o.hipY+cad(s)-A.footH-y,d=dl(s,lat),[th,kn]=av2(A.Lt,A.Ls,x,Math.hypot(dy,d),1);
+    l.th.rotation.z=th;l.kn.rotation.z=Math.min(kn,-.04);l.an.rotation.z=psi-(th+l.kn.rotation.z);l.ab=Math.atan2(d,dy)-s*ab0;l.yw=yw}
+  o.chest.rotation.z+=((-.035*mix+br*.008)-o.chest.rotation.z)*k;o.chest.rotation.y=cL*.09;o.chest.rotation.x=-o.roll*.7;o.head.rotation.x=o.roll*.35;
+  // gesto en curso (saludar, hablar, pensar, mirar la hora, estirarse): entra y sale suave, y al terminar el cuerpo vuelve a lo que estaba haciendo
+  let G=null,ge=0,gt=0;if(o.ges){const g=o.ges;if(g.t0==null)g.t0=c.t||0;gt=(c.t||0)-g.t0;if(gt>=g.dur||!AV_GES[g.id])o.ges=null;else{G=AV_GES[g.id];ge=avSm(0,.32,gt)*(1-avSm(g.dur-.4,g.dur,gt))}}
+  const gh=G&&G.cabeza?G.cabeza(gt):null,hy0=mix>.3?-cL*.07:Math.sin(t*.3)*.22+Math.sin(t*.071+sd)*.12,hz0=mix>.3?.02:Math.sin(t*.21)*.04;
+  o.head.rotation.y+=((gh?hy0+(gh[0]-hy0)*ge:hy0)-o.head.rotation.y)*k;o.head.rotation.z+=((gh?hz0+(gh[1]-hz0)*ge:hz0)-o.head.rotation.z)*k;
+  if(G&&G.pecho)o.chest.rotation.z+=G.pecho*ge*k;
+  for(const [a,s] of [[o.aL,1],[o.aR,-1]]){
+    if(o.carry){a.sh.rotation.x=0;to(a.sh,.5);to(a.el,1.2);a.in+=(.25-a.in)*k;a.palma+=(.2-a.palma)*k;a.pf=0;continue}
+    // brazos: al caminar acompañan el paso; quietos cuelgan sueltos, el del lado del peso apenas más atrás
+    const sw=-s*cL;let v=[mix*(sw*.3-.03)+q*(-.015-s*o.pw*.03+br*.006),0,mix*(.44+Math.max(0,sw)*.42)+q*(.3-s*o.pw*.04+.06*fr(sd*(s>0?4.1:6.7))),0,0,0],kk=.5;
+    const gv=G&&G.brazo?G.brazo(gt,s):null;if(gv){v=v.map((x,i)=>x+((gv[i]||0)-x)*ge);kk=Math.min(1,dt*12)}
+    to(a.sh,v[0],kk);a.sh.rotation.x+=(v[1]-a.sh.rotation.x)*kk;to(a.el,v[2],kk);a.in+=(v[3]-a.in)*k;a.palma+=(v[4]-a.palma)*k;a.pf=(a.pf||0)+(v[5]-(a.pf||0))*k}}
+// gestos: brazo(t, lado) devuelve [subir adelante, abrir al costado, doblar el codo, cerrar al centro, palma abajo, palma al frente] (lado +1 izquierdo, −1 derecho; null = ese brazo sigue en lo suyo)
+// y cabeza(t) = [girar, bajar]. Para sumar uno alcanza con agregarlo acá.
+const AV_GES={
+  saludo:{dur:2.4,brazo:(t,s)=>s<0?[1.5,1.05+Math.sin(t*9)*.16,1.55+Math.sin(t*9)*.22,0,0,1]:null,cabeza:t=>[0,-.03]},
+  hablar:{dur:2.8,brazo:(t,s)=>[.36+Math.sin(t*3.7+s)*.07,.12,1.2+Math.sin(t*5.1+s*1.4)*.2,.1,.35,0],cabeza:t=>[Math.sin(t*2.1)*.06,.03+Math.sin(t*4.3)*.03]},
+  pensar:{dur:3.6,brazo:(t,s)=>s<0?[.5,0,2.22,.62,0,0]:[.3,0,1.5,.75,.6,0],cabeza:t=>[.12,.1]},
+  hora:{dur:2.8,brazo:(t,s)=>s>0?[.42,0,1.42,.78,1,0]:null,cabeza:t=>[.32,.36]},
+  estirar:{dur:3.2,brazo:(t,s)=>[2.75,.3,.3,0,0,0],cabeza:t=>[0,-.2],pecho:.09}};
+function avGesto(o,id,dur){if(!o||!AV_GES[id]||o.ges&&o.ges.id===id)return;o.ges={id,dur:dur||AV_GES[id].dur,t0:null}}
+
+;return {avatarGLB,avPose,avGesto,AV_GES}})(THREE);
+const cv=$('#c'),r=new THREE.WebGLRenderer({canvas:cv,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio||1,2));r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.outputColorSpace=THREE.SRGBColorSpace;
+const sc=new THREE.Scene();sc.background=new THREE.Color('#eef0f3');sc.fog=new THREE.Fog('#eef0f3',16,34);sc.environment=new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(),.04).texture;sc.environmentIntensity=.6;
+const sun=new THREE.DirectionalLight('#fff4e2',2.3);sun.position.set(3.5,7,4.5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-5,right:5,top:5,bottom:-5,near:.5,far:24});sun.shadow.bias=-.0004;sun.shadow.normalBias=.02;sc.add(sun);sc.add(new THREE.HemisphereLight('#f2f6ff','#b9b3a8',.55));
+const piso=new THREE.Mesh(new THREE.CircleGeometry(40,64).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#e3e6ea',roughness:.95}));piso.receiveShadow=true;sc.add(piso);
+const cam=new THREE.PerspectiveCamera(30,1,.1,80),piv=new THREE.Group();sc.add(piv);
+const mat=(c,o)=>new THREE.MeshStandardMaterial({color:c,roughness:.8,...o}),caja=(w,h,d,x,y,z,m,par)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);b.position.set(x,y,z);b.castShadow=b.receiveShadow=true;par.add(b);return b};
+// puesto de trabajo con las medidas de la oficina (asiento a 47 cm, mesa a 74 cm), con la persona mirando hacia +x
+const puesto=new THREE.Group();{const g=mat('#3b3f46'),p=mat('#8a8f98',{metalness:.6,roughness:.4});caja(.5,.07,.5,0,.435,0,g,puesto);caja(.07,.5,.46,-.24,.75,0,g,puesto);caja(.06,.4,.06,0,.2,0,p,puesto);caja(.5,.03,.5,0,.02,0,p,puesto);
+  caja(.8,.035,1.6,.64,.7225,0,mat('#d9c3a0',{roughness:.6}),puesto);for(const z of[-.72,.72])caja(.05,.705,.6,.64,.3525,z,p,puesto);caja(.15,.015,.46,.36,.7475,0,mat('#f3f4f6',{roughness:.5}),puesto);caja(.025,.34,.56,.9,.99,0,mat('#15171b',{roughness:.3}),puesto);caja(.04,.14,.06,.92,.81,0,p,puesto);caja(.16,.012,.22,.9,.746,0,p,puesto)}
+puesto.visible=false;piv.add(puesto);
+// marcas del piso que corren hacia atrás al caminar (la persona camina en el lugar)
+const marcas=new THREE.Group(),mm=new THREE.MeshBasicMaterial({color:'#c9ced6',transparent:true,opacity:0});for(let i=-5;i<=5;i++){const l=new THREE.Mesh(new THREE.PlaneGeometry(.035,1).rotateX(-Math.PI/2),mm);l.position.y=.004;marcas.add(l)}piv.add(marcas);
+const cat=await (await fetch('./3d/catalogo.json',{cache:'no-cache'})).json(),L=new GLTFLoader(),cache={};
+const carga=async a=>cache[a.archivo]||(cache[a.archivo]=L.loadAsync('./3d/'+a.archivo).then(g=>{g.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;const m=o.material;if(m&&m.transparent){m.transparent=false;m.alphaTest=.32;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}}});return g.scene}));
+const E={tipo:'',id:'',av:null,veh:null,modo:'idle',x:0,t:0,color:null,yaw:-1.05,vyaw:0,zoom:1,dist:5,alto:.95,dQ:5,aQ:.95};
+const COLORES=[['Blanco','#e9ebee'],['Plata','#aeb3ba'],['Gris','#5b5f66'],['Negro','#101114'],['Azul','#2f6fd0'],['Rojo','#b3261e'],['Verde','#2e6b4a']];
+function pintura(col){const c=new THREE.Color(col),lum=.299*c.r+.587*c.g+.114*c.b,o=lum<.05;if(o)c.setRGB(Math.max(c.r,.012),Math.max(c.g,.012),Math.max(c.b,.014));
+  return new THREE.MeshPhysicalMaterial(o?{color:c,metalness:0,roughness:.3,clearcoat:1,clearcoatRoughness:.04,envMapIntensity:4}:{color:c,metalness:.28,roughness:.34,clearcoat:.8,clearcoatRoughness:.1})}
+function armarVeh(esc,md,col){const g=new THREE.Group(),S=THREE.MeshStandardMaterial,m={pintura:pintura(col),vidrio:new S({color:'#263039',metalness:.3,roughness:.1}),negro:new S({color:'#1f2125',roughness:.7}),gris:new S({color:'#45484d',roughness:.85}),faro:new S({color:'#fffbe8',emissive:'#fff6c8',emissiveIntensity:.5}),stop:new S({color:'#ff453a',emissive:'#ff453a',emissiveIntensity:.6}),patente:new S({color:'#f1f1ec',roughness:.5}),cromo:new S({color:'#c7c7cc',metalness:.9,roughness:.25}),goma:new S({color:'#161618',roughness:.9}),llanta:md.llanta?new THREE.MeshPhysicalMaterial({color:md.llanta,metalness:.2,roughness:.3,clearcoat:1,clearcoatRoughness:.1,envMapIntensity:5}):new S({color:'#c9ccd1',metalness:.55,roughness:.34})};
+  esc.updateMatrixWorld(true);esc.traverse(o=>{if(!o.isMesh)return;const x=new THREE.Mesh(o.geometry,m[o.material&&o.material.name]||m.negro);x.applyMatrix4(o.matrixWorld);x.castShadow=x.receiveShadow=true;g.add(x)});g.userData.pintura=m.pintura;return g}
+async function elegir(tipo,a){aviso('Cargando…');const esc=await carga(a);if(E.av){piv.remove(E.av.g);E.av=null}if(E.veh){piv.remove(E.veh);E.veh=null}
+  E.tipo=tipo;E.id=a.id;$('#nombre').textContent=a.nombre||'';
+  if(tipo==='p'){const av=avatarGLB(clone(esc),a.alto||1.74);av.seed=1.3;piv.add(av.g);E.av=av;E.dQ=5.7;E.aQ=.95;if(E.modo==='sit')puesto.visible=true}
+  else{E.color=E.color&&E.cid===a.id?E.color:(a.color||'#e9ebee');E.cid=a.id;E.veh=armarVeh(esc,a,E.color);piv.add(E.veh);puesto.visible=false;E.dQ=11.5;E.aQ=.8}
+  aviso('');botones()}
+function modo(m){E.modo=m;puesto.visible=m==='sit'&&E.tipo==='p';if(E.av)E.av.ges=null;botones()}
+function botones(){const q=$('#f-quien'),h=$('#f-hace'),b=(par,t,on,fn,cls)=>{const x=document.createElement('button');x.type='button';x.textContent=t;x.setAttribute('aria-pressed',on?'true':'false');if(cls)x.className=cls;x.onclick=fn;par.appendChild(x);return x},sep=par=>{const s=document.createElement('span');s.className='sep';par.appendChild(s)};
+  q.querySelectorAll('button,.sep').forEach(x=>x.remove());h.querySelectorAll('button,.sep').forEach(x=>x.remove());
+  (cat.avatares||[]).forEach(a=>b(q,a.nombre.replace(/\s*\(.*\)/,''),E.id===a.id,()=>elegir('p',a)));sep(q);(cat.vehiculos||[]).forEach(a=>b(q,a.nombre.replace(/\s*\(.*\)/,''),E.id===a.id,()=>elegir('v',a)));
+  h.firstElementChild.textContent=E.tipo==='p'?'Qué hace':'Color';
+  if(E.tipo==='p'){[['idle','Parado'],['walk','Caminar'],['sit','Sentado']].forEach(([m,t])=>b(h,t,E.modo===m,()=>modo(m)));sep(h);
+    [['saludo','Saludar'],['hablar','Hablar'],['pensar','Pensar'],['hora','Mirar la hora'],['estirar','Estirarse']].forEach(([g,t])=>b(h,t,false,()=>{if(E.modo==='sit')modo('idle');if(E.av){E.av.ges=null;avGesto(E.av,g)}}))}
+  else COLORES.forEach(([t,c])=>{const x=b(h,'',E.color===c,()=>{E.color=c;const md=cat.vehiculos.find(v=>v.id===E.id),esc=E.veh;carga(md).then(s=>{piv.remove(esc);E.veh=armarVeh(s,md,c);piv.add(E.veh);botones()})},'col');x.style.background=c;x.title=t;x.setAttribute('aria-label',t)})}
+// girar arrastrando (con inercia), acercar con rueda o pellizco
+const pt=new Map();let pd=0;cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pt.set(e.pointerId,[e.clientX,e.clientY]);E.vyaw=0});
+cv.addEventListener('pointermove',e=>{const p=pt.get(e.pointerId);if(!p)return;if(pt.size===1){const dx=e.clientX-p[0];E.yaw+=dx*.008;E.vyaw=dx*.008*60}pt.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pt.size===2){const [a,b]=[...pt.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd)E.zoom=Math.max(.55,Math.min(1.7,E.zoom*pd/d));pd=d}});
+const suelta=e=>{pt.delete(e.pointerId);pd=0};cv.addEventListener('pointerup',suelta);cv.addEventListener('pointercancel',suelta);
+cv.addEventListener('wheel',e=>{e.preventDefault();E.zoom=Math.max(.55,Math.min(1.7,E.zoom*Math.exp(e.deltaY*.0012)))},{passive:false});
+function medida(){const w=innerWidth,h=innerHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<h?40:30;cam.updateProjectionMatrix()}addEventListener('resize',medida);medida();
+let t0=performance.now();function cuadro(now){const dt=Math.min(.05,(now-t0)/1000);t0=now;E.t+=dt;
+  if(!pt.size){E.yaw+=E.vyaw*dt;E.vyaw*=Math.exp(-dt*4)}piv.rotation.y=E.yaw;
+  if(E.av){const anda=E.modo==='walk';if(anda)E.x+=1.3*dt;avPose(E.av,E.modo,dt,{x:E.x,y:0,t:E.t,teclado:E.modo==='sit'?{d:.36,h:.755}:null});E.av.sync();
+    mm.opacity+=((anda?.9:0)-mm.opacity)*Math.min(1,dt*5);marcas.children.forEach((l,i)=>{const x=((i-5)*.5-(E.x%.5));l.position.x=x;l.scale.z=Math.max(.01,Math.sqrt(Math.max(0,2.4*2.4-x*x))*2)})}
+  else mm.opacity=0;
+  const narrow=innerWidth<innerHeight?1.25:1;E.dist+=(E.dQ*E.zoom*narrow-E.dist)*Math.min(1,dt*6);E.alto+=(E.aQ-E.alto)*Math.min(1,dt*6);
+  const baja=innerWidth<innerHeight?.035:.05;cam.position.set(0,E.alto+E.dist*.09,E.dist);cam.lookAt(0,E.alto-baja*E.dist,0);/* se mira un poco más abajo: el modelo queda por encima del panel */r.render(sc,cam);requestAnimationFrame(cuadro)}
+$('#panel').hidden=false;await elegir('p',(cat.avatares||[])[0]);window.__demo=E;requestAnimationFrame(cuadro);
+}catch(e){console.error(e);aviso('No se pudo cargar la vista 3D en este equipo. Probá recargar la página.')}
+</script></body></html>
