@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
+<title>Ondi · prueba del motor nuevo</title>
+<style>
+html,body{margin:0;height:100%;background:#dfe6ea;overflow:hidden;font:14px/1.35 "Hanken Grotesk",system-ui,-apple-system,sans-serif;color:#14181b}
+canvas{display:block;width:100vw;height:100vh;touch-action:none;cursor:grab}
+.hud{position:fixed;left:14px;top:14px;display:grid;gap:8px;max-width:min(340px,calc(100vw - 28px))}
+.card{background:rgba(255,255,255,.78);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(20,30,40,.12)}
+.card b{font-weight:700}.card small{color:#55626b}
+.nums{display:grid;grid-template-columns:repeat(4,auto);gap:4px 14px;font-variant-numeric:tabular-nums}
+.nums span{color:#55626b;font-size:12px}.nums i{font-style:normal;font-weight:700;font-size:17px}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+button{font:inherit;border:1px solid rgba(20,30,40,.14);background:rgba(255,255,255,.9);border-radius:999px;padding:7px 12px;cursor:pointer;color:inherit}
+button[aria-pressed="true"]{background:#14181b;color:#fff;border-color:#14181b}
+#carga{position:fixed;inset:0;display:grid;place-items:center;background:#dfe6ea;transition:opacity .5s}#carga.ok{opacity:0;pointer-events:none}
+#sel{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:none}
+@media (prefers-color-scheme:dark){html,body{color:#eef2f4}.card{background:rgba(22,27,31,.72);border-color:rgba(255,255,255,.08)}.card small,.nums span{color:#9aa7b0}button{background:rgba(30,36,41,.9);border-color:rgba(255,255,255,.14)}button[aria-pressed="true"]{background:#eef2f4;color:#14181b}}
+</style></head><body>
+<canvas id="c" aria-label="Galpón de prueba en el motor nuevo: estanterías, camiones en los andenes, vehículos y personas"></canvas>
+<div class="hud">
+  <div class="card"><b>Ondi · motor nuevo (prueba)</b><br><small>Un galpón inventado, armado sobre el mismo motor y el mismo catálogo de Olumi. Arrastrá para girar, rueda para acercar, botón derecho para desplazar. Tocá una persona o un vehículo y arrastralo.</small></div>
+  <div class="card nums"><span>cuadros/s</span><span>ms por cuadro</span><span>dibujos</span><span>triángulos</span><i id="fps">–</i><i id="ms">–</i><i id="dc">–</i><i id="tri">–</i></div>
+  <div class="card row"><button id="bTecho" aria-pressed="false">Techo</button><button id="bSombra" aria-pressed="true">Sombras</button><button id="bNoche" aria-pressed="false">Noche</button><button id="bGente" aria-pressed="true">Personas</button></div>
+</div>
+<div id="sel" class="card"></div>
+<div id="carga"><div class="card">Armando el galpón…</div></div>
+<script type="module">
+// Prueba del motor único (three.js) para Ondi. La escena es una descripción en datos, separada del motor: lo que se arma no depende de cómo se dibuja.
+import * as THREE from '../../../olumi/beta/lib/three.module.min.js';
+import { GLTFLoader } from '../../../olumi/beta/lib/GLTFLoader.js';
+import { clone as clonar } from '../../../olumi/beta/lib/SkeletonUtils.js';
+import { RoomEnvironment } from '../../../olumi/beta/lib/RoomEnvironment.js';
+const CAT = '../../../olumi/beta/3d/';
+const ESC = { nombre: 'Moda Express', L: 267, D: 81, h: 13, patio: 52,
+  filas: { desde: -34, cada: 5.6, n: 10, x0: -121, x1: 121, modulo: 2.7, niveles: 4 },
+  camiones: 0.4, personas: [['tec-h-epp', -96, 33, 1.2], ['tec-h-epp', -40, 33.5, -1], ['tec-h', 18, 34, 2.4], ['tec-h-epp', 70, 33, 0.3], ['tec-h', -70, 4.2, 1.57], ['tec-h-epp', 30, -12.6, -1.57], ['of-h', 118, 46, 2.6], ['of-m', 120.5, 46.6, -2.4]],
+  vehiculos: [['eq7', 124, 52, Math.PI / 2], ['toro', 124, 56.4, Math.PI / 2], ['fiorino', 124, 60.6, Math.PI / 2]] };
+const $ = id => document.getElementById(id), rnd = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(77);
+const canvas = $('c'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(42, 1, 0.5, 2500);
+const pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.55;
+const hemi = new THREE.HemisphereLight(0xcfe3f5, 0x8d8a80, 0.9), sol = new THREE.DirectionalLight(0xfff1dc, 2.6); scene.add(hemi, sol, sol.target);
+sol.position.set(-150, 190, 120); sol.castShadow = true; { const s = +new URLSearchParams(location.search).get('sombra') || (matchMedia('(pointer:coarse)').matches ? 2048 : 4096); sol.shadow.mapSize.set(s, s); } Object.assign(sol.shadow.camera, { left: -175, right: 175, top: 110, bottom: -110, near: 20, far: 520 }); sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.06;
+const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.8, metalness: 0 }, o));
+const add = (g, m, x, y, z, o = {}) => { const k = new THREE.Mesh(g, m); k.position.set(x, y, z); k.castShadow = o.sombra !== false; k.receiveShadow = true; (o.en || scene).add(k); return k; };
+const caja = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+// lote de piezas iguales en un solo dibujo
+function lote(geo, mat, items, o = {}) { const im = new THREE.InstancedMesh(geo, mat, items.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
+  items.forEach((t, i) => { e.set(0, t[3] || 0, 0); q.setFromEuler(e); m.compose(new THREE.Vector3(t[0], t[1], t[2]), q, new THREE.Vector3(t[4] || 1, t[5] || 1, t[6] || 1)); im.setMatrixAt(i, m); if (t[7] != null) im.setColorAt(i, c.set(t[7])); });
+  im.castShadow = o.sombra !== false; im.receiveShadow = true; scene.add(im); return im; }
+const { L, D, h } = ESC, zs = D / 2;
+// suelo, patio, calle y piso del galpón
+add(new THREE.PlaneGeometry(1400, 1400).rotateX(-Math.PI / 2), M(0x8fae7a, { roughness: 1 }), 0, -0.05, 0, { sombra: false });
+add(caja(L + 30, 0.1, D + ESC.patio + 20), M(0xc9cdd0, { roughness: 0.95 }), 0, -0.02, ESC.patio / 2, { sombra: false });
+add(caja(L + 30, 0.1, 11), M(0x5d6368, { roughness: 0.9 }), 0, 0.0, zs + ESC.patio - 8, { sombra: false });
+add(caja(L, 0.12, D), M(0xb9bfc3, { roughness: 0.45, metalness: 0.05 }), 0, 0.02, 0, { sombra: false });
+// galpón: paredes de chapa blanca, zócalo, techo (apagado para ver adentro)
+const chapa = M(0xf1f3f4, { roughness: 0.7 }), zoc = M(0xb7bcc0);
+for (const [w, d, x, z] of [[L, 0.3, 0, -zs], [0.3, D, -L / 2, 0], [0.3, D, L / 2, 0]]) { add(caja(w, h, d), chapa, x, h / 2, z); add(caja(w + 0.1, 1.2, d + 0.1), zoc, x, 0.6, z); }
+add(caja(L, h - 4.9, 0.3), chapa, 0, 4.9 + (h - 4.9) / 2, zs); add(caja(L, 1.2, 0.3), zoc, 0, 0.6, zs);
+const techo = add(caja(L + 1, 0.4, D + 1), M(0xe3e6e8, { roughness: 0.6, metalness: 0.2 }), 0, h + 0.2, 0); techo.visible = false;
+// andenes: tramo de pared entre portones, marco oscuro, cortina y número
+const us = []; for (let u = -L / 2 + 17; u <= L / 2 - 6; u += 5) us.push(u);
+lote(caja(1.4, 3.7, 0.3), chapa, us.map(u => [u + 2.5, 3.05, zs]).concat([[-L / 2 + 7.3, 3.05, zs, 0, 10.4], [L / 2 - 3.4, 3.05, zs, 0, 4.3]]));
+lote(caja(3.9, 0.5, 0.9), M(0x1b1f23, { roughness: 0.6 }), us.map(u => [u, 4.75, zs + 0.45]));
+lote(caja(0.35, 3.6, 0.9), M(0x1b1f23, { roughness: 0.6 }), us.flatMap(u => [[u - 1.78, 2.9, zs + 0.45], [u + 1.78, 2.9, zs + 0.45]]));
+lote(caja(3.2, 3.4, 0.08), M(0xe9ecee, { roughness: 0.5 }), us.map(u => [u, 2.9, zs - 0.05]));
+lote(caja(0.9, 0.5, 0.06), M(0x1f6fd6, { roughness: 0.5 }), us.map(u => [u, 5.6, zs + 0.2]));
+// estanterías: parantes azules, largueros naranjas y pallets, cada cosa en un solo dibujo
+{ const F = ESC.filas, par = [], lar = [], pal = [], col = ['#c9a36b', '#b98d55', '#d7b989', '#8f9aa3', '#e6e1d6'], Hn = 2.1;
+  for (let r = 0; r < F.n; r++) { const z = F.desde + r * F.cada; for (const dz of [-0.62, 0.62]) for (let x = F.x0; x <= F.x1 + 0.01; x += F.modulo) { par.push([x, 4.6, z + dz, 0, 1, 1, 1]);
+      if (x + F.modulo > F.x1 + 0.01) continue; for (let n = 0; n < F.niveles; n++) { const y = 0.25 + n * Hn; if (n) lar.push([x + F.modulo / 2, y - 0.08, z + dz * 1.75, 0, 1, 1, 1], [x + F.modulo / 2, y - 0.08, z + dz * 0.25, 0, 1, 1, 1]);
+        for (const dx of [0.7, 2.0]) if (rnd() < 0.86) { const hh = 0.9 + rnd() * 0.75; pal.push([x + dx, y + hh / 2 + 0.14, z + dz, 0, 1, hh, 1, col[Math.floor(rnd() * col.length)]]); } } } }
+  lote(caja(0.09, 9.2, 1.05), M(0x2c5fb3, { roughness: 0.55, metalness: 0.3 }), par); lote(caja(F.modulo, 0.11, 0.06), M(0xe07a1f, { roughness: 0.5, metalness: 0.3 }), lar, { sombra: false });
+  const pm = lote(caja(1.15, 1, 1.0), M(0xffffff, { roughness: 0.85 }), pal); ESC._n = { parantes: par.length, largueros: lar.length, pallets: pal.length };
+  lote(caja(F.x1 - F.x0 + 6, 0.02, 0.12), M(0xf2c230, { roughness: 0.6 }), Array.from({ length: F.n + 1 }, (_, r) => [0, 0.09, F.desde - F.cada / 2 + r * F.cada]), { sombra: false }); }
+// luminarias y equipos de red: Wi-Fi en el techo (uno caído), cámaras y rack
+const luces = lote(caja(1.5, 0.08, 0.3), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff3d6, emissiveIntensity: 0.4 }), Array.from({ length: 60 }, (_, i) => [-L / 2 + 14 + (i % 15) * 17, h - 0.6, -zs + 12 + Math.floor(i / 15) * 19]), { sombra: false });
+const apOk = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x21c16b, emissiveIntensity: 0.9 }), apMal = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff3b30, emissiveIntensity: 1.6 });
+const aps = []; for (let i = 0; i < 12; i++) aps.push(add(new THREE.CylinderGeometry(0.28, 0.28, 0.07, 20), i === 7 ? apMal : apOk, -L / 2 + 22 + (i % 6) * 44, h - 1.1, i < 6 ? -14 : 16, { sombra: false }));
+lote(caja(0.16, 0.16, 0.34), M(0xf5f6f7), [[-L / 2 + 9, h - 1.6, zs + 0.3, 0.5], [L / 2 - 9, h - 1.6, zs + 0.3, -0.5], [0, h - 1.6, zs + 0.3], [-60, 6, zs - 0.4, 3.1], [60, 6, zs - 0.4, 3.1]]);
+add(caja(0.6, 2, 0.8), M(0x22272b, { roughness: 0.4, metalness: 0.5 }), L / 2 - 1.2, 1, zs - 6);
+// camiones en los andenes (por ahora de cajas; van a salir del catálogo como los autos)
+{ const tr = [], cb = [], ru = [], cc = ['#2f6fd6', '#c2415b', '#f1f3f4', '#1e9e5a', '#3a3f44'];
+  for (const u of us) if (rnd() < ESC.camiones) { tr.push([u, 2.55, zs + 7.3]); cb.push([u, 2.0, zs + 15.4, 0, 1, 1, 1, cc[Math.floor(rnd() * cc.length)]]); for (const [dx, dz] of [[-1.15, 2.2], [1.15, 2.2], [-1.15, 3.5], [1.15, 3.5], [-1.15, 14.6], [1.15, 14.6], [-1.15, 16.4], [1.15, 16.4]]) ru.push([u + dx, 0.5, zs + dz]); }
+  lote(caja(2.55, 2.8, 13.6), M(0xf4f5f6, { roughness: 0.55 }), tr); lote(caja(2.5, 2.9, 2.4), M(0xffffff, { roughness: 0.4, metalness: 0.2 }), cb); lote(new THREE.CylinderGeometry(0.5, 0.5, 0.32, 16).rotateZ(Math.PI / 2), M(0x15171a, { roughness: 0.9 }), ru); ESC._n.camiones = tr.length; }
+// piezas del catálogo de Olumi: vehículos y personas (los mismos archivos que usa la oficina)
+const gltf = new GLTFLoader(), piezas = [], gente = [], cargar = f => new Promise((ok, no) => gltf.load(CAT + f, g => ok(g.scene), undefined, no));
+function sombras(o) { o.traverse(k => { if (k.isMesh) { k.castShadow = true; k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; } }); }
+// las personas vienen con los brazos abiertos: se bajan al costado del cuerpo
+function brazos(p) { p.updateMatrixWorld(true); const B = {}; p.traverse(o => { if (o.isBone) B[o.name.replace(/^mixamorig:?/, '')] = o; });
+  const wp = n => B[n].getWorldPosition(new THREE.Vector3()), gira = (n, a, b, s) => { if (!B[n] || !B[b]) return; const d = wp(b).sub(wp(a)).normalize(), q = new THREE.Quaternion().setFromUnitVectors(d, new THREE.Vector3(s * 0.12, -1, 0.04).normalize()), pw = B[n].parent.getWorldQuaternion(new THREE.Quaternion()), bw = B[n].getWorldQuaternion(new THREE.Quaternion());
+    B[n].quaternion.copy(pw.invert().multiply(q).multiply(bw)); p.updateMatrixWorld(true); };
+  const s = Math.sign(wp('LeftArm').x - wp('RightArm').x) || 1; gira('LeftArm', 'LeftArm', 'LeftForeArm', s); gira('LeftForeArm', 'LeftForeArm', 'LeftHand', s); gira('RightArm', 'RightArm', 'RightForeArm', -s); gira('RightForeArm', 'RightForeArm', 'RightHand', -s); }
+async function catalogo() { const c = await (await fetch(CAT + 'catalogo.json')).json(), base = {};
+  for (const [id, x, z, yaw] of ESC.vehiculos) { const v = c.vehiculos.find(q => q.id === id); if (!v) continue; const o = await cargar(v.archivo); sombras(o); if (v.color) o.traverse(k => { if (k.isMesh) for (const m of [].concat(k.material)) if (m.name === 'pintura') m.color.set(v.color); });
+    const g = new THREE.Group(); g.add(o); g.position.set(x, 0.04, z); g.rotation.y = yaw; g.userData.pieza = v.nombre; scene.add(g); piezas.push(g); }
+  for (const [id, x, z, yaw] of ESC.personas) { const a = c.avatares.find(q => q.id === id); if (!a) continue; if (!base[id]) { base[id] = await cargar(a.archivo); const b = new THREE.Box3().setFromObject(base[id]); base[id].scale.setScalar(a.alto / (b.max.y - b.min.y)); }
+    const o = clonar(base[id]); sombras(o); const g = new THREE.Group(); g.add(o); scene.add(g); brazos(o); g.position.set(x, 0.08, z); g.rotation.y = yaw; g.userData.pieza = a.nombre; piezas.push(g); gente.push(g); } }
+// cámara: girar, acercar y desplazar
+const C = { tx: 40, tz: 26, yaw: 0.62, pitch: 0.5, d: 150 }, tecla = {};
+function camara() { const cp = Math.cos(C.pitch); cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, 1.5, C.tz); }
+const ray = new THREE.Raycaster(), piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt = new THREE.Vector2(), toca = new THREE.Vector3(); let drag = null, sel = null, dedos = new Map(), pinch = 0;
+const aro = add(new THREE.RingGeometry(0.9, 1.05, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x1f6fd6 }), 0, 0.12, 0, { sombra: false }); aro.visible = false;
+const enPiso = e => { pt.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(pt, cam); return ray.ray.intersectPlane(piso, toca) ? toca.clone() : null; };
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); dedos.set(e.pointerId, e); if (dedos.size === 2) { const [a, b] = [...dedos.values()]; pinch = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); drag = null; return; }
+  enPiso(e); const hit = ray.intersectObjects(piezas, true)[0]; let g = hit && hit.object; while (g && !g.userData.pieza) g = g.parent;
+  if (g) { sel = g; const p = enPiso(e); drag = { pieza: g, dx: g.position.x - p.x, dz: g.position.z - p.z }; $('sel').style.display = 'block'; $('sel').innerHTML = '<b>' + g.userData.pieza + '</b> · arrastrala para moverla'; }
+  else drag = { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey }; canvas.style.cursor = 'grabbing'; });
+canvas.addEventListener('pointermove', e => { if (dedos.has(e.pointerId)) dedos.set(e.pointerId, e); if (dedos.size === 2) { const [a, b] = [...dedos.values()], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); if (pinch) C.d = Math.min(420, Math.max(6, C.d * pinch / d)); pinch = d; return; }
+  if (!drag) return; if (drag.pieza) { const p = enPiso(e); if (p) drag.pieza.position.set(p.x + drag.dx, drag.pieza.position.y, p.z + drag.dz); return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) { const k = C.d * 0.0016; C.tx -= (Math.cos(C.yaw) * dx + Math.sin(C.yaw) * dy) * k; C.tz -= (-Math.sin(C.yaw) * dx + Math.cos(C.yaw) * dy) * k; } else { C.yaw -= dx * 0.005; C.pitch = Math.min(1.5, Math.max(0.06, C.pitch + dy * 0.004)); } });
+const suelta = e => { dedos.delete(e.pointerId); pinch = 0; drag = null; canvas.style.cursor = 'grab'; }; canvas.addEventListener('pointerup', suelta); canvas.addEventListener('pointercancel', suelta);
+canvas.addEventListener('wheel', e => { e.preventDefault(); C.d = Math.min(420, Math.max(6, C.d * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+addEventListener('keydown', e => tecla[e.key.toLowerCase()] = 1); addEventListener('keyup', e => tecla[e.key.toLowerCase()] = 0);
+// botones
+const boton = (id, fn) => $(id).addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); fn(on); });
+boton('bTecho', on => techo.visible = on); boton('bSombra', on => { sol.castShadow = on; renderer.shadowMap.needsUpdate = true; }); boton('bGente', on => gente.forEach(g => g.visible = on));
+const cielo = { dia: new THREE.Color(0xdfe6ea), noche: new THREE.Color(0x0d1418) }; scene.background = cielo.dia.clone(); scene.fog = new THREE.Fog(0xdfe6ea, 420, 1300);
+boton('bNoche', on => { scene.background.copy(on ? cielo.noche : cielo.dia); scene.fog.color.copy(scene.background); sol.intensity = on ? 0.25 : 2.6; sol.color.set(on ? 0x9db4ff : 0xfff1dc); hemi.intensity = on ? 0.22 : 0.9; scene.environmentIntensity = on ? 0.12 : 0.55; luces.material.emissiveIntensity = on ? 2.4 : 0.4; renderer.toneMappingExposure = on ? 1.25 : 1.05; });
+// medición: cuadros por segundo, milisegundos de armado por cuadro, dibujos y triángulos
+let n = 0, t0 = performance.now(), acc = 0, prev = t0;
+function cuadro(t) { requestAnimationFrame(cuadro); const dt = Math.min(0.05, (t - prev) / 1000); prev = t; const v = C.d * 0.9 * dt, fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw);
+  if (tecla.w) { C.tx += fx * v; C.tz += fz * v; } if (tecla.s) { C.tx -= fx * v; C.tz -= fz * v; } if (tecla.a) { C.tx += fz * v; C.tz -= fx * v; } if (tecla.d) { C.tx -= fz * v; C.tz += fx * v; }
+  if (canvas.width !== Math.floor(innerWidth * renderer.getPixelRatio()) || canvas.height !== Math.floor(innerHeight * renderer.getPixelRatio())) { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
+  camara(); apMal.emissiveIntensity = 1 + Math.sin(t * 0.006) * 0.9; if (sel) { aro.visible = true; aro.position.set(sel.position.x, 0.12, sel.position.z); }
+  const a = performance.now(); renderer.render(scene, cam); acc += performance.now() - a; n++;
+  if (t - t0 > 500) { $('fps').textContent = Math.round(n * 1000 / (t - t0)); $('ms').textContent = (acc / n).toFixed(1); $('dc').textContent = renderer.info.render.calls; $('tri').textContent = Math.round(renderer.info.render.triangles / 1000) + ' mil'; n = 0; acc = 0; t0 = t; } }
+window.__motor = { THREE, scene, renderer, cam, C, ESC, piezas, gente, medir: () => ({ fps: +$('fps').textContent, ms: +$('ms').textContent, dibujos: renderer.info.render.calls, triangulos: renderer.info.render.triangles, piezas: piezas.length, cuenta: ESC._n }) };
+requestAnimationFrame(cuadro); requestAnimationFrame(() => $('carga').classList.add('ok')); catalogo().catch(e => console.warn('catálogo', e)).finally(() => { window.__motor.listo = true; });
+</script></body></html>
