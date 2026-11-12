@@ -23,20 +23,25 @@ def suv():
         juntas=[(.86, .36, 1.08), (-.115, .36, 1.10), (-1.13, 'arco', 1.13)], junta_baja=(-1.0, .86, .361), manijas=[(.42, .62, 1.0, 1.025, 'cromo'), (-.52, -.32, 1.02, 1.045, 'cromo')], molduras=[], espejo_en=(.86, 1.10))
 
 def eq7():
-    # medidas tomadas de la foto de costado de Christian con la rueda como regla (73 cm de diámetro): capó a 1 m sobre la rueda delantera,
-    # base del parabrisas a 1,13, cintura a 1,12 en la puerta de adelante y 1,28 en el vidrio chico, cola a 1,22: trompa alta y vidrios bajos
+    # Chery eQ7 de Christian, sobre sus fotos del 11/11 (costado, tres cuartos de adelante, atrás). Medidas tomadas con la rueda como regla (73 cm):
+    # capó a 1 m sobre la rueda delantera, base del parabrisas a 1,13, cintura a 1,12 en la puerta de adelante y 1,28 en el vidrio chico,
+    # cola a 1,25 con la tira de luz a 1,19: trompa alta y redonda, vidrios bajos, cola alta.
     L, W, EJ, vF = 4.675, 1.91, 2.83, .905; XF = L / 2; XR = -XF; AXF = XF - vF; AXR = AXF - EJ; COWL = 1.10; ROOF0 = .28; TAIL = -2.20
-    return dict(L=L, W=W, EJ=EJ, vF=vF, RR=.365, RL=.262, tw=.12, arc=.078, arco='negro', espejo='negro', rayos=((0,), .30, .17),
-        top=[(XR, 1.14), (XR + .06, 1.19), (TAIL, 1.22), (-2.05, 1.32), (-1.80, 1.47), (-1.42, 1.585), (-.85, 1.64), (-.1, 1.66), (ROOF0, 1.635), (.60, 1.47), (.90, 1.26), (COWL, 1.13), (1.5, 1.10), (1.95, 1.065), (XF - .12, 1.03), (XF, .98)],
-        cin=[(XR, 1.12), (TAIL, 1.20), (-1.75, 1.28), (-1.25, 1.17), (-.2, 1.12), (.75, 1.10), (COWL, 1.09), (1.6, 1.06), (XF - .1, 1.0), (XF, .95)],
-        pis=[(XR, .42), (XR + .25, .28), (AXR, .20), (0, .19), (AXF, .20), (XF - .25, .24), (XF, .34)],
-        planta=[(XR, .82), (XR + .25, .91), (AXR, .945), (-.3, .955), (AXF, .945), (XF - .3, .905), (XF, .82)], esquinas=((XF, .34, .18), (XR, .32, .20)),
-        cab=(TAIL + .1, COWL - .02, .17, .45, .3, 0), vid=(-1.74, COWL - .34), parantes=[(-.16, -.07), (-1.22, -1.13)], parabrisas=(ROOF0 + .04, COWL - .03), luneta=(TAIL + .04, -1.56),
-        frente=[('diurna', 'faro', .22, .78, .925, .955, 14, 2, .012, 1), ('optica', 'negro', .46, .87, .70, .86, 8, 3, .008, 1), ('faro', 'faro', .52, .81, .745, .815, 8, 2, .014, 1),
-                ('parrilla', 'negro', -.72, .72, .28, .62, 28, 5, .009, 0), ('patente', 'patente', -.2, .2, .40, .50, 6, 2, .016, 0)],
-        cola=[('luz', 'stop', -.74, .74, 1.10, 1.13, 30, 2, .009, 0), ('stop', 'stop', .56, .86, 1.06, 1.155, 10, 3, .011, 1), ('paragolpes', 'negro', -.76, .76, .38, .62, 28, 4, .009, 0), ('patente', 'patente', -.2, .2, .78, .88, 6, 2, .012, 0)],
+    letras = lambda z0, z1, sale: [('letra', 'cromo', -.215 + k * .095, -.165 + k * .095, z0, z1, 1, 1, sale, 0) for k in range(5)]      # CHERY: cinco letras sueltas
+    return dict(L=L, W=W, EJ=EJ, vF=vF, RR=.365, RL=.262, tw=.12, arc=.078, arco='gris', espejo='negro', rayos=((0,), .30, .17), domoF=.11, domoT=.06,
+        top=[(XR, 1.18), (XR + .06, 1.235), (TAIL, 1.26), (-2.05, 1.33), (-1.80, 1.47), (-1.42, 1.585), (-.85, 1.64), (-.1, 1.66), (ROOF0, 1.635), (.60, 1.47), (.90, 1.26), (COWL, 1.13), (1.5, 1.10), (1.95, 1.065), (XF - .12, 1.03), (XF, .98)],
+        cin=[(XR, 1.16), (TAIL, 1.22), (-1.75, 1.29), (-1.25, 1.17), (-.2, 1.12), (.75, 1.10), (COWL, 1.09), (1.6, 1.06), (XF - .1, 1.0), (XF, .95)],
+        pis=[(XR, .30), (XR + .25, .25), (AXR, .20), (0, .19), (AXF, .20), (XF - .25, .22), (XF, .25)],
+        planta=[(XR, .83), (XR + .25, .915), (AXR, .945), (-.3, .955), (AXF, .945), (XF - .3, .905), (XF, .82)], esquinas=((XF, .34, .18), (XR, .30, .19)),
+        cab=(TAIL + .1, COWL - .02, .17, .45, .3, 0), vid=(-1.74, COWL - .34), parantes=[(-.16, -.07), (-1.22, -1.13)], parabrisas=(ROOF0 + .04, COWL - .03), luneta=(TAIL + .06, -1.56),
+        # frente: luces diurnas finas bajo el borde del capó, CHERY en el medio, ópticas oscuras en las esquinas, tomas con rejilla debajo, parrilla baja de listones, labio gris
+        frente=[('diurna', 'faro', .28, .78, .93, .953, 14, 2, .012, 1)] + letras(.885, .915, .010) + [('optica', 'vidrio', .47, .87, .635, .745, 8, 3, .010, 1), ('faro', 'faro', .56, .78, .675, .705, 6, 1, .016, 1),
+                ('toma', 'negro', .50, .86, .36, .60, 8, 4, .009, 1), ('parrilla', 'negro', -.48, .48, .31, .57, 24, 5, .009, 0), ('labio', 'gris', -.82, .82, .26, .31, 28, 1, .011, 0), ('patente', 'patente', -.2, .2, .50, .63, 6, 2, .018, 0)],
+        # cola: tira roja de lado a lado con los grupos en las esquinas, CHERY debajo, panel gris con la patente, tomas negras a los costados con sus reflectores, difusor
+        cola=[('luz', 'stop', -.62, .62, 1.185, 1.205, 30, 1, .010, 0), ('grupo', 'stop', .50, .84, 1.11, 1.205, 10, 3, .011, 1)] + letras(1.115, 1.145, .010) + [('panel', 'gris', -.40, .40, .50, .80, 14, 4, .009, 0),
+              ('toma', 'negro', .42, .84, .46, .78, 8, 4, .010, 1), ('reflector', 'stop', .46, .74, .785, .81, 6, 1, .014, 1), ('difusor', 'negro', -.80, .80, .32, .46, 28, 2, .009, 0), ('patente', 'patente', -.2, .2, .62, .75, 6, 2, .016, 0)],
         juntas=[(.86, .36, 1.09), (-.115, .36, 1.11), (-1.13, 'arco', 1.17)], junta_baja=None, manijas=[(.40, .60, 1.03, 1.055, 'negro'), (-.56, -.36, 1.06, 1.085, 'negro')],
-        molduras=[(-.93, .86, .345, .50, 'negro')], espejo_en=(.86, 1.11))
+        molduras=[(-.93, .86, .345, .50, 'gris')], espejo_en=(.86, 1.11))
 
 def toro():
     L, W, EJ, vF = 4.944, 1.844, 2.99, .92; XF = L / 2; XR = -XF; AXF = XF - vF; AXR = AXF - EJ; COWL = 1.02; ROOF0 = .30
@@ -99,7 +104,8 @@ def medio(x):
 CA0, CA1, METE, FA0, FA1, METE0 = C['cab']
 def cabina(x):      # 0 fuera de la cabina, 1 donde hay vidrios laterales (se desvanece en los parantes)
     return max(0, min(1, (x - CA0) / FA0)) * max(0, min(1, (CA1 - x) / FA1))
-NS = 46; xs = [XR + .045 + (L - .09) * i / (NS - 1) for i in range(NS)]      # las tapas de trompa y cola suman lo que falta para el largo de fábrica
+DF = C.get('domoF', .035); DT = C.get('domoT', .035)      # cuánto sobresale la tapa de la trompa y de la cola
+NS = 46; xs = [XR + DT + .01 + (L - DF - DT - .02) * i / (NS - 1) for i in range(NS)]      # las tapas de trompa y cola suman lo que falta para el largo de fábrica
 def seccion(x):
     w = medio(x); zb = z_pis(x); zt = z_top(x); zc = min(z_cin(x), zt - .02); cb = cabina(x); mete = METE * cb + METE0 * min(1, max(0, (zt - zc) / .4))      # el techo es más angosto que la cintura
     wt = w - .03 - mete
@@ -111,12 +117,15 @@ for x in xs:
 NR = len(V[0])
 for i in range(NS - 1):
     for j in range(NR): bm.faces.new((V[i][j], V[i][(j + 1) % NR], V[i + 1][(j + 1) % NR], V[i + 1][j]))
-# tapas de trompa y cola: una sección más chica, hacia afuera, y se cierra
-for ring, sx in ((V[0], -1), (V[-1], 1)):
-    cx = ring[0].co.x; zc = sum(v.co.z for v in ring) / NR; inner = [bm.verts.new((cx + sx * .035, v.co.y * .86, zc + (v.co.z - zc) * .82)) for v in ring]
-    for j in range(NR):
-        f = (ring[j], ring[(j + 1) % NR], inner[(j + 1) % NR], inner[j]); bm.faces.new(f if sx > 0 else f[::-1])
-    bm.faces.new(inner if sx < 0 else inner[::-1])
+# tapas de trompa y cola. Planas (un solo anillo más chico) o en domo (tres anillos que se van cerrando): el domo da la trompa redonda de un SUV moderno
+for ring, sx, dom in ((V[0], -1, DT), (V[-1], 1, DF)):
+    cx = ring[0].co.x; zc = sum(v.co.z for v in ring) / NR; prev = ring
+    for off, ky, kz in (((dom, .86, .82),) if dom <= .04 else ((dom * .42, .90, .88), (dom * .80, .68, .66), (dom, .34, .32))):
+        cur = [bm.verts.new((cx + sx * off, v.co.y * ky, zc + (v.co.z - zc) * kz)) for v in ring]
+        for j in range(NR):
+            f = (prev[j], prev[(j + 1) % NR], cur[(j + 1) % NR], cur[j]); bm.faces.new(f if sx > 0 else f[::-1])
+        prev = cur
+    bm.faces.new(prev if sx < 0 else prev[::-1])
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 if bm.calc_volume(signed=True) < 0: bmesh.ops.reverse_faces(bm, faces=bm.faces[:])      # las caras miran hacia afuera
 me = bpy.data.meshes.new('carroceria'); bm.to_mesh(me); bm.free()
@@ -128,7 +137,7 @@ def mat(n, col, rug, met=0, emis=None, coat=0):
     return m
 M = {'pintura': mat('pintura', (.86, .87, .88), .34, .55, coat=1), 'vidrio': mat('vidrio', (.02, .026, .032), .06, .25), 'negro': mat('negro', (.035, .037, .04), .62),
      'faro': mat('faro', (1, .98, .92), .2, 0, (1, .97, .88, 2.2)), 'stop': mat('stop', (.75, .03, .03), .3, 0, (1, .05, .04, 1.6)), 'llanta': mat('llanta', (.62, .64, .66), .28, .9),
-     'goma': mat('goma', (.02, .02, .022), .88), 'cromo': mat('cromo', (.8, .82, .84), .16, 1), 'patente': mat('patente', (.93, .93, .9), .5)}
+     'goma': mat('goma', (.02, .02, .022), .88), 'cromo': mat('cromo', (.8, .82, .84), .16, 1), 'patente': mat('patente', (.93, .93, .9), .5), 'gris': mat('gris', (.07, .073, .078), .8)}
 for k in ('pintura', 'vidrio', 'negro'): me.materials.append(M[k])
 # materiales por zona de la piel (sobre la jaula, antes de suavizar)
 me.update(); V0, V1 = C['vid']; P0, P1 = C['parabrisas']
@@ -180,12 +189,13 @@ def hacia(p, eje, s):
     return h[0]
 def lamina(n, m, grilla, eje, s, sale=.009):
     """lámina fina apoyada sobre la carrocería: cada punto de la grilla se proyecta sobre la piel y queda apenas salido"""
-    bm = bmesh.new(); G = []
+    bm = bmesh.new(); G = []; ult = s * (L / 2 if eje == 0 else W / 2)
     for fila in grilla:
         F = []
         for p in fila:
             h = hacia(p, eje, s); q = Vector(p)
-            if h is not None: q[eje] = h[eje] + s * sale
+            if h is not None: ult = h[eje]
+            q[eje] = ult + s * sale      # si un punto cae fuera de la carrocería, sigue a la altura del anterior
             F.append(bm.verts.new(q))
         G.append(F)
     for j in range(len(G) - 1):
