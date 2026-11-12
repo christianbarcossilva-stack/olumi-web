@@ -207,6 +207,39 @@ a.btn,label.btn{box-sizing:border-box;display:inline-flex;align-items:center;jus
   html #sheet .pie-menu>.btn.danger::before{content:"";position:absolute;left:12px;right:12px;top:-3px;border-top:1px solid var(--line)}
 }
 /* fin 1.51f */
+/* 1.51g */
+.agped{display:flex;gap:6px;overflow-x:auto;padding:10px 12px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.agped::-webkit-scrollbar{display:none}
+.agped-b{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:none;color:var(--fg);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;position:relative}
+.agped-b:hover{background:var(--surface-2)}
+.agped-b.clip{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.agped-b input,.agclip input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.agin{align-items:flex-end}
+.agclip{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;color:var(--muted);background:var(--surface-2);cursor:pointer;overflow:hidden}
+.agclip:hover{color:var(--accent)}
+.agclip.busy{opacity:.5;pointer-events:none}
+.agin-c{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.agin-c textarea{width:100%;box-sizing:border-box}
+.agadj-p{display:flex;gap:6px;flex-wrap:wrap}
+.agadj-p[hidden]{display:none}
+.agadj-m{position:relative;display:inline-flex;align-items:center;gap:8px;max-width:220px;padding:4px 30px 4px 4px;border-radius:12px;background:var(--surface-2);font-size:12.5px}
+.agadj-m img,.agadj-m .pdfdoc{width:40px;height:40px;border-radius:8px;object-fit:cover;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.agadj-m em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.agadj-x{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;border-radius:50%;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.agadj-sub{font-size:12.5px;align-self:center}
+.agadj-l{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.agadj-l a{color:inherit;text-decoration:none}
+.agadj-l .agadj-m{padding-right:10px;background:rgb(0 0 0 / .08)}
+.agm:has(.gad){max-width:min(100%,520px)}
+.gad{margin-top:10px;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:grid;gap:8px;color:var(--fg)}
+.gad .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.gad .fld{margin:0}
+.gad .actions{margin:2px 0 0}
+.gad.ok{display:flex;align-items:center;gap:8px;padding:8px 10px;color:var(--good,#1f8a4c);font-weight:600}
+.gad.ok span{flex:1;min-width:0}
+.gad.ok .btn{min-height:32px;padding:4px 12px}
+.gad.muted{padding:8px 10px;font-size:13px}
+/* fin 1.51g */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1985,6 +2018,7 @@ async function patch(col,id,fields){
   if(D[col][id])D[col][id]={...D[col][id],...clean(fields)};
 }
 async function onUpload(inp){
+  if(await agAdjUpload(inp))return;
   if(await perUpload(inp))return;
   if(await gastoUpload(inp))return;
   if(ADJCOL[inp.dataset.up]){await adjUpload(inp);return}
@@ -3614,6 +3648,112 @@ document.addEventListener('click',e=>{
 {const mira=()=>{const sh=document.getElementById('sheet');if(sh)new MutationObserver(()=>{if(!PIE_OCUP)piePide()}).observe(sh,{childList:true,subtree:true,characterData:true})};document.getElementById('sheet')?mira():document.addEventListener('DOMContentLoaded',mira)}
 addEventListener('resize',piePide);PIE_MQ.addEventListener&&PIE_MQ.addEventListener('change',piePide);
 /* === fin 1.51f === */
+/* === 1.51g · asistentes: adjuntar y guardar === */
+/* Carolina y Gabriela: adjuntar fotos o archivos en el chat y guardarlos donde van
+   (ficha de una persona, cliente o gasto). La asistente propone; la persona confirma.
+   Los archivos quedan en Olumi: no se mandan a la inteligencia artificial. */
+let AGADJ=[],AGADJB=false;const AGGS={};
+const AG_PED={
+  lumi:[['Armame un presupuesto para ','4 cámaras en un depósito'],['¿Qué le pregunto al cliente antes de cotizar ','un CCTV?'],['Proponeme la agenda del proyecto ',''],['¿Relevamos o cotizo directo ','esta obra?'],['📎','Guardar un plano o una foto de un cliente']],
+  ada:[['¿Qué vence este mes?',''],['¿Qué facturas están vencidas?',''],['¿Qué gastos faltan revisar?',''],['Pasame el carné de salud de ',''],['📎','Guardar un carné o una boleta']]};
+const AG_DOCV={salud:'carneSalud',altura:'carneAltura',libreta:'libreta'};
+const agN=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const agPal=(t,w)=>new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)').test(t);
+function agPedidosHtml(t){const l=AG_PED[t]||[];return`<div class="agped" role="list" aria-label="Pedidos que le podés hacer">${l.map((p,i)=>p[0]==='📎'
+  ?`<label class="agped-b clip" role="listitem"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10.5 4.5 5.6 9.4a1.5 1.5 0 0 0 2.1 2.1l5-5a3 3 0 0 0-4.2-4.2l-5 5a4.5 4.5 0 0 0 6.4 6.4l4.2-4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>${esc(p[1])}<input type="file" accept="image/*,application/pdf" multiple data-up="agadj"></label>`
+  :`<button type="button" class="agped-b" role="listitem" data-act="agped:${t}:${i}">${esc((p[0]+p[1]).trim())}</button>`).join('')}</div>`}
+function agAdjBoton(){return`<label class="agclip${AGADJB?' busy':''}" title="Adjuntar foto o archivo" aria-label="Adjuntar foto o archivo"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M13 5.5 6.9 11.6a1.9 1.9 0 0 0 2.7 2.7l6.2-6.2a3.8 3.8 0 0 0-5.4-5.4L4.2 8.9a5.6 5.6 0 0 0 8 8l5.1-5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><input type="file" accept="image/*,application/pdf" multiple data-up="agadj"></label>`}
+function agAdjMini(d,i){const pdf=/pdf/.test(d.type||'');return`<span class="agadj-m">${pdf?'<span class="pdfdoc">PDF</span>':`<img src="${esc(blobUrl(d.id))}" alt="">`}<em>${esc(d.name||'archivo')}</em>${i!=null?`<button type="button" class="agadj-x" data-act="agadjx:${i}" aria-label="Sacar ${esc(d.name||'archivo')}">✕</button>`:''}</span>`}
+function agAdjPrevia(){return`<div class="agadj-p" id="agAdjP"${AGADJ.length||AGADJB?'':' hidden'}>${AGADJ.map((d,i)=>agAdjMini(d,i)).join('')}${AGADJB?'<span class="muted agadj-sub">Subiendo…</span>':''}</div>`}
+function agAdjRefresca(){const p=$('#agAdjP');if(p)p.outerHTML=agAdjPrevia();const t=$('#agTxt');if(t&&AGADJ.length)t.placeholder='¿De quién o de qué es? Ej.: carné de salud de Víctor, vence 03/2027';const c=$('.agclip');if(c)c.classList.toggle('busy',AGADJB)}
+async function agAdjUpload(inp){if(inp.dataset.up!=='agadj')return false;const files=[...inp.files];if(!files.length)return true;
+  if(!AS){toast('Necesitás permiso de edición para subir archivos.');inp.value='';return true}
+  AGADJB=true;agAdjRefresca();
+  for(const f of files.slice(0,6)){try{const x=f.type.startsWith('image/')?await shrink(f):f;let type=x.type||f.type;if(!type&&/\.pdf$/i.test(f.name))type='application/pdf';
+    const r=await AS.upload(x,type?{type}:undefined);AGADJ.push({id:r.id,name:f.name||'archivo',type:r.contentType||type,at:Date.now(),by:ME||''})}catch(e){toast(upErr(e))}}
+  inp.value='';AGADJB=false;agAdjRefresca();$('#agTxt')?.focus();return true}
+function agFecha(t){let m=t.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){let y=+m[3];if(y<100)y+=2000;const d=new Date(y,+m[2]-1,+m[1]);if(d.getMonth()===+m[2]-1)return localISO(d).slice(0,10)}
+  m=t.match(/(?:^|[^\d\/])(\d{1,2})[\/\-.](\d{4}|\d{2})(?![\d\/])/);if(m){let y=+m[2];if(y<100)y+=2000;const mo=+m[1];if(mo>=1&&mo<=12)return localISO(new Date(y,mo,0)).slice(0,10)}
+  const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
+  m=t.match(/(?:(\d{1,2}) de )?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|se?ptiembre|octubre|noviembre|diciembre)(?: de(?:l)?)? (\d{4})/);
+  if(m){const mo=MES.indexOf(m[2].replace('septiembre','setiembre'));const y=+m[3];return localISO(m[1]?new Date(y,mo,+m[1]):new Date(y,mo+1,0)).slice(0,10)}
+  return''}
+function agMonto(t){const m=t.match(/(u\$s|us\$|usd|\$|uyu)?\s*(\d{1,3}(?:[.\s]\d{3})+|\d+)(?:,(\d{1,2}))?\s*(pesos|uyu|dolares|usd|u\$s)?/);if(!m||!(m[1]||m[4]))return null;
+  const v=Number(m[2].replace(/[.\s]/g,'')+(m[3]?'.'+m[3]:''));return v>0?{v,mon:/u\$s|us\$|usd|dolar/.test((m[1]||'')+(m[4]||''))?'USD':'UYU'}:null}
+function agAdivina(texto,a){const t=agN(texto);const p={dest:'',persona:'',tipo:'otro',vence:'',cliente:'',monto:'',moneda:'UYU',categoria:'materiales',proveedor:''};
+  if(isRRHH()){let best=null;perList().forEach(id=>{const f=tecFicha(id);const nom=agN(f.nombreCompleto||personName(id).replace(' (vos)',''));const ws=nom.split(/\s+/).filter(w=>w.length>=3);
+      const pts=(agPal(t,nom)?10:0)+ws.filter(w=>agPal(t,w)).length;if(pts&&(!best||pts>best.pts))best={id,pts};else if(pts&&best&&pts===best.pts)best.empate=true});
+    if(best&&!best.empate)p.persona=best.id}
+  p.tipo=/carn[e]? de salud|carne salud|\bsalud\b/.test(t)?'salud':/altura/.test(t)?'altura':/libreta|licencia de conducir|\bconducir\b/.test(t)?'libreta':/cedula|\bci\b|documento de identidad/.test(t)?'cedula':'otro';
+  p.vence=agFecha(t);
+  const GEN=new Set(['s.a.','sa','srl','s.r.l.','ltda','empresa','grupo','uruguay','montevideo','del','los','las','san']);
+  {let best=null;arr('clientes').forEach(c=>{const n=agN(c.nombre);if(!n)return;const ws=n.split(/[\s,]+/).filter(w=>w.length>=4&&!GEN.has(w));
+      const pts=(agPal(t,n)?10:0)+ws.filter(w=>agPal(t,w)).length;if(pts&&(!best||pts>best.pts))best={id:c.id,pts}});if(best)p.cliente=best.id}
+  const tg=p.cliente?t.split(agN(cliName(p.cliente))).join(' '):t;
+  const esGasto=/boleta|factura de compra|ticket de compra|compr[ea]|\bgasto|nafta|gasoil|combustible|peaje|estacionamiento|ancap|petrobras|axion|ferreteria|barraca/.test(tg);
+  if(esGasto){p.categoria=/nafta|gasoil|combustible|ancap|petrobras|axion/.test(t)?'combustible':/peaje|estacionamiento/.test(t)?'peaje':/almuerzo|comida|viatico/.test(t)?'comida':/herramienta|taladro|amoladora/.test(t)?'herramientas':'materiales';
+    const m=agMonto(t);if(m){p.monto=m.v;p.moneda=m.mon}const pv=t.match(/(?:en|de) (ancap|petrobras|axion|ferreteria [a-z]+|barraca [a-z]+)/);if(pv)p.proveedor=pv[1].replace(/\b\w/g,c=>c.toUpperCase())}
+  const puedeP=isRRHH(),puede=!readonly;
+  p.dest=p.persona&&puedeP&&(p.tipo!=='otro'||!p.cliente)?'persona':esGasto&&puede?'gasto':p.cliente&&puede?'cliente':p.persona&&puedeP?'persona':(a==='ada'&&puedeP?'persona':a==='ada'&&puede?'gasto':puede?'cliente':'');
+  return p}
+const agDocT=k=>((PER_DOCT.find(x=>x[0]===k)||[,'documento'])[1]);
+function agFrase(p,a){const n=p.dest==='persona'?(p.persona?personName(p.persona).replace(' (vos)',''):''):p.dest==='cliente'?cliName(p.cliente):'';
+  if(p.dest==='persona'&&n)return`Lo guardo en la ficha de ${n} como ${agDocT(p.tipo).toLowerCase()}${p.vence?`, que vence el ${fdateL(p.vence)}`:''}. Revisá y confirmá.`;
+  if(p.dest==='cliente'&&n)return`Lo guardo en los archivos de ${n}. Revisá y confirmá.`;
+  if(p.dest==='gasto')return`Lo cargo como gasto${p.monto?` de ${money(p.monto,p.moneda)}`:''} para que Administración lo revise. Completá lo que falte y confirmá.`;
+  if(!p.dest)return'No tenés permiso para guardar archivos. Pedíselo a quien administra la empresa.';
+  return`No me doy cuenta de ${p.dest==='persona'?'quién':'qué cliente'} es. Elegí dónde lo guardo y confirmá.`}
+async function agAdjEnviar(a,texto){if(AGBUSY||AGADJB||!agConsent())return;AGBUSY=true;const adj=AGADJ.slice();AGADJ=[];
+  try{const id=uid(),now=Date.now();await put('agentes_chat',id,{agente:a,por:ME||'',rol:'yo',texto:texto.trim(),adj,creado:now});
+    const p=agAdivina(texto,a);await put('agentes_chat',uid(),{agente:a,por:ME||'',rol:'agente',texto:agFrase(p,a),guardar:{...p,adj,estado:p.dest?'pendiente':'sin'},creado:now+1})}
+  catch(e){if(!(e&&e.code==='loading'))handleErr(e);AGADJ=adj}
+  AGBUSY=false;sr();setTimeout(()=>{const l=$('#agLog');if(l)l.scrollTop=l.scrollHeight},50)}
+function agGuardarHtml(m){const g=m.guardar;if(!g)return'';const k=m.id,o=AGGS[k]||{},dest=o.dest||g.dest,P=x=>`gad_${k}_${x}`;
+  if(g.estado==='guardado')return`<div class="gad ok"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="m3.5 8.3 3 3 6-6.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${esc(g.donde||'Guardado')}</span>${g.abrir?`<button type="button" class="btn ghost" data-open="${esc(g.abrir)}">Ver</button>`:''}</div>`;
+  if(g.estado==='descartado')return`<div class="gad muted">No se guardó.</div>`;
+  if(g.estado==='sin')return'';
+  const dOpts=[...(isRRHH()?[['persona','Ficha de una persona']]:[]),...(!readonly?[['cliente','Archivos de un cliente'],['gasto','Gasto para revisar']]:[])];
+  let campos='';
+  if(dest==='persona')campos=`<label class="fld"><span>Persona</span><select id="${P('persona')}">${opts([['','Elegí a la persona'],...perList().map(id=>[id,(tecFicha(id).nombreCompleto||personName(id)).replace(' (vos)','')])],g.persona)}</select></label>
+    <label class="fld"><span>Qué es</span><select id="${P('tipo')}" data-gadtipo="${k}">${opts(PER_DOCT,o.tipo||g.tipo)}</select></label>
+    ${AG_DOCV[o.tipo||g.tipo]?`<label class="fld"><span>Vence</span><input type="date" id="${P('vence')}" value="${esc(g.vence||'')}"></label>`:''}`;
+  else if(dest==='cliente')campos=`<label class="fld full"><span>Cliente</span><select id="${P('clienteId')}">${opts(cliOpts(),g.cliente)}</select></label>`;
+  else if(dest==='gasto')campos=`<label class="fld"><span>Monto total</span><input type="number" step="0.01" min="0" inputmode="decimal" id="${P('monto')}" value="${esc(String(g.monto||''))}"></label>
+    <label class="fld"><span>Moneda</span><select id="${P('moneda')}">${opts([['UYU','Pesos ($)'],['USD','Dólares (US$)']],g.moneda)}</select></label>
+    <label class="fld"><span>Qué es</span><select id="${P('categoria')}">${opts(GCAT,g.categoria)}</select></label>
+    <label class="fld"><span>Dónde lo compraste</span><input id="${P('proveedor')}" value="${esc(g.proveedor||'')}" placeholder="Ej.: Barraca Sur"></label>`;
+  return`<div class="gad" id="gad_${k}"><label class="fld full"><span>Dónde lo guardo</span><select id="${P('dest')}" data-gadest="${k}">${opts(dOpts,dest)}</select></label><div class="grid">${campos}</div>
+    <p class="err" id="${P('err')}" hidden></p><div class="actions"><button type="button" class="btn pri" data-act="gadok:${k}">Guardar</button><button type="button" class="btn ghost" data-act="gadno:${k}">No guardar</button></div></div>`}
+function agAdjMsgHtml(m){return(m.adj&&m.adj.length?`<div class="agadj-l">${m.adj.map(d=>`<a href="${esc(blobUrl(d.id))}" target="_blank" rel="noopener">${agAdjMini(d)}</a>`).join('')}</div>`:'')+agGuardarHtml(m)}
+async function agGuardar(k,el){const m=D.agentes_chat&&D.agentes_chat[k];if(!m||!m.guardar)return;const g=m.guardar,o=AGGS[k]||{},dest=o.dest||g.dest,v=x=>(document.getElementById(`gad_${k}_${x}`)||{}).value||'';
+  const err=t=>{const e=document.getElementById(`gad_${k}_err`);if(e){e.textContent=t;e.hidden=false}};
+  const adj=(g.adj||[]).map(d=>({...d}));if(!adj.length)return err('No hay archivos para guardar.');
+  let donde='',abrir='';el.disabled=true;
+  try{
+    if(dest==='persona'){if(!isRRHH())return err('No tenés permiso para cambiar fichas del personal.');const pid=v('persona');if(!pid)return err('Elegí a la persona.');
+      const tipo=v('tipo')||'otro',vence=v('vence'),f=tecFicha(pid);const doc={...f,docs:[...(f.docs||[]),...adj.map(d=>({...d,tipo}))],actualizado:Date.now()};
+      if(vence&&AG_DOCV[tipo])doc[AG_DOCV[tipo]]=vence;await put('tecnicos',pid,doc);
+      donde=`Guardado en la ficha de ${(f.nombreCompleto||personName(pid)).replace(' (vos)','')} como ${agDocT(tipo).toLowerCase()}${vence&&AG_DOCV[tipo]?`, vence el ${fdateL(vence)}`:''}`;abrir='per:'+pid}
+    else if(dest==='cliente'){const cid=v('clienteId');const c=D.clientes[cid];if(!c)return err('Elegí el cliente.');
+      await patch('clientes',cid,{archivos:[...(c.archivos||[]),...adj]});donde=`Guardado en los archivos de ${c.nombre}`;abrir='cli:'+cid}
+    else if(dest==='gasto'){const monto=n0(v('monto'));const gid=uid();
+      await put('gastos',gid,{fecha:today(),monto,moneda:v('moneda')||'UYU',categoria:v('categoria')||'materiales',proveedor:v('proveedor').trim(),fotos:adj,estado:'pendiente',pago:'empresa',por:ME||'',creado:Date.now()});
+      donde=`Cargado como gasto${monto?` de ${money(monto,v('moneda')||'UYU')}`:''} para revisar`;abrir='gasto:'+gid}
+    else return err('Elegí dónde lo guardo.');
+    await put('agentes_chat',k,{...m,guardar:{...g,dest,estado:'guardado',donde,abrir,en:Date.now()}});delete AGGS[k];toast(donde);sr()}
+  catch(e){if(!(e&&e.code==='loading'))handleErr(e)}finally{el.disabled=false}}
+async function agAdjAct(k,arg,el){
+  if(k==='agsend'&&(AGADJ.length||AGADJB)){if(AGADJB){toast('Esperá a que termine de subir.');return true}const t=$('#agTxt');const tx=t?t.value:'';if(t)t.value='';await agAdjEnviar(arg,tx);return true}
+  if(k==='agadjx'){AGADJ.splice(+arg,1);agAdjRefresca();return true}
+  if(k==='agped'){const [a,i]=String(arg).split(':');const p=(AG_PED[a]||[])[+i];const t=$('#agTxt');if(!p||!t)return true;t.value=p[0]+p[1];t.focus();
+    const ini=p[0].length;try{t.setSelectionRange(p[1]?ini:t.value.length,t.value.length)}catch(e){}return true}
+  if(k==='gadok'){await agGuardar(arg,el);return true}
+  if(k==='gadno'){const m=D.agentes_chat&&D.agentes_chat[arg];if(m&&m.guardar)await put('agentes_chat',arg,{...m,guardar:{...m.guardar,estado:'descartado'}});sr();return true}
+  return false}
+document.addEventListener('change',e=>{const s=e.target;if(!s||!s.dataset)return;const k=s.dataset.gadest||s.dataset.gadtipo;if(!k)return;
+  AGGS[k]={...(AGGS[k]||{}),[s.dataset.gadest?'dest':'tipo']:s.value};const m=D.agentes_chat&&D.agentes_chat[k];const box=document.getElementById('gad_'+k);if(m&&box)box.outerHTML=agGuardarHtml({...m,id:k})});
+/* === fin 1.51g === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -6744,9 +6884,9 @@ async function perAct(k,arg,el){
 /* ---------- 1.39: agentes (Lumi · ventas, Ada · administración) ---------- */
 const AGURL='https://n8n.unitytech.uy/webhook/';
 /* 1.41: nombres — Carolina (atención comercial) y Gabriela (administración) */
-const AG={lumi:{n:'Carolina',rol:'Atención comercial',ofi:'ventas',color:'#7c5cff',hola:'Hola, soy Carolina, de atención comercial (asistente virtual). Por ahora practico: escribime como si fueras un cliente ("necesito 4 cámaras en el depósito") y te muestro cómo lo atendería. Lo que cotice queda en "Para aprobar".',
+const AG={lumi:{n:'Carolina',rol:'Atención comercial',ofi:'ventas',color:'#7c5cff',hola:'Hola, soy Carolina, de atención comercial (asistente virtual). Te armo borradores de presupuesto con tu catálogo, te digo qué preguntarle al cliente y te propongo la agenda de un proyecto. Mandame un plano o una foto con el clip y te lo guardo en el cliente. Si querés practicar la atención, escribime como si fueras un cliente. Lo que cotice queda en "Para aprobar".',
     ok:()=>isBoss()||['ventas','encargado'].includes(ROLE)},
-  ada:{n:'Gabriela',rol:'Administración',ofi:'admin',color:'#0a84ff',hola:'Hola, soy Gabriela, de administración (asistente virtual). Pedime cosas como "pasame el carné de salud de Victor", "¿qué vence este mes?" o "¿qué facturas están vencidas?".',
+  ada:{n:'Gabriela',rol:'Administración',ofi:'admin',color:'#0a84ff',hola:'Hola, soy Gabriela, de administración (asistente virtual). Pedime cosas como "pasame el carné de salud de Víctor", "¿qué vence este mes?" o "¿qué facturas están vencidas?". Mandame la foto de un carné o de una boleta con el clip y te la guardo donde va.',
     ok:()=>isRRHH()||ROLE==='encargado'}};
 const agOk=()=>Object.values(AG).some(a=>a.ok());
 let AGT=null,AGBUSY=false;
@@ -6803,9 +6943,9 @@ function vAgentes(){const t=agCur(),np=aprobPend().length;
         ${est==='pendiente'&&isLead()?`<div class="actions" style="margin-top:10px">${x.tipo==='agenda'?`<button class="btn pri" data-act="aprobag:${x.id}">Aprobar y pasar al Calendario</button>`:x.tipo==='presupuesto'?`<button class="btn pri" data-act="aprob:${x.id}">Revisar y pasar a presupuesto</button>`:`<button class="btn pri" data-act="aprobok:${x.id}">Listo, lo vi</button>`}<button class="btn ghost" data-act="aprobno:${x.id}">Descartar</button></div>`:''}</div>`}).join('')}</div>`:'<div class="empty"><p>No hay nada para aprobar. Lo que coticen o consulten Carolina y Gabriela aparece acá.</p></div>')}
   if(!agConsent())return head+tabs+agConsentHtml(t);
   const g=AG[t],ms=agMsgs(t);
-  return head+tabs+`<div class="agchat"><div class="aghead">${agAvatar(t,44)}<div><b>${g.n}</b><div class="muted">${g.rol} · virtual · ${t==='lumi'?'en práctica: vos hacés de cliente':'con los datos que vos podés ver'}</div></div>${ms.length?`<button class="btn ghost" data-act="agclear:${t}" style="margin-left:auto">Charla nueva</button>`:''}</div>
-    <div class="aglog" id="agLog">${[{rol:'agente',texto:g.hola}].concat(ms).map(m=>`<div class="agm ${m.rol==='yo'?'yo':''}${m.error?' err':''}">${esc(m.texto||'').replace(/\n/g,'<br>')}${m.docs&&m.docs.length?`<div class="actions" style="margin-top:6px">${agDocLinks(m.docs)}</div>`:''}</div>`).join('')}${AGBUSY?`<div class="agm pensando">${g.n} está pensando…</div>`:''}</div>
-    <div class="agin"><textarea id="agTxt" rows="2" data-ag="${t}" placeholder="Escribile a ${g.n}… (podés dictar con el micrófono del teclado)"></textarea><button class="btn pri" data-act="agsend:${t}" ${AGBUSY?'disabled':''}>Enviar</button></div></div><p class="hint" style="max-width:860px">Es una asistente con inteligencia artificial y puede equivocarse: revisá antes de usar lo que te dice. <button class="btn ghost" data-act="agno" style="min-height:28px;padding:2px 8px">Dejar de usar las asistentes</button></p>`}
+  return head+tabs+`<div class="agchat"><div class="aghead">${agAvatar(t,44)}<div><b>${g.n}</b><div class="muted">${g.rol} · virtual · con los datos que vos podés ver</div></div>${ms.length?`<button class="btn ghost" data-act="agclear:${t}" style="margin-left:auto">Charla nueva</button>`:''}</div>
+    <div class="aglog" id="agLog">${[{rol:'agente',texto:g.hola}].concat(ms).map(m=>`<div class="agm ${m.rol==='yo'?'yo':''}${m.error?' err':''}">${esc(m.texto||'').replace(/\n/g,'<br>')}${m.docs&&m.docs.length?`<div class="actions" style="margin-top:6px">${agDocLinks(m.docs)}</div>`:''}${agAdjMsgHtml(m)}</div>`).join('')}${AGBUSY?`<div class="agm pensando">${g.n} está pensando…</div>`:''}</div>
+    ${agPedidosHtml(t)}<div class="agin">${agAdjBoton()}<div class="agin-c">${agAdjPrevia()}<textarea id="agTxt" rows="2" data-ag="${t}" placeholder="${AGADJ.length?'¿De quién o de qué es? Ej.: carné de salud de Víctor, vence 03/2027':`Escribile a ${g.n}… (podés dictar con el micrófono del teclado)`}"></textarea></div><button class="btn pri" data-act="agsend:${t}" ${AGBUSY?'disabled':''}>Enviar</button></div></div><p class="hint" style="max-width:860px">Es una asistente con inteligencia artificial y puede equivocarse: revisá antes de usar lo que te dice. <button class="btn ghost" data-act="agno" style="min-height:28px;padding:2px 8px">Dejar de usar las asistentes</button></p>`}
 function sheetAgcfg(){const p=CFG.lumi||{};const F=[{k:'diaTec',l:'Precio por día de un técnico',t:'number',step:'any'},{k:'diaElev',l:'Precio por día del medio de elevación',t:'number',step:'any'},{k:'moneda',l:'Moneda',t:'select',o:[['USD','US$ Dólares'],['UYU','$ Pesos']]},
   {k:'rendimiento',l:'Cuánto rinde un día',t:'textarea',w:'full',ph:'Ej.: 4 cámaras por día con 1 técnico; 1 PTZ en columna alta por día con 2 técnicos y elevador; 100 m de cableado por día'},
   {k:'preguntas',l:'Qué preguntar antes de cotizar',t:'textarea',w:'full',ph:'Ej.: cuántos equipos y dónde; altura; si va por arriba o subterráneo; distancia al rack; horario para trabajar'},
@@ -6814,6 +6954,7 @@ function sheetAgcfg(){const p=CFG.lumi||{};const F=[{k:'diaTec',l:'Precio por d�
 async function saveAgcfg(){const F=['diaTec','diaElev','moneda','rendimiento','preguntas','notas'];const v={};F.forEach(k=>{const el=$('#f_'+k);if(el)v[k]=el.type==='number'?n0(el.value):el.value.trim()});
   try{await saveCfg({...CFG,lumi:v});toast('Ajustes de Carolina guardados');closeSheet()}catch(e){const er=$('#shErr');er.textContent='No se pudo guardar.';er.hidden=false}}
 async function agAct(k,arg,el){
+  if(await agAdjAct(k,arg,el))return true;
   if(k==='agt'){AGT=arg;lsSet('olumi.ag',arg);sr();return true}
   if(k==='agsend'){const t=$('#agTxt');const tx=t?t.value:'';if(t)t.value='';await agEnviar(arg,tx);return true}
   if(k==='agok'){lsSet('olumi.agok.'+(ME||''),'1');sr();return true}
