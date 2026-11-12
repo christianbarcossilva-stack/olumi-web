@@ -33,7 +33,7 @@ import { RoomEnvironment } from '../../../olumi/beta/lib/RoomEnvironment.js';
 const CAT = '../../../olumi/beta/3d/';
 const ESC = { nombre: 'Moda Express', L: 267, D: 81, h: 13, patio: 52,
   filas: { desde: -34, cada: 5.6, n: 10, x0: -121, x1: 121, modulo: 2.7, niveles: 4 },
-  camiones: 0.4, personas: [['tec-h-epp', -96, 33, 1.2], ['tec-h-epp', -40, 33.5, -1], ['tec-h', 18, 34, 2.4], ['tec-h-epp', 70, 33, 0.3], ['tec-h', -70, 4.2, 1.57], ['tec-h-epp', 30, -12.6, -1.57], ['of-h', 118, 46, 2.6], ['of-m', 120.5, 46.6, -2.4]],
+  camiones: 0.4, personas: [['tec-h-epp', -96, 33, 1.2], ['tec-h-epp', -40, 33.5, -1], ['tec-h', 18, 34, 2.4], ['tec-h-epp', 70, 33, 0.3], ['tec-h', -70, 2.4, 1.57], ['tec-h-epp', 30, -14.4, -1.57], ['of-h', 117.6, 47, 1.9], ['of-m', 119.4, 47.8, -1.6]],
   vehiculos: [['eq7', 124, 52, Math.PI / 2], ['toro', 124, 56.4, Math.PI / 2], ['fiorino', 124, 60.6, Math.PI / 2]] };
 const $ = id => document.getElementById(id), rnd = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(77);
 const canvas = $('c'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -62,8 +62,8 @@ for (const [w, d, x, z] of [[L, 0.3, 0, -zs], [0.3, D, -L / 2, 0], [0.3, D, L / 
 add(caja(L, h - 4.9, 0.3), chapa, 0, 4.9 + (h - 4.9) / 2, zs); add(caja(L, 1.2, 0.3), zoc, 0, 0.6, zs);
 const techo = add(caja(L + 1, 0.4, D + 1), M(0xe3e6e8, { roughness: 0.6, metalness: 0.2 }), 0, h + 0.2, 0); techo.visible = false;
 // andenes: tramo de pared entre portones, marco oscuro, cortina y número
-const us = []; for (let u = -L / 2 + 17; u <= L / 2 - 6; u += 5) us.push(u);
-lote(caja(1.4, 3.7, 0.3), chapa, us.map(u => [u + 2.5, 3.05, zs]).concat([[-L / 2 + 7.3, 3.05, zs, 0, 10.4], [L / 2 - 3.4, 3.05, zs, 0, 4.3]]));
+const us = []; for (let u = -L / 2 + 17; u <= L / 2 - 30; u += 5) us.push(u); const uFin = us[us.length - 1] + 1.8, wFin = L / 2 - uFin, wIni = us[0] - 1.8 + L / 2;
+lote(caja(1.4, 3.7, 0.3), chapa, us.map(u => [u + 2.5, 3.05, zs]).slice(0, -1).concat([[-L / 2 + wIni / 2, 3.05, zs, 0, wIni / 1.4], [uFin + wFin / 2, 3.05, zs, 0, wFin / 1.4]]));
 lote(caja(3.9, 0.5, 0.9), M(0x1b1f23, { roughness: 0.6 }), us.map(u => [u, 4.75, zs + 0.45]));
 lote(caja(0.35, 3.6, 0.9), M(0x1b1f23, { roughness: 0.6 }), us.flatMap(u => [[u - 1.78, 2.9, zs + 0.45], [u + 1.78, 2.9, zs + 0.45]]));
 lote(caja(3.2, 3.4, 0.08), M(0xe9ecee, { roughness: 0.5 }), us.map(u => [u, 2.9, zs - 0.05]));
