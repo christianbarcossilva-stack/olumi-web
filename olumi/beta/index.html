@@ -126,6 +126,24 @@ body.cal-drag{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .calh{margin:0 0 10px;font-size:15px;font-weight:650}
 ul.pasos{list-style:disc}
 /* fin 1.50 */
+/* 1.51t */
+.tki-add{display:flex;gap:8px;align-items:flex-end;margin:0 0 12px}
+.tki-add textarea{flex:1;min-width:0;min-height:0;resize:vertical}
+#tkiL .tki-add{margin:12px 0 0}
+.tki-l{display:grid;gap:2px}
+.tki-r{display:flex;gap:8px;align-items:center;padding:6px 4px;border-radius:8px}
+.tki-r:hover{background:var(--surface-2)}
+.tki-r label{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;cursor:pointer;font-size:14.5px;line-height:1.4}
+.tki-r input{width:20px;height:20px;margin:0;flex:none}
+.tki-r.ok label span{color:var(--muted);text-decoration:line-through}
+.tki-q{font-size:12px;white-space:nowrap}
+.tki-x{border:0;background:none;color:var(--muted);cursor:pointer;padding:4px 7px;border-radius:6px;font-size:12.5px;opacity:.55;white-space:nowrap}
+.tki-x:hover{opacity:1;background:var(--surface-2)}.tki-x.arm{color:var(--bad);opacity:1;font-weight:600}
+.logh .tki-x{margin-left:auto}
+.tki-av{display:flex;gap:10px;align-items:center;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+.tki-bar{flex:1;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden}
+.tki-bar i{display:block;height:100%;background:var(--s-ok,#30a46c);border-radius:3px;transition:width .2s}
+/* fin 1.51t */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1303,7 +1321,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -1722,7 +1740,7 @@ function sheetTk(id,p){
   let body=webContactHtml(t,id)+`<div class="contact">${prChip(pr)}<span>${PRN[pr]}</span>${aboTag(t.clienteId)}${id?`<span class="muted">· abierto ${ago(t.creado)}</span>`:''}</div>
     <div class="grid">${TKF().map(f=>fldv(f,t)).join('')}${!id?fld({k:'nuevoCli',l:'…o cliente nuevo',ph:'Nombre'},p.newCli?.nombre||'')+fld({k:'nuevoTel',l:'Teléfono del cliente nuevo',t:'tel'},p.newCli?.telefono||''):''}</div><p class="err" id="shErr" hidden></p>`;
   body+=tkContactoHtml(t,id);
-  if(id)body+=adjSection('tickets',id,'tkadj');
+  if(id)body+=tkiSection(id)+adjSection('tickets',id,'tkadj');
   if(id){
     const jobs=arr('trabajos').filter(j=>j.ticketId===id).sort((a,b)=>((a.fecha||'')+(a.hora||'')).localeCompare((b.fecha||'')+(b.hora||'')));
     if((t.fotos||[]).length)body+=`<section class="rel"><h3>Fotos que mandó el cliente</h3>${photosHtmlRO(t.fotos)}</section>`;
@@ -2392,6 +2410,7 @@ if(await planosAct(k,el,arg))return;
   if(await opeAct(k,el,arg))return;
   if(await agendaAct(k,el,arg))return;
   if(await calAct(k,el,arg))return;
+  if(await tkiAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -2444,6 +2463,7 @@ if(await planosAct(k,el,arg))return;
       const col={op:'oportunidades',cli:'clientes',act:'actividades',prod:'productos',pres:'presupuestos',tk:'tickets',trab:'trabajos',fact:'facturas',pry:'proyectos',rel:'relevamientos',dep:'depositos',mov:'movimientos',eq:'equipos',tar:'tareas',cua:'cuadrillas',kit:'kits',chk:'checklists',oc:'compras',ent:'entradas',gasto:'gastos',ev:'eventos'}[SH.type];if(!col){closeSheet();break}if(SH.type==='fact'&&D.facturas[SH.id]?.cfeData?.idCFE){armed=null;el.classList.remove('arm');el.textContent=el.dataset.orig||'Eliminar';toast('Tiene CFE emitido: no se puede borrar. Hacé una nota de crédito.');break}
       const tarPry=SH.type==='tar'&&D.tareas[SH.id]?.proyectoId;
       if(SH.type==='trab')await msDropJob(SH.id);
+      if(SH.type==='tk'&&D.tkint&&D.tkint[SH.id])await remove('tkint',SH.id);
       await remove(col,SH.id);if(tarPry){delete D.tareas[SH.id];await pryAvSync(tarPry)}toast('Eliminado');closeSheet();break}
     case'opnota':{const t=($('#op_nota')?.value||'').trim();if(!t){toast('Escribí la nota primero');break}await opAddLog(SH.id,{tipo:'nota',text:t});$('#op_nota').value='';toast('Nota registrada');break}
     case'opmsg':{const t=($('#op_nota')?.value||'').trim();const o=D.oportunidades[SH.id],cl=o&&D.clientes[o.clienteId];if(!cl)break;if(!t){toast('Escribí el mensaje en el cuadro de nota');break}
@@ -3305,6 +3325,63 @@ function feedHtml(){
     <div class="actions"><button class="btn ghost" data-act="feednew">Cambiar la dirección</button><button class="btn ghost danger" data-act="feedoff">Apagar</button></div>`;
 }
 /* === fin 1.50 === */
+/* === 1.51 · ticket: notas internas y lista === */
+/* Ticket: notas internas (bitácora con fecha y quién) y la lista de lo que instalamos, para ir tildando.
+   Se guardan aparte del ticket, en la colección "tkint" (un documento por ticket), que el portal del cliente no lee: son internas de verdad. */
+const tkiDoc=id=>(D.tkint&&D.tkint[id])||{};
+const tkiQuien=u=>personName(u).replace(' (vos)','');
+function tkiNotasHtml(id){
+  const l=[...(tkiDoc(id).notas||[])].sort((a,b)=>n0(b.ts)-n0(a.ts));
+  if(!l.length)return'<p class="muted" style="margin:0">Sin notas todavía.</p>';
+  return`<div class="log">${l.map(x=>`<div class="logi nota"><div class="logh"><b>${esc(tkiQuien(x.by))}</b><span class="muted">${fdtMs(x.ts)}</span>${!readonly&&(x.by===ME||isLead())?`<button type="button" class="tki-x" data-act="tkinrm:${esc(x.id)}" aria-label="Borrar nota">✕</button>`:''}</div><div class="logt">${esc(x.text).replace(/\n/g,'<br>')}</div></div>`).join('')}</div>`;
+}
+function tkiListaHtml(id){
+  const l=tkiDoc(id).lista||[],ok=l.filter(x=>x.ok).length;
+  if(!l.length)return'<p class="muted" style="margin:0">Todavía no hay nada en la lista.</p>';
+  return`<div class="tki-av"><div class="tki-bar"><i style="width:${Math.round(ok/l.length*100)}%"></i></div><span>${ok} de ${l.length}</span></div>
+    <div class="tki-l">${l.map(x=>`<div class="tki-r${x.ok?' ok':''}"><label><input type="checkbox" id="na_ck_${esc(x.id)}" data-tkick="${esc(x.id)}"${x.ok?' checked':''}${readonly?' disabled':''}><span>${esc(x.t)}</span></label>${x.ok&&x.by?`<span class="muted tki-q">${esc(tkiQuien(x.by).split(' ')[0])} · ${fdate(dISO(new Date(x.ts)))}</span>`:''}${readonly?'':`<button type="button" class="tki-x" data-act="tkilrm:${esc(x.id)}" aria-label="Quitar de la lista">✕</button>`}</div>`).join('')}</div>`;
+}
+function tkiSection(id){
+  return`<section class="rel" id="tkiN"><h3>Notas internas <span class="tag t-none">No las ve el cliente</span></h3>
+    ${readonly?'':`<div class="tki-add"><textarea id="na_tkn" rows="2" placeholder="Ej.: quedó en pasar fecha; hay que coordinar con la oficina de al lado" aria-label="Nota interna"></textarea><button type="button" class="btn" data-act="tkinadd">Agregar nota</button></div>`}
+    <div id="tkiNL">${tkiNotasHtml(id)}</div></section>
+    <section class="rel" id="tkiL"><h3>Lo que instalamos</h3><p class="hint" style="margin:0 0 8px">Anotá lo que hay que instalar y andá tildando lo que ya quedó.</p>
+    <div id="tkiLL">${tkiListaHtml(id)}</div>
+    ${readonly?'':`<div class="tki-add"><textarea id="na_tki" rows="1" placeholder="Ej.: AP piso 4 (podés pegar varios, uno por renglón)" aria-label="Agregar a la lista"></textarea><button type="button" class="btn" data-act="tkiladd">Agregar</button></div>`}</section>`;
+}
+function tkiPinta(id){const a=$('#tkiNL'),b=$('#tkiLL');if(a)a.innerHTML=tkiNotasHtml(id);if(b)b.innerHTML=tkiListaHtml(id)}
+async function tkiGuarda(id,p){
+  const t=D.tickets[id]||{};
+  try{await put('tkint',id,{...tkiDoc(id),...p,ticket:id,numero:t.numero||'',actualizado:Date.now()})}catch(e){if(!(e&&e.code==='loading'))handleErr(e);return false}
+  tkiPinta(id);return true;
+}
+async function tkiAct(k,el,arg){
+  if(!/^tki(n|l)(add|rm)$/.test(k))return false;const id=SH&&SH.type==='tk'&&SH.id;if(!id||readonly)return true;const d=tkiDoc(id);
+  if(k==='tkinadd'){
+    const i=$('#na_tkn'),t=(i?i.value:'').trim();if(!t){toast('Escribí la nota primero');if(i)i.focus();return true}
+    if(await tkiGuarda(id,{notas:[...(d.notas||[]),{id:uid(),ts:Date.now(),by:ME||'',text:t}].slice(-300)})){if(i){i.value='';i.focus()}toast('Nota guardada')}
+    return true}
+  if(k==='tkiladd'){
+    const i=$('#na_tki'),ls=(i?i.value:'').split('\n').map(x=>x.replace(/^[\s•·\-–*☐☑]+/,'').trim()).filter(Boolean);if(!ls.length){toast('Escribí qué hay que instalar');if(i)i.focus();return true}
+    if(await tkiGuarda(id,{lista:[...(d.lista||[]),...ls.map(t=>({id:uid(),t:t.slice(0,200),ok:false}))].slice(0,200)})){if(i){i.value='';i.focus()}}
+    return true}
+  if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=k==='tkinrm'?'¿Borrar?':'¿Quitar?';return true}
+  armed=null;
+  if(k==='tkinrm')await tkiGuarda(id,{notas:(d.notas||[]).filter(x=>x.id!==arg)});
+  else await tkiGuarda(id,{lista:(d.lista||[]).filter(x=>x.id!==arg)});
+  return true;
+}
+document.addEventListener('change',async e=>{
+  const t=e.target;if(!t||!t.dataset||t.dataset.tkick===undefined)return;const id=SH&&SH.type==='tk'&&SH.id;if(!id||readonly)return;
+  const l=(tkiDoc(id).lista||[]).map(x=>x.id===t.dataset.tkick?(t.checked?{...x,ok:true,by:ME||'',ts:Date.now()}:{id:x.id,t:x.t,ok:false}):x);
+  await tkiGuarda(id,{lista:l});
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||!e.target||e.isComposing)return;
+  if(e.target.id==='na_tkn'&&(e.metaKey||e.ctrlKey)){e.preventDefault();act('tkinadd',e.target)}
+  else if(e.target.id==='na_tki'&&!e.shiftKey){e.preventDefault();act('tkiladd',e.target)}
+});
+/* === fin 1.51t === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
