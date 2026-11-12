@@ -153,6 +153,32 @@ ul.pasos{list-style:disc}
 @media (min-width:900px){.board .col{flex:1 1 212px;min-width:212px;max-width:380px}}
 .crml td .code{margin-right:6px}
 /* fin 1.51c */
+/* 1.51d */
+.cpk-sel{display:none!important}
+.cpk-b{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;box-sizing:border-box;font:inherit;text-align:left;color:var(--fg);background:var(--surface-2);border:1px solid transparent;border-radius:11px;padding:9px 12px;min-height:40px;cursor:pointer}
+.cpk-b span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cpk-b.vacio span{color:var(--muted)}
+.cpk-b svg{flex:none;color:var(--muted)}
+.cpk-b:focus-visible,.cpk-b[aria-expanded=true]{outline:0;border-color:var(--accent)}
+.cpk-b:disabled{opacity:.6;cursor:default}
+.cpk{margin-top:6px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);box-shadow:0 12px 32px rgb(0 0 0 / .16);overflow:hidden}
+.cpk-q{display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--line)}
+.cpk-q svg{flex:none;color:var(--muted)}
+.cpk-q input[type=search]{flex:1;min-width:0;border:0;background:none;box-shadow:none;padding:9px 0;font-size:16px;border-radius:0}
+.cpk-q input[type=search]:focus{outline:0}
+.cpk-l{max-height:min(300px,42vh);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.cpk-o{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;font:inherit;color:var(--fg);background:none;border:0;border-top:1px solid var(--line-2);padding:10px 14px;cursor:pointer}
+.cpk-o:first-child{border-top:0}
+.cpk-o b{font-weight:600;font-size:15px}
+.cpk-o span{font-size:12.5px;color:var(--muted)}
+.cpk-o.on,.cpk-o:hover{background:var(--surface-2)}
+.cpk-o.sel b{color:var(--accent)}
+.cpk-o.vacio b{font-weight:500;color:var(--muted)}
+.cpk-o.nuevo b{color:var(--accent)}
+.cpk-nada{margin:0;padding:10px 14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line-2)}
+.fld input[type=date],.fld input[type=time],.fld input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;text-align:left;min-height:40px}
+.fld input::-webkit-date-and-time-value{text-align:left}
+/* fin 1.51d */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -3425,6 +3451,82 @@ async function crmNumAct(k,el){
   try{for(const o of l){const cur=D.oportunidades[o.id];if(!cur||cur.numero)continue;await put('oportunidades',o.id,{...cur});n++;el.textContent=`Numerando… ${n} de ${l.length}`}}catch(e){if(!(e&&e.code==='loading'))handleErr(e)}
   toast(`${pl(n,'oportunidad numerada','oportunidades numeradas')}`);sr();return true}
 /* === fin 1.51c === */
+/* === 1.51d · elegir cliente escribiendo === */
+/* Elegir cliente escribiendo: reemplaza a la vista cada lista de clientes (id …clienteId)
+   por un campo con buscador. La lista original queda escondida y sigue siendo la que guarda. */
+const CPK_N=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+function cpkTexto(c){return CPK_N([c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion].filter(Boolean).join(' '))}
+function cpkSub(c){return[c.contacto,c.direccion||c.telefono].filter(Boolean).join(' · ')}
+function cpkLabel(sel){const o=sel.options[sel.selectedIndex];const b=sel._cpk;if(!b)return;
+  const vacio=!sel.value;b.querySelector('span').textContent=o?o.textContent:'';b.classList.toggle('vacio',vacio);b.disabled=sel.disabled}
+function cpkMonta(sel){
+  if(sel._cpk||sel.multiple)return;
+  const b=document.createElement('button');b.type='button';b.className='cpk-b';b.setAttribute('aria-haspopup','listbox');
+  b.innerHTML='<span></span><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  sel._cpk=b;sel.classList.add('cpk-sel');sel.tabIndex=-1;sel.setAttribute('aria-hidden','true');sel.before(b);
+  const lab=sel.closest('label');if(lab&&lab.htmlFor===sel.id)lab.removeAttribute('for');
+  const d=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value');
+  Object.defineProperty(sel,'value',{configurable:true,get(){return d.get.call(this)},set(v){d.set.call(this,v);cpkLabel(this)}});
+  new MutationObserver(()=>cpkLabel(sel)).observe(sel,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
+  sel.addEventListener('change',()=>cpkLabel(sel));
+  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();cpkAbre(sel)});
+  cpkLabel(sel);
+}
+let CPK=null;
+function cpkCierra(foco){if(!CPK)return;const {box,sel}=CPK;CPK=null;box.remove();sel._cpk&&sel._cpk.setAttribute('aria-expanded','false');if(foco&&sel._cpk)sel._cpk.focus()}
+function cpkAbre(sel){
+  if(CPK&&CPK.sel===sel){cpkCierra(true);return}
+  cpkCierra();if(sel.disabled)return;
+  const box=document.createElement('div');box.className='cpk';
+  box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="Buscar por nombre, RUT, contacto o teléfono" aria-label="Buscar cliente" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
+  sel._cpk.after(box);sel._cpk.setAttribute('aria-expanded','true');
+  CPK={sel,box,i:0,items:[]};
+  const q=box.querySelector('input');q.addEventListener('input',()=>{CPK.i=0;cpkPinta()});q.addEventListener('keydown',cpkTecla);
+  box.addEventListener('pointerdown',e=>e.stopPropagation());
+  box.addEventListener('click',e=>{e.stopPropagation();if(e.target.tagName!=='INPUT')e.preventDefault();const r=e.target.closest('[data-cpk]');if(r)cpkElige(r.dataset.cpk)});
+  cpkPinta();q.focus({preventScroll:true});
+  requestAnimationFrame(()=>box.scrollIntoView({block:'nearest',behavior:'smooth'}));
+}
+function cpkPinta(){
+  if(!CPK)return;const {sel,box}=CPK;const qv=box.querySelector('input').value;const q=CPK_N(qv);const ws=q.split(/\s+/).filter(Boolean);
+  const ops=[...sel.options];const vacio=ops.find(o=>!o.value);
+  let l=ops.filter(o=>o.value).map(o=>{const c=D.clientes&&D.clientes[o.value]||{nombre:o.textContent};return{id:o.value,n:o.textContent,c}});
+  if(ws.length){l=l.map(x=>{const t=cpkTexto(x.c)||CPK_N(x.n),n=CPK_N(x.n);if(!ws.every(w=>t.includes(w)))return null;
+    return{...x,p:n.startsWith(q)?0:n.split(/\s+/).some(w=>w.startsWith(ws[0]))?1:2}}).filter(Boolean).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n,'es'))}
+  const exacto=l.some(x=>CPK_N(x.n)===q);
+  const items=[];
+  if(!ws.length&&vacio)items.push({id:'',n:vacio.textContent,vacio:1});
+  l.slice(0,60).forEach(x=>items.push(x));
+  if(ws.length&&!exacto&&!readonly)items.push({id:'+',n:qv.trim()});
+  CPK.items=items;if(CPK.i>=items.length)CPK.i=Math.max(0,items.length-1);
+  const lst=box.querySelector('.cpk-l');
+  lst.innerHTML=items.map((x,i)=>x.id==='+'?`<button type="button" role="option" class="cpk-o nuevo${i===CPK.i?' on':''}" data-cpk="+"><b>Crear cliente «${esc(x.n)}»</b><span>Después completás sus datos en Clientes</span></button>`
+    :`<button type="button" role="option" class="cpk-o${x.vacio?' vacio':''}${x.id===sel.value?' sel':''}${i===CPK.i?' on':''}" data-cpk="${esc(x.id)}" aria-selected="${x.id===sel.value}"><b>${esc(x.n)}</b>${x.c&&cpkSub(x.c)?`<span>${esc(cpkSub(x.c))}</span>`:''}</button>`).join('')
+    +(ws.length&&!l.length&&readonly?`<p class="cpk-nada">No hay clientes con «${esc(qv.trim())}».</p>`:'')
+    +(l.length>60?`<p class="cpk-nada">Hay ${l.length-60} más. Escribí un poco más para encontrarlo.</p>`:'');
+  const on=lst.querySelector('.on');on&&on.scrollIntoView({block:'nearest'});
+}
+function cpkTecla(e){
+  if(!CPK)return;const n=CPK.items.length;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();CPK.i=(CPK.i+(e.key==='ArrowDown'?1:-1)+n)%Math.max(n,1);cpkPinta()}
+  else if(e.key==='Enter'){e.preventDefault();const x=CPK.items[CPK.i];if(x)cpkElige(x.id)}
+  else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cpkCierra(true)}
+}
+async function cpkElige(id){
+  if(!CPK)return;const {sel,box}=CPK;
+  if(id==='+'){const nom=box.querySelector('input').value.trim();if(!nom)return;
+    const nid=uid();try{await put('clientes',nid,{nombre:nom,creado:Date.now(),actualizado:Date.now()})}catch(err){if(!(err&&err.code==='loading'))handleErr(err);return}
+    if(![...sel.options].some(o=>o.value===nid)){const o=document.createElement('option');o.value=nid;o.textContent=nom;sel.append(o)}
+    id=nid;toast(`Cliente «${nom}» creado`)}
+  sel.value=id;cpkCierra(true);
+  sel.dispatchEvent(new Event('input',{bubbles:true}));sel.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function cpkBusca(raiz){(raiz.querySelectorAll?raiz:document).querySelectorAll('select[id$="clienteId"],select[data-q="clienteId"]').forEach(cpkMonta)}
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.matches&&n.matches('select[id$="clienteId"],select[data-q="clienteId"]'))cpkMonta(n);else if(n.querySelector&&n.querySelector('select'))cpkBusca(n)}
+  if(CPK&&!CPK.box.isConnected)CPK=null}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('pointerdown',e=>{if(CPK&&!CPK.box.contains(e.target)&&e.target!==CPK.sel._cpk)cpkCierra()});
+cpkBusca(document);
+/* === fin 1.51d === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
