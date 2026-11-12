@@ -147,6 +147,12 @@ ul.pasos{list-style:disc}
 /* 1.51b */
 .numrow{display:flex;gap:6px;align-items:center}.numrow input[type=text]{width:72px;text-align:center;font-family:var(--f-mono);text-transform:uppercase}.numrow input[type=number]{width:120px}
 /* fin 1.51b */
+/* 1.51c */
+#sheet label[for=f_motivoPerdida]{display:none}
+#sheet:has(.step.on[data-act="step:per"]) label[for=f_motivoPerdida]{display:flex}
+@media (min-width:900px){.board .col{flex:1 1 212px;min-width:212px;max-width:380px}}
+.crml td .code{margin-right:6px}
+/* fin 1.51c */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1610,7 +1616,7 @@ function vAgenda(){
   const pend=list.filter(a=>!a.hecha);
   const groups=[['Vencidas',pend.filter(a=>a.fecha&&a.fecha.slice(0,10)<t).sort(byDate)],['Hoy',pend.filter(a=>a.fecha&&a.fecha.slice(0,10)===t).sort(byDate)],['Próximas',pend.filter(a=>!a.fecha||a.fecha.slice(0,10)>t).sort(byDate)],['Hechas recientemente',list.filter(a=>a.hecha).sort((a,b)=>n0(b.hechaEn)-n0(a.hechaEn)).slice(0,12)]];
   const head=`<div class="vhead"><div><h1>Agenda</h1><p class="sub">${pl(pend.length,'pendiente','pendientes')}${groups[0][1].length?` · <span style="color:var(--bad)">${pl(groups[0][1].length,'vencida','vencidas')}</span>`:''}</p></div><div class="tools">${ME?`<button class="tgl${mine?' on':''}" data-act="mine" aria-pressed="${mine}">Solo mías</button>`:''}<button class="btn pri" data-new="act">+ Actividad</button></div></div>`;
-  if(!all.length)return head+empty('Nada agendado','Programá visitas técnicas, llamadas de seguimiento e instalaciones. Las vencidas se marcan en rojo en el pipeline.','act','+ Programar actividad');
+  if(!all.length)return head+empty('Nada agendado','Programá visitas técnicas, llamadas de seguimiento e instalaciones. Las vencidas se marcan en rojo en el CRM.','act','+ Programar actividad');
   return head+groups.filter(g=>g[1].length).map(([n,l])=>`<section class="group"><h2>${n} <span class="num">${l.length}</span></h2><div class="list">${l.map(aRow).join('')}</div></section>`).join('')||`<p class="muted">Nada coincide con la búsqueda.</p>`;
 }
 
@@ -2104,7 +2110,7 @@ async function genAbonos(){
 
 /* ---------- menú (celular) ---------- */
 function vMenu(){
-  const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y mail')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
+  const it=[...(isLead()?[['oficina','Oficina','Tu empresa en vivo, área por área'],['vivo','En vivo','El mapa de la empresa ahora: técnicos, visitas y fallas'],['hoy','Hoy','Emergencias, visitas del día y lo que hay que resolver'],['bandeja','Bandeja de entrada',(n=>n?`${n} pedido${n===1?'':'s'} nuevo${n===1?'':'s'}`:'Lo que llega por WhatsApp y email')(entNuevas().length)]]:[]),...(isBoss()?[['inicio','Primeros pasos',setupPending()?`${setupSteps().filter(x=>x.ok).length} de ${setupSteps().length} pasos listos`:'Rubros, kits y listas de control']]:[]),['proyectos','Proyectos y obras','Planos, avance de la instalación y relevamientos'],['tecnicos',isLead()?'Técnicos':'Mis horas',isBoss()?'Fichas, horas, productividad y liquidación':'Horas trabajadas y visitas'],['inventario','Inventario',invOn()?`Stock, camionetas y equipos${(n=>n?' · '+n+' mantenimiento'+(n===1?'':'s')+' a vencer':'')(mantPend().length)}`:'Stock por depósito y camioneta'],['trabajos','Historial de trabajos','Informes, fotos y firmas'],['clientes','Clientes',`${Object.keys(D.clientes).length} en la cartera`],['presupuestos','Presupuestos',`${arr('presupuestos').filter(p=>p.estado==='enviado').length} esperando respuesta`],
     ...(canMoney()?[['facturacion','Facturación',pl(arr('facturas').filter(f=>factState(f)==='vencida').length,'vencida','vencidas')]]:[]),['agenda','Seguimientos',pl(overdueCount(),'vencido','vencidos')],
     ...(canMoney()?[['reportes','Reportes','CRM, tickets y cobros']]:[]),...(agOk()?[['agentes','Carolina y Gabriela',(n=>n?`${n} para aprobar`:'Asistentes virtuales: atención comercial y administración')(aprobPend().length)]]:[]),...(isRRHH()?[['personal','Personal','Fichas, vencimientos y pago de cada persona']]:[]),['gastos','Gastos',(n=>n&&gastoAdmin()?`${n} factura${n===1?'':'s'} para revisar`:'Facturas de compra de los técnicos')(arr('gastos').filter(g=>(g.estado||'pendiente')==='pendiente').length)],['mas','Catálogo','Productos, kits, listas de control, importar'],['ajustes','Ajustes','Datos de la empresa, equipo, apariencia, exportar'],['plan','Plan',planLine()],...(ISADMIN?[['admin','Panel Unity Tech','Empresas, planes y cobros']]:[])];
   const M={};it.filter(([v])=>viewOk(v)).forEach(x=>M[x[0]]=x);Object.entries(MENUEXTRA).forEach(([v,[n,d]])=>{if(!M[v]&&viewOk(v)&&tabOk(v))M[v]=[v,n,d]});
@@ -2144,7 +2150,7 @@ const opOpts=cli=>[['','Sin oportunidad'],...arr('oportunidades').filter(o=>!cli
 const OPF=()=>[
   {k:'titulo',l:'Título de la oportunidad',w:'full',ph:'Ej.: CCTV 8 cámaras depósito'},
   {k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},
-  {k:'servicio',l:'Servicio',t:'select',o:SERV},
+  {k:'servicio',l:'Servicio',t:'select',o:[['','Sin definir'],...SERV]},
   {k:'monto',l:'Monto estimado',t:'number',step:'any'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','$ Pesos'],['USD','US$ Dólares']]},
   {k:'prob',l:'Probabilidad (%)',t:'number',step:'1'},{k:'cierre',l:'Cierre esperado',t:'date'},{k:'implementacion',l:'Implementación estimada',t:'date'},
   {k:'prioridad',l:'Prioridad',t:'select',o:[[0,'Normal'],[1,'★ Media'],[2,'★★ Alta'],[3,'★★★ Urgente']]},
@@ -2192,7 +2198,7 @@ function closeSheet(){$('#sheetWrap').hidden=true;document.body.style.overflow='
 
 /* oportunidad */
 function sheetOp(id,p){
-  const o=id?{...D.oportunidades[id]}:{etapa:p.stage||'nuevo',prob:EK[p.stage||'nuevo'].p,moneda:defMon(),responsable:ME||'',clienteId:p.cli||'',prioridad:0,servicio:SERV[0]};
+  const o=id?{...D.oportunidades[id]}:{etapa:p.stage||'nuevo',prob:EK[p.stage||'nuevo'].p,moneda:defMon(),responsable:ME||'',clienteId:p.cli||'',prioridad:0,servicio:''};
   const stepper=`<div class="stepper" role="group" aria-label="Etapa">${ETAPAS.map(e=>`<button type="button" class="step${(o.etapa||'nuevo')===e.k?' on':''}" data-act="step:${e.k}" style="--sc:var(--s-${e.k})" aria-pressed="${(o.etapa||'nuevo')===e.k}">${e.n}</button>`).join('')}</div>`;
   const f=OPF();const cl=D.clientes[o.clienteId];
   const strip=id&&cl&&(cl.telefono||cl.email)?`<div class="contact"><strong>${esc(cl.contacto||cl.nombre)}</strong>${cl.telefono?`<span class="num">${esc(cl.telefono)}</span>${waLink(cl.telefono)?`<a href="${waLink(cl.telefono)}" target="_blank" rel="noopener">WhatsApp</a>`:''}`:''}${cl.email?`<span>${esc(cl.email)}</span>`:''}</div>`:'';
@@ -2416,6 +2422,7 @@ if(await planosAct(k,el,arg))return;
   if(await calAct(k,el,arg))return;
   if(await tkiAct(k,el,arg))return;
   if(await crmAjAct(k,el,arg))return;
+  if(await crmNumAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -2635,7 +2642,7 @@ document.addEventListener('drop',async e=>{const col=e.target.closest&&e.target.
 const CSEL=new Set();let CLST=[];
 function crmList(l){CLST=l.map(o=>o.id);const vis=new Set(CLST);[...CSEL].forEach(i=>vis.has(i)||CSEL.delete(i));const n=CSEL.size;
   const bar=n?`<div class="bulk" role="region" aria-label="Acciones para las seleccionadas"><b>${pl(n,'seleccionada','seleccionadas')}</b>${readonly?'':`<select data-crm="bresp" aria-label="Cambiar el responsable"><option value="">Pasar a…</option>${opts(peopleOpts('').slice(1),'')}</select><select data-crm="betapa" aria-label="Cambiar la etapa"><option value="">Mover a…</option>${opts(ETAPAS.filter(e=>e.k!=='per').map(e=>[e.k,e.n]),'')}</select><button class="btn ghost" data-act="bper">Marcar perdidas</button>`}${canMoney()?'<button class="btn ghost" data-act="bcsv">Exportar</button>':''}<button class="btn ghost" data-act="bclr" style="margin-left:auto">Quitar selección</button></div>`:'';
-  return bar+`<div class="tablewrap"><table class="crml"><thead><tr><th class="ck" data-act="bsel:*"><input type="checkbox" aria-label="Seleccionar todas"${n&&n===l.length?' checked':''}></th><th>Oportunidad</th><th>Cliente</th><th>Servicio</th><th>Etapa</th><th class="n">Monto</th><th class="n">Prob.</th><th>Cierre</th><th>Próxima actividad</th></tr></thead><tbody>${l.map(o=>`<tr data-open="op:${o.id}" tabindex="0"${CSEL.has(o.id)?' class="sel"':''}><td class="ck" data-act="bsel:${o.id}"><input type="checkbox" aria-label="Seleccionar ${esc(o.titulo||'')}"${CSEL.has(o.id)?' checked':''}></td><td><strong>${esc(o.titulo)}</strong>${n0(o.prioridad)?` <span class="stars">${'★'.repeat(n0(o.prioridad))}</span>`:''}</td><td>${esc(cliName(o.clienteId)||'—')}</td><td>${esc(o.servicio||'—')}</td><td><span class="tag" style="background:var(--surface-2);color:var(--s-${o.etapa||'nuevo'})">${(EK[o.etapa]||EK.nuevo).n}</span></td><td class="n">${money(o.monto,o.moneda)}</td><td class="n">${n0(o.prob)} %</td><td>${o.cierre?`<span class="${isOpen(o)&&o.cierre<today()?'tag t-bad':''}">${fdate(o.cierre)}</span>`:'—'}</td><td>${isOpen(o)?actBadge(pendingActs(o.id)[0]):'—'}</td></tr>`).join('')}</tbody></table></div>`}
+  return bar+`<div class="tablewrap"><table class="crml"><thead><tr><th class="ck" data-act="bsel:*"><input type="checkbox" aria-label="Seleccionar todas"${n&&n===l.length?' checked':''}></th><th>Oportunidad</th><th>Cliente</th><th>Servicio</th><th>Etapa</th><th class="n">Monto</th><th class="n">Prob.</th><th>Cierre</th><th>Próxima actividad</th></tr></thead><tbody>${l.map(o=>`<tr data-open="op:${o.id}" tabindex="0"${CSEL.has(o.id)?' class="sel"':''}><td class="ck" data-act="bsel:${o.id}"><input type="checkbox" aria-label="Seleccionar ${esc(o.titulo||'')}"${CSEL.has(o.id)?' checked':''}></td><td>${o.numero?`<span class="code">${esc(o.numero)}</span>`:''}<strong>${esc(o.titulo)}</strong>${n0(o.prioridad)?` <span class="stars">${'★'.repeat(n0(o.prioridad))}</span>`:''}</td><td>${esc(cliName(o.clienteId)||'—')}</td><td>${esc(o.servicio||'—')}</td><td><span class="tag" style="background:var(--surface-2);color:var(--s-${o.etapa||'nuevo'})">${(EK[o.etapa]||EK.nuevo).n}</span></td><td class="n">${money(o.monto,o.moneda)}</td><td class="n">${n0(o.prob)} %</td><td>${o.cierre?`<span class="${isOpen(o)&&o.cierre<today()?'tag t-bad':''}">${fdate(o.cierre)}</span>`:'—'}</td><td>${isOpen(o)?actBadge(pendingActs(o.id)[0]):'—'}</td></tr>`).join('')}</tbody></table></div>`}
 
 /* --- perdida: el motivo en un toque --- */
 function sheetCrmPer(id,p){const ids=(p&&p.ids)||[id],o=D.oportunidades[ids[0]]||{};
@@ -3398,7 +3405,7 @@ function crmAjVista(){
     <div class="tools"><button class="btn" data-act="crmaj:0">‹ Volver al CRM</button>${readonly?'':'<button class="btn pri" data-act="crmsave">Guardar</button>'}</div></div>
     <div class="panel cv" style="margin-bottom:12px"><h2 style="margin:0">Numeración de las oportunidades</h2>
       <div class="cvr cvr2"><span>La próxima oportunidad sale con el número</span><span class="numrow"><input type="text" data-cv="numPre" value="${val(v.numPre==null?'P':v.numPre)}" maxlength="6" aria-label="Letras de adelante"><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="${opNumMax()+1}" aria-label="Próximo número"></span></div>
-      <p class="hint">Poné el número con el que vienen trabajando y Olumi sigue desde ahí. Tal como está hoy, la próxima sale como <b>${esc(opNumSig())}</b>. No puede ser menor que una que ya existe. El proyecto hereda ese número y, si lo elegís más abajo, también sus presupuestos.</p></div>`+resto;
+      <p class="hint">Poné el número con el que vienen trabajando y Olumi sigue desde ahí. Tal como está hoy, la próxima sale como <b>${esc(opNumSig())}</b>. No puede ser menor que una que ya existe. El proyecto hereda ese número y, si lo elegís más abajo, también sus presupuestos.</p>${crmSinNumHtml()}</div>`+resto;
 }
 async function crmAjAct(k,el,arg){
   if(k!=='crmaj')return false;if(arg==='1'&&!isBoss())return true;
@@ -3407,6 +3414,17 @@ async function crmAjAct(k,el,arg){
 /* tocar cualquier entrada del menú (también «CRM») sale de los ajustes */
 document.addEventListener('click',e=>{if(CRMAJ&&e.target.closest&&e.target.closest('[data-view]')){CRMAJ=false;CRMD=null;sr()}},true);
 /* === fin 1.51b === */
+/* === 1.51c · CRM: numerar las que no tienen número === */
+function crmSinNumHtml(){const n=arr('oportunidades').filter(o=>!o.numero).length;if(!n||readonly)return'';
+  return`<p class="hint" style="margin-top:8px">${pl(n,'oportunidad anterior no tiene','oportunidades anteriores no tienen')} número. <button type="button" class="btn ghost" data-act="crmnumerar">Numerarlas</button><br>Toman los números que siguen, de la más vieja a la más nueva. Si vas a cambiar el próximo número, guardalo antes.</p>`}
+async function crmNumAct(k,el){
+  if(k!=='crmnumerar')return false;if(!isBoss()||readonly)return true;
+  const l=arr('oportunidades').filter(o=>!o.numero).sort((a,b)=>n0(a.creado)-n0(b.creado));if(!l.length)return true;
+  if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent=`¿Numerar ${l.length}? Tocá de nuevo`;return true}
+  armed=null;el.disabled=true;let n=0;
+  try{for(const o of l){const cur=D.oportunidades[o.id];if(!cur||cur.numero)continue;await put('oportunidades',o.id,{...cur});n++;el.textContent=`Numerando… ${n} de ${l.length}`}}catch(e){if(!(e&&e.code==='loading'))handleErr(e)}
+  toast(`${pl(n,'oportunidad numerada','oportunidades numeradas')}`);sr();return true}
+/* === fin 1.51c === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -5722,7 +5740,7 @@ function relText(r){
 }
 async function relShare(){if(!RELJ)return;const r={...RELJ,...readForm(RELF()),items:relItemsClean(relReadItems())};const t=relText(r);
   if(navigator.share){try{await navigator.share({title:r.titulo||'Relevamiento',text:t});return}catch(e){if(e&&e.name==='AbortError')return}}
-  try{await navigator.clipboard.writeText(t);toast('Texto copiado: pegalo en WhatsApp o en un mail.')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Texto copiado')}catch(_){toast('No se pudo copiar')}ta.remove()}}
+  try{await navigator.clipboard.writeText(t);toast('Texto copiado: pegalo en WhatsApp o en un email.')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Texto copiado')}catch(_){toast('No se pudo copiar')}ta.remove()}}
 function relItemsToLines(r,mon,out){
   const isM=s=>/\b(m|mts?|metros?)\b/i.test(s||'');
   (r.items||[]).forEach(it=>{if(!it.desc)return;const cant=n0(it.cant)||1;const q=qn(it.desc);
@@ -5783,7 +5801,7 @@ function wedgeApply(code){
   openSheet(typeof invOn==='function'&&invOn()?'stk':'prod',p.id);
 }
 
-/* ---------- 1.13: Bandeja de entrada (pedidos que llegan por WhatsApp y mail) · posibles clientes dentro del ticket ---------- */
+/* ---------- 1.13: Bandeja de entrada (pedidos que llegan por WhatsApp y email) · posibles clientes dentro del ticket ---------- */
 const ENT_TIPO={trabajo:['Trabajo nuevo','t-acc'],falla:['Falla o reclamo','t-bad'],presupuesto:['Pide presupuesto','t-warn'],consulta:['Consulta','t-none'],otro:['Otro','t-none'],charla:['Charla','t-none'],proveedor:['Proveedor','t-none'],spam:['Publicidad','t-none'],informe:['Informe de técnico','t-acc']};
 /* 1.18: informes de técnicos · rol técnico acotado */
 const isTec=()=>['tecnico','subcontratista'].includes(ROLE)&&!PORTAL();
@@ -5819,14 +5837,14 @@ function vBandeja(){
   if(Q)l=l.filter(e=>qn([e.titulo,e.resumen,e.texto,entNombre(e),e.contacto?.telefono,e.de].join(' ')).includes(qn(Q)));
   l.sort((a,b)=>n0(b.creado)-n0(a.creado));
   const nuevas=entNuevas().length;
-  const head=`<div class="vhead"><div><h1>Bandeja de entrada</h1><p class="sub">${pl(nuevas,'pedido nuevo','pedidos nuevos')} · lo que llega por WhatsApp y mail, antes de convertirlo en ticket, visita o presupuesto</p></div>
+  const head=`<div class="vhead"><div><h1>Bandeja de entrada</h1><p class="sub">${pl(nuevas,'pedido nuevo','pedidos nuevos')} · lo que llega por WhatsApp y email, antes de convertirlo en ticket, visita o presupuesto</p></div>
     <div class="tools"><div class="seg" role="group" aria-label="Filtro">${[['abiertas','Pendientes'],['nuevas','Nuevas'],['charla','Charla y otros'+(nCharla?' · '+nCharla:'')],['todas','Todas']].map(([k,n])=>`<button class="${ENTF===k?'on':''}" data-act="entf:${k}">${n}</button>`).join('')}</div>${ENTF==='charla'&&nCharla&&!readonly?'<button class="btn ghost danger" data-act="entvaciar">Vaciar charla</button>':''}<button class="btn pri" data-new="ent">+ Anotar pedido</button></div></div>
     ${ENTF==='charla'?'<p class="hint" style="margin:-6px 0 12px">Mensajes que el asistente tomó como charla, saludo, proveedor o publicidad. No generan avisos. Si alguno es un pedido, abrilo y cambiale el tipo; si no, borralo.</p>':''}`;
   if(!all.length)return head+empty('Todavía no llegó nada','Cuando un cliente escriba al WhatsApp de la empresa o al correo, el asistente lo deja acá con quién es, qué pide y de qué tipo es. Las fallas urgentes pasan a ticket solas; el resto lo decidís vos con un toque.','ent','+ Anotar un pedido a mano');
   if(!l.length)return head+'<p class="muted">No hay pedidos con este filtro.</p>';
   return head+`<div class="list">${l.map(entRow).join('')}</div>`;
 }
-const ENTF_FIELDS=()=>[{k:'titulo',l:'Qué pide',w:'full',ph:'Ej.: Fibra rota en la iglesia, quieren relevamiento'},{k:'tipo',l:'Tipo',t:'select',o:Object.entries(ENT_TIPO).map(([k,v])=>[k,v[0]])},{k:'canal',l:'Llegó por',t:'select',o:[['whatsapp','WhatsApp'],['mail','Mail'],['llamada','Llamada'],['web','Web'],['otro','Otro']]},
+const ENTF_FIELDS=()=>[{k:'titulo',l:'Qué pide',w:'full',ph:'Ej.: Fibra rota en la iglesia, quieren relevamiento'},{k:'tipo',l:'Tipo',t:'select',o:Object.entries(ENT_TIPO).map(([k,v])=>[k,v[0]])},{k:'canal',l:'Llegó por',t:'select',o:[['whatsapp','WhatsApp'],['mail','Email'],['llamada','Llamada'],['web','Web'],['otro','Otro']]},
   {k:'clienteId',l:'Cliente (si ya está registrado)',t:'select',o:cliOpts()},{k:'estado',l:'Estado',t:'select',o:Object.entries(ENT_EST)},
   {k:'c_nombre',l:'Quién escribe',ph:'Nombre de la persona'},{k:'c_empresa',l:'Empresa o lugar',ph:'Ej.: Parroquia San José'},{k:'c_telefono',l:'Teléfono',t:'tel'},{k:'c_email',l:'Email',t:'email'},
   {k:'texto',l:'Mensaje o detalle',t:'textarea',w:'full'}];
@@ -5840,7 +5858,7 @@ function sheetEnt(id,p){
     if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Qué hacer con este pedido</h3><p class="hint">${e.clienteId?'Es de un cliente registrado.':c.telefono||c.nombre?'No está registrado como cliente: queda como <b>posible cliente</b> y se registra solo cuando le hagas un presupuesto o una factura.':''}</p>
       <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Pasar a ticket</button>`}<button class="btn${e.tipo==='informe'?' pri':''}" data-act="ent2trab">${e.tipo==='informe'?'Crear informe de visita':'Agendar visita'}</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
-      <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por mail</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
+      <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por email</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
   }
   return sheetFrame('Bandeja',id?(e.titulo||'Pedido'):'Anotar pedido',body,{del:!!id});
 }
@@ -5893,14 +5911,14 @@ async function entLinkTicket(tid,t){if(!t||!t.entradaId||!D.entradas[t.entradaId
 async function clienteConfirmado(cid){const c=cid&&D.clientes[cid];if(c&&c.prospecto)await patch('clientes',cid,{prospecto:false})}
 function bandejaHoyHtml(){const n=entNuevas().length;if(!n)return'';return`<div class="panel link" role="button" tabindex="0" data-view="bandeja" style="margin-bottom:14px;display:flex;gap:12px;align-items:center;cursor:pointer"><span class="av-ic" aria-hidden="true">📥</span><span class="grow"><b>${pl(n,'pedido nuevo','pedidos nuevos')} en la bandeja de entrada</b><br><small class="muted">${entNuevas().slice(0,3).map(e=>esc(entNombre(e)+': '+(e.titulo||''))).join(' · ')}</small></span><span>›</span></div>`}
 
-/* ---------- 1.14: varias personas de contacto por cliente (WhatsApp y mail se reconocen por cualquiera de ellas) ---------- */
+/* ---------- 1.14: varias personas de contacto por cliente (WhatsApp y email se reconocen por cualquiera de ellas) ---------- */
 const telKey=t=>String(t||'').replace(/\D/g,'').slice(-8);
 const cliTels=c=>[c.telefono,...(c.contactos||[]).map(x=>x.telefono)].filter(Boolean);
 const cliMails=c=>[c.email,...(c.contactos||[]).map(x=>x.email)].filter(Boolean).map(x=>String(x).toLowerCase());
 function cliContactoRow(x,i){return`<div class="ccrow" data-i="${i}"><input class="cc-nombre" value="${esc(x.nombre||'')}" placeholder="Nombre" aria-label="Nombre"><input class="cc-area" value="${esc(x.area||'')}" placeholder="Área o cargo" aria-label="Área o cargo"><input class="cc-tel" type="tel" value="${esc(x.telefono||'')}" placeholder="Celular" aria-label="Celular"><input class="cc-mail" type="email" value="${esc(x.email||'')}" placeholder="Email" aria-label="Email">${readonly?'':`<button type="button" class="btn ico ghost" data-act="ccdel:${i}" aria-label="Quitar">✕</button>`}</div>`}
 function cliContactosHtml(c){
   const l=c.contactos||[];
-  return`<section class="rel" id="cliContactos"><h3>Personas de contacto <span class="muted">${l.length?'· '+l.length:''}</span></h3><p class="hint" style="margin:0 0 8px">Cuando alguien de la empresa escribe por WhatsApp o mail desde cualquiera de estos números o casillas, Olumi lo reconoce como este cliente. Si cambia el personal, agregá a la persona nueva acá.</p><div id="ccList">${l.map(cliContactoRow).join('')||'<p class="muted" style="margin:0">Solo el contacto principal de arriba.</p>'}</div>${readonly?'':'<div class="actions"><button type="button" class="btn" data-act="ccadd">+ Agregar persona</button></div>'}</section>`;
+  return`<section class="rel" id="cliContactos"><h3>Personas de contacto <span class="muted">${l.length?'· '+l.length:''}</span></h3><p class="hint" style="margin:0 0 8px">Cuando alguien de la empresa escribe por WhatsApp o email desde cualquiera de estos números o casillas, Olumi lo reconoce como este cliente. Si cambia el personal, agregá a la persona nueva acá.</p><div id="ccList">${l.map(cliContactoRow).join('')||'<p class="muted" style="margin:0">Solo el contacto principal de arriba.</p>'}</div>${readonly?'':'<div class="actions"><button type="button" class="btn" data-act="ccadd">+ Agregar persona</button></div>'}</section>`;
 }
 function cliReadContactos(){return[...document.querySelectorAll('#ccList .ccrow')].map(el=>({id:CLIJ.contactos[+el.dataset.i]?.id||uid(),nombre:(el.querySelector('.cc-nombre')?.value||'').trim(),area:(el.querySelector('.cc-area')?.value||'').trim(),telefono:(el.querySelector('.cc-tel')?.value||'').trim(),email:(el.querySelector('.cc-mail')?.value||'').trim()}))}
 function cliContactosRender(){const e=$('#ccList');if(e)e.innerHTML=CLIJ.contactos.map(cliContactoRow).join('')||'<p class="muted" style="margin:0">Solo el contacto principal de arriba.</p>'}
@@ -7170,10 +7188,10 @@ function equipoHtml(){
   ${MEMS.length>1?`<div class="panel" style="margin-bottom:12px"><label class="fld" for="orgsel" style="max-width:420px"><span>Empresa</span><select id="orgsel" data-orgsel>${opts(MEMS.map(m=>[m.org_id,(m.orgs&&m.orgs.name)||m.org_id]),ORG)}</select></label></div>`:''}<div class="panel">${admin?`<p style="margin:0 0 10px">Para sumar a alguien: que instale Olumi, cree su cuenta y elija <b>Unirme a la empresa</b> con este código. Queda esperando hasta que lo apruebes acá abajo y le elijas el rol.</p>
     <div class="actions" style="margin-bottom:16px;align-items:center"><span class="num" style="font-size:24px;letter-spacing:.18em">${esc((ORGINFO&&ORGINFO.join_code)||'')}</span><button class="btn" data-act="copycode">Copiar código</button><button class="btn ghost" data-act="newcode">Cambiar código</button></div>`:''}
   <div class="list">${ms.map(m=>`<div class="row" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
-    ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un mail para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
+    ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un email para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
   ${admin?inviteHtml():''}
   ${admin?soporteHtml():''}
-  ${admin?`<details class="more" style="margin-top:14px"><summary>Roles y permisos: qué ve cada uno</summary><div class="tablewrap"><table><thead><tr><th>Rol</th><th>Qué ve</th></tr></thead><tbody>${[['owner'],...ROLES].map(([r])=>`<tr><td><b>${esc(ROLEN[r]||r)}</b></td><td>${esc(ROLV_TXT[r]||'')}</td></tr>`).join('')}</tbody></table></div><p class="hint">Para sumar a alguien con un rol fijo (por ejemplo un técnico): invitalo por mail acá abajo con ese rol. Cuando se registre con ese mail entra directo como técnico y no puede elegir otra cosa. Con el código de empresa entra "pendiente" hasta que lo apruebes. Contraseña perdida: botón "Contraseña" al lado de su nombre.</p></details>`:''}
+  ${admin?`<details class="more" style="margin-top:14px"><summary>Roles y permisos: qué ve cada uno</summary><div class="tablewrap"><table><thead><tr><th>Rol</th><th>Qué ve</th></tr></thead><tbody>${[['owner'],...ROLES].map(([r])=>`<tr><td><b>${esc(ROLEN[r]||r)}</b></td><td>${esc(ROLV_TXT[r]||'')}</td></tr>`).join('')}</tbody></table></div><p class="hint">Para sumar a alguien con un rol fijo (por ejemplo un técnico): invitalo por email acá abajo con ese rol. Cuando se registre con ese email entra directo como técnico y no puede elegir otra cosa. Con el código de empresa entra "pendiente" hasta que lo apruebes. Contraseña perdida: botón "Contraseña" al lado de su nombre.</p></details>`:''}
   ${empresaZonaHtml()}
   <div class="actions" style="margin-top:16px"><button class="btn" data-act="logout">Cerrar sesión</button><button class="btn ghost danger" data-act="delacct">Eliminar mi cuenta</button></div></div>`;
 }
@@ -7184,7 +7202,7 @@ async function teamAct(k,el){
   if(k==='sopsalir'){localStorage.removeItem('olumi.soporte');const real=(MEMS||[]).find(m=>!m.soporte);if(real)lsSet('olumi.org',real.org_id);else localStorage.removeItem('olumi.org');location.reload();return true}
   if(k==='sopentrar'){const id=String(el.dataset.act||'').slice(10);if(!id)return true;lsSet('olumi.soporte',id);lsSet('olumi.org',id);lsSet('crm.view','hoy');location.reload();return true}
   if(k==='ajtab'){const id=String(el.dataset.act||'').slice(6);AJTAB=id;document.querySelectorAll('.ajtabs button').forEach(b=>b.classList.toggle('on',b.dataset.act==='ajtab:'+id));const t=document.getElementById(id);if(t){const y=t.getBoundingClientRect().top+window.scrollY-70;window.scrollTo({top:y,behavior:'smooth'})}return true}
-  if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar mail a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el mail.':'Listo: le llega un mail para elegir la contraseña nueva.');sr();return true}
+  if(k==='pwreset'){const mail=String(el.dataset.act||'').slice(8);if(!mail)return true;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');el.textContent='¿Mandar email a '+mail+'?';return true}armed=null;const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:PORTAL_URL});toast(error?'No se pudo mandar el email.':'Listo: le llega un email para elegir la contraseña nueva.');sr();return true}
   if(k==='copycode'){const c=(ORGINFO&&ORGINFO.join_code)||'';try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){toast('Código: '+c)}return true}
   if(k==='newcode'){const {data,error}=await SB.rpc('new_join_code',{o:ORG});if(error){toast('No se pudo cambiar el código.');return true}ORGINFO.join_code=data;sr();toast('Código nuevo listo');return true}
   if(k==='setupoff'){try{localStorage.setItem('olumi.setupoff.'+ORG,'1')}catch(e){}toast('Listo. Lo seguís cuando quieras desde Menú → Primeros pasos.');sr();return true}
