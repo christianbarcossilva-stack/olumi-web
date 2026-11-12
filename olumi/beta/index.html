@@ -144,6 +144,9 @@ ul.pasos{list-style:disc}
 .tki-bar{flex:1;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden}
 .tki-bar i{display:block;height:100%;background:var(--s-ok,#30a46c);border-radius:3px;transition:width .2s}
 /* fin 1.51t */
+/* 1.51b */
+.numrow{display:flex;gap:6px;align-items:center}.numrow input[type=text]{width:72px;text-align:center;font-family:var(--f-mono);text-transform:uppercase}.numrow input[type=number]{width:120px}
+/* fin 1.51b */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1484,6 +1487,7 @@ function render(){
   document.querySelectorAll('.nav .navsec').forEach(h=>{let n=h.nextElementSibling,any=false;while(n&&!n.classList.contains('navsec')){if(n.dataset&&n.dataset.view&&!n.hidden)any=true;n=n.nextElementSibling}h.hidden=!any});
   const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){const oh=$('#ofiHoy');if(oh){const x=ofiHoy();if(oh.dataset.k!==x){oh.dataset.k=x;oh.innerHTML=x}}const od=$('#ofiDia');if(od){const x=ofiMiDia();if(od.dataset.k!==x){od.dataset.k=x;od.innerHTML=x}}ofiPost();return}
+  if(CRMAJ&&VIEW!=='pipeline'){CRMAJ=false;CRMD=null}
   $('#main').innerHTML=ready?view():loadingHtml();calPost();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
@@ -1528,6 +1532,7 @@ function card(o){const q=opQuieta(o),sg=opSig(o);
     <div class="cbot"><span class="amt">${money(o.monto,o.moneda)}</span>${cierre||(isOpen(o)?actBadge(pendingActs(o.id)[0]):'')}${av(o.responsable)}${sg&&!readonly?`<button type="button" class="cnext" data-act="opnext:${o.id}" title="Pasar a ${sg.n}" aria-label="Pasar a ${sg.n}">›</button>`:''}</div></article>`;
 }
 function vPipeline(){
+  if(CRMAJ&&isBoss())return crmAjVista();
   const all=arr('oportunidades');const ops=all.filter(opMatch);
   const open=ops.filter(isOpen);
   const c90=localISO(Date.now()-90*864e5).slice(0,10),g90=all.filter(o=>esGan(o)&&(o.ganadoEn||'')>=c90).length,p90=all.filter(o=>o.etapa==='per'&&(o.perdidoEn||'')>=c90).length;
@@ -1538,7 +1543,7 @@ function vPipeline(){
     ${ME?`<button class="tgl${mine?' on':''}" data-act="mine" aria-pressed="${mine}">Solo mías</button>`:''}
     <button class="tgl${seguir?' on':''}" data-act="seguir" aria-pressed="${seguir}" title="Sin próxima actividad, con una vencida o sin movimiento hace más de 14 días">Para seguir${nSeg?` · ${nSeg}`:''}</button>
     <button class="tgl${showLost?' on':''}" data-act="lost" aria-pressed="${showLost}">Perdidas</button>
-    <div class="seg" role="group" aria-label="Vista"><button class="${pView==='board'?'on':''}" data-act="pview:board">Tablero</button><button class="${pView==='list'?'on':''}" data-act="pview:list">Lista</button><button class="${pView==='fore'?'on':''}" data-act="pview:fore">Pronóstico</button></div></div></div>`+crmMetaHtml(all)+crmSegStrip();
+    <div class="seg" role="group" aria-label="Vista"><button class="${pView==='board'?'on':''}" data-act="pview:board">Tablero</button><button class="${pView==='list'?'on':''}" data-act="pview:list">Lista</button><button class="${pView==='fore'?'on':''}" data-act="pview:fore">Pronóstico</button></div>${isBoss()?'<button class="btn" data-act="crmaj:1" title="Numeración, metas, proceso de ventas y motivos de pérdida">Ajustes</button>':''}</div></div>`+crmMetaHtml(all)+crmSegStrip();
   if(!all.length)return head+empty('Todavía no hay oportunidades','Cargá la primera con cliente, servicio y monto estimado. Después la movés por etapas: relevamiento, presupuesto, negociación, hasta ganarla.','op','+ Nueva oportunidad');
   const st=ETAPAS.filter(e=>showLost||e.k!=='per');
   const order=Object.fromEntries(ETAPAS.map((e,i)=>[e.k,i]));
@@ -1556,7 +1561,7 @@ function vPipeline(){
     return`<section class="col" data-stage="${e.k}" style="--sc:var(--s-${e.k})" aria-label="${e.n}">
       <header class="colh"><span class="dot"></span><h2>${e.n}</h2><span class="cnt">${cs.length+older}</span><span class="tot">${money(tot,repMon)}</span></header>
       <div class="cards">${cs.map(card).join('')||(older?'':'<p class="nocards">Sin oportunidades en esta etapa.</p>')}${older?`<button class="addq" data-act="pview:list" style="padding:4px 2px">+ ${older} de hace más de 60 días, ver en la lista</button>`:''}</div>
-      ${!e.c&&(!CRMC().unaEntrada||e.k==='nuevo')?`<button class="addq" data-new="op" data-stage="${e.k}">+ Agregar</button>`:''}</section>`}).join('')}</div>`;
+</section>`}).join('')}</div>`;
 }
 function vSearch(){
   const q=qn(Q),hit=s=>qn(s).includes(q);
@@ -1692,7 +1697,6 @@ function vAjustesRaw(){
   `:`<div class="vhead"><div><h1>Ajustes</h1><p class="sub">Tu cuenta, el equipo y cómo se ve Olumi en este dispositivo.</p></div></div>`}${pedidoAjustesHtml()}
   ${isBoss()?cfeAjustesHtml():''}
   ${equipoHtml()}
-  ${crmAjustesHtml()}
   ${apHtml()}
   ${canMoney()?`<div class="vhead" style="margin-top:34px"><div><h1>Exportar</h1><p class="sub">Archivos CSV que abren en Excel</p></div></div>
   <div class="tools"><button class="btn" data-act="csvcli">Clientes</button><button class="btn" data-act="csvop">Oportunidades</button><button class="btn" data-act="csvact">Actividades</button>${isBoss()?'<button class="btn" data-act="respaldo">Copia de seguridad completa</button>':''}</div>${isBoss()?'<p class="hint">La copia completa es un archivo con todos los datos de la empresa (clientes, tickets, trabajos, presupuestos, facturas, stock…). Guardala cada tanto: tus datos son tuyos.</p>':''}`:''}<p class="hint" style="margin-top:18px;"><a href="https://unitytech.uy/olumi/privacidad.html" target="_blank" rel="noopener">Política de privacidad</a> · <a href="https://unitytech.uy/olumi/terminos.html" target="_blank" rel="noopener">Términos</a></p>`;
@@ -2201,7 +2205,7 @@ function sheetOp(id,p){
       <div><button class="btn" data-new="pres" data-op="${id}">+ Presupuesto para esta oportunidad</button></div></section>
       ${opLogSection(id)}${adjSection('oportunidades',id,'opadj')}${cliRelHtml(o.clienteId)}`;
   }
-  return sheetFrame('Oportunidad'+(o.numero?' '+o.numero:''),id?o.titulo:'Nueva oportunidad',body,{del:!!id});
+  return sheetFrame('Oportunidad'+(o.numero?' '+o.numero:id?'':' '+opNumSig()),id?o.titulo:'Nueva oportunidad',body,{del:!!id});
 }
 function opActsHtml(id){
   const l=arr('actividades').filter(a=>a.oportunidadId===id).sort((a,b)=>(a.hecha-b.hecha)||(a.fecha||'9').localeCompare(b.fecha||'9'));
@@ -2222,7 +2226,7 @@ async function saveOp(){
   if(esGan(o)&&!o.ganadoEn)o.ganadoEn=today();
   if(!esGan(o))o.ganadoEn='';
   if(o.etapa==='per'&&!o.perdidoEn)o.perdidoEn=today();
-  const oid=SH.id||uid(),camb=!SH.id||(base.etapa||'nuevo')!==(o.etapa||'nuevo');await put('oportunidades',oid,o);toast('Oportunidad guardada'+(camb?await segTras(oid,o)+await fjObra(oid,{...o,numero:o.numero||(D.oportunidades[oid]||{}).numero}):''));closeSheet();
+  const oid=SH.id||uid(),camb=!SH.id||(base.etapa||'nuevo')!==(o.etapa||'nuevo');await put('oportunidades',oid,o);toast((SH.id?'Oportunidad guardada':('Oportunidad '+((D.oportunidades[oid]||{}).numero||'')+' creada').replace('  ',' '))+(camb?await segTras(oid,o)+await fjObra(oid,{...o,numero:o.numero||(D.oportunidades[oid]||{}).numero}):''));closeSheet();
 }
 
 /* cliente */
@@ -2411,6 +2415,7 @@ if(await planosAct(k,el,arg))return;
   if(await agendaAct(k,el,arg))return;
   if(await calAct(k,el,arg))return;
   if(await tkiAct(k,el,arg))return;
+  if(await crmAjAct(k,el,arg))return;
   switch(k){
     case'close':
       if(SH&&SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Cerrá de nuevo para descartarlos.');return}
@@ -2608,7 +2613,7 @@ const opSenalesHtml=(id,o)=>{const s=opSenales(id,o);return s.length?`<div class
 /* --- metas del mes --- */
 function crmMeta(quien){const m=CRMC().meta||{},mon=m.mon||defMon(),who=quien!==undefined?quien:(mine?ME:(fResp&&fResp!=='-'?fResp:''));const v=who?n0((m.por||{})[who]):(n0(m.total)||sum(Object.values(m.por||{}),n0));return v?conv(v,mon,repMon):0}
 function crmMetaHtml(all){const meta=crmMeta();if(!meta)return'';const who=mine?ME:(fResp&&fResp!=='-'?fResp:''),ym=today().slice(0,7),g=sum(all.filter(o=>esGan(o)&&(o.ganadoEn||'').startsWith(ym)&&(!who||o.responsable===who)),o=>conv(o.monto,o.moneda,repMon)),pc=Math.round(g*100/meta);
-  return`<div class="cmeta" title="Se cambia en Ajustes → Ventas"><div class="trk"><i style="width:${Math.min(100,pc)}%"></i></div><span>Meta de ${mesNom(ym).toLowerCase()}${who?' de '+esc(sinVos(who)):''}: <b>${money(g,repMon)}</b> de ${money(meta,repMon)} · ${pc} %</span></div>`}
+  return`<div class="cmeta" title="Se cambia en CRM → Ajustes"><div class="trk"><i style="width:${Math.min(100,pc)}%"></i></div><span>Meta de ${mesNom(ym).toLowerCase()}${who?' de '+esc(sinVos(who)):''}: <b>${money(g,repMon)}</b> de ${money(meta,repMon)} · ${pc} %</span></div>`}
 
 /* --- pronóstico: las abiertas según el mes en que se espera cerrarlas --- */
 function crmFore(ops){const C=o=>conv(o.monto,o.moneda,repMon),P=o=>C(o)*n0(o.prob)/100,ym0=ymAdd(0),ymN=ymAdd(3);
@@ -2685,7 +2690,7 @@ function crmRepExtra(ops,C){const none='<p class="muted">Todavía no hay datos.<
   const ors=Object.entries(og).sort((a,b)=>b[1].n-a[1].n).slice(0,7).map(([l,x])=>({l:`${l} (${x.n})${x.g+x.p?` · gana el ${Math.round(x.g*100/(x.g+x.p))} %`:''}`,v:x.n,t:x.m?money(x.m,repMon):'—'}));
   const won=ops.filter(o=>esGan(o)&&o.ganadoEn&&o.creado),avg=l=>l.length?sum(l,dias)/l.length:0;
   const cs=[['Todas',won],...SERV.map(s=>[s,won.filter(o=>o.servicio===s)])].filter(x=>x[1].length).map(([l,x])=>({l:`${l} (${x.length})`,v:avg(x),t:`${Math.round(avg(x))} días`}));
-  return`<section class="panel"><h2>Vendedores · ${mesNom(ym).toLowerCase()}</h2>${vs.length?bars(vs)+'<p class="hint" style="margin:8px 0 0">Lo ganado en el mes por cada uno, contra su meta si la tiene (Ajustes → Ventas).</p>':none}</section>
+  return`<section class="panel"><h2>Vendedores · ${mesNom(ym).toLowerCase()}</h2>${vs.length?bars(vs)+'<p class="hint" style="margin:8px 0 0">Lo ganado en el mes por cada uno, contra su meta si la tiene (CRM → Ajustes).</p>':none}</section>
   <section class="panel"><h2>De dónde llegan</h2>${ors.length?bars(ors)+'<p class="hint" style="margin:8px 0 0">Cuántas oportunidades trajo cada origen, qué porcentaje se gana y cuánto dejó.</p>':none}</section>
   <section class="panel"><h2>Tiempo para cerrar</h2>${cs.length?bars(cs)+'<p class="hint" style="margin:8px 0 0">Días promedio desde que se carga la oportunidad hasta que se gana.</p>':none}</section>`}
 
@@ -2726,7 +2731,7 @@ async function crmAct(k,el,arg){
   if(k==='bclr'){CSEL.clear();sr();return true}
   if(k==='bper'){if(CSEL.size)openSheet('crmper',[...CSEL][0],{ids:[...CSEL]});return true}
   if(k==='bcsv'){if(!canMoney())return true;saveFile(`Oportunidades seleccionadas ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').filter(o=>CSEL.has(o.id)).map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));return true}
-  if(k==='crmsave'){if(!isBoss()||readonly)return true;const mv=fjAntes();await saveCfg({...CFG,crm:CRMD||CRMC()});CRMD=null;applyEtapas();await fjDespues(mv);toast('Ajustes de ventas guardados');sr();return true}
+  if(k==='crmsave'){if(!isBoss()||readonly)return true;const mv=fjAntes();await saveCfg({...CFG,crm:CRMD||CRMC()});CRMD=null;applyEtapas();await fjDespues(mv);toast(CRMAJ?'Ajustes del CRM guardados':'Ajustes de ventas guardados');sr();return true}
   return false}
 /* === fin CRM 1.48 === */
 /* === CRM 1.49 · proceso de ventas === */
@@ -2764,7 +2769,10 @@ function flujoPuede(o,k,id){const a=fjE(o),b=EK[k];if(!b||a.k===k)return'';
 const fjSig=o=>{const a=fjE(o),i=ETAPAS.indexOf(a);if(a.c==='p'||a.fijo)return null;return ETAPAS.slice(i+1).find(e=>e.c!=='p'&&(!a.sig||!a.sig.length||a.sig.includes(e.k)))||null};
 // número de la oportunidad: nace con ella (P1, P2…) y es el que después lleva el proyecto y sus presupuestos
 let FJ_N=0;
-function opNumNuevo(){const m=Math.max(FJ_N,n0(CRMC().numDesde)-1,...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0));return'P'+(FJ_N=m+1)}
+function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0))}
+function opNumPre(){const p=CRMC().numPre;return String(p==null?'P':p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
+function opNumNuevo(){return opNumPre()+(FJ_N=opNumMax()+1)}
+function opNumSig(){return opNumPre()+(opNumMax()+1)}
 async function fjNumPres(q){try{if(!CRMC().cotNum||!q.oportunidadId)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   const m=Math.max(0,...arr('presupuestos').filter(x=>x.oportunidadId===q.oportunidadId).map(x=>{const r=/\.S(\d+)$/.exec(String(x.numero||''));return r?+r[1]:0}));return o.numero+'.S'+(m+1)}catch(e){return''}}
@@ -2805,7 +2813,6 @@ function fjHtml(){const v=CRMD||CRMC(),propio=Array.isArray(v.flujo)&&v.flujo.le
     <label class="fld chk"><input type="checkbox" data-cv="unaEntrada"${v.unaEntrada?' checked':''}><span>Toda oportunidad entra por el primer bloque (no se cargan directo en los siguientes)</span></label>
     <label class="fld chk"><input type="checkbox" data-cv="oblig"${v.oblig?' checked':''}><span>Para abrir una oportunidad son obligatorios el cliente, el monto, la probabilidad y la fecha estimada</span></label>
     <label class="fld chk"><input type="checkbox" data-cv="cotNum"${v.cotNum?' checked':''}><span>Los presupuestos de una oportunidad llevan su número: P12.S1, P12.S2…</span></label>
-    <div class="cvr cvr2"><span>Cada oportunidad nace con su número (P1, P2…) y el proyecto lo hereda. Empezar en</span><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="1" aria-label="Primer número"></div>
     ${hu?`<p class="hint">Al guardar, ${pl(hu,'oportunidad que está','oportunidades que están')} en un bloque que sacaste ${hu>1?'pasan':'pasa'} al bloque anterior.</p>`:''}
     <p class="hint">Se guarda con “Guardar ventas”, abajo.</p></div>`}
 document.addEventListener('input',e=>{const t=e.target,p=t.dataset&&t.dataset.fj;if(!p)return;const [i,f]=p.split('.'),b=fjDraft()[+i];if(!b)return;
@@ -3382,6 +3389,24 @@ document.addEventListener('keydown',e=>{
   else if(e.target.id==='na_tki'&&!e.shiftKey){e.preventDefault();act('tkiladd',e.target)}
 });
 /* === fin 1.51t === */
+/* === 1.51b · ajustes del CRM en el CRM === */
+/* Los ajustes del CRM se abren desde el CRM (botón «Ajustes», solo quien dirige): numeración, metas, seguimiento, proceso de ventas y motivos. */
+let CRMAJ=false;
+function crmAjVista(){
+  const v=CRMD||CRMC(),val=x=>esc(x===undefined||x===null?'':String(x)),resto=crmAjustesHtml().replace(/^<div class="vhead"[^>]*>[\s\S]*?<\/div><\/div>/,'');
+  return`<div class="vhead"><div><h1>Ajustes del CRM</h1><p class="sub">Numeración, metas, seguimiento, proceso de ventas y motivos de pérdida.</p></div>
+    <div class="tools"><button class="btn" data-act="crmaj:0">‹ Volver al CRM</button>${readonly?'':'<button class="btn pri" data-act="crmsave">Guardar</button>'}</div></div>
+    <div class="panel cv" style="margin-bottom:12px"><h2 style="margin:0">Numeración de las oportunidades</h2>
+      <div class="cvr cvr2"><span>La próxima oportunidad sale con el número</span><span class="numrow"><input type="text" data-cv="numPre" value="${val(v.numPre==null?'P':v.numPre)}" maxlength="6" aria-label="Letras de adelante"><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="${opNumMax()+1}" aria-label="Próximo número"></span></div>
+      <p class="hint">Poné el número con el que vienen trabajando y Olumi sigue desde ahí. Tal como está hoy, la próxima sale como <b>${esc(opNumSig())}</b>. No puede ser menor que una que ya existe. El proyecto hereda ese número y, si lo elegís más abajo, también sus presupuestos.</p></div>`+resto;
+}
+async function crmAjAct(k,el,arg){
+  if(k!=='crmaj')return false;if(arg==='1'&&!isBoss())return true;
+  CRMAJ=arg==='1';CRMD=null;VIEW='pipeline';try{lsSet('crm.view',VIEW)}catch(e){}scrollTo(0,0);sr();return true;
+}
+/* tocar cualquier entrada del menú (también «CRM») sale de los ajustes */
+document.addEventListener('click',e=>{if(CRMAJ&&e.target.closest&&e.target.closest('[data-view]')){CRMAJ=false;CRMD=null;sr()}},true);
+/* === fin 1.51b === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
