@@ -379,6 +379,9 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .obs-hh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.obs-hh h2{margin:0}
 .btn .ic{width:17px;height:17px;margin-right:2px;vertical-align:-3px}
 /* fin 1.51n */
+/* 1.51o */
+.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
+/* fin 1.51o */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -2243,7 +2246,7 @@ function vCampoDia(){
   const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
   const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
-  return head+obsMiasHtml()+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
+  return head+obsMiasHtml()+mdEvHtml(day)+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
 }
 
 /* ---------- facturación ---------- */
@@ -4425,6 +4428,15 @@ function obsHistHtml(){const lead=isLead(),todas=arr('obs').filter(o=>lead||(o.t
     ${l.length?`<div class="list">${l.map(o=>{const e=OBSE[o.estado||'abierta'];return`<div class="row" role="button" tabindex="0" data-open="obs:${o.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(obsTipo(o.tipo))} · ${esc(cliName(o.clienteId)||'')}</strong><span class="muted">${fdate(localISO(new Date(n0(o.creado))))} · ${esc((o.tecnicos||[]).map(personName).join(', '))}${o.arregladoPor?' · arregló '+esc(personName(o.arregladoPor)):''}${o.texto?' · '+esc(o.texto.slice(0,70)):''}</span></div><span class="tag ${e[1]}">${e[0]}</span></div>`}).join('')}</div>`:'<p class="muted">Sin observaciones. Cuando algo quede mal en una obra, anotalo desde la visita o con «Nueva observación».</p>'}</section>`}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-obtec]');if(!b)return;OBSTEC=OBSTEC===b.dataset.obtec?'':b.dataset.obtec;sr()});
 /* === fin 1.51n === */
+/* === 1.51o · eventos en Mi día === */
+/* Mi día también muestra los eventos (13/11, Christian: «¿por qué esta tarea no me aparece, cuando dice que es para mí?»).
+   Antes Mi día listaba solo trabajos; un evento «de» la persona (por ejemplo, uno traído de Google Calendar) quedaba solo en el Calendario. */
+function mdEvHtml(day){const mios=e=>e.de===ME||(!e.de&&e.por===ME),todos=typeof campoAll!=='undefined'&&campoAll;
+  const l=arr('eventos').filter(e=>{if(!e.fecha||(e.privado&&e.de!==ME))return false;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;return day>=e.fecha&&day<=fin&&(todos||mios(e))})
+    .sort((a,b)=>(a.todoDia||!a.hora?'00':a.hora).localeCompare(b.todoDia||!b.hora?'00':b.hora));
+  if(!l.length)return'';
+  return`<section class="group md-ev" style="margin:0 0 18px"><h2>Tu agenda <span class="num">${l.length}</span></h2><div class="list">${l.map(e=>`<div class="row" role="button" tabindex="0" data-open="ev:${e.id}" style="grid-template-columns:64px minmax(0,1fr) auto"><span class="md-ev-h${e.tentativo?' tent':''}">${e.todoDia||!e.hora?'Todo el día':esc(e.hora)}</span><div class="r-main"><strong>${esc(e.titulo||'Evento')}</strong><span class="muted">${esc([e.lugar,e.duracion&&!e.todoDia?String(e.duracion).replace('.',',')+' h':'',todos&&e.de&&e.de!==ME?personName(e.de):'',e.origen==='google'?'De Google Calendar':''].filter(Boolean).join(' · '))}</span></div>${e.tentativo?'<span class="tag t-none">Tentativo</span>':''}</div>`).join('')}</div></section>`}
+/* === fin 1.51o === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
