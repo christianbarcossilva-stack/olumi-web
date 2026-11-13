@@ -4276,16 +4276,16 @@ entity = (o => function (id) { if (typeof id === 'string') { if (id.startsWith('
     if (isRH(id)) { const [k, rid, i] = id.split('|'), R = ED.roads.find(r => r.id === rid); return R ? { t: 'rh', R, i: +i, mid: k === 'rm' } : null; } } return o(id); })(entity);
 entPos = (o => function (id) { const e = typeof id === 'string' && id.startsWith('road:') && entity(id); if (!e) return o(id); const P0 = e.R.pts, i = Math.floor((P0.length - 1) / 2), a = P0[i], b = P0[i + 1] || a; return [(a[0] + b[0]) / 2, 2, (a[1] + b[1]) / 2]; })(entPos);
 panelContent = (o => function (id) { const e = typeof id === 'string' && id.startsWith('road:') ? entity(id) : null; if (!e) return o(id); const R = e.R, fence = R.kind === 'alambrado', ed = ED.on && canEdit();
-  const f = (l, h) => `<label class="ef"><span>${l}</span>${h}</label>`, nm = fence ? 'el alambrado' : 'la calle';
+  const f = (l, h) => `<label class="ef"><span>${l}</span>${h}</label>`, nm = R.muro ? 'el muro' : fence ? 'el alambrado' : 'la calle';
   let body = `<dl class="rows">${row('Largo', Math.round(segLen(R.pts)) + ' m')}${fence ? '' : row('Ancho', String(R.w).replace('.', ',') + ' m')}${row('Puntos', R.pts.length)}</dl>`;
-  if (ed) body += `<div class="edbox"><b>Edición</b>${f('Nombre', `<input data-ed="rname" value="${escH(R.name || '')}">`)}${f('Tipo', `<select data-ed="rkind"><option value="calle" ${!fence ? 'selected' : ''}>Calle</option><option value="alambrado" ${fence ? 'selected' : ''}>Alambrado</option></select>`)}`
+  if (ed) body += `<div class="edbox"><b>Edición</b>${f('Nombre', `<input data-ed="rname" value="${escH(R.name || '')}">`)}${f('Tipo', `<select data-ed="rkind"><option value="calle" ${!fence ? 'selected' : ''}>Calle</option><option value="alambrado" ${fence && !R.muro ? 'selected' : ''}>Alambrado</option><option value="muro" ${R.muro ? 'selected' : ''}>Muro</option></select>`)}`
     + (fence ? '' : f('Ancho', `<select data-ed="rw">${[4, 6, 7, 9, 10, 12, 15, 18, 23].concat([R.w]).filter((v, i, A) => A.indexOf(v) === i).sort((a, b) => a - b).map(w => `<option value="${w}" ${R.w === w ? 'selected' : ''}>${String(w).replace('.', ',')} m</option>`).join('')}</select>`) + f('Línea del medio', `<select data-ed="rdash"><option value="1" ${R.dash !== false ? 'selected' : ''}>Sí</option><option value="0" ${R.dash === false ? 'selected' : ''}>No</option></select>`))
     + `<p class="ehelp">Arrastrá los postes naranjas para mover los puntos; los azules agregan un punto en el medio. Con la herramienta Borrar sobre un poste naranja se saca ese punto.</p><div class="cact"><button class="btn" data-ed="radd">Sumar un punto al final</button><button class="btn danger" data-ed="del">Borrar ${nm}</button></div></div>`;
   return { ey: (fence ? 'Alambrado' : 'Calle') + ' · ' + R.id, t: R.name || (fence ? 'Alambrado' : 'Calle'), s: fence ? 'Cerco del predio' : R.pub ? 'Calle pública' : 'Calle del predio', pill: '', body, acts: '', icon: CIC.road || CIC.zone }; })(panelContent);
 e3Action = (o => function (a, val) { const e = SEL && entity(SEL); if (!e || e.t !== 'road') return o(a, val); const R = e.R;
   if (a === 'del') { removeId(SEL); return true; }
   if (a === 'rname') R.name = String(val).trim() || R.name; if (a === 'rw') R.w = +val || R.w; if (a === 'rdash') R.dash = val === '1' ? undefined : false;
-  if (a === 'rkind') { R.kind = val === 'alambrado' ? 'alambrado' : undefined; if (R.kind) { R.w0 = R.w; R.w = 0.3; } else R.w = R.w0 || 9; }
+  if (a === 'rkind') { R.kind = val === 'alambrado' || val === 'muro' ? 'alambrado' : undefined; if (val === 'muro') R.muro = true; else delete R.muro; if (R.kind) { R.w0 = R.w; R.w = 0.3; } else R.w = R.w0 || 9; }
   if (a === 'radd') { const n = R.pts.length, a2 = R.pts[n - 2], b2 = R.pts[n - 1], dx = b2[0] - a2[0], dz = b2[1] - a2[1], l = Math.hypot(dx, dz) || 1; R.pts.push([b2[0] + dx / l * 20, b2[1] + dz / l * 20]); }
   roadsChanged(); renderPanel(true); return true; })(e3Action);
 removeId = (o => function (id, noHist) { if (typeof id === 'string' && id.startsWith('road:')) { const i = ED.roads.findIndex(r => r.id === id.slice(5)); if (i < 0) return false; const R = ED.roads.splice(i, 1)[0]; RH.sel = null; if (SEL === id) closePanel(); roadsChanged(); toast((R.name || R.id) + ' borrada'); return true; }
@@ -5395,6 +5395,33 @@ solids = (o => function (p) { if (p.k === 'escultura') { const s = pv(p, 'r') * 
 pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 7) return; ED.seed = 7;
   if (!PROPS.some(q => q.k === 'escultura')) { const [x, z] = px(RB[0] - 0.5, RB[1] + 5); PROPS.push({ id: 'ESC-01', type: 'prop', k: 'escultura', seed: 1, x, y: 0, z, yaw: 0, name: 'Escultura de la entrada' }); }
   const of = PROPS.find(q => q.id === 'EDI-01'); if (of && of.estilo === 'osc') { of.osc = 1; delete of.estilo; } })(pzSeed);
+// muro: un cerco macizo con pilares (medianeras). Se elige en la ficha de la calle o alambrado, en "Tipo"
+fenceGeo = (o => function (R, g) { if (!R.muro) return o(R, g); const pts = R.pts, H = R.h || 2.8, T = 0.11, c = C('#C9CCCB'), c2 = mulc(c, 0.84);
+  for (let i = 0; i < pts.length - 1; i++) { const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], L = Math.hypot(x1 - x0, z1 - z0) || 1, nx = -(z1 - z0) / L, nz = (x1 - x0) / L;
+    for (const sg of [1, -1]) { const ox = nx * T * sg, oz = nz * T * sg; g.quad([x0 + ox, 0, z0 + oz], [x1 + ox, 0, z1 + oz], [x1 + ox, H, z1 + oz], [x0 + ox, H, z0 + oz], [nx * sg, 0, nz * sg], c2, c2, c, c); }
+    g.strip([[x0, z0], [x1, z1]], T * 2, H, '#DADDDC'); const n = Math.max(1, Math.round(L / 4)); for (let k = 0; k <= n; k++) { const x = lerp(x0, x1, k / n), z = lerp(z0, z1, k / n); g.box(x - 0.17, 0, z - 0.17, x + 0.17, H + 0.12, z + 0.17, '#B9BDBC'); } } })(fenceGeo);
+// rampa de acceso: sube hasta la altura del andén, con cordones amarillos y, si se quiere, el portón arriba
+Object.assign(PK, { rampa: { n: 'Rampa de acceso', tags: 'rampa subida entrada porton anden cordon', out: true } }); Object.assign(PRE3, { rampa: 'RP-' }); Object.assign(PBIG, { rampa: 1 });
+PRM.rampa = [['w', 'Ancho', 0.5, 2, 14, 4], ['L', 'Largo', 0.5, 2, 40, 10], ['h', 'Altura arriba', 0.1, 0.2, 3, 1.2], ['porton', 'Portón arriba (0 no · 1 sí)', 1, 0, 1, 1]];
+{ const ex = CAT3.find(c => c[0] === 'Predio') || CAT3.find(c => c[0] === 'Exterior y decoración'); if (ex) { const it = ['prop:rampa', PK.rampa.n, 'road', PK.rampa.tags]; ex[1].push(it); ALL3.push({ k: it[0], n: it[1], ic: it[2], tags: it[3], c: ex[0] }); } }
+propGeo = (o => p => { if (p.k !== 'rampa') return o(p); const g = new Geo(), w = pv(p, 'w') / 2, L = pv(p, 'L') / 2, h = pv(p, 'h'), cp = C('#B9BFC4'), cl = C('#9AA1A7'), am = C('#F2C230'), am2 = C('#C99A1C'), k = h / (2 * L), nl = Math.hypot(k, 1), nt = [k / nl, 1 / nl, 0];
+  // el lado alto queda en -x (contra la pared) y baja hacia +x
+  g.quad([-L, h, -w], [-L, h, w], [L, 0.02, w], [L, 0.02, -w], nt, cp, cp, cp, cp);
+  for (const sg of [-1, 1]) { const z = sg * w; g.tri([-L, 0, z], [-L, h, z], [L, 0, z], cl); const a = z, b = z + sg * 0.3;
+    g.quad([-L, h + 0.28, a], [-L, h + 0.28, b], [L, 0.3, b], [L, 0.3, a], nt, am, am, am, am); g.quad([-L, 0, b], [L, 0, b], [L, 0.3, b], [-L, h + 0.28, b], [0, 0, sg], am2, am2, am2, am2); g.quad([-L, h, a], [L, 0.02, a], [L, 0.3, a], [-L, h + 0.28, a], [0, 0, -sg], am2, am2, am2, am2); g.quad([L, 0, a], [L, 0, b], [L, 0.3, b], [L, 0.3, a], [1, 0, 0], am, am, am, am); }
+  if (pv(p, 'porton') >= 1) { const pw = Math.min(w * 0.9, 1.9); g.box(-L - 0.08, h, -pw - 0.25, -L + 0.06, h + 3.9, pw + 0.25, '#2B2F33', { ao: 1 }); g.box(-L - 0.02, h, -pw, -L + 0.1, h + 3.6, pw, '#E4E7E9', { ao: 1 }); for (let j = 1; j < 9; j++) g.box(-L + 0.1, h + j * 0.4, -pw, -L + 0.115, h + j * 0.4 + 0.03, pw, '#AEB4B9', { ao: 1 }); }
+  return g; })(propGeo);
+solids = (o => function (p) { return p.k === 'rampa' ? [] : o(p); })(solids);
+// lo que faltaba del predio, de los videos y la vista aérea: cantina, acceso peatonal y rampa del galpón E1, tanques y sala de motobombas con su cámara, y el muro medianero
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 8) return; ED.seed = 8; const has = new Set(PROPS.map(q => q.id));
+  const add = (id, k, X, Y, op) => { if (has.has(id)) return; const [x, z] = px(X, Y); PROPS.push(Object.assign({ id, type: 'prop', k, seed: 3, x, y: 0, z, yaw: 0 }, op)); };
+  add('EDI-CANT', 'edif', 262, 543.6, { w: 12, d: 7, h: 3.3, pisos: 1, osc: 1, name: 'Cantina' });
+  add('CS-E1A', 'casilla', 268.1, 550.6, { w: 6, d: 3.4, door: 0, yaw: yawDir(0, 1), name: 'Acceso peatonal E1' });
+  add('RP-E1', 'rampa', 264.8, 556.2, { w: 4.2, L: 10, h: 1.2, porton: 1, yaw: yawDir(-1, 0), name: 'Rampa de acceso E1' });
+  add('TQ-MB1', 'tanque', 410, 622, { r: 9.5, h: 7, name: 'Tanque de incendio 1' }); add('TQ-MB2', 'tanque', 411, 640.5, { r: 9, h: 7, name: 'Tanque de incendio 2' });
+  add('EDI-MB', 'edif', 408, 657, { w: 9, d: 7, h: 3.6, pisos: 0, name: 'Sala de motobombas' });
+  if (!DEV.some(d => /motobombas/i.test(d.loc || ''))) { const [x, z] = px(401.5, 651); DEV.push({ id: nextId('C-', DEV.map(d => d.id)), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'pole', ph: 5, x, y: 0, z, yaw: -0.5, name: 'Cámara motobombas', loc: 'Sala de motobombas · atrás de E1', status: 'ok', custom: true }); }
+  if (!ED.roads.some(r => r.muro)) ED.roads.push({ id: nextId('CL-', ED.roads.map(r => r.id)), name: 'Muro medianero', w: 0.3, kind: 'alambrado', muro: true, nolbl: 1, pts: pxs([[143, 733.5], [214, 733.5], [214, 906]]) }); })(pzSeed);
 
 /* ---------- gráficos v25 (2): luz de los focos de noche y control de calidad automático ----------
    De noche, cada foco y cada andén dejan un charco de luz cálida en el piso y en lo que tienen cerca (un mapa de luz visto desde arriba, que se rehace cuando se mueve un foco).
