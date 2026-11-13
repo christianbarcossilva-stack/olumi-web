@@ -27,6 +27,13 @@ const ESTX = { ok: 'En línea', crit: 'Caído', warn: 'Con alertas', off: 'Sin d
 const tipoReal = d => { if (/^sensor_/.test(d.tipo || '')) return 'sen'; if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw', ap: 'ap', router: 'gw' }[d.tipo] || 'otro'; const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
   if (/protect|camera|cámara|camara|bullet|dome|domo|turret|\bg[345]\b|nvr/.test(t)) return 'cam'; if (/usw|switch|flex mini/.test(t)) return 'sw'; if (/udm|uxg|usg|ucg|gateway|dream|router|cloud key/.test(t)) return 'gw'; if (/\bu[67]\b|uap|\bap\b|mesh|nanohd|access point|wi-?fi/.test(t)) return 'ap'; return 'otro'; };
 
+// el logo de cada app en la barra (el mismo dibujo que su ícono)
+const LOGO = {
+  estiba: '<svg class="mapp" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="var(--acc)"/><rect x="24" y="74" width="70" height="15" rx="4.5" fill="var(--acc-ink)"/><rect x="24" y="53" width="54" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".82"/><rect x="24" y="32" width="38" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".62"/><circle cx="87" cy="38" r="10.5" fill="#3ddc97"/></svg>'
+};
+const BUSCA = { estiba: 'Buscar fila, galpón o máquina', olumi: 'Buscar sala, puesto o persona' };
+const SIN = { estiba: ['Equipos'] };   // Estiba es solo logística: lo informático es de Ondi
+
 export async function abrirMaqueta(o) {
   const host = o.host || null, raiz = o.raiz || document.body, app = o.app || 'ondi';
   const puede = o.editable ?? (!host || host.role !== 'cli');
@@ -34,10 +41,10 @@ export async function abrirMaqueta(o) {
   if (host && !E.piezas.length) E.piezas.push({ id: 'ter1', t: 'terreno', nombre: E.nombre, mat: 'tierra', pts: [[-60, -40], [60, -40], [60, 40], [-60, 40]] });
   // ---------- pantalla ----------
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover, rueda para acercar, clic derecho para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
-  <header class="mbar vidrio"><div class="mmarca"><i class="mapp mapp-${app}"></i><div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
-    <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="Buscar fila, galpón, equipo o IP" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
+  <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
+    <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
     <div class="mbtns"><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
-  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}</div>
+  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'estiba' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}</div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">
     <button data-h="mano" aria-pressed="true" title="Mano: elegir y mover (H)">${svg('mano')}</button><button data-h="maza" title="Maza: sacar (K)">${svg('maza')}</button><button data-h="gotero" title="Gotero: copiar (E)">${svg('gotero')}</button>
@@ -167,7 +174,7 @@ export async function abrirMaqueta(o) {
 
   // catálogo
   function catalogo(abrir = true) { const box = $('#mcat'); box.hidden = !abrir; if (!abrir) return; $('#meq').hidden = true; const t = ($('#mcq').value || '').toLowerCase();
-    $('#mcl').innerHTML = GRUPOS.map(g => { const its = Object.entries(TIPOS).filter(([k, T]) => T.g === g && (!t || (T.n + ' ' + g).toLowerCase().includes(t))); return its.length ? `<h4>${g}</h4><div class="mgrid">${its.map(([k, T]) => `<button data-t="${k}"><i class="mico mico-${T.forma}"></i><span>${T.n}</span><small>${T.forma === 'punto' ? 'Clic para ubicar' : T.forma === 'linea' ? 'Línea: clic por punto' : 'Área: clic por esquina'}</small></button>`).join('')}</div>` : ''; }).join('') || '<p class="mvacio">Nada con ese nombre.</p>';
+    $('#mcl').innerHTML = GRUPOS.filter(g => !(SIN[app] || []).includes(g)).map(g => { const its = Object.entries(TIPOS).filter(([k, T]) => T.g === g && (!t || (T.n + ' ' + g).toLowerCase().includes(t))); return its.length ? `<h4>${g}</h4><div class="mgrid">${its.map(([k, T]) => `<button data-t="${k}"><i class="mico mico-${T.forma}"></i><span>${T.n}</span><small>${T.forma === 'punto' ? 'Clic para ubicar' : T.forma === 'linea' ? 'Línea: clic por punto' : 'Área: clic por esquina'}</small></button>`).join('')}</div>` : ''; }).join('') || '<p class="mvacio">Nada con ese nombre.</p>';
     if (!motor.tactil) $('#mcq').focus(); }
   $('#mcq').addEventListener('input', () => catalogo());
   $('#mcl').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; empezar({ t: b.dataset.t }); $('#mcat').hidden = !motor.tactil ? true : true; });

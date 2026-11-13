@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es-UY">
+<head>
+<script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0e1412">
+<title>Estiba</title>
+<link rel="icon" href="../icono.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../marca.css?v=1">
+<script src="../../olumi/app/config.js"></script>
+<script src="../../olumi/app/vendor/supabase.js"></script>
+<style>
+/* Estiba · la app. Misma cuenta y empresa que Olumi y Ondi; cada empresa tiene sus depósitos y cada depósito su maqueta en el motor común. */
+:root{--bg:var(--es-hormigon);--card:#fff;--sunk:var(--es-hormigon-2);--ink:var(--es-tinta);--muted:#4f5a55;--line:rgba(18,24,21,.12);
+  --acc:var(--es-pino);--acc-ink:#fff;--acc-t:var(--es-pino-2);--crit:#b3172b;--r:10px;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:var(--es-asfalto);--card:var(--es-asfalto-2);--sunk:var(--es-asfalto-3);--ink:#edf3ef;--muted:#a3b0aa;--line:rgba(255,255,255,.1);
+  --acc:var(--es-menta);--acc-ink:#04150e;--acc-t:var(--es-menta);--crit:#ff6b7d;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 "Archivo",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--acc-t)}
+[hidden]{display:none!important}
+.tit{font-family:var(--es-ft);font-stretch:125%;font-weight:800;letter-spacing:-.02em;margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600;text-decoration:none;color:var(--ink);white-space:nowrap;transition:transform .12s,background .15s}
+.btn:hover{background:var(--sunk)}.btn:active{transform:scale(.97)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:transparent}.btn.pri:hover{filter:brightness(1.06)}
+.btn.peligro{color:var(--crit)}.btn.chico{min-height:36px;padding:0 12px;font-size:14px}
+.btn svg{width:18px;height:18px;flex:none}
+.lnk{border:0;background:none;padding:6px 0;color:var(--acc-t);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+label.f{display:grid;gap:6px;font-weight:600;font-size:14px}
+label.f small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=email],input[type=password],select{height:46px;border-radius:8px;border:1px solid var(--line);background:var(--card);padding:0 12px;width:100%}
+input:focus,select:focus{border-color:var(--acc);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+.msg{margin:0;padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--crit) 12%,transparent);color:var(--crit);font-size:14px}
+.msg.ok{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc-t)}
+.wm{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.wm img{width:32px;height:32px;flex:none}
+.wm b{font-family:var(--es-ft);font-stretch:125%;font-weight:800;font-size:21px;letter-spacing:-.03em}
+/* entrar */
+#auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+#auth .lado{background-color:var(--es-asfalto);color:#edf3ef;padding:48px clamp(28px,5vw,72px);display:flex;flex-direction:column;gap:28px;position:relative;overflow:hidden}
+#auth .lado h1{font-size:clamp(34px,4.4vw,60px);line-height:1;color:#fff}
+#auth .lado p{margin:0;color:#a3b0aa;font-size:17px;max-width:44ch}
+#auth .lado .placa{color:var(--es-menta);align-self:flex-start}
+#auth .lado .franja{position:absolute;left:0;right:0;bottom:0}
+#auth .forma{display:grid;place-items:center;padding:32px 20px}
+#auth form{width:min(380px,100%);display:grid;gap:16px}
+#auth form h2{font-size:28px}
+#auth .nota{font-size:13.5px;color:var(--muted);margin:0}
+/* app */
+.barra{position:sticky;top:0;z-index:5;background-color:var(--es-asfalto);color:#edf3ef}
+.barra .in{height:60px;display:flex;align-items:center;gap:14px;padding:0 max(20px,env(safe-area-inset-left))}
+.barra .sp{flex:1}
+.barra select{height:38px;width:auto;max-width:240px;background:var(--es-asfalto-3);border-color:rgba(255,255,255,.12);color:#edf3ef}
+.barra .btn{background:var(--es-asfalto-3);border-color:rgba(255,255,255,.12);color:#edf3ef}.barra .btn:hover{background:#2a3832}
+.yo{font-size:13.5px;color:#a3b0aa;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:36px 20px 64px}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.cab h1{font-size:clamp(28px,4vw,44px)}
+.cab p{margin:6px 0 0;color:var(--muted)}
+.deps{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin:0;padding:0;list-style:none}
+.dep{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;min-height:200px}
+.dep .placa{align-self:flex-start;color:var(--acc-t)}
+.dep h2{font-size:22px;line-height:1.1}
+.dep p{margin:0;color:var(--muted);font-size:14px}
+.dep .acc{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+.vacio{background:var(--card);border:1.5px dashed var(--line);border-radius:var(--r);padding:40px 24px;text-align:center;display:grid;gap:12px;justify-items:center}
+.vacio p{margin:0;color:var(--muted);max-width:52ch}
+.pasos{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;max-width:720px}
+.pasos ol{margin:12px 0 0;padding-left:22px;display:grid;gap:10px}
+.pasos code{font:500 13px var(--es-fm);background:var(--sunk);padding:2px 6px;border-radius:4px}
+/* maqueta */
+#vdep{position:fixed;inset:66px 0 0;display:flex;flex-direction:column}
+#vdep .tira{display:flex;align-items:center;gap:10px;padding:10px max(16px,env(safe-area-inset-left));border-bottom:1px solid var(--line);background:var(--card);flex-wrap:wrap}
+#vdep .tira h1{font-size:20px;line-height:1.1;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vdep iframe{flex:1;width:100%;border:0;display:block;background:var(--bg)}
+body.juego .barra,body.juego #vdep .tira{display:none}body.juego #vdep{inset:0}
+/* ventana */
+dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));background:var(--card);color:var(--ink);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(8,12,10,.55)}
+dialog form{padding:24px;display:grid;gap:16px}
+dialog h2{font-size:24px}
+dialog .pie{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.opc{display:grid;gap:8px}
+.opc label{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.opc label:has(input:checked){border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.opc input{margin-top:3px;accent-color:var(--acc)}
+.opc b{display:block}.opc small{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--es-tinta);color:#fff;padding:12px 16px;border-radius:8px;z-index:20;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100vw - 32px)}
+@media (max-width:820px){#auth{grid-template-columns:minmax(0,1fr);align-content:start}#auth .lado{padding:22px 20px 30px;gap:14px}#auth .lado h1{font-size:26px}#auth .lado p,#auth .lado .placa{display:none}#auth .forma{place-items:start center;padding:28px 20px}}
+@media (max-width:560px){.yo,.barra .wm b{display:none}.barra .in{gap:8px}.barra select{max-width:150px}#vdep .tira .btn span{display:none}#vdep .tira .btn{padding:0 10px}main{padding-top:24px}}
+</style>
+</head>
+<body>
+<div id="auth" hidden>
+  <section class="lado corrugado">
+    <a class="wm" href="../"><img src="../icono.svg" alt=""><b>estiba</b></a>
+    <span class="placa"><span>ESTU 000000</span><b>4</b></span>
+    <h1 class="tit">El patio, los andenes y el depósito, en un solo lugar.</h1>
+    <p>Cada depósito con su maqueta 3D editable: filas, galpones, calles y máquinas, como están en el predio.</p>
+    <div class="franja" aria-hidden="true"></div>
+  </section>
+  <div class="forma"><form id="fauth" novalidate></form></div>
+</div>
+
+<div id="app" hidden>
+  <header class="barra corrugado"><div class="in">
+    <a class="wm" href="./" data-ir="deps"><img src="../icono.svg" alt=""><b>estiba</b></a>
+    <span class="sp"></span>
+    <select id="org" aria-label="Empresa" hidden></select>
+    <span class="yo" id="yo"></span>
+    <button class="btn chico" id="salir" type="button">Salir</button>
+  </div><div class="franja" aria-hidden="true"></div></header>
+  <main id="vdeps"></main>
+  <section id="vdep" hidden>
+    <div class="tira">
+      <button class="btn chico" type="button" data-ir="deps" aria-label="Volver a depósitos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg><span>Depósitos</span></button>
+      <h1 class="tit" id="dnom"></h1>
+      <button class="btn chico" type="button" id="bimp" aria-label="Importar armado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><span>Importar armado</span></button>
+      <button class="btn chico" type="button" id="bexp" aria-label="Exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M4 21h16"/></svg><span>Exportar</span></button>
+      <button class="btn chico" type="button" id="bdat" aria-label="Datos del depósito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Datos</span></button>
+    </div>
+    <div id="marco" style="flex:1;display:flex"></div>
+  </section>
+</div>
+
+<dialog id="dlg"><form id="fdlg" method="dialog"></form></dialog>
+<div id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const CFG = window.OLUMI_CONFIG || {};
+const SB = window.supabase && CFG.supabaseUrl ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+const HERE = location.origin + location.pathname;
+const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+const S = { user: null, orgs: [], org: null, deps: [], dep: null, falta: false };
+const ROL = o => (S.orgs.find(x => x.org_id === o) || {}).role || '';
+const admin = () => ['owner', 'admin'].includes(ROL(S.org));
+const edita = () => ['owner', 'admin', 'encargado', 'tecnico'].includes(ROL(S.org));
+let tt; const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
+const faltaSQL = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /estiba_(depositos|maquetas)/.test(e.message || ''));
+const errTxt = e => { const m = (e && e.message) || String(e || ''); if (/Invalid login/i.test(m)) return 'El email o la contraseña no coinciden.'; if (/Email not confirmed/i.test(m)) return 'Falta confirmar el email: revisá tu casilla.'; if (/row-level security|permission/i.test(m)) return 'Tu rol en la empresa no permite hacer eso.'; return m || 'Algo falló. Probá de nuevo.'; };
+// código de depósito con dígito de control (como el de un contenedor, ISO 6346)
+const codigo = id => { const t = ('EST' + 'D' + String(parseInt(String(id).slice(0, 8), 16) % 1e6).padStart(6, '0')); let n = 10; const v = {}; for (const c of '0123456789') v[c] = +c; for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') { while (n % 11 === 0) n++; v[c] = n++; }
+  const d = [...t].reduce((s, c, i) => s + v[c] * 2 ** i, 0) % 11 % 10; return `<span class="placa"><span>${t.slice(0, 4)} ${t.slice(4)}</span><b>${d}</b></span>`; };
+const hace = f => { if (!f) return ''; const m = Math.round((Date.now() - new Date(f)) / 60000); return m < 1 ? 'recién' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : new Date(f).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' }); };
+
+// ---------- entrar ----------
+function auth(modo = 'login', aviso = '') {
+  $('#app').hidden = true; $('#auth').hidden = false; const f = $('#fauth'); f.dataset.modo = modo;
+  if (!SB) { f.innerHTML = `<h2 class="tit">Falta la configuración</h2><p class="nota">No se encontró la conexión con el servidor.</p>`; return; }
+  f.innerHTML = modo === 'olvido'
+    ? `<h2 class="tit">Recuperar la contraseña</h2><p class="nota">Te mandamos un email con un enlace para elegir una nueva.</p>
+       <label class="f">Email<input type="email" id="aem" autocomplete="email" required></label>${aviso ? `<p class="msg ${/mandamos/.test(aviso) ? 'ok' : ''}">${esc(aviso)}</p>` : ''}
+       <button class="btn pri" type="submit">Mandar el enlace</button><button class="lnk" type="button" data-modo="login">Volver</button>`
+    : modo === 'nueva'
+    ? `<h2 class="tit">Nueva contraseña</h2><label class="f">Contraseña nueva <small>al menos 8 caracteres</small><input type="password" id="apw" autocomplete="new-password" minlength="8" required></label>${aviso ? `<p class="msg">${esc(aviso)}</p>` : ''}<button class="btn pri" type="submit">Guardar y entrar</button>`
+    : `<h2 class="tit">Entrar</h2><p class="nota">Es la misma cuenta de Olumi y Ondi.</p>
+       <label class="f">Email<input type="email" id="aem" autocomplete="email" required></label>
+       <label class="f">Contraseña<input type="password" id="apw" autocomplete="current-password" required></label>${aviso ? `<p class="msg">${esc(aviso)}</p>` : ''}
+       <button class="btn pri" type="submit">Entrar</button><button class="lnk" type="button" data-modo="olvido">Me olvidé la contraseña</button>`;
+  const e = f.querySelector('input'); if (e && matchMedia('(pointer:fine)').matches) e.focus();
+}
+$('#fauth').addEventListener('click', e => { const b = e.target.closest('[data-modo]'); if (b) auth(b.dataset.modo); });
+$('#fauth').addEventListener('submit', async e => { e.preventDefault(); const f = e.target, m = f.dataset.modo, b = f.querySelector('[type=submit]'), v = id => ($('#' + id) || {}).value || ''; b.disabled = true;
+  try {
+    if (m === 'olvido') { const r = await SB.auth.resetPasswordForEmail(v('aem').trim(), { redirectTo: HERE }); if (r.error) throw r.error; auth('olvido', 'Te mandamos el enlace. Revisá tu casilla.'); return; }
+    if (m === 'nueva') { const r = await SB.auth.updateUser({ password: v('apw') }); if (r.error) throw r.error; await arrancar(); return; }
+    const r = await SB.auth.signInWithPassword({ email: v('aem').trim(), password: v('apw') }); if (r.error) throw r.error; await arrancar();
+  } catch (er) { auth(m, errTxt(er)); } finally { b.disabled = false; } });
+
+// ---------- arranque ----------
+async function arrancar() {
+  const { data } = await SB.auth.getSession(); S.user = data.session && data.session.user; if (!S.user) return auth();
+  const r = await SB.from('members').select('org_id,role,orgs(name)').eq('user_id', S.user.id);
+  if (r.error) return auth('login', errTxt(r.error));
+  S.orgs = (r.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)).map(m => ({ org_id: m.org_id, role: m.role, name: (m.orgs && m.orgs.name) || 'Empresa' })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  const g = ls.get('estiba.org'); S.org = (S.orgs.find(o => o.org_id === g) || S.orgs[0] || {}).org_id || null;
+  $('#auth').hidden = true; $('#app').hidden = false; $('#yo').textContent = S.user.email;
+  const sel = $('#org'); sel.hidden = S.orgs.length < 2; sel.innerHTML = S.orgs.map(o => `<option value="${o.org_id}"${o.org_id === S.org ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
+  await cargarDeps(); const d = new URLSearchParams(location.search).get('d'); if (d && S.deps.find(x => x.id === d)) abrir(d); else verDeps();
+}
+$('#org').addEventListener('change', async e => { S.org = e.target.value; ls.set('estiba.org', S.org); await cargarDeps(); verDeps(); });
+$('#salir').addEventListener('click', async () => { await SB.auth.signOut(); location.replace(HERE); });
+
+async function cargarDeps() { S.deps = []; S.falta = false; if (!S.org) return;
+  const r = await SB.from('estiba_depositos').select('id,name,data,updated_at').eq('org_id', S.org).order('name');
+  if (r.error) { if (faltaSQL(r.error)) S.falta = true; else toast(errTxt(r.error)); return; } S.deps = r.data || []; }
+
+// ---------- depósitos ----------
+function verDeps() { S.dep = null; history.replaceState(null, '', HERE); $('#vdep').hidden = true; $('#marco').innerHTML = ''; const m = $('#vdeps'); m.hidden = false; document.title = 'Estiba';
+  const org = S.orgs.find(o => o.org_id === S.org);
+  if (!org) { m.innerHTML = `<div class="cab"><div><h1 class="tit">Todavía no tenés empresa</h1><p>Tu cuenta no está en ninguna empresa. Pedile a quien administra tu empresa en Olumi que te sume al equipo.</p></div></div>`; return; }
+  if (S.falta) { m.innerHTML = `<div class="cab"><div><h1 class="tit">Falta un paso en el servidor</h1><p>Estiba guarda los depósitos en el mismo servidor que Olumi y Ondi. Se hace una sola vez.</p></div></div>
+    <div class="pasos"><b>En supabase.com, en el proyecto de Olumi:</b><ol><li>Abrí <b>SQL Editor</b>, pegá el archivo <code>servidor/supabase/estiba-1.0.sql</code> y tocá <b>Run</b>. Tiene que terminar con <code>listo</code>.</li><li>En <b>Authentication → URL Configuration → Redirect URLs</b>, agregá <code>https://unitytech.uy/estiba/app/</code> (para el email de cambiar la contraseña).</li><li>Volvé acá y recargá la página.</li></ol></div>`; return; }
+  m.innerHTML = `<div class="cab"><div><h1 class="tit">Depósitos</h1><p>${esc(org.name)} · ${S.deps.length === 1 ? '1 depósito' : S.deps.length + ' depósitos'}</p></div>${admin() ? `<button class="btn pri" type="button" data-acc="nuevo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nuevo depósito</button>` : ''}</div>
+  ${S.deps.length ? `<ul class="deps">${S.deps.map(d => `<li class="dep">${codigo(d.id)}<div><h2 class="tit">${esc(d.name)}</h2><p>${esc((d.data && d.data.direccion) || 'Sin dirección')}</p></div><p>Cambios ${hace(d.updated_at)}</p><div class="acc"><button class="btn pri chico" type="button" data-abrir="${esc(d.id)}">Abrir la maqueta</button></div></li>`).join('')}</ul>`
+    : `<div class="vacio"><h2 class="tit" style="font-size:22px">Ningún depósito todavía</h2><p>${admin() ? 'Creá el primero. Podés arrancar en blanco o importar un armado que ya tengas (por ejemplo, el de un predio relevado desde la foto aérea).' : 'Cuando la empresa cree un depósito, lo vas a ver acá.'}</p>${admin() ? `<button class="btn pri" type="button" data-acc="nuevo">Nuevo depósito</button>` : ''}</div>`}`;
+}
+$('#vdeps').addEventListener('click', e => { const a = e.target.closest('[data-abrir]'); if (a) return abrir(a.dataset.abrir); if (e.target.closest('[data-acc=nuevo]')) nuevo(); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-ir=deps]'); if (b && S.user) { e.preventDefault(); if (S.dep) cerrarDep(); } });
+
+const leerArmado = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => { try { const d = JSON.parse(r.result); if (!d || d.v !== 1 || !d.escena) throw 0; ok(d); } catch (e) { no(new Error('Ese archivo no es un armado de maqueta.')); } }; r.onerror = () => no(new Error('No se pudo leer el archivo.')); r.readAsText(f); });
+
+function nuevo() { const f = $('#fdlg');
+  f.innerHTML = `<h2 class="tit">Nuevo depósito</h2>
+    <label class="f">Nombre<input type="text" id="nnom" maxlength="120" required placeholder="Por ejemplo: Depósito Ruta 1"></label>
+    <label class="f">Dirección <small>(opcional)</small><input type="text" id="ndir" maxlength="200"></label>
+    <div class="opc" role="radiogroup" aria-label="Cómo arrancar">
+      <label><input type="radio" name="base" value="vacia" checked><span><b>En blanco</b><small>Un terreno con grilla en metros. Dibujás filas, galpones y calles en el editor.</small></span></label>
+      <label><input type="radio" name="base" value="archivo"><span><b>Importar un armado</b><small>Un archivo .json exportado de Estiba u Ondi.</small></span></label>
+    </div>
+    <input type="file" id="nfile" accept=".json,application/json" hidden>
+    <p class="msg" id="nmsg" hidden></p>
+    <div class="pie"><button class="btn" value="no" formnovalidate>Cancelar</button><button class="btn pri" value="si" id="nok">Crear</button></div>`;
+  $('#dlg').showModal();
+  f.onsubmit = async e => { if (e.submitter && e.submitter.value === 'no') return; e.preventDefault(); const msg = $('#nmsg'), b = $('#nok'); msg.hidden = true;
+    const nombre = $('#nnom').value.trim(); if (!nombre) { msg.textContent = 'Poné un nombre.'; msg.hidden = false; return; }
+    let armado = null; if (f.querySelector('input[name=base]:checked').value === 'archivo') { const fl = $('#nfile'); if (!fl.files[0]) { fl.click(); return; } try { armado = await leerArmado(fl.files[0]); } catch (er) { msg.textContent = er.message; msg.hidden = false; return; } }
+    b.disabled = true;
+    try { const r = await SB.from('estiba_depositos').insert({ org_id: S.org, name: nombre, data: { direccion: $('#ndir').value.trim() } }).select().single(); if (r.error) throw r.error;
+      if (armado) { const q = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: r.data.id, data: armado }, { onConflict: 'org_id,deposito_id' }); if (q.error) throw q.error; }
+      S.deps.push(r.data); S.deps.sort((a, c) => a.name.localeCompare(c.name, 'es')); $('#dlg').close(); toast('Depósito creado'); abrir(r.data.id);
+    } catch (er) { msg.textContent = errTxt(er); msg.hidden = false; b.disabled = false; } };
+  $('#nfile').onchange = () => { const fl = $('#nfile').files[0]; if (fl) { $('#nok').textContent = 'Crear con ' + (fl.name.length > 24 ? fl.name.slice(0, 22) + '…' : fl.name); } };
+}
+
+// ---------- maqueta de un depósito (motor común) ----------
+let guardT = null, pendiente = null;
+async function abrir(id) { const d = S.deps.find(x => x.id === id); if (!d) return; S.dep = d; history.replaceState(null, '', HERE + '?d=' + encodeURIComponent(id));
+  $('#vdeps').hidden = true; $('#vdep').hidden = false; $('#dnom').textContent = d.name; document.title = d.name + ' · Estiba';
+  $('#bimp').hidden = !edita(); $('#bdat').hidden = !edita();
+  const r = await SB.from('estiba_maquetas').select('data').eq('org_id', S.org).eq('deposito_id', id).maybeSingle();
+  if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
+  window.__maquetaHost = { state: (r.data && r.data.data) || null, role: edita() ? 'inst' : 'cli', park: d.name,
+    save(s) { pendiente = s; clearTimeout(guardT); guardT = setTimeout(guardar, 400); },
+    juego(on) { document.body.classList.toggle('juego', !!on); } };
+  $('#marco').innerHTML = `<iframe src="../../motor/?app=estiba&v=2" title="Maqueta 3D de ${esc(d.name)}" allow="fullscreen"></iframe>`;
+}
+async function guardar() { if (!pendiente || !S.dep) return; const s = pendiente; pendiente = null;
+  const r = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: S.dep.id, data: s }, { onConflict: 'org_id,deposito_id' });
+  if (r.error) toast('No se pudo guardar: ' + errTxt(r.error)); else S.dep.updated_at = new Date().toISOString(); }
+function cerrarDep() { if (pendiente) guardar(); document.body.classList.remove('juego'); verDeps(); }
+window.addEventListener('beforeunload', () => { if (pendiente) guardar(); });
+
+$('#bexp').addEventListener('click', () => { const h = window.__maquetaHost; const blob = new Blob([JSON.stringify((h && h.state) || {}, null, 1)], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a');
+  l.href = u; l.download = 'estiba-' + S.dep.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); });
+$('#bimp').addEventListener('click', () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+  i.onchange = async () => { if (!i.files[0]) return; try { const d = await leerArmado(i.files[0]); const r = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: S.dep.id, data: d }, { onConflict: 'org_id,deposito_id' }); if (r.error) throw r.error; toast('Armado importado'); abrir(S.dep.id); } catch (er) { toast(errTxt(er)); } }; i.click(); });
+$('#bdat').addEventListener('click', () => { const d = S.dep, f = $('#fdlg');
+  f.innerHTML = `<h2 class="tit">Datos del depósito</h2><label class="f">Nombre<input type="text" id="dnm" maxlength="120" value="${esc(d.name)}" required></label><label class="f">Dirección<input type="text" id="ddi" maxlength="200" value="${esc((d.data && d.data.direccion) || '')}"></label><p class="msg" id="dmsg" hidden></p>
+    <div class="pie">${admin() ? `<button class="btn peligro" value="borrar" formnovalidate style="margin-right:auto">Borrar</button>` : ''}<button class="btn" value="no" formnovalidate>Cancelar</button><button class="btn pri" value="si">Guardar</button></div>`;
+  $('#dlg').showModal();
+  f.onsubmit = async e => { const v = e.submitter && e.submitter.value; if (v === 'no') return; e.preventDefault(); const msg = $('#dmsg');
+    try { if (v === 'borrar') { if (!confirmarBorrar(d)) return; const r = await SB.from('estiba_depositos').delete().eq('org_id', S.org).eq('id', d.id); if (r.error) throw r.error; S.deps = S.deps.filter(x => x !== d); $('#dlg').close(); toast('Depósito borrado'); cerrarDep(); return; }
+      const nm = $('#dnm').value.trim(); if (!nm) throw new Error('Poné un nombre.');
+      const r = await SB.from('estiba_depositos').update({ name: nm, data: { ...(d.data || {}), direccion: $('#ddi').value.trim() } }).eq('org_id', S.org).eq('id', d.id).select().single(); if (r.error) throw r.error;
+      Object.assign(d, r.data); $('#dnom').textContent = d.name; $('#dlg').close(); toast('Guardado'); } catch (er) { msg.textContent = errTxt(er); msg.hidden = false; } }; });
+// borrar pide escribir el nombre: se borra la maqueta entera y no vuelve
+function confirmarBorrar(d) { const msg = $('#dmsg'), i = $('#dnm'); if (i.dataset.borrar !== '1') { i.dataset.borrar = '1'; i.value = ''; i.placeholder = d.name; msg.className = 'msg'; msg.textContent = `Para borrar el depósito y su maqueta (no se puede deshacer), escribí «${d.name}» arriba y tocá Borrar otra vez.`; msg.hidden = false; i.focus(); return false; }
+  if (i.value.trim().toLowerCase() !== d.name.trim().toLowerCase()) { msg.textContent = 'El nombre no coincide.'; msg.hidden = false; return false; } return true; }
+
+if (!SB) auth(); else { SB.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') auth('nueva'); }); if (/type=recovery/.test(location.hash)) auth('nueva'); else arrancar(); }
+})();
+</script>
+</body>
+</html>
