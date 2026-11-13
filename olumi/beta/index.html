@@ -371,6 +371,14 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .paj-b{display:flex;gap:4px;justify-content:flex-end;min-width:148px}.paj-b .icb{width:34px;height:34px}.paj-b .icb[disabled]{opacity:.3}
 @media (max-width:699px){.paj-r{grid-template-columns:34px minmax(0,1fr);}.paj-r select{grid-column:2}.paj-b{grid-column:1/-1;justify-content:flex-end}}
 /* fin 1.51l */
+/* 1.51n */
+.obs-h{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.obs-t{font-size:15px;line-height:1.45;margin:10px 0}
+.obs-m{display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--muted);margin:0 0 6px}.obs-m span{display:inline-flex;gap:6px;align-items:center}.obs-m .ic{width:15px;height:15px;flex:none}.obs-m .link{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.obs-r{padding:8px 0;border-bottom:1px solid var(--line)}.obs-r:last-child{border-bottom:0}.obs-r p{margin:4px 0 0}
+.obs-tec{display:flex;flex-wrap:wrap;gap:6px}.obs-tec .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;cursor:pointer}.obs-tec .chip:has(input:checked){border-color:var(--fg);background:var(--surface-2)}
+.obs-hh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.obs-hh h2{margin:0}
+.btn .ic{width:17px;height:17px;margin-right:2px;vertical-align:-3px}
+/* fin 1.51n */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1548,7 +1556,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -2099,7 +2107,7 @@ function sheetTrab(id,p){
   const data=`<div class="grid">${TRF().map(f=>fld(f,j[f.k])).join('')}<div class="fld full"><span>Técnicos</span>${techsHtml(j.tecnicos||[])}${cuaPickHtml()}</div></div><p class="err" id="shErr" hidden></p>`;
   if(!id)return sheetFrame('Trabajo'+(t?' · '+t.numero:''),'Agendar trabajo',(t?`<div class="contact">${prChip(tkPrio(t))}<span>${PRN[tkPrio(t)]}</span>${aboTag(t.clienteId)}</div>`:'')+data);
   const body=`<div class="contact">${t?prChip(tkPrio(t))+`<span class="code">${esc(t.numero)}</span>`:''}<strong>${esc(c?.nombre||j.clienteNombre||'Sin cliente')}</strong>${aboTag(j.clienteId)}<span class="muted">${fdate(j.fecha)} ${esc(j.hora||'')}</span></div>${calAvisoHtml(j,c)}
-    <div class="actions">${j.estado==='programado'?'<button class="btn pri" data-act="jstate:en_curso">Empezar trabajo</button>':''}${j.estado==='en_curso'?'<button class="btn pri" data-act="jstate:terminado">Terminar trabajo</button>':''}${j.estado==='terminado'?'<span class="tag t-ok">Terminado</span>':''}
+    <div class="actions">${obsBtn(id)}${j.estado==='programado'?'<button class="btn pri" data-act="jstate:en_curso">Empezar trabajo</button>':''}${j.estado==='en_curso'?'<button class="btn pri" data-act="jstate:terminado">Terminar trabajo</button>':''}${j.estado==='terminado'?'<span class="tag t-ok">Terminado</span>':''}
       ${loc?`<a class="btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc+', Uruguay')}" target="_blank" rel="noopener">Cómo llegar</a>`:''}
       ${c?.telefono?`<a class="btn" href="tel:${esc(String(c.telefono).replace(/[^\d+]/g,''))}">Llamar</a>`:''}${c?.telefono&&waLink(c.telefono)?`<a class="btn" href="${esc(waLink(c.telefono))}" target="_blank" rel="noopener">WhatsApp</a>`:''}
       ${has('gcal')?`<a class="btn" href="${esc(gcalLink(j,c))}" target="_blank" rel="noopener">Agregar a Google Calendar</a>`:''}</div>
@@ -2235,7 +2243,7 @@ function vCampoDia(){
   const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
   const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
-  return head+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
+  return head+obsMiasHtml()+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
 }
 
 /* ---------- facturación ---------- */
@@ -2410,7 +2418,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
+  const fns={obs:sheetObs,crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -2689,7 +2697,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={obs:saveObs,op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -2944,6 +2952,7 @@ document.addEventListener('change',async e=>{const t=e.target,k=t.dataset&&t.dat
   try{for(const id of ids){if(k==='bresp')await opSet(id,{responsable:v},`Responsable: ${sinVos(v)}`);else await opMove(id,v)}
     toast(k==='bresp'?`${pl(ids.length,'oportunidad pasó','oportunidades pasaron')} a ${sinVos(v)}`:`${pl(ids.length,'oportunidad movida','oportunidades movidas')} a ${EK[v].n}`);CSEL.clear();sr()}catch(x){if(x&&x.code!=='loading')handleErr(x)}});
 async function crmAct(k,el,arg){
+  if(k.startsWith('obs')&&await obsAct(k,el,arg))return true;
   if(k==='segq'){segAbrir();return true}
   if(k==='sgdo'){const S=SEG,id=S&&S.ids[S.i],o=id&&D.oportunidades[id];if(!o)return true;const c=D.clientes[o.clienteId]||{},msg=($('#sg_msg')?.value||'').trim(),nota=($('#sg_nota')?.value||'').trim(),dias=n0($('#sg_prox')?.value);
     if((arg==='wa'||arg==='mail')&&!msg){toast('Escribí el mensaje');return true}
@@ -4323,6 +4332,99 @@ document.addEventListener('dragend',()=>{PDRAG='';document.querySelectorAll('.pc
 document.addEventListener('dragover',e=>{if(!PDRAG)return;const c=e.target.closest&&e.target.closest('.col[data-pst]');if(!c)return;e.preventDefault();document.querySelectorAll('.col.over').forEach(x=>x!==c&&x.classList.remove('over'));c.classList.add('over')});
 document.addEventListener('drop',e=>{if(!PDRAG)return;const c=e.target.closest&&e.target.closest('.col[data-pst]');if(!c)return;e.preventDefault();const id=PDRAG;PDRAG='';c.classList.remove('over');pryMover(id,c.dataset.pst)});
 /* === fin 1.51l === */
+/* === 1.51n · observaciones === */
+/* Observaciones del jefe de operaciones (pedido de Christian, 12/11; doc claude/olumi-observaciones.md).
+   El jefe ve algo mal hecho en una obra (sucio, cámara destapada…): saca la foto, escribe qué quedó mal y les llega el aviso
+   a los técnicos que fueron. Queda pendiente en su Mi día hasta que lo arreglan (con foto) y el jefe la cierra, o el jefe
+   toca «Lo arreglé yo»: queda cerrada a su nombre, los técnicos reciben el aviso igual y cuenta en su historial.
+   Colección `obs`: interna (el portal del cliente no la lee). Decisiones tomadas (12/11, OK general de Christian):
+   técnicos sugeridos = los de la visita elegida (o la última del cliente) y se pueden cambiar; tipos fijos para poder contar;
+   la anotan los jefes (dueño, admin, encargado); el historial está en Técnicos; el técnico puede responder. */
+const OBST=[['limpieza','Limpieza (quedó sucio)'],['destapado','Equipo destapado o sin tapa'],['terminacion','Terminación'],['etiquetado','Etiquetado'],['otro','Otro']];
+const OBSE={abierta:['Para resolver','t-warn'],arreglada:['Arreglada, falta cerrar','t-acc'],cerrada:['Cerrada','t-ok']};
+let OBF=[],OBFA=[],OBSTEC='';
+const obsTipo=k=>(OBST.find(x=>x[0]===k)||OBST[4])[1];
+const obsMias=()=>arr('obs').filter(o=>(o.tecnicos||[]).includes(ME)&&o.estado==='abierta');
+function obsJobsDe(cid){return arr('trabajos').filter(j=>!cid||j.clienteId===cid).sort((a,b)=>((b.fecha||'')+(b.hora||'')).localeCompare((a.fecha||'')+(a.hora||''))).slice(0,25)}
+function obsTecsDe(jid,cid){const j=jid&&D.trabajos[jid];if(j)return j.tecnicos||[];const u=obsJobsDe(cid).find(x=>x.estado==='terminado'||(x.fecha||'')<=today());return u?u.tecnicos||[]:[]}
+const obsFotosHtml=(l,quita)=>l.length?`<div class="photos">${l.map((f,i)=>`<div class="ph"><img src="${esc(blobUrl(f.id))}" alt="">${quita?`<button type="button" class="x" data-obq="${quita}:${i}" aria-label="Sacar foto">×</button>`:''}</div>`).join('')}</div>`:'';
+function obsBtn(id){return id&&isLead()&&!readonly?`<button class="btn" data-act="obsnew:${esc(id)}" title="Algo quedó mal: foto y aviso a los técnicos">${ic('foto')}Observación</button>`:''}
+function obsTecChecks(sel){return`<div class="chips obs-tec" id="obTecs">${tecList().filter(id=>!['viewer','administracion','cliente','pendiente'].includes(MEMBERS[id]?.role)).map(id=>`<label class="chip"><input type="checkbox" name="obtec" value="${esc(id)}"${sel.includes(id)?' checked':''}> ${esc(personName(id).replace(' (vos)',''))}</label>`).join('')}</div>`}
+function sheetObs(id,p){
+  if(!id){const j=p.trab&&D.trabajos[p.trab],jid=j?p.trab:'',cid=(j&&j.clienteId)||p.cli||'';OBF=[];
+    const jobs=obsJobsDe(cid);
+    const body=`<div class="grid">${fld({k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},cid,'ob_')}
+      <label class="fld full"><span>Visita</span><select id="ob_trab" aria-label="Visita"><option value="">Sin visita</option>${jobs.map(x=>`<option value="${esc(x.id)}"${x.id===jid?' selected':''}>${esc(fdate(x.fecha)+' · '+(x.titulo||'Visita'))}</option>`).join('')}</select></label>
+      ${fld({k:'tipo',l:'Qué pasó',t:'select',o:OBST},'limpieza','ob_')}
+      ${fld({k:'texto',l:'Qué quedó mal',t:'textarea',w:'full',ph:'Ej.: quedó la caja de la cámara 3 destapada y restos de cable en el piso'},'','ob_')}</div>
+      <section class="rel"><h3>Técnicos que fueron</h3><p class="hint" style="margin:0 0 8px">Les llega el aviso y la ven en su Mi día.</p>${obsTecChecks(obsTecsDe(jid,cid))}</section>
+      <section class="rel"><h3>Fotos</h3><div id="obFotos">${obsFotosHtml(OBF,'n')||'<p class="muted" style="margin:0">Sacá la foto de cómo quedó.</p>'}</div>
+        <div class="actions"><label class="btn upl">${ic('foto')}Sacar foto<input type="file" accept="image/*" capture="environment" data-obsup="n"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*" multiple data-obsup="n"></label></div><p class="busy" id="obBusy" hidden></p></section>
+      <p class="err" id="shErr" hidden></p>`;
+    return sheetFrame('Observación','Nueva observación',body,{saveLabel:'Guardar y avisar'})}
+  const o=(D.obs||{})[id];if(!o)return sheetFrame('Observación','Ya no está','<p class="muted">Esta observación ya no está.</p>',{saveLabel:'Cerrar'});
+  OBFA=[];const mia=(o.tecnicos||[]).includes(ME),jefe=isLead(),e=OBSE[o.estado||'abierta']||OBSE.abierta,j=o.trabajoId&&D.trabajos[o.trabajoId];
+  const body=`<div class="obs-h"><span class="tag ${e[1]}">${e[0]}</span><span class="tag t-none">${esc(obsTipo(o.tipo))}</span></div>
+    ${obsFotosHtml(o.fotos||[])}<p class="obs-t">${esc(o.texto||'')}</p>
+    <div class="obs-m"><span>${ic('obra')}${esc(cliName(o.clienteId)||'Sin cliente')}</span>${j?`<span class="link" role="button" tabindex="0" data-open="trab:${esc(o.trabajoId)}">${ic('agendar')}${esc(fdate(j.fecha)+' · '+(j.titulo||'Visita'))}</span>`:''}<span>${ic('persona')}${esc((o.tecnicos||[]).map(personName).join(', ')||'Sin técnicos')}</span><span>${ic('editar')}${esc(personName(o.por))} · ${fdate(localISO(new Date(n0(o.creado))))}</span></div>
+    ${o.estado!=='abierta'&&(o.arregladoPor||o.fotosArreglo)?`<section class="rel"><h3>${o.arregladoPor&&!(o.tecnicos||[]).includes(o.arregladoPor)?'Lo arregló '+esc(personName(o.arregladoPor)):'Cómo quedó'}</h3>${obsFotosHtml(o.fotosArreglo||[])}${o.notaArreglo?`<p style="margin:6px 0 0">${esc(o.notaArreglo)}</p>`:''}</section>`:''}
+    ${(o.respuestas||[]).length?`<section class="rel"><h3>Respuestas</h3>${o.respuestas.map(r=>`<div class="obs-r"><b>${esc(personName(r.por))}</b> <span class="muted">${fdate(localISO(new Date(n0(r.en))))}</span><p>${esc(r.texto)}</p></div>`).join('')}</section>`:''}
+    ${o.estado==='abierta'&&(mia||jefe)&&!readonly?`<section class="rel"><h3>${mia?'Cuando lo arregles':'Si lo arreglaste vos'}</h3><div id="obFotosA">${'<p class="muted" style="margin:0">Foto de cómo quedó (opcional).</p>'}</div>
+      <div class="actions"><label class="btn upl">${ic('foto')}Sacar foto<input type="file" accept="image/*" capture="environment" data-obsup="a"></label></div>
+      <textarea id="ob_nota" rows="2" placeholder="${mia?'Qué hiciste (opcional)':'Nota (opcional)'}" style="width:100%;box-sizing:border-box;margin-top:8px"></textarea>
+      <div class="actions">${mia?`<button class="btn pri" data-act="obsfix:${esc(id)}">${ic('check')}Lo arreglé</button>`:''}${jefe?`<button class="btn${mia?'':' pri'}" data-act="obsyo:${esc(id)}">${ic('check')}Lo arreglé yo</button>`:''}</div></section>`:''}
+    ${o.estado==='arreglada'&&jefe&&!readonly?`<div class="actions"><button class="btn pri" data-act="obscierra:${esc(id)}">${ic('check')}Está bien, cerrarla</button><button class="btn" data-act="obsreabre:${esc(id)}">Sigue mal</button></div>`:''}
+    ${!readonly&&(mia||jefe)?`<section class="rel"><h3>Responder</h3><textarea id="ob_resp" rows="2" placeholder="${mia?'Si querés explicar algo':'Mensaje para los técnicos'}" style="width:100%;box-sizing:border-box"></textarea><div class="actions"><button class="btn" data-act="obsresp:${esc(id)}">${ic('mensaje')}Enviar</button></div></section>`:''}`;
+  return sheetFrame('Observación',obsTipo(o.tipo),body,{saveLabel:'Listo'})}
+async function saveObs(){
+  if(SH.id){closeSheet();return}
+  const e=$('#shErr'),cid=$('#ob_clienteId')?.value||'',texto=($('#ob_texto')?.value||'').trim(),tecs=[...document.querySelectorAll('#obTecs input:checked')].map(i=>i.value);
+  if(!texto&&!OBF.length){e.textContent='Escribí qué quedó mal o sacá una foto.';e.hidden=false;return}
+  if(!tecs.length){e.textContent='Marcá qué técnicos fueron.';e.hidden=false;return}
+  const id=uid(),o={clienteId:cid,trabajoId:$('#ob_trab')?.value||'',tipo:$('#ob_tipo')?.value||'otro',texto,fotos:OBF.slice(),tecnicos:tecs,estado:'abierta',por:ME||'',creado:Date.now(),actualizado:Date.now()};
+  try{await put('obs',id,o)}catch(x){if(!(x&&x.code==='loading'))handleErr(x);return}
+  (D.obs=D.obs||{})[id]=o;arrDirty();
+  avSend({org:ORG,to:tecs.filter(t=>t!==ME),titulo:'Observación · '+(cliName(cid)||'obra'),texto:obsTipo(o.tipo)+(texto?' · '+texto.slice(0,120):''),ir:'obs:'+id});
+  closeSheet();toast(`Observación guardada. Les avisé a ${tecs.length===1?personName(tecs[0]).replace(' (vos)',''):tecs.length+' técnicos'}.`);sr()}
+async function obsSet(id,cambio,aviso){const o=(D.obs||{})[id];if(!o)return;const n={...o,...cambio,actualizado:Date.now()};
+  try{await put('obs',id,n)}catch(x){if(!(x&&x.code==='loading'))handleErr(x);return}
+  if(aviso&&aviso.to.length)avSend({org:ORG,to:aviso.to,titulo:aviso.titulo,texto:aviso.texto,ir:'obs:'+id});
+  (D.obs=D.obs||{})[id]=n;arrDirty();openSheet('obs',id);sr()}
+async function obsAct(k,el,arg){
+  if(k==='obsnew'){openSheet('obs',null,{trab:arg});return true}
+  const o=D.obs&&D.obs[arg];if(!o)return k.startsWith('obs');const nota=($('#ob_nota')?.value||'').trim(),cl=cliName(o.clienteId)||'obra';
+  const tecs=(o.tecnicos||[]).filter(t=>t!==ME),jefe=o.por&&o.por!==ME?[o.por]:[];
+  if(k==='obsfix'){await obsSet(arg,{estado:'arreglada',arregladoPor:ME,arregladoEn:Date.now(),fotosArreglo:OBFA.slice(),notaArreglo:nota},{to:jefe,titulo:'Observación arreglada · '+cl,texto:personName(ME).replace(' (vos)','')+' la marcó como arreglada'+(nota?': '+nota:'')});toast('Listo, le avisé a quien la anotó');return true}
+  if(k==='obsyo'){await obsSet(arg,{estado:'cerrada',arregladoPor:ME,arregladoEn:Date.now(),fotosArreglo:OBFA.slice(),notaArreglo:nota,cerradaPor:ME},{to:tecs,titulo:'Observación · '+cl,texto:'Lo arregló '+personName(ME).replace(' (vos)','')+'. Queda en tu historial: '+obsTipo(o.tipo)});toast('Cerrada. Les avisé a los técnicos.');return true}
+  if(k==='obscierra'){await obsSet(arg,{estado:'cerrada',cerradaPor:ME},{to:tecs,titulo:'Observación cerrada · '+cl,texto:'Quedó bien. Gracias.'});return true}
+  if(k==='obsreabre'){await obsSet(arg,{estado:'abierta'},{to:tecs,titulo:'Observación · '+cl,texto:'Sigue mal: '+(o.texto||obsTipo(o.tipo)).slice(0,120)});return true}
+  if(k==='obsresp'){const t=($('#ob_resp')?.value||'').trim();if(!t){toast('Escribí la respuesta');return true}
+    await obsSet(arg,{respuestas:[...(o.respuestas||[]),{por:ME,en:Date.now(),texto:t.slice(0,1000)}]},{to:[...new Set([...tecs,...jefe])].filter(x=>x!==ME),titulo:'Respuesta · observación de '+cl,texto:t.slice(0,140)});return true}
+  return false}
+/* fotos */
+document.addEventListener('change',async e=>{const inp=e.target;if(!inp||!inp.dataset||!inp.dataset.obsup)return;const files=[...inp.files];if(!files.length||!AS)return;
+  const dst=inp.dataset.obsup==='a'?OBFA:OBF,busy=$('#obBusy');if(busy){busy.hidden=false;busy.textContent='Subiendo fotos…'}
+  for(const f of files){try{const b=await shrink(f);const r=await AS.upload(b,{type:b.type||f.type});dst.push({id:r.id,name:f.name||'foto',type:r.contentType,at:Date.now()})}catch(x){toast(upErr(x))}}
+  inp.value='';if(busy)busy.hidden=true;const el=$(inp.dataset.obsup==='a'?'#obFotosA':'#obFotos');if(el)el.innerHTML=obsFotosHtml(dst,inp.dataset.obsup)||''});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-obq]');if(!b)return;e.preventDefault();const[w,i]=b.dataset.obq.split(':'),l=w==='a'?OBFA:OBF;l.splice(+i,1);const el=$(w==='a'?'#obFotosA':'#obFotos');if(el)el.innerHTML=obsFotosHtml(l,w)});
+/* al cambiar el cliente: sus visitas y quiénes fueron a la última */
+document.addEventListener('change',e=>{const t=e.target;if(!t)return;
+  if(t.id==='ob_clienteId'){const s=$('#ob_trab');if(s)s.innerHTML='<option value="">Sin visita</option>'+obsJobsDe(t.value).map(x=>`<option value="${esc(x.id)}">${esc(fdate(x.fecha)+' · '+(x.titulo||'Visita'))}</option>`).join('');const c=$('#obTecs');if(c)c.outerHTML=obsTecChecks(obsTecsDe('',t.value))}
+  else if(t.id==='ob_trab'&&t.value){const c=$('#obTecs');if(c)c.outerHTML=obsTecChecks(obsTecsDe(t.value,''))}});
+/* Mi día: lo que me toca resolver */
+function obsMiasHtml(){const l=obsMias();if(!l.length)return'';
+  return`<section class="group obs-mias" style="margin:0 0 18px"><h2>Observaciones para resolver <span class="num">${l.length}</span></h2><div class="list">${l.map(o=>`<div class="row" role="button" tabindex="0" data-open="obs:${o.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(obsTipo(o.tipo))} · ${esc(cliName(o.clienteId)||'')}</strong><span class="muted">${esc((o.texto||'').slice(0,90))}${(o.fotos||[]).length?' · '+o.fotos.length+' foto'+(o.fotos.length===1?'':'s'):''}</span></div><span class="tag t-warn">${fdate(localISO(new Date(n0(o.creado))))}</span></div>`).join('')}</div></section>`}
+/* Técnicos: historial de observaciones */
+function obsHistHtml(){const lead=isLead(),todas=arr('obs').filter(o=>lead||(o.tecnicos||[]).includes(ME)).sort((a,b)=>n0(b.creado)-n0(a.creado));
+  if(!todas.length&&!lead)return'';
+  const desde=Date.now()-90*864e5,cnt={};todas.filter(o=>n0(o.creado)>=desde).forEach(o=>(o.tecnicos||[]).forEach(t=>cnt[t]=(cnt[t]||0)+1));
+  const l=todas.filter(o=>!OBSTEC||(o.tecnicos||[]).includes(OBSTEC)).slice(0,60);
+  const chips=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  return`<section class="group obs-hist" style="margin-top:26px"><div class="obs-hh"><h2>Observaciones <span class="num">${todas.filter(o=>o.estado!=='cerrada').length}</span></h2>${lead&&!readonly?`<button class="btn" data-act="obsnew:">${ic('foto')}Nueva observación</button>`:''}</div>
+    ${lead&&chips.length?`<div class="chips" style="margin:0 0 10px">${chips.map(([t,n])=>`<button type="button" class="tgl${OBSTEC===t?' on':''}" data-obtec="${esc(t)}" aria-pressed="${OBSTEC===t}">${esc(personName(t).replace(' (vos)',''))} · ${n}</button>`).join('')}<span class="muted" style="font-size:12.5px;align-self:center">en 90 días</span></div>`:''}
+    ${l.length?`<div class="list">${l.map(o=>{const e=OBSE[o.estado||'abierta'];return`<div class="row" role="button" tabindex="0" data-open="obs:${o.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(obsTipo(o.tipo))} · ${esc(cliName(o.clienteId)||'')}</strong><span class="muted">${fdate(localISO(new Date(n0(o.creado))))} · ${esc((o.tecnicos||[]).map(personName).join(', '))}${o.arregladoPor?' · arregló '+esc(personName(o.arregladoPor)):''}${o.texto?' · '+esc(o.texto.slice(0,70)):''}</span></div><span class="tag ${e[1]}">${e[0]}</span></div>`}).join('')}</div>`:'<p class="muted">Sin observaciones. Cuando algo quede mal en una obra, anotalo desde la visita o con «Nueva observación».</p>'}</section>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-obtec]');if(!b)return;OBSTEC=OBSTEC===b.dataset.obtec?'':b.dataset.obtec;sr()});
+/* === fin 1.51n === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -4995,7 +5097,7 @@ function vTecnicos(){
     ${per}
     <div class="kpis" style="margin:14px 0">${kpi('Horas trabajadas',fmtH(tot.h))}${kpi('Horas extra',fmtH(tot.e))}${kpi('Visitas cerradas',tot.t)}</div>
     ${rows.length?mob+dsk:'<div class="empty"><h2>Todavía no hay técnicos</h2><p>Invitalos desde Catálogo y ajustes → Equipo.</p></div>'}
-    <p class="hint" style="margin-top:12px">Horas normales hasta la jornada de cada técnico (8 h si no se cargó); lo que pasa de la jornada y los domingos cuenta como extra. El valor de la hora se carga en Personal (lo ve solo Administración).</p>${cuaHtml()}`;
+    <p class="hint" style="margin-top:12px">Horas normales hasta la jornada de cada técnico (8 h si no se cargó); lo que pasa de la jornada y los domingos cuenta como extra. El valor de la hora se carga en Personal (lo ve solo Administración).</p>${cuaHtml()}${obsHistHtml()}`;
 }
 const TECF=()=>[...PER_VEH,{k:'jornada',l:'Jornada (horas por día)',t:'number',step:'0.5'},
   {k:'herramientas',l:'Herramientas y equipos asignados',t:'textarea',w:'full',ph:'Ej.: fusionadora Fujikura 41S, OTDR, escalera 6 m, taladro'},
@@ -6167,7 +6269,7 @@ function avGo(ir){
   if(mode==='loading'||!D.tickets){let n=0;const w=setInterval(()=>{if((mode!=='loading'&&D.tickets)||++n>40){clearInterval(w);if(n<=40)avGo(ir)}},500);return}
   const i=ir.indexOf(':'),k=ir.slice(0,i),id=ir.slice(i+1);
   if(k==='view'){closeSheet();VIEW=id;lsSet('crm.view',VIEW);render();window.scrollTo(0,0);return}
-  const col={tk:'tickets',tar:'tareas',trab:'trabajos',oc:'compras',fact:'facturas'}[k];
+  const col={tk:'tickets',tar:'tareas',trab:'trabajos',oc:'compras',fact:'facturas',obs:'obs'}[k];
   if(col&&D[col]&&D[col][id])openSheet(k,id);else{closeSheet();toast('Ese registro ya no está.')}
 }
 async function avAct(k,el,arg){

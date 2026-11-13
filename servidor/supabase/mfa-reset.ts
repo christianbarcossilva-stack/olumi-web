@@ -7,11 +7,14 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const pickKey = (dict, legacy) => { const l = Deno.env.get(legacy); if (l) return l; try { const d = JSON.parse(Deno.env.get(dict) || '{}'); return d.default || Object.values(d)[0]; } catch (_) { return undefined; } };
 const SERVICE_KEY = pickKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY');
-const CORS = { 'Access-Control-Allow-Origin': 'https://unitytech.uy', 'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
+const ORIGENES = ['https://unitytech.uy', 'capacitor://localhost'];   // la web y la app del iPhone
+let CORS = { 'Access-Control-Allow-Origin': ORIGENES[0], 'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
 const res = (s, o) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
+  const o = req.headers.get('Origin') || '';
+  CORS = { ...CORS, 'Access-Control-Allow-Origin': ORIGENES.includes(o) ? o : ORIGENES[0] };
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return res(405, { error: 'Método no permitido.' });
   try {
