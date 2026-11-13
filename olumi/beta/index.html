@@ -7446,12 +7446,15 @@ const GEST={pendiente:['Para revisar','t-warn'],aprobado:['Aprobado','t-ok'],rec
 const gastoAdmin=()=>isBoss()||['administracion','encargado'].includes(ROLE);
 let GFOT=[];
 const gMine=g=>!ME||g.por===ME;
-function gTrabOpts(v){const lim=localISO(new Date(Date.now()-10*864e5)).slice(0,10);
+function gTrabOpts(v){const lim=localISO(new Date(Date.now()-45*864e5)).slice(0,10),hasta=localISO(new Date(Date.now()+30*864e5)).slice(0,10);
   const js=arr('trabajos').filter(j=>(j.id===v)||((j.fecha||'')>=lim&&(!isTec()||(j.tecnicos||[]).includes(ME)))).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-  return[['','Sin trabajo (gasto general)'],...js.map(j=>[j.id,`${fdate(j.fecha)} · ${j.titulo||'Trabajo'}${j.clienteId?' · '+jCli(j):''}`])]}
+  // 1.51q: tus eventos del calendario (también los traídos de Google) y las obras en curso
+  const evs=arr('eventos').filter(e=>('ev:'+e.id===v)||(e.fecha&&e.fecha>=lim&&e.fecha<=hasta&&(e.de===ME||(!e.de&&e.por===ME)))).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const prs=arr('proyectos').filter(p=>('pry:'+p.id===v)||(p.estado||'activo')==='activo').sort((a,b)=>pryNumN(b)-pryNumN(a));
+  return[['','Sin trabajo (gasto general)'],...js.map(j=>[j.id,`${fdate(j.fecha)} · ${j.titulo||'Trabajo'}${j.clienteId?' · '+jCli(j):''}`]),...evs.map(e=>['ev:'+e.id,`${fdate(e.fecha)} · ${e.titulo||'Evento'} · agenda`]),...prs.map(p=>['pry:'+p.id,`Obra ${pryLabel(p)}${p.clienteId?' · '+(cliName(p.clienteId)||''):''}`])]}
 const GASTOF=v=>[{k:'fecha',l:'Fecha',t:'date'},{k:'monto',l:'Monto total',t:'number',step:'0.01'},{k:'moneda',l:'Moneda',t:'select',o:[['UYU','Pesos ($)'],['USD','Dólares (US$)']]},
   {k:'categoria',l:'Qué es',t:'select',o:GCAT},{k:'proveedor',l:'Dónde lo compraste',ph:'Ej.: Barraca Sur, Ancap Rivera'},{k:'numero',l:'N.º de factura o boleta',ph:'Opcional'},{k:'pago',l:'Cómo se pagó',t:'select',o:GPAGO},{k:'vence',l:'Si es a crédito, se paga el',t:'date'},
-  {k:'trabajoId',l:'Para qué trabajo',t:'select',o:gTrabOpts(v&&v.trabajoId),w:'full'},{k:'nota',l:'Nota',t:'textarea',w:'full',ph:'Ej.: 2 rollos de UTP para la obra de Rivera'}];
+  {k:'trabajoId',l:'Para qué trabajo, agenda u obra',t:'select',o:gTrabOpts(v&&v.trabajoId),w:'full'},{k:'nota',l:'Nota',t:'textarea',w:'full',ph:'Ej.: 2 rollos de UTP para la obra de Rivera'}];
 function gFotosHtml(edit){return`<div class="gfotos">${GFOT.map((f,i)=>`<figure><a href="${esc(blobUrl(f.id))}" target="_blank" rel="noopener"><img src="${esc(blobUrl(f.id))}" alt="Factura ${i+1}"></a>${edit?`<button class="btn ghost" data-act="gfotodel:${i}" aria-label="Sacar foto">✕</button>`:''}</figure>`).join('')}</div>
   ${edit?`<div class="actions"><label class="btn pri upl">📷 Sacar foto de la factura<input type="file" accept="image/*" capture="environment" data-up="gasto"></label><label class="btn upl">Subir de la galería<input type="file" accept="image/*,application/pdf" multiple data-up="gasto"></label></div><p class="busy" id="gBusy" hidden></p>`:''}`}
 function sheetGasto(id){
@@ -7479,6 +7482,7 @@ async function saveGasto(){
   const doc={...(old||{creado:Date.now(),por:ME||'',estado:'pendiente'}),...v,...extra,fotos:GFOT,actualizado:Date.now()};
   if(doc.pago==='credito'&&!doc.vence)doc.vence=finMes(doc.fecha);if(doc.pago!=='credito')doc.vence='';
   const t=v.trabajoId&&D.trabajos[v.trabajoId];if(t){doc.clienteId=t.clienteId||'';doc.proyectoId=t.proyectoId||''}
+  {const m=/^(ev|pry):(.+)$/.exec(v.trabajoId||'');doc.eventoId=m&&m[1]==='ev'?m[2]:'';if(m&&m[1]==='pry'){const p=D.proyectos[m[2]];doc.proyectoId=m[2];doc.clienteId=(p&&p.clienteId)||''}}
   await put('gastos',id||uid(),doc);toast(id?'Gasto guardado':'Factura subida. Administración la va a revisar.');closeSheet();
 }
 async function gastoUpload(inp){if(inp.dataset.up!=='gasto')return false;
