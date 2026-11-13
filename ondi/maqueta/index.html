@@ -390,6 +390,7 @@ html:not(.blank) .blankonly{display:none!important}
 .galsvg .gmid{stroke:rgba(255,255,255,.28);stroke-width:1px;pointer-events:none}
 .galsvg .gname{fill:#E3EAED;font-weight:600;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .galsvg .gname.dim{fill:#7C878F}
+.galsvg .gotro{opacity:.16;pointer-events:none}.gpisos{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px}.gpisos span{font-size:13px;color:var(--muted);margin-right:2px}.gpisos button{font:inherit;font-size:13.5px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--line-strong);background:transparent;color:inherit;cursor:pointer}.gpisos button[aria-pressed=true]{background:var(--accent);border-color:transparent;color:#fff}
 .galsvg .gitem.on .gbox{stroke:#27C3D9;stroke-width:2.6px;stroke-dasharray:none}
 .galsvg .gitem.drag .gbox{stroke-dasharray:5 4;stroke:#27C3D9}
 .galsvg .gitem.bad .gbox{stroke:#E5484D}
@@ -5528,6 +5529,38 @@ if (window.OndiRed) { for (const k in OndiRed.CAT) if (!CAT[k]) CAT[k] = OndiRed
     racks: () => Object.keys(CABS).filter(k => DEV.some(d => d.id === k)).map(k => { const d = DEV.find(x => x.id === k); return [k, k + (d && d.loc ? ' · ' + d.loc.split(' · ')[0] : '')]; }) };
   renderCab = function () { if (!CABV.cid) return; if (!CABS[CABV.cid]) CABS[CABV.cid] = mkCab(9); OndiRed.pintar($('#cabview'), RH, CABV); };
   openCab = (o => function (cid) { CABV.tab = 'frente'; CABV.q = ''; return o(cid); })(openCab); }
+/* pisos del galpón: la planta baja y un piso por cada entrepiso. El plano muestra uno a la vez y cada equipo sabe en qué piso está */
+const pisosDe = N => [{ id: '', n: 'Planta baja', y: 0 }].concat(innerOf(N).items.filter(it => it.k === 'mez').sort((a, b) => mzH(a) - mzH(b)).map(m => ({ id: m.id, n: m.name, y: mzH(m) + 0.25, m })));
+const enMez = (m, u, d, mg = 0) => u >= m.u - mg && u <= m.u + m.su + mg && d >= m.d - mg && d <= m.d + m.sd + mg;
+function pisoDev(N, d, P) { P = P || pisosDe(N); if (P.length < 2) return ''; if (d.piso !== undefined && (d.piso === '' || P.some(p => p.id === d.piso))) return d.piso;
+  const [u, dd] = toLocal(N, d.x, d.z); let r = ''; for (const p of P.slice(1)) if (enMez(p.m, u, dd) && (d.y || 0) >= p.y - 0.05) r = p.id; return r; }
+function pisoItem(N, it, P) { if (it.k === 'mez') return it.id; const y = it.y0 || 0; if (y < 0.5) return ''; let r = ''; for (const p of P.slice(1)) if (p.y <= y + 0.4 && enMez(p.m, it.u + it.su / 2, it.d + it.sd / 2, 0.5)) r = p.id; return r; }
+// el techo de un piso en un punto: el entrepiso que tiene arriba, o el techo del galpón
+function techoEn(N, P, i, u, d) { for (const p of P.slice(i + 1)) if (enMez(p.m, u, d)) return p.y - 0.35; return N.h - 0.8; }
+function setPiso(N, dv, id) { const P = pisosDe(N), i = P.findIndex(p => p.id === id); if (i < 0 || !devMovable(N, dv)) return; const F = P[i]; let [u, d] = toLocal(N, dv.x, dv.z);
+  if (F.m) { u = clamp(u, F.m.u + 0.8, F.m.u + F.m.su - 0.8); d = clamp(d, F.m.d + 0.8, F.m.d + F.m.sd - 0.8); const [x, z] = NP(N, u, -d); dv.x = x; dv.z = z; }
+  const top = techoEn(N, P, i, u, d);
+  if (dv.type === 'ap' || SENS[dv.type]) dv.y = F.m ? Math.min(top, F.y + 3) : top; else if (dv.type === 'cam') dv.y = F.m ? Math.min(top - 0.2, F.y + 2.8) : Math.max(F.y + 2.2, top - 0.2); else if (dv.type === 'wr') dv.y = F.y + (dv.stand ? 1.6 : 1.3); else if (dv.type === 'gab') dv.y = F.y; else dv.y = F.y + 1.3;
+  dv.piso = id; devObj(dv); devTag(dv); markMoved(dv); }
+markMoved = (o => function (d) { o(d); if (!d.custom && ED.moved[d.id] && d.piso !== undefined) ED.moved[d.id].piso = d.piso; })(markMoved);
+galTools = (o => function () { const h = o(), N = naveById(GALV.id); if (!N) return h; const P = pisosDe(N); if (P.length < 2) return h;
+  if (GALV.piso !== null && GALV.piso !== undefined && !P.some(p => p.id === GALV.piso)) GALV.piso = null;
+  return `<div class="gpisos" role="group" aria-label="Piso"><span>Piso</span><button data-gpiso="*" aria-pressed="${GALV.piso == null}">Todos</button>${P.map(p => `<button data-gpiso="${p.id}" aria-pressed="${GALV.piso === p.id}">${escH(p.n)}</button>`).join('')}</div>` + h; })(galTools);
+// con un piso elegido, lo de los otros pisos queda tenue y no se puede tocar
+renderGal = (o => function () { o(); const N = naveById(GALV.id); if (!N || GALV.piso == null) return; const P = pisosDe(N), I = innerOf(N), sv = $('#galPlan svg'); if (!sv || P.length < 2) return;
+  sv.querySelectorAll('[data-it]').forEach(g => { const it = I.items.find(x => x.id === g.dataset.it); if (it && pisoItem(N, it, P) !== GALV.piso) g.classList.add('gotro'); });
+  sv.querySelectorAll('[data-dev]').forEach(g => { const d = DEV.find(x => x.id === g.dataset.dev); if (d && pisoDev(N, d, P) !== GALV.piso) g.classList.add('gotro'); });
+  if (GALV.piso !== '') sv.querySelectorAll('[data-wl],[data-tr],.gaisle').forEach(g => g.classList.add('gotro')); })(renderGal);
+galPlace = (o => function (N, I, k, u, d) { const before = new Set(I.items.map(x => x.id)); o(N, I, k, u, d); const id = GALV.piso; if (id == null) return;
+  if (k.startsWith('dev:')) { const dv = DEV.find(x => x.id === GALV.sel); if (dv && dv.nave === N.id) setPiso(N, dv, id); return; }
+  const F = pisosDe(N).find(p => p.id === id); if (!F || !F.m) return; for (const it of I.items) if (!before.has(it.id) && it.k !== 'mez') it.y0 = F.y; })(galPlace);
+galMove = (o => function (N, I, obj, du, dd) { o(N, I, obj, du, dd); const dv = DEV.find(x => x.id === obj.id); if (dv && dv.piso !== undefined && dv.nave === N.id) setPiso(N, dv, dv.piso); })(galMove);
+galSide = (o => function (N, I) { let h = o(N, I); const S = selOf(I, GALV.sel); if (!S || S.t !== 'dev' || !devMovable(N, S.o)) return h; const P = pisosDe(N); if (P.length < 2) return h; const cur = pisoDev(N, S.o, P);
+  const f = canEdit() ? `<label class="ef"><span>Piso</span><select data-g="dpiso">${P.map(p => `<option value="${p.id}" ${p.id === cur ? 'selected' : ''}>${escH(p.n)}</option>`).join('')}</select></label>` : `<dl class="rows">${row('Piso', escH((P.find(p => p.id === cur) || P[0]).n))}</dl>`;
+  const i = h.indexOf('<div class="cact gbtns">'); return i < 0 ? h + f : h.slice(0, i) + f + h.slice(i); })(galSide);
+galAct = (o => function (a, val) { if (a !== 'dpiso') return o(a, val); const N = naveById(GALV.id); if (!N || !canEdit()) return; const S = selOf(innerOf(N), GALV.sel); if (!S || S.t !== 'dev') return;
+  setPiso(N, S.o, val); if (GALV.piso != null) GALV.piso = val; toast(S.o.id + ' pasó a ' + (pisosDe(N).find(p => p.id === val) || { n: 'otro piso' }).n); galCommit(N); })(galAct);
+$('#galview').addEventListener('click', ev => { const b = ev.target.closest('[data-gpiso]'); if (!b) return; ev.stopPropagation(); GALV.piso = b.dataset.gpiso === '*' ? null : b.dataset.gpiso; GALV.place = null; GALV.sel = null; renderGal(); }, true);
 window.__dbg = { ed: { setEdit, setTool, openCab, FIBS, CABS, DEV, NAVES, flyTo, groundAt: (x, y) => groundAt(x, y) }, sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>

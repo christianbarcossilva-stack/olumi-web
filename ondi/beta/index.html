@@ -524,7 +524,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=35" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=36" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -554,7 +554,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=1' : 'maqueta.html?v=35'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=1' : 'maqueta.html?v=36'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
