@@ -1131,14 +1131,14 @@ function wander(){const gente=S.people.filter(p=>!p.inVan&&!p.virtual&&!p.busy),
   else if(r<.7&&p.role!=='recepcion')aReunion(p,()=>{say(p,'Reunión',2);back(6000)});
   else if(p.role==='tecnico')goTo(p,SPOTS.deposito.x,SPOTS.deposito.y,()=>{say(p,'📦 material',2);back()})}
 // 1.51v · «¿En qué estás?»: el estado de cada persona (lo manda Olumi en olumiDatos.people[].st) se ve en la maqueta
-const ESTL={reunion:'👥 En reunión',llamada:'📞 En llamada',relev:'📐 Relevamiento',presup:'🧮 Presupuestando',almuerzo:'☕ Almuerzo'};
+const ESTL={instalando:'🛠 Instalando',reunion:'👥 En reunión',llamada:'📞 En llamada',relev:'📐 Relevamiento',presup:'🧮 Presupuestando',almuerzo:'☕ Almuerzo'};
 function estAplica(){S.people.forEach(p=>{const st=p.st||'';p.stl=ESTL[st]||'';if(p.virtual||p.inVan)return;if(st===p._st)return;const ant=p._st;p._st=st;
   if(ant&&p._stb){p.busy=0;p._stb=0;if(p.sit&&!st){p.sit=null}}
-  if(!st||st==='relev'){if(ant&&!p.out){const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)}return}
+  if(!st||st==='relev'||st==='instalando'){if(ant&&!p.out){const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)}return}
   p.busy=1;p._stb=1;const d=deskOf(p),dice=()=>say(p,ESTL[st],8);
   if(st==='reunion')aReunion(p,dice);else if(st==='almuerzo')alCafe(p,dice);else goTo(p,d.x+.2,d.y+1.1,dice)})}
 window.__est=()=>S.people.map(p=>[p.n,p.st,p.stl,p.say]);
-setInterval(()=>{if(typeof S==='undefined')return;S.people.forEach(p=>{if(p.stl&&!p.inVan&&p.tx==null&&(!p.say||T>p.sayT-1))say(p,p.stl,8)})},4000);
+setInterval(()=>{if(typeof S==='undefined')return;try{estAplica()}catch(_){}S.people.forEach(p=>{if(p.stl&&!p.inVan&&p.tx==null&&(!p.say||T>p.sayT-1))say(p,p.stl,8)})},4000);
 // ---------- eventos de la empresa ----------
 const CLI=['Barraca Norte','Clínica Sur','Estudio Gómez','Colegio del Parque','Depósito Logístico','Hotel Rambla','Farmacia Central','Edificio Torre Sur'];
 const feed=[];let tk=151,pr=232,pm=41;
