@@ -198,6 +198,7 @@ tr:last-child td{border-bottom:0}
 .brand h3{margin:0;font-size:16px}
 .brand p{margin:0;font-size:13.5px;color:var(--muted)}
 .brand .via{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sols{list-style:none;margin:0;padding:0;display:grid;gap:8px}.sols li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px}.soln{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;border:1.5px solid var(--muted);color:var(--muted)}.sols b{font-size:13.5px}.sols .pill{font-size:11px;padding:1px 8px;margin-left:2px}.sols p{margin-top:4px}
 .mark{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;flex:none}
 .bhead{display:flex;gap:12px;align-items:center}
 .modal{position:fixed;inset:0;background:rgba(10,14,18,.55);display:grid;place-items:center;z-index:70;padding:16px}
@@ -273,6 +274,24 @@ const BRANDS = [
   { k: 'intelbras', n: 'Intelbras', c: '#00A859', ab: 'IB', via: 'Agente', what: 'Cámaras, NVR, control de acceso y switches.', how: 'API HTTP (la misma base que Dahua) y ONVIF, desde el agente.' },
   { k: 'honeywell', n: 'Honeywell', c: '#E4002B', ab: 'HW', via: 'Agente', what: 'Cámaras, NVR y control de acceso.', how: 'ONVIF y SNMP, desde el agente.' }
 ];
+// dos caminos por marca para monitorear: siempre hay uno que no necesita instalar nada en el cliente. [nombre, explicación, estado, etiqueta corta]
+const AG = d => ['Agente Ondi en la red', d, 'prep', 'Agente'];
+const AFUERA = q => ['Chequeo desde afuera', 'Ondi prueba cada pocos minutos si ' + q + ' responde en la dirección que el cliente ya tiene publicada. No se instala nada.', 'prep', 'Desde afuera'];
+const SOL = {
+  unifi: [['Nube de UniFi', 'Con una clave de solo lectura de unifi.ui.com. No se instala nada en el cliente.', 'ok', 'Nube'], AG('Lee la consola local y los equipos por SNMP, para sitios que no usan la nube de UniFi.')],
+  meraki: [['Nube de Meraki', 'Con una clave de solo lectura del Dashboard. No se instala nada en el cliente.', 'ok', 'Nube'], ['Avisos de Meraki hacia Ondi', 'Meraki le avisa a Ondi en el momento en que un equipo se cae, sin esperar la próxima lectura.', 'prep', 'Avisos']],
+  sonoff: [['Nube de eWeLink', 'Se autoriza una vez la cuenta de eWeLink donde están los equipos. No se instala nada en el cliente.', 'prep', 'Nube'], AG('Lee los equipos por la red local (modo LAN o central iHost), para cuando no pueden salir a la nube.')],
+  tplink: [['Nube de Omada', 'Con el acceso de solo lectura del controlador en la nube. No se instala nada en el cliente.', 'prep', 'Nube'], AG('Lee el controlador local y los equipos por SNMP.')],
+  mikrotik: [['Latido desde el propio equipo', 'Una tarea de tres líneas en el MikroTik llama a Ondi cada minuto. No se instala nada ni se abre ningún puerto.', 'prep', 'Latido'], AG('Lee todo el detalle (interfaces, enlaces, carga) por la API de RouterOS 7.')],
+  cisco: [['Túnel desde el firewall del cliente', 'Su firewall arma un túnel cifrado hacia Ondi, limitado a la red de gestión. No se instala nada.', 'prep', 'Túnel'], AG('Lee switches y routers por SNMP v2c o v3.')],
+  hikvision: [['Avisos del propio equipo', 'El grabador le manda a Ondi sus eventos (cámara sin video, disco con falla) con su función de servidor de alarmas. No se instala nada.', 'prep', 'Avisos'], AG('Lee por ISAPI el estado de cada canal, los discos y la grabación.')],
+  dahua: [AFUERA('el grabador'), AG('Lee por la API de Dahua y ONVIF el estado de cada canal, los discos y la grabación.')],
+  intelbras: [AFUERA('el grabador'), AG('Lee por la API de Intelbras y ONVIF el estado de cada canal, los discos y la grabación.')],
+  honeywell: [AFUERA('el equipo'), AG('Lee cámaras y grabadores por ONVIF y SNMP.')],
+  otra: [['Latido', 'Cualquier equipo o computadora de esa red llama a Ondi cada minuto; si deja de llamar, Ondi avisa. No se abre ningún puerto.', 'prep', 'Latido'], AFUERA('el equipo')]
+};
+const solHtml = k => `<ol class="sols">${(SOL[k] || []).map(([t, d, e], i) => `<li><span class="soln">${i + 1}</span><div><b>${t}</b> <span class="pill ${e === 'ok' ? 'ok' : 'warn'}">${e === 'ok' ? 'Lista' : 'En preparación'}</span><p>${d}</p></div></li>`).join('')}</ol>`;
+const solVia = k => (SOL[k] || []).map(x => x[3]).join(' o ').toLowerCase();
 const BR = Object.fromEntries(BRANDS.map(b => [b.k, b]));
 const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
 const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
@@ -505,7 +524,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=32" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=33" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -533,7 +552,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; window.__ondiMaqueta = MAQ;
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=32" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="maqueta.html?v=33" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -546,9 +565,9 @@ async function savePlano(st, url) { if (!siteEd()) return; MAQ.plano = url; setS
 window.addEventListener('beforeunload', e => { if (/Guardando/.test(S.maqSave)) { e.preventDefault(); e.returnValue = ''; } });
 
 /* equipos: nube + cargados a mano */
-const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Esperando el agente'], abierta: ['warn', 'Abierta'], cerrada: ['ok', 'Cerrada'] };
+const EST = { online: ['ok', 'En línea'], en_linea: ['ok', 'En línea'], offline: ['down', 'Caído'], caido: ['down', 'Caído'], alerting: ['warn', 'Con alertas'], atencion: ['warn', 'Atención'], dormant: ['off', 'Inactivo'], sin_dato: ['off', 'Sin conexión todavía'], abierta: ['warn', 'Abierta'], cerrada: ['ok', 'Cerrada'] };
 const VIVO = ['online', 'en_linea', 'abierta', 'cerrada'];
-const estPill = (e, m) => { const x = e === 'sin_dato' && BR[m] && BR[m].prep ? ['off', 'Sin conexión todavía'] : EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
+const estPill = e => { const x = EST[e] || ['warn', e || 'sin dato']; return `<span class="pill ${x[0]}">${esc(x[1])}</span>`; };
 const EQT = { cam: 'Cámaras', sw: 'Switches', ap: 'Wi-Fi', gw: 'Routers y gateways', sen: 'Sensores', otro: 'Otros' };
 function eqTipo(d) { if (/^sensor_/.test(d.tipo || '')) return 'sen'; if (d.tipo) return { camara: 'cam', nvr: 'cam', switch: 'sw', ap: 'ap', router: 'gw' }[d.tipo] || 'otro';
   const t = [d.linea, d.modelo, d.nombre].join(' ').toLowerCase();
@@ -630,7 +649,7 @@ function integView() { const st = S.site, M = S.man[st.id], F = S.manForm;
   const list = (M || []).map(d => `<div><span><b>${esc(d.nombre)}</b><br><span class="muted" style="font-size:13px">${esc([BR[d.marca] ? BR[d.marca].n : d.marca, TIPOS[d.tipo] || d.tipo, d.modelo, d.ip].filter(Boolean).join(' · '))}</span></span>
       <span class="acts">${estPill(d.estado, d.marca)}${editor() ? `<button class="btn sm" data-manedit="${esc(d.id)}">Cambiar</button><button class="btn sm danger ${S.armed === 'man:' + d.id ? 'arm' : ''}" data-mandel="${esc(d.id)}">${S.armed === 'man:' + d.id ? '¿Seguro?' : 'Borrar'}</button>` : ''}</span></div>`).join('');
   return `${falta11()}<div class="grid2" style="align-items:start"><div style="display:grid;gap:18px">${CLOUD.map(k => cloudBlock(st, k)).join('')}</div>
-    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell se leen con el agente Ondi instalado en la red del cliente. Cargalos acá y, cuando el agente esté andando, se ponen en vivo solos. Los <b>Sonoff</b> (sensores de puerta y el resto de la línea) no necesitan agente: se leen desde la nube de eWeLink.</p>
+    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">Sonoff, TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell todavía no se leen solos. Cada marca va a tener dos caminos, y siempre uno sin instalar nada en el cliente (están en Ajustes → Integraciones). Mientras tanto cargalos acá: quedan en la lista y en la maqueta, y se ponen en vivo cuando el camino de su marca esté listo.</p>
       ${M === undefined ? '<p class="muted">Cargando…</p>' : list ? `<div class="ppl">${list}</div>` : '<p class="muted">Todavía no cargaste equipos.</p>'}
       ${editor() && !F ? `<p style="margin-top:12px"><button class="btn pri" data-do="manadd">${IC.plus}Agregar equipo</button></p>` : ''}${form}</div></div>`; }
 
@@ -717,17 +736,19 @@ function repartoBlock(h) { const R = S.rep[h], ed = admin();
   return head + sum + grupos + (ed ? `<div class="acts" style="margin-top:12px"><button class="btn" data-repsug="${esc(h)}">Volver a la propuesta</button><button class="btn pri" data-repsave="${esc(h)}">${R.saving ? 'Guardando…' : 'Guardar el reparto'}</button></div>` : '') + '</div>'; }
 function repInit(r) { const sel = {}, hay = r.equipos.some(d => d.asignado), cli = s => (r.sitios.find(x => x.siteId === s) || {}).cliente || '';
   r.equipos.forEach(d => { sel[d.mac] = hay ? d.asignado || '' : cli(d.sugerido); }); r.sel = sel; return r; }
-function marcasView() { return `<p class="muted" style="margin:0">Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
+function marcasView() { return `<p class="muted" style="margin:0"><b>Cada marca tiene dos caminos para monitorearla</b>, y siempre uno que no necesita instalar nada en el cliente: si no nos dejan poner un equipo en su red, se usa el otro. Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
   <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k];
-    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${b.via}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : b.prep ? '<span class="pill warn">En preparación</span>' : '<span class="pill off">Con agente</span>'}</header>
-      <p>${b.what} ${b.how}</p>
+    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${solVia(b.k)}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : '<span class="pill warn">En preparación</span>'}</header>
+      <p>${b.what}</p>${solHtml(b.k)}
       ${b.ready ? `${k ? `<p>Clave cargada · termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}</p>` : ''}
         ${admin() ? `<form class="inline" data-do-f="keyorg" data-k="${b.k}"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave de API'}<input id="ko-${b.k}" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
           <div class="acts">${k ? `<button class="btn" data-probar="${b.k}">${T === 'cargando' ? 'Probando…' : 'Probar la conexión'}</button><button class="btn danger ${S.armed === 'del:' + b.k ? 'arm' : ''}" data-delkey="${b.k}">${S.armed === 'del:' + b.k ? '¿Seguro? Tocá de nuevo' : 'Borrar la clave'}</button>` : ''}</div>
           ${k ? sitiosOrgBlock(b.k) : ''}
           ${T && T !== 'cargando' ? (T.error ? `<div class="err">${esc(T.error)}</div>` : `<div class="okmsg">Conectado: ${T.consolas} ${b.k === 'meraki' ? 'organizaci' + (T.consolas === 1 ? 'ón' : 'ones') : 'consola' + (T.consolas === 1 ? '' : 's')} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}
           <details><summary class="muted" style="cursor:pointer;font-size:13.5px">Cómo sacar la clave</summary><ol class="how">${b.steps.map(x => `<li>${x}</li>`).join('')}</ol></details>` : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}`
-      : `<p class="muted" style="font-size:13px">${b.prep ? 'Falta enlazar la cuenta de eWeLink para ver el estado en vivo (abierta o cerrada, batería, última señal). ' : ''}Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
+      : `<p class="muted" style="font-size:13px">${b.prep ? 'Con la cuenta de eWeLink enlazada se va a ver el estado en vivo (abierta o cerrada, batería, última señal). ' : ''}Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
+    <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:#5B6670">+</span><div><h3>Cualquier otra marca</h3><span class="via">${solVia('otra')}</span></div></div><span class="pill warn">En preparación</span></header>
+      <p>Para equipos que no tienen nube ni forma de leerlos: alcanza con saber si siguen prendidos y conectados.</p>${solHtml('otra')}</div>
     <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:var(--accent)">AG</span><div><h3>Agente Ondi</h3><span class="via">En la red del cliente</span></div></div><span class="pill warn">En preparación</span></header>
       <p>Un programa chico que va en una mini PC, una Raspberry o un servidor del cliente. Lee los equipos de la red local (SNMP, ONVIF, ISAPI, API de MikroTik y Dahua) y manda el estado a Ondi cada minuto, sin abrir puertos.</p></div></div>`; }
 function avisosView() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return '<div class="card empty">Cargando…</div>'; }
@@ -744,7 +765,9 @@ async function loadAjustes() { const r = await SB.from('ondi_ajustes').select('d
 function cuentaView() { const u = S.user;
   return `<div class="grid2"><div class="card pad"><h2>Mi cuenta</h2><form class="form" data-do-f="perfil"><label class="fld">Nombre<input id="pf_name" value="${esc((u.user_metadata && u.user_metadata.name) || '')}" maxlength="80"></label><label class="fld">Email<input value="${esc(u.email)}" disabled></label><div><button class="btn pri" type="submit">Guardar</button></div></form></div>
     <div class="card pad"><h2>Contraseña</h2><form class="form" data-do-f="pass"><label class="fld">Contraseña nueva<input id="pf_pass" type="password" minlength="6" autocomplete="new-password" required></label><div><button class="btn" type="submit">Cambiar la contraseña</button></div></form>
-      <div class="acts" style="margin-top:12px"><button class="btn" data-a="logout">Salir</button></div></div></div>`; }
+      <div class="acts" style="margin-top:12px"><button class="btn" data-a="logout">Salir</button></div></div>
+    <div class="card pad"><h2>Eliminar mi cuenta</h2><p class="muted">Borra tu usuario y tus accesos para siempre. Es la misma cuenta que se usa en Olumi: se elimina de las dos aplicaciones. Los datos de la empresa (clientes, maquetas, equipos) quedan para el resto del equipo.</p>
+      <div class="acts" style="margin-top:12px"><button class="btn danger ${S.armed === 'delacct' ? 'arm' : ''}" data-a="delacct">${S.armed === 'delacct' ? 'Se borra para siempre. Tocá de nuevo' : 'Eliminar mi cuenta'}</button></div></div></div>`; }
 
 /* ---------- pedidos de ayuda ---------- */
 const row = (k, v) => `<dt class="muted">${k}</dt><dd style="margin:0">${v}</dd>`;
@@ -809,7 +832,9 @@ async function saveSite(st, patch) { const cur = await SB.from('ondi_sites').sel
   const r = await SB.from('ondi_sites').update(upd).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); return st; }
 function openSite(id, tab) { const st = S.sites.find(x => x.id === id); if (!st) return; S.site = st; S.view = 'site'; S.tab = tab || 'maqueta'; S.link = {}; S.sitiosUI = {}; S.acc = null; S.manForm = null; ls.set('ondi.site.' + orgId(), id); history.replaceState(null, '', '#c'); render(); scrollTo(0, 0); }
 document.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a || !S.auth && a.dataset.a !== 'logout') return; const k = a.dataset.a;
-  if (k === 'logout') return logout(); S.info = '';
+  if (k === 'logout') return logout();
+  if (k === 'delacct') { if (!arm('delacct')) return; SB.rpc('delete_my_account').then(r => { if (r.error) toast('No se pudo eliminar la cuenta: ' + errTxt(r.error)); else logout(); }); return; }
+  S.info = '';
   if (k === 'sumar') { SB.rpc('ondi_sumar_empresa', { o: a.dataset.o }).then(r => { if (r.error) { showAuth('start', errTxt(r.error)); return; } ls.set('ondi.ctx', 'org:' + a.dataset.o); boot(); }); return; }
   showAuth(k); const f = $('#root input'); if (f) f.focus(); });
 document.addEventListener('submit', async e => { const f = e.target.closest('[data-f]'); if (!f) return; e.preventDefault(); const btn = f.querySelector('[type=submit]'); btn.disabled = true; S.msg = '';
