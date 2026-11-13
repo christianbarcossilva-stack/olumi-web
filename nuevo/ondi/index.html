@@ -78,22 +78,19 @@ p{margin:0}.lede{font-size:clamp(18px,1.6vw,21px);color:var(--ti2);max-width:46c
 
 /* tapa */
 .tapa{min-height:100vh;min-height:100svh;position:relative;padding:0}
-.tapa .ancho{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);align-items:end;gap:40px;min-height:100vh;min-height:100svh;padding-top:96px;padding-bottom:max(30vh,230px)}
+.tapa .ancho{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:40px;min-height:100vh;min-height:100svh;padding-top:96px;padding-bottom:max(30vh,230px)}
 .tapa h1{font-size:clamp(110px,17vw,250px);line-height:.74;margin-left:-.035em;letter-spacing:-.035em;text-shadow:0 10px 50px color-mix(in srgb,var(--et) 70%,transparent)}
 .tapa h1 span{display:block;font-size:clamp(34px,4.4vw,60px);line-height:1;letter-spacing:-.005em;margin:26px 0 0 .06em}
 .tapa .lede{color:var(--ti);opacity:.86}
 .tapa .acc{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
-#fibra{position:absolute;left:0;right:0;bottom:0;width:100%;height:38%;z-index:1;pointer-events:none;opacity:0;transition:opacity 1.2s var(--ease)}
+#fibra{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transition:opacity 1.4s var(--ease)}
 #fibra.listo{opacity:1}
-
-/* la placa en vivo: frente de rack con el estado del cliente */
-.placa{background:linear-gradient(#3A4148,#24292E);color:#E3E8EC;border-radius:5px;padding:20px 24px 22px 46px;position:relative;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 30px 60px -26px rgba(0,0,0,.75);width:min(400px,100%)}
-.placa::before,.placa::after{content:"";position:absolute;left:16px;width:13px;height:8px;border-radius:5px;background:#0d0f11;box-shadow:0 0 0 1px rgba(255,255,255,.14)}.placa::before{top:16px}.placa::after{bottom:16px}
-.placa .fila{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.placa .n{font:600 21px/1 var(--fd)}.placa .reloj{font:500 13px var(--fm);color:#9AA5AE}
-.placa .g{font:700 68px/.9 var(--fd);margin:16px 0 12px;font-variant-numeric:tabular-nums}.placa .g small{font:500 21px var(--fd);color:#9AA5AE;margin-left:8px}
-.placa .ev{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14);font-size:15.5px;min-height:46px}
-.placa .ev span:last-child{transition:opacity .4s}
+/* aviso que sale de la boca del rack 3D */
+.globo{position:absolute;z-index:3;left:0;top:0;display:flex;align-items:center;gap:10px;pointer-events:none;opacity:0;transform:translate(-100%,-50%);transition:opacity .45s var(--ease);font:500 15px/1.3 var(--ft);color:#fff;white-space:nowrap}
+.globo.on{opacity:1}
+.globo span:last-child{background:rgba(16,19,23,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:6px 10px;border-radius:4px}
+.globo::after{content:"";width:34px;height:1.5px;background:currentColor;opacity:.8;order:3}
+.reloj{position:absolute;z-index:3;right:max(20px,env(safe-area-inset-right));top:84px;font:500 13px var(--fm);color:var(--ti2)}
 
 /* tarjetas de los capítulos */
 .panel{background:var(--vidrio);-webkit-backdrop-filter:blur(20px) saturate(1.3);backdrop-filter:blur(20px) saturate(1.3);border-radius:6px;box-shadow:0 0 0 1px var(--li),var(--sombra);padding:24px;width:min(380px,86vw)}
@@ -228,8 +225,7 @@ footer .uno{flex:1 1 280px;max-width:380px}
 @media (max-width:900px){
   .nav{display:none}.entrar{display:none}
   .tapa .ancho{grid-template-columns:1fr;align-items:end;padding-bottom:36px}
-  .tapa .lateral{display:none}
-  #fibra{height:30%}
+  .globo{display:none}
   .tapa .ancho{padding-bottom:max(26vh,180px)}
   .ch{min-height:150vh;min-height:150svh;align-items:flex-end;padding:84px 0 56px}
   .ch .ancho{grid-template-columns:1fr;gap:22px;justify-items:center}
@@ -259,14 +255,12 @@ footer .uno{flex:1 1 280px;max-width:380px}
 
     <article class="ch tapa" data-t="0">
       <canvas id="fibra" aria-hidden="true"></canvas>
+      <div class="globo" id="globo" aria-live="polite"><span class="etq" id="evEtq" style="--c:#E5383B">AP-13</span><span id="evTxt">Sin señal, andén 3</span></div><span class="reloj" id="reloj" aria-hidden="true">--:--:--</span>
       <div class="ancho"><div class="txt">
         <h1>ondi<span>Tus clientes, en vivo.</span></h1>
         <p class="lede">Las cámaras, los switches, el Wi-Fi y los sensores de todos tus clientes, sobre la maqueta 3D de cada predio. Si algo se cae, lo sabés antes que ellos.</p>
         <div class="acc"><a class="btn" href="/ondi/app/">Probar Ondi</a><a class="btn sec" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Ondi">Pedir una demostración</a></div>
       </div>
-      <div class="lateral"><div class="placa" aria-live="polite"><div class="fila"><span class="n">Parque Logístico Norte</span><span class="reloj" id="reloj">--:--:--</span></div>
-        <div class="g"><span id="enlinea">57</span><small>de 58 en línea</small></div><div class="bocas" id="bocasT"></div>
-        <div class="ev"><span class="etq" id="evEtq" style="--c:#E5383B">AP-13</span><span id="evTxt">Sin señal hace 4 minutos, en el andén 3.</span></div></div></div>
       </div>
     </article>
 
@@ -419,17 +413,14 @@ var temaMaq = function () { return R.dataset.tema === 'noche' ? 'dark' : 'light'
 function pintaTema() { $('tema').setAttribute('aria-label', R.dataset.tema === 'noche' ? 'Cambiar a de día' : 'Cambiar a de noche'); var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = R.dataset.tema === 'noche' ? '#14171A' : '#F4F5F2'; enviar({ tema: temaMaq() }); }
 $('tema').addEventListener('click', function () { R.dataset.tema = R.dataset.tema === 'noche' ? 'dia' : 'noche'; try { localStorage.setItem('ondi.web.tema', R.dataset.tema); } catch (e) {} pintaTema(); });
 
-/* la boca del switch con sus dos luces */
-function boca(e) { return '<svg viewBox="0 0 22 19" class="' + (e === 'r' ? 'r' : '') + '"><path d="M1 4.5h6V1h8v3.5h6V18H1z" fill="#0b0c0e" stroke="#59626b"/><rect x="5" y="12.5" width="12" height="2" fill="#a98a48" opacity=".8"/><rect class="l1" x="2.5" y="14.6" width="4.6" height="2.4" rx=".8" fill="' + (e === 'r' ? '#E5383B' : e === 'a' ? '#F7C600' : e ? '#18D36A' : '#2b3035') + '"/><rect x="14.9" y="14.6" width="4.6" height="2.4" rx=".8" fill="' + (e && e !== 'r' ? '#F7C600' : '#2b3035') + '"/></svg>'; }
 
-/* la placa en vivo: reloj, una boca que cae y vuelve, el contador */
-var EVS = [['AP-13', '#E5383B', 'Sin señal hace 4 minutos, en el andén 3.', 12, 'r'], ['AP-13', '#18A957', 'Volvió. Martín cambió el cable C-045.', -1, ''], ['C-22', '#F7C600', 'Perdió dos cuadros por segundo, cámara del portón.', 30, 'a'], ['C-22', '#18A957', 'Otra vez estable.', -1, ''], ['SP-04', '#E5383B', 'Puerta del depósito abierta fuera de horario.', 44, 'r'], ['SP-04', '#18A957', 'Puerta cerrada.', -1, '']];
-var ei = 0, mal = { 12: 'r' };
-function placa() { var b = ''; for (var i = 0; i < 58; i++) b += boca(mal[i] || 'v'); $('bocasT').innerHTML = b; var n = 0; for (var k in mal) if (mal[k] === 'r') n++; $('enlinea').textContent = 58 - n; }
-function siguienteEv() { ei = (ei + 1) % EVS.length; var e = EVS[ei], t = $('evTxt'); t.style.opacity = 0;
-  setTimeout(function () { $('evEtq').textContent = e[0]; $('evEtq').style.setProperty('--c', e[1]); t.textContent = e[2]; t.style.opacity = 1; mal = {}; if (e[3] >= 0) mal[e[3]] = e[4]; placa(); }, 400); }
-placa(); if (!reducir) setInterval(siguienteEv, 5200);
-function reloj() { var s = new Date().toLocaleTimeString('es-UY', { hour12: false }); $('reloj').textContent = s; if ($('osdt')) $('osdt').textContent = s; }
+/* lo que pasa en el rack de la tapa: una boca que cae y vuelve; el rack 3D la pinta y el aviso sale de esa boca */
+var EVS = [['AP-13', '#E5383B', 'Sin señal, andén 3', 4, 'r'], ['AP-13', '#18A957', 'Volvió: cambiaron el cable C-045', 4, ''], ['C-22', '#F7C600', 'Pierde cuadros, cámara del portón', 13, 'a'], ['C-22', '#18A957', 'Otra vez estable', 13, ''], ['SP-04', '#E5383B', 'Puerta del depósito abierta', 19, 'r'], ['SP-04', '#18A957', 'Puerta cerrada', 19, '']];
+var EV = { i: 0, boca: 4, est: 'r' };
+function siguienteEv() { EV.i = (EV.i + 1) % EVS.length; var e = EVS[EV.i], g = $('globo'); g.classList.remove('on');
+  setTimeout(function () { $('evEtq').textContent = e[0]; $('evEtq').style.setProperty('--c', e[1]); $('evTxt').textContent = e[2]; EV.boca = e[3]; EV.est = e[4]; g.classList.add('on'); }, 450); }
+if (!reducir) setInterval(siguienteEv, 5200);
+function reloj() { var s = new Date().toLocaleTimeString('es-UY', { hour12: false }); if ($('reloj')) $('reloj').textContent = s; if ($('osdt')) $('osdt').textContent = s; }
 reloj(); setInterval(reloj, 1000);
 
 /* la cinta del cierre */
@@ -490,34 +481,108 @@ if (window.OndiRed) { var mk = function (cap, items) { return { cap: cap, items:
   $('editar').addEventListener('click', function () { editar = !editar; this.textContent = editar ? 'Volver a solo mirar' : 'Probar a editarlo'; OndiRed.pintar(el, H, V); }); }
 else $('conexiones').hidden = true;
 
-/* la fibra en 3D: doce hilos que salen juntos y se abren, con luz que corre por cada uno */
+/* la tapa en 3D: un rack de costado flotando sobre la maqueta; de su patchera salen los doce hilos y bajan hasta el predio, con datos que suben por la fibra */
 var cv = $('fibra');
 import('/olumi/beta/lib/three.module.min.js').then(function (THREE) {
   var ren; try { ren = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'low-power' }); } catch (e) { return; }
-  ren.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); var esc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 2, 1, 200); cam.position.set(0, 1.5, 34); cam.lookAt(0, -1, 0);
-  var grupo = new THREE.Group(); esc.add(grupo); var U = { t: { value: 0 } };
-  var vs = 'uniform float t; attribute float hilo; varying vec3 vN; varying vec3 vP; varying float vX; varying float vH;' +
-    'vec3 eje(float x, float h){ float a = clamp((x + 30.0) / 60.0, 0.0, 1.0); float abre = a * a * (3.0 - 2.0 * a); float k = h - 5.5;' +
-    ' float y = k * mix(0.34, 1.05, abre) + sin(x * 0.16 + t * 0.6 + h * 0.4) * 0.55 * abre - abre * 1.2;' +
-    ' float z = cos(x * 0.11 - t * 0.45 + h * 0.7) * 2.6 * abre + k * 0.18 * abre; return vec3(x, y, z); }' +
-    'void main(){ float x = position.x; vec3 c = eje(x, hilo); vec3 c2 = eje(x + 0.2, hilo); vec3 tg = normalize(c2 - c); vec3 b = normalize(cross(tg, vec3(0.0, 0.0, 1.0))); vec3 n2 = normalize(cross(b, tg));' +
-    ' vec3 o = b * position.y + n2 * position.z; vec3 p = c + o; vN = normalize(normalMatrix * normalize(o)); vX = x; vH = hilo; vec4 mv = modelViewMatrix * vec4(p, 1.0); vP = mv.xyz; gl_Position = projectionMatrix * mv; }';
-  var fs = 'uniform float t; uniform vec3 col; varying vec3 vN; varying vec3 vP; varying float vX; varying float vH;' +
-    'void main(){ vec3 n = normalize(vN); vec3 l = normalize(vec3(0.3, 0.8, 0.6)); vec3 v = normalize(-vP); float d = max(dot(n, l), 0.0); float s = pow(max(dot(reflect(-l, n), v), 0.0), 28.0);' +
-    ' float p = fract(t * 0.09 + vH * 0.137); float pos = -30.0 + p * 66.0; float luz = exp(-pow((vX - pos) / 2.2, 2.0)) * 1.4;' +
-    ' vec3 c = col * (0.38 + 0.72 * d) + vec3(s * 0.55) + col * luz + vec3(luz * 0.35);' +
-    ' float fade = smoothstep(-31.0, -24.0, vX); gl_FragColor = vec4(c, fade); }';
-  HILOS.forEach(function (hx, i) { var geo = new THREE.CylinderGeometry(0.19, 0.19, 64, 12, 260, true); geo.rotateZ(Math.PI / 2); geo.translate(2, 0, 0);
-    var n = geo.attributes.position.count, h = new Float32Array(n).fill(i); geo.setAttribute('hilo', new THREE.BufferAttribute(h, 1));
-    var col = new THREE.Color(hx === '#16181A' ? '#2A2E33' : hx); var mat = new THREE.ShaderMaterial({ uniforms: { t: U.t, col: { value: col } }, vertexShader: vs, fragmentShader: fs, transparent: true });
-    var m = new THREE.Mesh(geo, mat); m.frustumCulled = false; grupo.add(m); });
-  var mx = 0, my = 0, tx = 0, ty = 0, visible = true, t0 = performance.now();
-  addEventListener('pointermove', function (e) { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
-  function medir() { var w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return; ren.setSize(w, h, false); cam.aspect = w / h; cam.position.z = w / h < 1.2 ? 52 : 34; cam.updateProjectionMatrix(); }
+  ren.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  var esc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 2, 1, 300);
+  esc.add(new THREE.HemisphereLight(0xdfe8f0, 0x1a1e22, 1.25));
+  var sol = new THREE.DirectionalLight(0xffffff, 1.6); sol.position.set(-6, 10, 9); esc.add(sol);
+  var con = new THREE.DirectionalLight(0x8fb4ff, .55); con.position.set(8, 2, -6); esc.add(con);
+  var M = function (c, o) { return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: .55, metalness: .35 }, o || {})); };
+  var caja = function (w, h, d, mat, x, y, z, padre) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); (padre || rack).add(m); return m; };
+
+  /* el rack: 9U, abierto de costado, con lo que tiene uno de verdad */
+  var rack = new THREE.Group(), U = .36, W = 2.6, D = 1.7, H = 9 * U, FZ = D / 2;
+  var fierro = M(0x2b3036, { metalness: .6, roughness: .45 }), negro = M(0x15181b, { roughness: .6 }), grafito = M(0x2d3339, { roughness: .5 }), plata = M(0xd4d9dd, { metalness: .55, roughness: .35 });
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { caja(.12, H + .34, .12, fierro, q[0] * (W / 2 + .1), H / 2, q[1] * (D / 2)); });
+  caja(W + .44, .12, D + .14, fierro, 0, -.08, 0); caja(W + .44, .12, D + .14, fierro, 0, H + .2, 0);
+  for (var k = 0; k < 2; k++) { caja(.1, H, .05, M(0x3a4148), (k ? 1 : -1) * (W / 2 + .03), H / 2, FZ - .03); }
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { caja(.16, .14, .16, negro, q[0] * (W / 2 + .1), -.24, q[1] * (D / 2)); });
+  var yU = function (u, n) { return H - (u - 1) * U - (n || 1) * U / 2; };
+  var frente = function (u, n, mat, prof) { prof = prof || 1.1; return caja(W, (n || 1) * U - .035, prof, mat, 0, yU(u, n), FZ - prof / 2); };
+  var bocas = [], leds = [];
+  // U1: patchera de fibra con adaptadores azules; los dos primeros con su conector amarillo (de ahí salen los hilos)
+  frente(1, 1, negro, .32);
+  for (k = 0; k < 12; k++) { var ax = -1.05 + k * .19; caja(.13, .16, .04, M(0x2F6FD6, { roughness: .4 }), ax, yU(1), FZ + .02); if (k < 2) caja(.08, .1, .14, M(0xE6BE1E, { roughness: .4 }), ax, yU(1), FZ + .1); }
+  // U2: switch de 24 bocas (dos filas), con luces de enlace y 4 SFP
+  frente(2, 1, plata, 1.25);
+  var gHueco = new THREE.BoxGeometry(.075, .062, .03), mHueco = M(0x0b0c0e, { roughness: .9, metalness: 0 });
+  var gLed = new THREE.BoxGeometry(.028, .016, .02), mLed = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var huecos = new THREE.InstancedMesh(gHueco, mHueco, 32), luces = new THREE.InstancedMesh(gLed, mLed, 32), mt = new THREE.Matrix4(), n = 0;
+  for (var fila = 0; fila < 2; fila++) for (k = 0; k < 12; k++) { var px = -.98 + k * .1 + Math.floor(k / 6) * .05, py = yU(2) + (fila ? -.075 : .075);
+    mt.makeTranslation(px, py, FZ + .005); huecos.setMatrixAt(n, mt); mt.makeTranslation(px - .022, py + (fila ? -.052 : .052), FZ + .01); luces.setMatrixAt(n, mt); bocas.push(new THREE.Vector3(px, py, FZ + .02)); leds.push(n); n++; }
+  for (k = 0; k < 4; k++) { var sx = .55 + k * .14; mt.makeTranslation(sx, yU(2), FZ + .005); huecos.setMatrixAt(n, mt); mt.makeTranslation(sx, yU(2) + .11, FZ + .01); luces.setMatrixAt(n, mt); n++; caja(.1, .055, .06, plata, sx, yU(2), FZ + .03); }
+  rack.add(huecos, luces);
+  // U3: patchera de cobre con su tira blanca de etiquetas
+  frente(3, 1, negro, .3);
+  var hc = new THREE.InstancedMesh(gHueco, mHueco, 24);
+  for (k = 0; k < 24; k++) { mt.makeTranslation(-1.05 + k * .088 + Math.floor(k / 6) * .03, yU(3) + .04, FZ + .005); hc.setMatrixAt(k, mt); }
+  rack.add(hc); caja(2.2, .05, .01, M(0xF3F4F2, { metalness: 0, roughness: .8 }), 0, yU(3) - .08, FZ + .005);
+  // patch cords del switch a la patchera, de colores
+  var cordCol = [0x2F6FD6, 0x2F6FD6, 0x2F6FD6, 0x2F6FD6, 0x8D979F, 0x8D979F, 0x2F6FD6, 0x2F6FD6, 0xE6BE1E, 0x2F6FD6, 0x2E9E5B, 0x8D979F];
+  for (k = 0; k < 12; k++) { var a = bocas[12 + k].clone(), b = new THREE.Vector3(-1.05 + k * .088 + Math.floor(k / 6) * .03, yU(3) + .04, FZ + .02);
+    var cv3 = new THREE.CatmullRomCurve3([a, a.clone().add(new THREE.Vector3(0, -.05, .14)), b.clone().add(new THREE.Vector3(0, .05, .16)), b]);
+    rack.add(new THREE.Mesh(new THREE.TubeGeometry(cv3, 16, .017, 6), M(cordCol[k], { metalness: 0, roughness: .5 }))); }
+  // U4: organizador; U5: switch de cámaras; U6: tapa; U7–8: UPS; U9: regleta
+  frente(4, 1, negro, .2); for (k = 0; k < 5; k++) caja(.16, .14, .1, grafito, -.9 + k * .45, yU(4), FZ + .08);
+  frente(5, 1, grafito, .9);
+  for (k = 0; k < 8; k++) { var p5 = -.2 + k * .1; mt.makeTranslation(p5, yU(5), FZ + .005); var hh = new THREE.Mesh(gHueco, mHueco); hh.position.set(p5, yU(5), FZ + .005); rack.add(hh); bocas.push(new THREE.Vector3(p5, yU(5), FZ + .02)); }
+  var luces5 = new THREE.InstancedMesh(gLed, mLed, 8); for (k = 0; k < 8; k++) { mt.makeTranslation(-.222 + k * .1, yU(5) + .055, FZ + .01); luces5.setMatrixAt(k, mt); } rack.add(luces5);
+  frente(6, 1, M(0x1f2327), .05);
+  frente(7, 2, grafito, 1.3); caja(.5, .26, .02, new THREE.MeshBasicMaterial({ color: 0x7fd7e6 }), -.7, yU(7, 2) + .05, FZ + .01);
+  for (k = 0; k < 14; k++) caja(.05, .4, .02, negro, .1 + k * .09, yU(7, 2), FZ + .01);
+  frente(9, 1, negro, .3); caja(.12, .14, .03, M(0xD2474B), -1.0, yU(9), FZ + .02);
+  esc.add(rack);
+
+  /* los doce hilos: salen juntos de la patchera, caen del rack y se abren sobre el predio; la luz sube por la fibra */
+  var U2 = { t: { value: 0 }, p0: { value: new THREE.Vector3() }, p1: { value: new THREE.Vector3() }, abajo: { value: -11 }, ancho: { value: 1 }, desp: { value: 0 }, corte: { value: 1.3 } };
+  var vs = 'uniform float t; uniform vec3 p0; uniform vec3 p1; uniform float abajo; uniform float ancho; uniform float desp; attribute float hilo; varying vec3 vN; varying vec3 vP; varying float vS; varying float vH;' +
+    'vec3 bz(vec3 a, vec3 b, vec3 c, vec3 d, float s){ float u = 1.0 - s; return u*u*u*a + 3.0*u*u*s*b + 3.0*u*s*s*c + s*s*s*d; }' +
+    'vec3 eje(float s, float h){ float k = h - 5.5; vec3 a = p0 + vec3(0.0, k * 0.03, k * 0.025);' +
+    ' vec3 d = vec3((-6.5 + h * 1.55) * ancho + desp, abajo, 4.0 - h * 0.3); vec3 b = p1 + vec3(k * 0.06, 0.0, k * 0.05); vec3 c = vec3(mix(p1.x, d.x, 0.35), abajo * 0.3 + k * 0.12, 1.5 + k * 0.18);' +
+    ' vec3 q = bz(a, b, c, d, s); float w = s * (1.0 - s) * 4.0; q.y += sin(s * 9.0 - t * 0.9 + h * 0.6) * 0.32 * w; q.z += cos(s * 7.0 + t * 0.7 + h) * 0.45 * w; return q; }' +
+    'void main(){ float s = position.x; vec3 c = eje(s, hilo); vec3 c2 = eje(min(s + 0.004, 1.0), hilo); vec3 c0 = eje(max(s - 0.004, 0.0), hilo); vec3 tg = normalize(c2 - c0);' +
+    ' vec3 b = normalize(cross(tg, vec3(0.0, 0.0, 1.0))); vec3 n2 = normalize(cross(b, tg)); vec3 o = b * position.y + n2 * position.z;' +
+    ' vN = normalize(normalMatrix * normalize(o)); vS = s; vH = hilo; vec4 mv = modelViewMatrix * vec4(c + o, 1.0); vP = mv.xyz; gl_Position = projectionMatrix * mv; }';
+  var fs = 'uniform float t; uniform float corte; uniform vec3 col; varying vec3 vN; varying vec3 vP; varying float vS; varying float vH;' +
+    'void main(){ vec3 n = normalize(vN); vec3 l = normalize(vec3(-0.4, 0.8, 0.6)); vec3 v = normalize(-vP); float d = max(dot(n, l), 0.0); float sp = pow(max(dot(reflect(-l, n), v), 0.0), 30.0);' +
+    ' float pos = 1.0 - fract(t * 0.16 + vH * 0.137); float luz = exp(-pow((vS - pos) / 0.035, 2.0)) * 1.5 + exp(-pow((vS - fract(pos + 0.5)) / 0.02, 2.0)) * 0.6;' +
+    ' vec3 c = col * (0.36 + 0.74 * d) + vec3(sp * 0.5) + col * luz + vec3(luz * 0.4); gl_FragColor = vec4(c, 1.0 - smoothstep(corte - 0.25, corte, vS)); }';
+  var hilos = new THREE.Group(); esc.add(hilos);
+  HILOS.forEach(function (hx, i) { var geo = new THREE.CylinderGeometry(.075, .075, 1, 10, 360, true); geo.rotateZ(-Math.PI / 2); geo.translate(.5, 0, 0);
+    geo.setAttribute('hilo', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count).fill(i), 1));
+    var m = new THREE.Mesh(geo, new THREE.ShaderMaterial({ uniforms: { t: U2.t, p0: U2.p0, p1: U2.p1, abajo: U2.abajo, ancho: U2.ancho, desp: U2.desp, corte: U2.corte, col: { value: new THREE.Color(hx === '#16181A' ? '#2A2E33' : hx) } }, vertexShader: vs, fragmentShader: fs, transparent: true }));
+    m.frustumCulled = false; hilos.add(m); });
+
+  /* encuadre: en compu el rack a la derecha; en el celular arriba al centro, más chico */
+  var base = { x: 8.2, y: -.9, s: 1 }, angosto = false;
+  function medir() { var w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return; ren.setSize(w, h, false); cam.aspect = w / h; angosto = w / h < 1.1;
+    cam.position.set(0, 2.2, angosto ? 46 : 34); cam.lookAt(0, -.6, 0); cam.updateProjectionMatrix();
+    base = angosto ? { x: 1.2, y: 3.8, s: 1.15 } : { x: Math.min(9.6, 6.6 + (w / h - 1.4) * 3.2), y: -2.6, s: 1.5 }; U2.ancho.value = angosto ? .75 : 1; U2.desp.value = angosto ? 0 : 1.5; U2.abajo.value = angosto ? -9 : -12; U2.corte.value = angosto ? .62 : 1.3; }
   addEventListener('resize', medir); medir();
+
+  var mx = 0, my = 0, tx = 0, ty = 0, visible = true, t0 = performance.now(), col = new THREE.Color(), pa = new THREE.Vector3(), ultLed = 0, globo = $('globo');
+  addEventListener('pointermove', function (e) { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
   if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; if (visible && !reducir) requestAnimationFrame(cuadro); }).observe(cv);
-  function cuadro(now) { if (!visible) return; U.t.value = reducir ? 3 : (now - t0) / 1000; tx += (mx - tx) * .04; ty += (my - ty) * .04; grupo.rotation.y = tx * .22; grupo.rotation.x = ty * .12; ren.render(esc, cam); if (!reducir) requestAnimationFrame(cuadro); }
-  requestAnimationFrame(function (n) { cuadro(n); cv.classList.add('listo'); });
+  var VERDE = new THREE.Color(0x22E07A), AMBAR = new THREE.Color(0xF7B500), ROJO = new THREE.Color(0xFF3B3B), APAG = new THREE.Color(0x1d2226);
+  function pintarLeds(seg) { for (var i = 0; i < 32; i++) { var e = i < 24 && i === EV.boca ? EV.est : '';
+      if (e === 'r') col.copy(Math.floor(seg * 2) % 2 ? ROJO : APAG); else if (e === 'a') col.copy(Math.random() < .5 ? AMBAR : APAG); else col.copy(Math.random() < .82 ? VERDE : APAG);
+      if (i >= 24) col.copy(Math.random() < .9 ? VERDE : APAG); luces.setColorAt(i, col); }
+    luces.instanceColor.needsUpdate = true;
+    for (i = 0; i < 8; i++) { var e5 = 24 + i === EV.boca ? EV.est : ''; col.copy(e5 === 'r' ? (Math.floor(seg * 2) % 2 ? ROJO : APAG) : Math.random() < .8 ? VERDE : APAG); luces5.setColorAt(i, col); } luces5.instanceColor.needsUpdate = true; }
+  function cuadro(now) { if (!visible && !reducir) return; var seg = reducir ? 2 : (now - t0) / 1000; U2.t.value = seg;
+    tx += (mx - tx) * .05; ty += (my - ty) * .05;
+    rack.position.set(base.x + tx * .6, base.y + Math.sin(seg * .7) * .12 - ty * .3, 0); rack.scale.setScalar(base.s);
+    rack.rotation.set(.16 + ty * .06, -.72 + tx * .35 + Math.sin(seg * .25) * .05, 0); rack.updateMatrixWorld();
+    U2.p0.value.set(-W / 2 - .1, yU(1), FZ - .3).applyMatrix4(rack.matrixWorld); U2.p1.value.set(-W / 2 - 1.1, yU(1) - 1.6, FZ).applyMatrix4(rack.matrixWorld);
+    if (now - ultLed > 90 || reducir) { ultLed = now; pintarLeds(seg); }
+    // el aviso sale de la boca que tiene el problema
+    if (globo && !angosto) { pa.copy(bocas[Math.min(EV.boca, bocas.length - 1)]).applyMatrix4(rack.matrixWorld).project(cam); var r = cv.getBoundingClientRect();
+      globo.style.left = ((pa.x + 1) / 2 * r.width - 6) + 'px'; globo.style.top = ((1 - pa.y) / 2 * r.height) + 'px'; globo.style.color = EV.est === 'r' ? '#FF5A5D' : EV.est === 'a' ? '#F7C600' : '#3ADB86'; }
+    ren.render(esc, cam); if (!reducir) requestAnimationFrame(cuadro); }
+  requestAnimationFrame(function (n) { cuadro(n); cv.classList.add('listo'); if (globo) setTimeout(function () { globo.classList.add('on'); }, 1200); });
 }).catch(function () {});
 })();
 </script>
