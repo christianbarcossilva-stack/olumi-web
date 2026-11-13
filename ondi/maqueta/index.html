@@ -562,7 +562,7 @@ html:not(.blank) .blankonly{display:none!important}
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
 
-<script src="/ondi/beta/red.js?v=2"></script>
+<script src="/ondi/beta/red.js?v=3"></script>
 <script>
 (() => {
 'use strict';
@@ -1719,7 +1719,7 @@ let prev = performance.now(), acc1 = 0, ENV;
 function frame(now) {
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
   if (!RM) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); }
-  else if (!PACKETS[0].x) PACKETS.forEach(p => stepPacket(p, 0));
+  else if (PACKETS[0] && !PACKETS[0].x) PACKETS.forEach(p => stepPacket(p, 0));
   stepWalk(dt); stepTraffic(dt); stepArms(dt); syncModels(); syncE3();
   if (tween) { tween.t += dt / tween.dur; const k = ease(Math.min(1, tween.t)); for (const key of ['tx', 'tz', 'yaw', 'pitch', 'zoom']) cam[key] = lerp(tween.from[key], tween.to[key], k); if (tween.t >= 1) tween = null; }
   if (FOLLOW && SEL && !tween) { const e = entity(SEL); if (e && e.t === 'truck' && e.tr.state !== 'idle') { const f = focusTarget([e.tr.x, 3, e.tr.z], cam.zoom); cam.tx = lerp(cam.tx, f.tx, Math.min(1, dt * 2.5)); cam.tz = lerp(cam.tz, f.tz, Math.min(1, dt * 2.5)); } }
@@ -5561,6 +5561,16 @@ galSide = (o => function (N, I) { let h = o(N, I); const S = selOf(I, GALV.sel);
 galAct = (o => function (a, val) { if (a !== 'dpiso') return o(a, val); const N = naveById(GALV.id); if (!N || !canEdit()) return; const S = selOf(innerOf(N), GALV.sel); if (!S || S.t !== 'dev') return;
   setPiso(N, S.o, val); if (GALV.piso != null) GALV.piso = val; toast(S.o.id + ' pasó a ' + (pisosDe(N).find(p => p.id === val) || { n: 'otro piso' }).n); galCommit(N); })(galAct);
 $('#galview').addEventListener('click', ev => { const b = ev.target.closest('[data-gpiso]'); if (!b) return; ev.stopPropagation(); GALV.piso = b.dataset.gpiso === '*' ? null : b.dataset.gpiso; GALV.place = null; GALV.sel = null; renderGal(); }, true);
+/* modo cine (la web): la fibra del parque se ve desde lejos, amarilla como la de verdad, y por ella corren pulsos de luz hasta cada galpón */
+if (CINE.on && BLANK && FIBS.length) {
+  const CF = { col: () => isDark() ? '#F2B705' : '#C98A00', luz: () => isDark() ? '#FFF6D2' : '#FFE27A' };
+  buildFiber = (o => function () { if (!FIBS.length) return o(); fiberLayout(); const g = new Geo();
+    FSEG.forEach(sg => g.strip([sg.a, sg.b], sg.n > 1 ? 1.5 : 2.2, 0.09 + sg.fi * 0.0004, CF.col(), 0.85)); obj('fiber', { geo: g, layer: 'fib', noShadow: true }); })(buildFiber);
+  packetGeo = () => { const g = new Geo(); g.box(-6, 0, -1.25, 6, 0.55, 1.25, CF.luz(), { e: 1, ao: 1 }); g.box(-2.5, 0, -1.6, 2.5, 0.6, 1.6, '#FFFFFF', { e: 1, ao: 1 }); return g; };
+  FIBS.forEach((F, ri) => { const r = F.pts.map(p => [p[0], p[1]]), L = []; let acc = 0; for (let i = 0; i < r.length - 1; i++) { const l = Math.hypot(r[i + 1][0] - r[i][0], r[i + 1][1] - r[i][1]); L.push(l); acc += l; }
+    if (acc < 1) return; for (let k = 0; k < 3; k++) PACKETS.push({ id: 'pkc-' + ri + '-' + k, route: r, lens: L, total: acc, s: ((k / 3) + ri * 0.11) % 1 * acc, sp: 42 + (ri % 3) * 4 }); });
+  buildFiber(); PACKETS.forEach(p => obj(p.id, { geo: packetGeo(), layer: 'fib', noShadow: true })); PACKETS.forEach(p => stepPacket(p, 0)); applyLayers();
+}
 window.__dbg = { ed: { setEdit, setTool, openCab, FIBS, CABS, DEV, NAVES, flyTo, groundAt: (x, y) => groundAt(x, y) }, sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>

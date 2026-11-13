@@ -123,7 +123,7 @@ function boca(cx, cy, o) { let s = gP(o, ' fo') + `<rect x="${cx - 6}" y="${cy -
 function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH = top + c.cap * UH + 30, X0 = 46, X1 = 654, F0 = 70, F1 = 630;
   const devs = mapaDevs(H), pos = {}, ch = V.sel && V.sel[1] ? cadena(H, V.cid, V.sel[0], V.sel[1]) : [];
   const hot = new Set(ch.filter(x => x.t === 'p' && x.cid === V.cid).map(x => x.iid + ':' + x.pid));
-  let s = `<svg viewBox="0 0 ${W} ${HH}" class="red-svg${ch.length > 1 ? ' sel' : ''}" style="width:${Math.round((V.zoom || 1) * 100)}%" role="img" aria-label="Frente del rack ${esc(V.cid)}">
+  let s = `<svg viewBox="0 0 ${W} ${HH}" class="red-svg${ch.length > 1 ? ' sel' : ''}${H.editar() ? ' ed' : ''}" style="width:${Math.round((V.zoom || 1) * 100)}%" role="img" aria-label="Frente del rack ${esc(V.cid)}">
     <defs><linearGradient id="rg-plata" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF1F3"/><stop offset="1" stop-color="#CBD1D6"/></linearGradient><linearGradient id="rg-grafito" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A4148"/><stop offset="1" stop-color="#262B30"/></linearGradient><linearGradient id="rg-azul" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C4A60"/><stop offset="1" stop-color="#1D3345"/></linearGradient><linearGradient id="rg-negro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#23272B"/><stop offset="1" stop-color="#15181B"/></linearGradient></defs>
     <rect x="4" y="4" width="${W - 8}" height="${HH - 8}" rx="10" class="r-marco"/><rect x="14" y="${top - 10}" width="${W - 28}" height="${c.cap * UH + 20}" rx="3" class="r-fondo"/>
     <rect x="16" y="${top - 6}" width="28" height="${c.cap * UH + 12}" class="r-riel"/><rect x="${W - 44}" y="${top - 6}" width="28" height="${c.cap * UH + 12}" class="r-riel"/>`;
@@ -171,10 +171,11 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
       if (it.type === 'odf') s += `<rect x="${F0 + 150}" y="${y + 12}" width="${F1 - F0 - 170}" height="${h - 24}" rx="3" class="r-bahia"/><path d="M${F0 + 190} ${y + h / 2}c40-22 80 22 120 0s80-22 120 0 80 22 120 0" class="r-aro" style="stroke:#E6BE1E"/>`;
       if (it.type === 'shelf') s += `<rect x="${F0 + 150}" y="${y + h - 16}" width="${F1 - F0 - 170}" height="6" rx="2" class="r-bahia"/>`; }
     s += '</g>'; }
-  for (const l of c.links) { const a = pos[l[0].join(':')], b = pos[l[1].join(':')]; if (!a || !b) continue; const on = hot.has(l[0].join(':')) && hot.has(l[1].join(':'));
-    const my = Math.max(a[1], b[1]) + 15 + Math.min(40, Math.abs(a[0] - b[0]) * 0.1 + Math.abs(a[1] - b[1]) * 0.2), d = `M${a[0]} ${a[1]} C ${a[0]} ${my}, ${b[0]} ${my}, ${b[0]} ${b[1]}`;
-    s += `<path d="${d}" class="r-pc0${on ? ' on' : ''}"/><path d="${d}" class="r-pc${on ? ' on' : ''}" stroke="${pcCol(H, c, l)}"/>`; }
-  return s + '</svg>'; }
+  c.links.forEach((l, li) => { const a = pos[l[0].join(':')], b = pos[l[1].join(':')]; if (!a || !b) return; const on = hot.has(l[0].join(':')) && hot.has(l[1].join(':')), d = curva(a, b);
+    s += `<path d="${d}" class="r-pc0${on ? ' on' : ''}" data-li="${li}"/><path d="${d}" class="r-pc${on ? ' on' : ''}" data-li="${li}" stroke="${pcCol(H, c, l)}"/>`; });
+  V._pos = pos; return s + '</svg>'; }
+// la curva de un patch cord que cuelga entre dos puertos
+const curva = (a, b) => { const my = Math.max(a[1], b[1]) + 15 + Math.min(40, Math.abs(a[0] - b[0]) * 0.1 + Math.abs(a[1] - b[1]) * 0.2); return `M${a[0]} ${a[1]} C ${a[0]} ${my}, ${b[0]} ${my}, ${b[0]} ${b[1]}`; };
 
 /* ---------- panel de la derecha ---------- */
 const opt = (v, t, cur) => `<option value="${esc(v)}" ${String(cur || '') === String(v) ? 'selected' : ''}>${esc(t)}</option>`;
@@ -202,7 +203,7 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
     if (sube.length) h += `<div class="red-sec">Sube al rack principal por</div>` + sube.map(s => pasos(H, V, s.ch) + (s.n > 1 ? `<p class="red-ayuda">Este switch tiene ${s.n} enlaces hacia arriba (redundancia).</p>` : '')).join('');
     if (!ed) { const d = []; if (p.desc) d.push(fila('Descripción', esc(p.desc))); if (p.vlan) d.push(fila('VLAN', esc(p.vlan))); if (p.poe) d.push(fila('PoE', POE[p.poe])); if (p.vel) d.push(fila('Velocidad', esc(p.vel))); if (p.nota) d.push(fila('Nota', esc(p.nota))); if (p.certf) d.push(fila('Medido el', esc(p.certf)));
       return h + (d.length ? `<dl class="red-rows">${d.join('')}</dl>` : ''); }
-    h += `<div class="red-sec">Patch cord</div><div class="red-g">${V.linking ? '<p class="red-ayuda on">Tocá el otro puerto en el dibujo para conectar el patch cord.</p><button class="red-b" data-r="nolink">Cancelar</button>' : `<button class="red-b" data-r="link">${l ? 'Cambiar de puerto' : 'Conectar con otro puerto'}</button>`}${l && !V.linking ? '<button class="red-b" data-r="unlink">Quitar</button>' : ''}</div>`;
+    h += `<div class="red-sec">Patch cord</div><div class="red-g">${V.linking ? '<p class="red-ayuda on">Tocá el otro puerto en el dibujo para conectar el patch cord.</p><button class="red-b" data-r="nolink">Cancelar</button>' : `<p class="red-ayuda">También podés agarrar la punta del cable en el dibujo y soltarla en otro puerto.</p><button class="red-b" data-r="link">${l ? 'Cambiar de puerto' : 'Conectar con otro puerto'}</button>`}${l && !V.linking ? '<button class="red-b" data-r="unlink">Quitar</button>' : ''}</div>`;
     if (l) h += `<div class="red-g2">${campo('Color', colSel('l', l[2] && l[2].col))}${campo('Largo (m)', inp('l', 'm', dec(l[2] && l[2].m), 'inputmode="decimal" maxlength="6" placeholder="Ej.: 0,5"'))}</div>`;
     if (fo) { const F = p.fib && fibDe(H, p.fib[0]);
       h += `<div class="red-sec">Fibra que llega a esta boca</div><div class="red-g2">${campo('Fibra', sel('fo', 'fib', p.fib && p.fib[0], H.fibs.map(f => [f.id, f.id + ' · ' + f.hilos + ' hilos' + (f.nombre ? ' · ' + f.nombre : '')]), 'Ninguna'))}
@@ -283,7 +284,7 @@ function buscar(H, V) { const q = (V.q || '').trim().toLowerCase(); if (q.length
 /* ---------- pantalla ---------- */
 const IC = { x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>', imp: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>', csv: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg>' };
 function pintar(el, H, V) { css(); const c = H.cabs[V.cid]; if (!c) return; V.tab = V.tab || 'frente'; if (V.zoom == null) V.zoom = (el.clientWidth || innerWidth) < 700 ? 2 : 1; el.__red = { H, V }; el.classList.add('red-on');
-  if (!el.__redOn) { el.__redOn = 1; for (const t of ['click', 'change', 'input']) el.addEventListener(t, e => evento(el, e), true); el.addEventListener('pointerdown', e => arrastrar(el, e)); }
+  if (!el.__redOn) { el.__redOn = 1; for (const t of ['click', 'change', 'input']) el.addEventListener(t, e => evento(el, e), true); el.addEventListener('pointerdown', e => { if (!arrastrarCable(el, e)) arrastrar(el, e); }); }
   const T = H.titulo(V.cid), racks = H.racks ? H.racks() : Object.keys(H.cabs).map(k => [k, k]), nC = filas(H, V.todos ? Object.keys(H.cabs) : [V.cid]).length, nF = fibsDe(H, V).length, sc = el.querySelector('.red-fr'), keep = sc ? [sc.scrollLeft, sc.scrollTop] : null, sl = el.querySelector('.red-lado'), keepL = sl ? sl.scrollTop : 0;
   el.innerHTML = `<div class="red"><div class="red-top"><div class="red-tt"><div class="red-eb">Documentación de conexiones</div><h3>${esc(T.t)}</h3><div class="red-sub">${esc(T.s)}</div></div>
       <div class="red-tools">${racks.length > 1 ? `<select data-r="rack" aria-label="Cambiar de rack">${racks.map(([k, t]) => opt(k, t, V.cid)).join('')}</select>` : ''}
@@ -335,6 +336,27 @@ function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.se
     else { pon(it, k, v); if (k === 'ext' && v && H.reales) { const x = H.reales().find(r => r.uid === v); if (x) { if (!it.name) it.name = x.nombre; if (!it.mac && x.mac) it.mac = x.mac; if (!it.modelo && x.modelo) it.modelo = x.modelo; if (!it.ip && x.ip) it.ip = x.ip; } } } }
   if (o === 'F') { const F = fibDe(H, id); if (F) pon(F, k, v); } }
 
+// agarrar la punta de un patch cord y soltarla en otro puerto (o tirar un cable nuevo desde un puerto libre); con mouse o con el dedo
+function arrastrarCable(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar() || V.tab !== 'frente' || e.button > 0) return false;
+  const p = e.target.closest('[data-rp]'), svg = el.querySelector('.red-svg'); if (!p || !svg || !V._pos) return false;
+  const c = H.cabs[V.cid], [iid, pid] = p.dataset.rp.split(':'), l = lk(c, iid, pid), li = l ? c.links.indexOf(l) : -1;
+  const fijo = l ? (l[0][0] === iid && l[0][1] === pid ? l[1] : l[0]) : [iid, pid], A = V._pos[fijo.join(':')]; if (!A) return false;
+  const NS = 'http://www.w3.org/2000/svg', pt = svg.createSVGPoint(), x0 = e.clientX, y0 = e.clientY, col = l ? pcCol(H, c, l) : '#0B5FFF'; let t0 = null, t1 = null, dest = null, movio = false;
+  const enSvg = ev => { pt.x = ev.clientX; pt.y = ev.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+  const mv = ev => { if (!movio && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return; ev.preventDefault();
+    if (!movio) { movio = true; svg.classList.add('arr'); if (li >= 0) svg.querySelectorAll(`[data-li="${li}"]`).forEach(x => x.style.display = 'none');
+      t0 = document.createElementNS(NS, 'path'); t0.setAttribute('class', 'r-pc0'); t1 = document.createElementNS(NS, 'path'); t1.setAttribute('class', 'r-pc r-tira'); t1.setAttribute('stroke', col); svg.append(t0, t1); }
+    const fr = el.querySelector('.red-fr'); if (fr) { const r = fr.getBoundingClientRect(), m = 36; if (ev.clientX > r.right - m) fr.scrollLeft += 14; else if (ev.clientX < r.left + m) fr.scrollLeft -= 14; if (ev.clientY > r.bottom - m) fr.scrollTop += 14; else if (ev.clientY < r.top + m) fr.scrollTop -= 14; }
+    const bajo = document.elementFromPoint(ev.clientX, ev.clientY), t = bajo && bajo.closest ? bajo.closest('[data-rp]') : null;
+    if (dest && dest !== t) dest.classList.remove('r-dest'); dest = t && svg.contains(t) && t.dataset.rp !== fijo.join(':') ? t : null; if (dest) dest.classList.add('r-dest');
+    const q = enSvg(ev), B = dest ? V._pos[dest.dataset.rp] : [q.x, q.y], d = curva(A, B); t0.setAttribute('d', d); t1.setAttribute('d', d); };
+  const fin = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', fin); removeEventListener('pointercancel', fin); if (!movio) return;
+    V._arr = true; setTimeout(() => { V._arr = false; }, 60);
+    if (dest) { const [i2, p2] = dest.dataset.rp.split(':'), viejo = lk(c, i2, p2); c.links = c.links.filter(x => x !== l && x !== viejo); const nuevo = [fijo.slice(), [i2, p2]]; if (l && l[2]) nuevo.push(l[2]); c.links.push(nuevo);
+      V.sel = [i2, p2]; V.linking = false; H.guardar(); H.aviso(l ? 'Patch cord movido al puerto ' + p2.replace(/^p/, '') : 'Patch cord conectado'); }
+    pintar(el, H, V); };
+  addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', fin); addEventListener('pointercancel', fin); return true; }
+
 // arrastrar un equipo arriba o abajo en el rack
 function arrastrar(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar() || V.tab !== 'frente' || e.target.closest('[data-rp]')) return; const g = e.target.closest('[data-it]'), svg = el.querySelector('.red-svg'); if (!g || !svg) return;
   const c = H.cabs[V.cid], it = itemDe(c, g.dataset.it); if (!it) return; const y0 = e.clientY, esc0 = (30 + c.cap * 56 + 30) / svg.getBoundingClientRect().height; let du = 0;
@@ -379,7 +401,7 @@ function css() { if (document.getElementById('red-css')) return; const s = docum
 .r-p.crit .r-led{animation:red-par 1s steps(2) infinite}@keyframes red-par{50%{opacity:.2}}
 .r-ada{stroke:rgba(0,0,0,.5);stroke-width:.6}.r-etq{fill:#f3f4f2;stroke:#b9bfc4;stroke-width:.4}.r-et{font:600 4.3px var(--f-mono,ui-monospace,monospace);fill:#20262b;text-anchor:middle}
 .r-bahia{fill:rgba(0,0,0,.32);stroke:rgba(255,255,255,.1);stroke-width:.6}.r-lcd{fill:#06181d;stroke:#274a55;stroke-width:.7}.r-rej{fill:rgba(0,0,0,.45)}.r-toma{fill:#1d2125;stroke:#555e66;stroke-width:1}.r-aro{fill:none;stroke:#3a4148;stroke-width:3;stroke-linecap:round}
-.r-pc0{fill:none;stroke:rgba(0,0,0,.42);stroke-width:3.4;pointer-events:none}.r-pc{fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none;opacity:.74}
+.red-svg.ed [data-rp]{cursor:grab;touch-action:none}.red-svg.arr,.red-svg.arr *{cursor:grabbing!important}.r-tira{opacity:1!important;stroke-width:3!important}.red-svg [data-rp].r-dest{filter:drop-shadow(0 0 4px #0B5FFF) drop-shadow(0 0 2px #fff)}.r-pc0{fill:none;stroke:rgba(0,0,0,.42);stroke-width:3.4;pointer-events:none}.r-pc{fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none;opacity:.74}
 .r-pc0.on{stroke:#fff;stroke-width:5.6}.r-pc.on{stroke-width:3.2;opacity:1}.red-svg.sel .r-pc:not(.on){opacity:.3}.red-svg.sel .r-pc0:not(.on){opacity:.25}
 .red-h small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5D6973)}.red-h b{font-size:18px}
 .red-sec{margin:16px 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5D6973);font-weight:700}
