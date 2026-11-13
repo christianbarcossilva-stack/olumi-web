@@ -16,6 +16,7 @@ const IC = {
   vista: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>', full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
   cerrar: '<path d="M6 6l12 12M18 6 6 18"/>', buscar: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', equipos: '<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>',
   borrar: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/>', duplicar: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>', enfocar: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4"/>',
+  plano: '<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
   girar: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/>', mas: '<path d="M12 5v14M5 12h14"/>'
 };
 const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
@@ -35,7 +36,7 @@ export async function abrirMaqueta(o) {
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover, rueda para acercar, clic derecho para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
   <header class="mbar vidrio"><div class="mmarca"><i class="mapp mapp-${app}"></i><div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="Buscar fila, galpón, equipo o IP" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
-    <div class="mbtns"><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
+    <div class="mbtns"><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
   <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}</div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">
@@ -135,6 +136,7 @@ export async function abrirMaqueta(o) {
   $('#bcapas').onclick = () => { $('#mcapas').hidden = !$('#mcapas').hidden; };
   $('#mcapas').addEventListener('change', e => { const k = e.target.dataset.capa; capas[k] = e.target.checked; for (const g of objs.values()) aplicarCapas(g); motor.dirty = true; });
   $('#bvista').onclick = () => motor.vista();
+  let antes = null; $('#bplano').onclick = () => { const b = $('#bplano'), on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); if (on) { antes = { pitch: motor.C.pitch, yaw: motor.C.yaw }; motor.ir({ pitch: 1.45, yaw: Math.round(motor.C.yaw / (Math.PI / 2)) * Math.PI / 2 }, 0.6); } else motor.ir(antes || { pitch: 0.7 }, 0.6); };
   $('#bfull').onclick = () => pantalla(!(document.fullscreenElement || document.documentElement.classList.contains('mfull')));
   function pantalla(on) { if (host && host.juego) { host.juego(on); document.documentElement.classList.toggle('mfull', on); return; } const d = document.documentElement;
     if (on && d.requestFullscreen) d.requestFullscreen().catch(() => d.classList.add('mfull')); else if (!on && document.fullscreenElement) document.exitFullscreen(); else d.classList.toggle('mfull', on); }
@@ -219,7 +221,10 @@ export async function abrirMaqueta(o) {
   motor.soltar = (e, gesto) => { canvas.classList.remove('lleva'); const D = ED.drag; ED.drag = null; if (gesto || !D) return; if (D.p && !D.p.pts) { const g = objs.get(D.p.id); if (g) g.position.y = 0; } if (D.movido || D.v != null) cambio(); else if (D.p) info(); motor.dirty = true; };
   motor.pasar = e => { const p = motor.enPiso(e.clientX, e.clientY);
     if (ED.colocar && p) { const C = ED.colocar; if (!C.p) { C.p = { ...JSON.parse(JSON.stringify(C.tpl)), id: nuevoId(C.tpl.t), x: 0, z: 0, r: C.tpl.r || 0 }; E.piezas.push(C.p); rehacer(C.p); }
-      C.p.x = pegar(p.x, e.altKey); C.p.z = pegar(p.z, e.altKey); const g = objs.get(C.p.id); if (g) { g.position.set(C.p.x, 0.25, C.p.z); g.rotation.y = C.p.r || 0; } motor.dirty = true; return; }
+      C.p.x = pegar(p.x, e.altKey); C.p.z = pegar(p.z, e.altKey);
+      // un equipo cerca de una columna de luz se engancha a la columna (como se instalan las cámaras y los Wi-Fi del patio)
+      if (TIPOS[C.p.t].equipo && !e.altKey) { const col = E.piezas.find(q => q.t === 'columna' && Math.hypot((q.x || 0) - p.x, (q.z || 0) - p.z) < 3); if (col) { C.p.x = col.x; C.p.z = (col.z || 0) + 0.5; if (C.tpl.y == null) { const h = (col.alto || 25); C.p.y = Math.max(3, h - (C.p.t === 'camara' ? 4 : 6)); } if (!C.p._col) { C.p._col = 1; rehacer(C.p); } } else if (C.p._col) { delete C.p._col; if (C.tpl.y == null) delete C.p.y; rehacer(C.p); } }
+      const g = objs.get(C.p.id); if (g) { g.position.set(C.p.x, 0.25, C.p.z); g.rotation.y = C.p.r || 0; } motor.dirty = true; return; }
     if (ED.linea && p && ED.linea.p) { const L = ED.linea; L.p.pts = [...L.pts, [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]]; if (L.p.pts.length >= 2) rehacer(L.p); return; }
     if (!ED.on && e.pointerType === 'mouse') { const h = hallar(e), g = h && objs.get(h.p.id); cajaH.visible = !!g && g !== objs.get(SEL && SEL.id) && TIPOS[h.p.t].forma === 'punto'; if (cajaH.visible) { cajaH.box.setFromObject(g); cajaH.box.expandByScalar(0.2); } canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
     else if (ED.on && e.pointerType === 'mouse') { const h = hallar(e); canvas.classList.toggle('sobre', !!h); } };
@@ -227,7 +232,7 @@ export async function abrirMaqueta(o) {
   motor.alTocar = e => { if (ED.on) return; const h = hallar(e); elegir(h ? h.p : null); };
   canvas.addEventListener('pointerup', e => { if (!ED.on || e.button !== 0) return; const p = motor.enPiso(e.clientX, e.clientY); if (!p) return;
     if (ED.colocar && !ED.colocar.p) motor.pasar(e);
-    if (ED.colocar && ED.colocar.p) { const C = ED.colocar, nuevo = C.p; objs.get(nuevo.id).position.y = 0; C.p = null; elegir(nuevo); cambio(); if (!e.shiftKey) { ED.colocar = null; herramienta(ED.h); toast(`${TIPOS[nuevo.t].n} ubicado`); } else motor.pasar(e); return; }
+    if (ED.colocar && ED.colocar.p) { const C = ED.colocar, nuevo = C.p; delete nuevo._col; objs.get(nuevo.id).position.y = 0; C.p = null; elegir(nuevo); cambio(); if (!e.shiftKey) { ED.colocar = null; herramienta(ED.h); toast(`${TIPOS[nuevo.t].n} ubicado`); } else motor.pasar(e); return; }
     if (ED.linea) { const L = ED.linea, ahora = performance.now(), dbl = ahora - ultimoToque < 320; ultimoToque = ahora; const q = [pegar(p.x, e.altKey), pegar(p.z, e.altKey)];
       if (dbl) { terminarLinea(); return; } L.pts.push(q); if (!L.p) { L.p = { ...JSON.parse(JSON.stringify(L.tpl)), id: nuevoId(L.tpl.t), pts: [...L.pts] }; E.piezas.push(L.p); } L.p.pts = [...L.pts]; if (L.pts.length >= 2) rehacer(L.p); } });
   function terminarLinea() { const L = ED.linea; if (!L) return; const min = TIPOS[L.tpl.t].forma === 'area' ? 3 : 2; if (L.p && L.pts.length >= min) { L.p.pts = [...L.pts]; rehacer(L.p); const p = L.p; L.p = null; ED.linea = null; elegir(p); cambio(); herramienta(ED.h); toast(`${TIPOS[p.t].n} listo`); } else { cancelar(); toast('Faltan puntos'); } }
