@@ -400,6 +400,17 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .ico{gap:10px}.ico .estc{width:44px;height:44px;padding:0;justify-content:center;border-radius:50%}.ico .estc .ic{width:22px;height:22px}.md-est-n{color:var(--fg);font-weight:650}
 @media (max-width:420px){.md-est-c.ico{gap:6px}.md-est-c.ico .estc{width:42px;height:42px}}
 /* fin 1.51v */
+/* 1.51w */
+.ev2t{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--accent,#6d5efc) 9%,transparent);border:1px solid color-mix(in srgb,var(--accent,#6d5efc) 22%,transparent)}
+.ev2t.ok{background:color-mix(in srgb,#2fa36b 10%,transparent);border-color:color-mix(in srgb,#2fa36b 28%,transparent)}
+.ev2t-i{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--surface,#fff)}
+.ev2t-i .ic{width:20px;height:20px}
+.ev2t b{display:block;font-size:15px}.ev2t div>span{display:block;font-size:13px;color:var(--muted)}
+.ev2t .btn .ic{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.ev2t-h{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent,#6d5efc) 8%,transparent);font-size:14px}
+.ev2t-h .ic{flex:none;width:18px;height:18px;margin-top:2px}
+@media (max-width:520px){.ev2t{grid-template-columns:auto minmax(0,1fr)}.ev2t .btn{grid-column:1/-1;justify-self:stretch}}
+/* fin 1.51w */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -2087,7 +2098,7 @@ Respondé solo con un objeto JSON con estas claves:
 
 /* ---------- trabajos, calendario y Mi día ---------- */
 const TRF=()=>[{k:'titulo',l:'Trabajo',w:'full',ph:'Ej.: Instalar 4 cámaras y DVR'},{k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},{k:'estado',l:'Estado',t:'select',o:TRE},
-  {k:'fecha',l:'Fecha',t:'date'},{k:'hora',l:'Hora',t:'time'},{k:'duracion',l:'Duración (horas)',t:'number',step:'0.5'},
+  {k:'fecha',l:'Fecha',t:'date'},{k:'hora',l:'Hora',t:'time'},{k:'duracion',l:'Duración (horas)',t:'number',step:'0.5'},{k:'cuantos',l:'Cuántos van',t:'number',step:'1',ph:'Los tildados'},
   {k:'obra',l:'Lugar de la obra',w:'full',ph:'Dirección o referencia'},{k:'proyectoId',l:'Proyecto',t:'select',o:pryOpts(TJ&&TJ.clienteId)},{k:'notas',l:'Instrucciones para el técnico',t:'textarea',w:'full'}];
 function techsHtml(sel=[]){
   const ids=new Set(Object.keys(NAMES));if(ME)ids.add(ME);sel.forEach(i=>ids.add(i));
@@ -2124,7 +2135,7 @@ function upBtns(kind){
 let TJ=null;
 function sheetTrab(id,p){
   const tk=p.tk?D.tickets[p.tk]:null;
-  const j=id?{...D.trabajos[id]}:{estado:'programado',fecha:p.date||today(),hora:p.hora||'09:00',duracion:2,tecnicos:ME?[ME]:[],ticketId:p.tk||'',proyectoId:p.pry||tk?.proyectoId||'',clienteId:tk?.clienteId||p.cli||'',titulo:tk?.titulo||'',obra:tk?.obra||'',notas:tk?.descripcion||''};
+  const j=id?{...D.trabajos[id]}:{estado:'programado',fecha:p.date||today(),hora:p.hora||'09:00',duracion:p.dur||2,tecnicos:p.tecs||(ME?[ME]:[]),ticketId:p.tk||'',proyectoId:p.pry||tk?.proyectoId||'',clienteId:tk?.clienteId||p.cli||'',titulo:tk?.titulo||p.titulo||'',obra:tk?.obra||p.obra||'',notas:tk?.descripcion||p.notas||''};
   TJ=j;
   const c=D.clientes[j.clienteId],t=j.ticketId&&D.tickets[j.ticketId];
   const loc=[j.obra||c?.direccion,c?.departamento].filter(Boolean).join(', ');
@@ -3191,7 +3202,7 @@ function calDatos(days){
   }
   const d0=days[0],dn=days[days.length-1];
   for(const e of arr('eventos')){
-    if(!e.fecha||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
+    if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
     const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:(e.hecho?'✓ ':'')+(e.titulo||'Evento'),sub:[e.tentativo?'Tentativo':'',e.privado?'Privado':'',e.lugar||''].filter(Boolean).join(' · '),col:calCol(e,null),tent:!!e.tentativo};
     if(ini==null){for(const d of days)if(d>=e.fecha&&d<=fin)out[d].a.push(it)}else if(set.has(e.fecha))out[e.fecha].t.push(it);
   }
@@ -3337,7 +3348,7 @@ async function saveEv(){
   if(v.todoDia){e.hora='';e.duracion=0;if(!e.hasta||e.hasta<=e.fecha)delete e.hasta}else{e.hora=e.hora||'09:00';e.duracion=Math.max(.25,n0(e.duracion)||1);delete e.hasta}
   delete e.todoDia;if(e.privado)e.de=ME||e.de;await put('eventos',SH.id||uid(),e);toast('Evento guardado');closeSheet();
 }
-const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
+const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
   for(const d of days)if(d>=e.fecha&&d<=fin)(o[d]=o[d]||[]).push(e)}
   for(const d in o)o[d].sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));return o};
 const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''} title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
@@ -3558,9 +3569,9 @@ function calqPinta(){
   const d=document.getElementById('calQ'),o=calqDoc();if(!d||!o){calqCierra();return}const {k,x}=o;
   const fecha=(x.fecha||'').slice(0,10),hora=k==='a'?(x.fecha||'').slice(11,16):(x.hora||''),ini=hm2m(hora),dur=Math.round((n0(x.duracion)||(k==='a'?.5:1))*60),fin=ini==null?'':m2hm(Math.min(1439,ini+dur));
   const tk=k==='j'&&x.ticketId&&D.tickets[x.ticketId],col=k==='a'?'var(--muted)':calCol(x,k==='j'?(tk?tkPrio(tk):4):null)||'#6d5efc';
-  const sub=k==='j'?[jCli(x),(x.tecnicos||[]).map(t=>personName(t).replace(' (vos)','')).join(', ')].filter(Boolean).join(' · '):k==='a'?(TK[x.tipo]||'Seguimiento'):(x.lugar||'');
+  const sub=k==='j'?[jCli(x),(x.tecnicos||[]).map(t=>personName(t).replace(' (vos)','')).join(', '),n0(x.cuantos)>(x.tecnicos||[]).length?'van '+n0(x.cuantos):''].filter(Boolean).join(' · '):k==='a'?(TK[x.tipo]||'Seguimiento'):(x.lugar||'');
   d.innerHTML=`<div class="cq-h"><i class="cq-dot" style="background:${col}"></i><input class="cq-t" id="cq_t" type="text" value="${esc(x.titulo||'')}" placeholder="${k==='j'?'Qué trabajo es':'Título'}" aria-label="Título"><div class="cq-i"><button type="button" class="icb" data-act="calqmas" aria-label="Más opciones" title="Más opciones" aria-haspopup="menu" aria-expanded="${CQ.mas?'true':'false'}">${ic('mas')}</button><button type="button" class="icb" data-act="calqx" aria-label="Cerrar" title="Cerrar">${ic('x')}</button></div></div>
-    ${CQ.mas?`<div class="cq-m" role="menu"><button type="button" role="menuitem" data-act="calqdup">${ic('duplicar')}Duplicar</button>${k!=='a'&&isLead()?`<button type="button" role="menuitem" data-act="calqets">${ic('etiqueta')}Editar etiquetas</button>`:''}${k==='e'?`<button type="button" role="menuitem" class="danger" data-act="calqdel">${ic('eliminar')}Eliminar</button>`:''}</div>`:''}
+    ${CQ.mas?`<div class="cq-m" role="menu"><button type="button" role="menuitem" data-act="calqdup">${ic('duplicar')}Duplicar</button>${k!=='a'&&isLead()?`<button type="button" role="menuitem" data-act="calqets">${ic('etiqueta')}Editar etiquetas</button>`:''}${k==='e'&&ev2Puede(x)?`<button type="button" role="menuitem" data-act="ev2trab:${esc(o.id)}">${ic('herramienta')}Pasar a trabajo</button>`:''}${k==='e'?`<button type="button" role="menuitem" class="danger" data-act="calqdel">${ic('eliminar')}Eliminar</button>`:''}</div>`:''}
     ${sub?`<div class="cq-s">${esc(sub)}</div>`:''}
     <div class="cq-r"><input type="date" id="cq_f" value="${esc(fecha)}" aria-label="Fecha"><input type="time" id="cq_h" value="${esc(hora)}" step="900" aria-label="Empieza"><span>a</span><input type="time" id="cq_h2" value="${fin}" step="900" aria-label="Termina"></div>
     ${k!=='a'?`<div class="cq-e" role="group" aria-label="Etiqueta de color">${calEts().map(e=>`<button type="button" class="${x.etiqueta===e.id?'on':''}" style="--c:${esc(e.c)}" data-act="calqet:${esc(e.id)}" aria-pressed="${x.etiqueta===e.id}"><i></i>${esc(e.n)}</button>`).join('')}</div>
@@ -4453,7 +4464,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* Mi día también muestra los eventos (13/11, Christian: «¿por qué esta tarea no me aparece, cuando dice que es para mí?»).
    Antes Mi día listaba solo trabajos; un evento «de» la persona (por ejemplo, uno traído de Google Calendar) quedaba solo en el Calendario. */
 function mdEvHtml(day){const mios=e=>e.de===ME||(!e.de&&e.por===ME),todos=typeof campoAll!=='undefined'&&campoAll;
-  const l=arr('eventos').filter(e=>{if(!e.fecha||(e.privado&&e.de!==ME))return false;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;return day>=e.fecha&&day<=fin&&(todos||mios(e))})
+  const l=arr('eventos').filter(e=>{if(!e.fecha||evPasado(e)||(e.privado&&e.de!==ME))return false;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;return day>=e.fecha&&day<=fin&&(todos||mios(e))})
     .sort((a,b)=>(a.todoDia||!a.hora?'00':a.hora).localeCompare(b.todoDia||!b.hora?'00':b.hora));
   if(!l.length)return'';
   return`<section class="group md-ev" style="margin:0 0 18px"><h2>Tu agenda <span class="num">${l.length}</span></h2><div class="list">${l.map(e=>`<div class="row${e.hecho?' md-hecho':''}" role="button" tabindex="0" data-open="ev:${e.id}" style="grid-template-columns:64px minmax(0,1fr) auto auto"><span class="md-ev-h${e.tentativo?' tent':''}">${e.todoDia||!e.hora?'Todo el día':esc(e.hora)}</span><div class="r-main"><strong>${esc(e.titulo||'Evento')}</strong><span class="muted">${esc([e.lugar,e.duracion&&!e.todoDia?String(e.duracion).replace('.',',')+' h':'',todos&&e.de&&e.de!==ME?personName(e.de):'',e.origen==='google'?'De Google Calendar':''].filter(Boolean).join(' · '))}</span></div>${e.tentativo?'<span class="tag t-none">Tentativo</span>':'<span></span>'}${readonly?'':`<button type="button" class="icb md-ok${e.hecho?' on':''}" data-act="evhecho:${esc(e.id)}" aria-pressed="${!!e.hecho}" aria-label="${e.hecho?'Hecho (tocá para desmarcar)':'Marcar como hecho'}" title="${e.hecho?'Hecho':'Marcar como hecho'}">${ic('check')}</button>`}</div>`).join('')}</div></section>`}
@@ -4461,7 +4472,7 @@ function mdEvHtml(day){const mios=e=>e.de===ME||(!e.de&&e.por===ME),todos=typeof
 function mdProxHtml(day){const todos=typeof campoAll!=='undefined'&&campoAll,d0=new Date(day+'T12:00:00'),dias=[];
   for(let i=1;i<=7;i++){const d=new Date(d0);d.setDate(d.getDate()+i);dias.push(localISO(d).slice(0,10))}
   const items=[];
-  for(const e of arr('eventos')){if(!e.fecha||e.hecho||(e.privado&&e.de!==ME)||!(todos||e.de===ME||(!e.de&&e.por===ME)))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
+  for(const e of arr('eventos')){if(!e.fecha||e.hecho||evPasado(e)||(e.privado&&e.de!==ME)||!(todos||e.de===ME||(!e.de&&e.por===ME)))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
     const d=dias.find(x=>x>=e.fecha&&x<=fin);if(d)items.push({d,h:e.todoDia||!e.hora?'':e.hora,t:e.titulo||'Evento',s:[e.lugar,e.origen==='google'?'Google Calendar':''].filter(Boolean).join(' · '),open:'ev:'+e.id})}
   for(const j of arr('trabajos')){if(!j.fecha||j.estado==='terminado'||!(todos||(j.tecnicos||[]).includes(ME)))continue;const d=j.fecha.slice(0,10);if(!dias.includes(d))continue;
     items.push({d,h:j.hora||'',t:j.titulo||'Visita',s:[cliName(j.clienteId),'Visita'].filter(Boolean).join(' · '),open:'trab:'+j.id})}
@@ -4656,7 +4667,7 @@ function mdEstHtml(){if(!ME)return'';const e=(D.estados||{})[ME]||{},k=estDe(ME)
     <div class="md-est-c ico">${ESTA.map(([key,n,i])=>`<button type="button" class="estc${key===k?' on':''}" data-est="${key}" aria-pressed="${key===k}" aria-label="${n}" title="${n}">${ic(i)}</button>`).join('')}</div></section>`}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-est]');if(!b)return;e.preventDefault();estPon(b.dataset.est)});
 /* lo semiautomático: cada 30 s mira tu agenda de hoy */
-function estMis(){const t=today();return arr('eventos').filter(e=>e.fecha===t&&e.hora&&!e.hecho&&(e.de===ME||(!e.de&&e.por===ME))).map(e=>({e,ini:hm2ms(t,e.hora),fin:hm2ms(t,e.hora)+Math.max(.25,n0(e.duracion)||1)*3600e3}))}
+function estMis(){const t=today();return arr('eventos').filter(e=>e.fecha===t&&e.hora&&!e.hecho&&!evPasado(e)&&(e.de===ME||(!e.de&&e.por===ME))).map(e=>({e,ini:hm2ms(t,e.hora),fin:hm2ms(t,e.hora)+Math.max(.25,n0(e.duracion)||1)*3600e3}))}
 let ESTPREG={};
 function estAviso(html){let w=document.getElementById('estAviso');if(!w){w=document.createElement('div');w.id='estAviso';w.setAttribute('role','alertdialog');document.body.append(w)}w.innerHTML=html;w.hidden=false}
 function estAvisoCierra(){const w=document.getElementById('estAviso');if(w)w.hidden=true}
@@ -4674,6 +4685,52 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
   if(t.dataset.estfin){const id=t.dataset.estfin;estPon('disp');const ev=D.eventos&&D.eventos[id];if(ev&&!ev.hecho&&typeof evHecho==='function')evHecho(id)}});
 setInterval(()=>{try{estTick()}catch(_){}},30e3);setTimeout(()=>{try{estTick()}catch(_){}},4e3);
 /* === fin 1.51v === */
+/* === 1.51w · evento a trabajo === */
+// 1.51w · De lo agendado a un trabajo (13/11, Christian): lo que está en el Calendario (o vino de Google)
+// se pasa a trabajo con un toque, eligiendo quién va (una persona, otra, o una cuadrilla) y cuántos van.
+// El evento queda enlazado al trabajo y deja de verse repetido en el Calendario y en Mi día.
+function evPasado(e){return!!(e&&e.trabajoId&&D.trabajos&&D.trabajos[e.trabajoId])}
+function ev2Puede(e){return!!e&&!readonly&&ROLE!=='subcontratista'&&!evPasado(e)&&(isLead()||e.de===ME||(!e.de&&e.por===ME))}
+function ev2Abre(id){
+  const e0=D.eventos[id];if(!e0)return;let e={...e0};
+  if(SH&&SH.type==='ev'&&SH.id===id){try{const v=readForm(EVF());Object.keys(v).forEach(k=>{if(v[k]!==''&&v[k]!=null)e[k]=v[k]})}catch(_){}}
+  if(typeof CQ!=='undefined'&&CQ&&typeof calqCierra==='function')calqCierra();
+  const notas=[e.notas,e.origen==='google'?'(Venía de Google Calendar)':''].filter(Boolean).join('\n');
+  openSheet('trab',null,{date:e.fecha||today(),hora:e.hora||'09:00',titulo:e.titulo||'',notas,dur:n0(e.duracion)||2,obra:e.lugar||'',tecs:e.de?[e.de]:(ME?[ME]:[]),desdeEv:id});
+}
+document.addEventListener('click',ev=>{const b=ev.target.closest&&ev.target.closest('[data-act^="ev2trab:"]');if(!b)return;ev.preventDefault();ev.stopPropagation();ev2Abre(b.dataset.act.slice(8))},true);
+
+// En la ficha del evento: «Pasar a trabajo» arriba, o «Ver el trabajo» si ya se pasó
+const _sheetEv151w=sheetEv;
+sheetEv=function(id,p){
+  const h=_sheetEv151w(id,p),e=id&&D.eventos[id];if(!e)return h;
+  let caja='';
+  if(evPasado(e)){const j=D.trabajos[e.trabajoId];caja=`<div class="ev2t ok"><span class="ev2t-i">${ic('herramienta')}</span><div><b>Ya es un trabajo</b><span>${esc([(j.tecnicos||[]).map(t=>personName(t).replace(' (vos)','')).join(', '),j.estado==='terminado'?'Terminado':j.estado==='en_curso'?'En curso':'Agendado'].filter(Boolean).join(' · '))}</span></div><button type="button" class="btn" data-open="trab:${esc(e.trabajoId)}">${ic('abrir')}Ver</button></div>`}
+  else if(ev2Puede(e))caja=`<div class="ev2t"><span class="ev2t-i">${ic('herramienta')}</span><div><b>¿Va alguien del equipo?</b><span>Pasalo a trabajo y elegí quién va</span></div><button type="button" class="btn pri" data-act="ev2trab:${esc(id)}">${ic('persona')}Pasar a trabajo</button></div>`;
+  return caja?h.replace('<div class="sh-b">','<div class="sh-b">'+caja):h;
+};
+
+// En la ficha del trabajo nuevo que viene de un evento: título y ayuda
+const _sheetTrab151w=sheetTrab;
+sheetTrab=function(id,p){
+  let h=_sheetTrab151w(id,p||{});if(id||!p||!p.desdeEv)return h;
+  const e=D.eventos[p.desdeEv];
+  h=h.replace('Agendar trabajo</h2>','Pasar a trabajo</h2>');
+  return h.replace('<div class="sh-b">',`<div class="sh-b"><p class="ev2t-h">${ic('calendario')}<span>Viene de tu agenda${e&&e.titulo?': <b>'+esc(e.titulo)+'</b>':''}. Tildá quién va (o tocá una cuadrilla) y poné cuántos van. Al guardar, el evento pasa a ser este trabajo.</span></p>`);
+};
+
+// Al guardar ese trabajo, el evento queda enlazado (no se borra: si vino de Google, no vuelve a aparecer)
+const _saveTrab151w=saveTrab;
+saveTrab=async function(close=true,estado){
+  const evId=SH&&!SH.id&&SH.type==='trab'&&SH.preset&&SH.preset.desdeEv,antes=evId?new Set(Object.keys(D.trabajos)):null;
+  await _saveTrab151w(close,estado);
+  if(!evId)return;const nid=Object.keys(D.trabajos).find(k=>!antes.has(k));const e=D.eventos[evId];if(!nid||!e)return;
+  const x={...e,trabajoId:nid,pasadoEn:Date.now(),pasadoPor:ME||''};D.eventos[evId]=x;
+  try{await put('eventos',evId,x)}catch(err){handleErr(err)}
+  try{const j=D.trabajos[nid],q=(j.tecnicos||[]).map(t=>personName(t).replace(' (vos)','')).join(', ');toast('Pasado a trabajo'+(q?' · va '+q:''))}catch(_){}
+  if(typeof sr==='function')sr();
+};
+/* === fin 1.51w === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
