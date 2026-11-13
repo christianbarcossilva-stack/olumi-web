@@ -380,7 +380,7 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .btn .ic{width:17px;height:17px;margin-right:2px;vertical-align:-3px}
 /* fin 1.51n */
 /* 1.51o */
-.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
+.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
 </style>
 <script src="config.js"></script>
@@ -2246,7 +2246,7 @@ function vCampoDia(){
   const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
   const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
-  return head+obsMiasHtml()+mdEvHtml(day)+misTareasHtml()+relsHtml+list+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
+  return head+obsMiasHtml()+mdEvHtml(day)+misTareasHtml()+relsHtml+list+mdProxHtml(day)+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
 }
 
 /* ---------- facturación ---------- */
@@ -4436,6 +4436,18 @@ function mdEvHtml(day){const mios=e=>e.de===ME||(!e.de&&e.por===ME),todos=typeof
     .sort((a,b)=>(a.todoDia||!a.hora?'00':a.hora).localeCompare(b.todoDia||!b.hora?'00':b.hora));
   if(!l.length)return'';
   return`<section class="group md-ev" style="margin:0 0 18px"><h2>Tu agenda <span class="num">${l.length}</span></h2><div class="list">${l.map(e=>`<div class="row" role="button" tabindex="0" data-open="ev:${e.id}" style="grid-template-columns:64px minmax(0,1fr) auto"><span class="md-ev-h${e.tentativo?' tent':''}">${e.todoDia||!e.hora?'Todo el día':esc(e.hora)}</span><div class="r-main"><strong>${esc(e.titulo||'Evento')}</strong><span class="muted">${esc([e.lugar,e.duracion&&!e.todoDia?String(e.duracion).replace('.',',')+' h':'',todos&&e.de&&e.de!==ME?personName(e.de):'',e.origen==='google'?'De Google Calendar':''].filter(Boolean).join(' · '))}</span></div>${e.tentativo?'<span class="tag t-none">Tentativo</span>':''}</div>`).join('')}</div></section>`}
+/* «Lo que viene»: los próximos 7 días (eventos y visitas tuyas), así no hay que entrar al Calendario para ver la semana */
+function mdProxHtml(day){const todos=typeof campoAll!=='undefined'&&campoAll,d0=new Date(day+'T12:00:00'),dias=[];
+  for(let i=1;i<=7;i++){const d=new Date(d0);d.setDate(d.getDate()+i);dias.push(localISO(d).slice(0,10))}
+  const items=[];
+  for(const e of arr('eventos')){if(!e.fecha||(e.privado&&e.de!==ME)||!(todos||e.de===ME||(!e.de&&e.por===ME)))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
+    const d=dias.find(x=>x>=e.fecha&&x<=fin);if(d)items.push({d,h:e.todoDia||!e.hora?'':e.hora,t:e.titulo||'Evento',s:[e.lugar,e.origen==='google'?'Google Calendar':''].filter(Boolean).join(' · '),open:'ev:'+e.id})}
+  for(const j of arr('trabajos')){if(!j.fecha||j.estado==='terminado'||!(todos||(j.tecnicos||[]).includes(ME)))continue;const d=j.fecha.slice(0,10);if(!dias.includes(d))continue;
+    items.push({d,h:j.hora||'',t:j.titulo||'Visita',s:[cliName(j.clienteId),'Visita'].filter(Boolean).join(' · '),open:'trab:'+j.id})}
+  if(!items.length)return'';items.sort((a,b)=>(a.d+(a.h||'00')).localeCompare(b.d+(b.h||'00')));
+  let html='',ult='';for(const x of items){if(x.d!==ult){html+=`<h3 class="md-px-d">${esc(fdateL(x.d))}</h3>`;ult=x.d}
+    html+=`<div class="row" role="button" tabindex="0" data-open="${x.open}" style="grid-template-columns:64px minmax(0,1fr)"><span class="md-ev-h">${x.h?esc(x.h):'Todo el día'}</span><div class="r-main"><strong>${esc(x.t)}</strong>${x.s?`<span class="muted">${esc(x.s)}</span>`:''}</div></div>`}
+  return`<section class="group md-px" style="margin-top:22px"><h2>Lo que viene <span class="num">${items.length}</span></h2><div class="list">${html}</div></section>`}
 /* === fin 1.51o === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
