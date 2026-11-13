@@ -379,6 +379,9 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .obs-hh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.obs-hh h2{margin:0}
 .btn .ic{width:17px;height:17px;margin-right:2px;vertical-align:-3px}
 /* fin 1.51n */
+/* 1.51r */
+.aptr{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}.aptr input{flex:1;accent-color:var(--accent)}.aptr b{min-width:28px;text-align:right;color:var(--fg);font-variant-numeric:tabular-nums}
+/* fin 1.51r */
 /* 1.51o */
 .md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -4468,6 +4471,27 @@ decBusca(document);
 /* solo números, una coma o punto y el signo menos al principio */
 document.addEventListener('input',e=>{const i=e.target;if(!i||!i._dec)return;const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value'),raw=d.get.call(i),l=raw.replace(/[^\d.,-]/g,'').replace(/(?!^)-/g,'');if(l!==raw)d.set.call(i,l)},true);
 /* === fin 1.51p === */
+/* === 1.51r · transparencia === */
+/* Transparencia del diseño Vidrio con una barra (13/11, Christian: «en blanco no funciona muy bien el vidrio y en negro más o menos
+   lo mismo, falta mejorar con una barra la transparencia»). 0 = sólido (sin vidrio ni desenfoque, como «Reducir transparencia»);
+   100 = lo más transparente. Se guarda aparte para claro y para oscuro, en este dispositivo. Claro arranca más sólido (35) que oscuro (50). */
+const APTR_BASE={dark:{g:[30,30,34,.5],s:[46,46,50,.5]},light:{g:[255,255,255,.55],s:[255,255,255,.66]}};
+const apTrModo=()=>document.documentElement.dataset.mode==='light'?'light':'dark';
+function apTrV(m){m=m||apTrModo();try{const v=localStorage.getItem('olumi.trans.'+m);if(v!=null&&v!=='')return Math.max(0,Math.min(100,+v));
+  if(localStorage.getItem('olumi.solido')==='1')return 0}catch(_){}return m==='light'?35:50}
+function apTrAplica(){const R=document.documentElement,st=R.style;
+  if(!R.classList.contains('d2')){['--d2-glass','--glass','--surface'].forEach(k=>st.removeProperty(k));return}
+  const m=apTrModo(),v=apTrV(m),B=APTR_BASE[m],a=a0=>Math.round((v<=50?a0+(1-a0)*(50-v)/50:a0*(1-.6*(v-50)/50))*1000)/1000,c=([r,g,b,a0])=>`rgb(${r} ${g} ${b} / ${a(a0)})`;
+  st.setProperty('--d2-glass',c(B.g));st.setProperty('--glass',c(B.g));st.setProperty('--surface',c(B.s))}
+function apTrHtml(){return`<h3>Transparencia</h3><div class="aptr"><span>Sólido</span><input type="range" min="0" max="100" step="5" value="${apTrV()}" data-aptr aria-label="Transparencia del vidrio"><span>Vidrio</span><b id="aptrN">${apTrV()}</b></div>
+  <p class="hint" style="margin:6px 0 0">Se guarda aparte para el modo ${apTrModo()==='light'?'claro':'oscuro'}. En 0 queda todo sólido, sin desenfoque (más liviano en celulares viejos).</p>`}
+document.addEventListener('input',e=>{const t=e.target;if(!t||!t.matches||!t.matches('input[data-aptr]'))return;const v=+t.value,m=apTrModo();
+  try{localStorage.setItem('olumi.trans.'+m,String(v))}catch(_){}const n=document.getElementById('aptrN');if(n)n.textContent=v;apTrAplica()});
+document.addEventListener('change',e=>{const t=e.target;if(!t||!t.matches||!t.matches('input[data-aptr]'))return;
+  try{const s=+t.value===0;if((localStorage.getItem('olumi.solido')==='1')!==s){localStorage.setItem('olumi.solido',s?'1':'');window.__olumiAp&&window.__olumiAp(window.__olumiImgs&&window.__olumiImgs())}}catch(_){}apTrAplica()});
+new MutationObserver(()=>{apTrAplica();const i=document.querySelector('input[data-aptr]');if(i){i.value=apTrV();const n=document.getElementById('aptrN');if(n)n.textContent=i.value}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-mode','class']});
+apTrAplica();
+/* === fin 1.51r === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -8339,7 +8363,7 @@ function apHtml(){const g=k=>{try{return localStorage.getItem(k)||''}catch(e){re
   <h3>Día y noche</h3>${themeSeg()}<p class="hint" style="margin:6px 0 0">Automático: claro de 7 a 19 h y oscuro el resto del día.</p>
   <h3>Color</h3><div class="apc">${SW.map(([c,n])=>`<button type="button" class="${c?'':'emp'}" style="${c?'background:'+c:''}" data-ap="acento:${c}" aria-pressed="${ac===c}" aria-label="${n}" title="${n}"></button>`).join('')}</div>
   <h3>Fondo</h3><div class="apf">${FO.map(([k,n])=>`<button type="button" data-ap="fondo:${k}" aria-pressed="${fo===k}">${n}</button>`).join('')}<label>Subir una foto…<input type="file" accept="image/png,image/jpeg,image/webp" data-ap-foto></label></div>
-  <label class="apsw"><input type="checkbox" data-ap="solido"${so?' checked':''}><span>Reducir transparencia<small>Todo sólido, sin vidrio ni desenfoques. Más liviano en compus o celulares viejos.</small></span></label></div>`}
+  ${d==='2'?apTrHtml():`<label class="apsw"><input type="checkbox" data-ap="solido"${so?' checked':''}><span>Reducir transparencia<small>Todo sólido, sin vidrio ni desenfoques. Más liviano en compus o celulares viejos.</small></span></label>`}</div>`}
 /*/d2*/
 boot();
 })();
