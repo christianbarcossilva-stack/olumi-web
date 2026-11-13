@@ -4449,6 +4449,25 @@ function mdProxHtml(day){const todos=typeof campoAll!=='undefined'&&campoAll,d0=
     html+=`<div class="row" role="button" tabindex="0" data-open="${x.open}" style="grid-template-columns:64px minmax(0,1fr)"><span class="md-ev-h">${x.h?esc(x.h):'Todo el día'}</span><div class="r-main"><strong>${esc(x.t)}</strong>${x.s?`<span class="muted">${esc(x.s)}</span>`:''}</div></div>`}
   return`<section class="group md-px" style="margin-top:22px"><h2>Lo que viene <span class="num">${items.length}</span></h2><div class="list">${html}</div></section>`}
 /* === fin 1.51o === */
+/* === 1.51p · decimales con coma === */
+/* Decimales con coma (13/11, Christian desde el iPhone: «no me deja poner decimales en el precio, o sea 10,37»).
+   En el iPhone con región Uruguay el teclado numérico trae coma, y un <input type="number"> la rechaza: el valor queda vacío.
+   Todo campo numérico que admite decimales pasa a ser de texto con teclado decimal, y al leerlo la coma vale como punto
+   («10,37» → 10.37; «1.234,50» → 1234.50). Los que piden enteros (step="1" o teclado numérico) quedan como están. */
+const decNorm=s=>{s=String(s??'').trim().replace(/\s/g,'');if(s.includes(',')){if(s.includes('.'))s=s.replace(/\./g,'');s=s.replace(',','.')}return s};
+const decQuiere=i=>i.type==='number'&&i.step!=='1'&&i.getAttribute('inputmode')!=='numeric';
+function decMonta(i){if(i._dec||!decQuiere(i))return;i._dec=1;
+  const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  i.type='text';i.setAttribute('inputmode','decimal');i.setAttribute('autocomplete','off');i.classList.add('dec');
+  const v0=d.get.call(i);if(v0)d.set.call(i,v0.replace('.',','));
+  Object.defineProperty(i,'value',{configurable:true,get(){return decNorm(d.get.call(this))},set(v){d.set.call(this,String(v??'').replace('.',','))}});
+  Object.defineProperty(i,'valueAsNumber',{configurable:true,get(){const n=parseFloat(decNorm(d.get.call(this)));return isNaN(n)?NaN:n}})}
+function decBusca(r){(r.querySelectorAll?r:document).querySelectorAll('input[type="number"]').forEach(decMonta)}
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='INPUT')decMonta(n);else if(n.querySelector)decBusca(n)}}).observe(document.documentElement,{childList:true,subtree:true});
+decBusca(document);
+/* solo números, una coma o punto y el signo menos al principio */
+document.addEventListener('input',e=>{const i=e.target;if(!i||!i._dec)return;const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value'),raw=d.get.call(i),l=raw.replace(/[^\d.,-]/g,'').replace(/(?!^)-/g,'');if(l!==raw)d.set.call(i,l)},true);
+/* === fin 1.51p === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
