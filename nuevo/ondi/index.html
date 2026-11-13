@@ -85,6 +85,8 @@ p{margin:0}.lede{font-size:clamp(18px,1.6vw,21px);color:var(--ti2);max-width:46c
 .tapa .acc{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
 #fibra{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transition:opacity 1.4s var(--ease)}
 #fibra.listo{opacity:1}
+#avisoRed{position:fixed;left:50%;bottom:24px;z-index:60;transform:translate(-50%,16px);max-width:min(92vw,520px);padding:12px 16px;border-radius:4px;background:#14171A;color:#fff;font:500 15px/1.35 var(--ft);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+#avisoRed.on{opacity:1;transform:translate(-50%,0)}
 /* aviso que sale de la boca del rack 3D */
 .globo{position:absolute;z-index:3;left:0;top:0;display:flex;align-items:center;gap:10px;pointer-events:none;opacity:0;transform:translate(-100%,-50%);transition:opacity .45s var(--ease);font:500 15px/1.3 var(--ft);color:#fff;white-space:nowrap}
 .globo.on{opacity:1}
@@ -409,7 +411,7 @@ footer .uno{flex:1 1 280px;max-width:380px}
   <div><b>Legal</b><a href="/olumi/privacidad.html">Privacidad</a><a href="/olumi/terminos.html">Términos</a></div>
 </div></footer>
 
-<script src="/ondi/beta/red.js?v=3"></script>
+<script src="/ondi/beta/red.js?v=4"></script>
 <script>
 (function () {
 'use strict';
@@ -484,7 +486,7 @@ if (window.OndiRed) { var mk = function (cap, items) { return { cap: cap, items:
   DEVS.forEach(function (d, k) { var n = k + 1, cam = d.id[0] === 'C'; g.ports.pc['p' + n] = { dev: d.id, cab: 'C-' + ('0' + (40 + n)).slice(-3), cat: 'Cat 6', col: cam ? 'azul' : 'gris', m: 22 + n * 5, cert: 'ok', certf: '2026-11-05' }; g.ports.sw['p' + n] = { poe: cam ? 'af' : 'at', vlan: cam ? '20 · CCTV' : '10 · Wi-Fi', desc: cam ? 'Cámaras' : 'Wi-Fi andenes' }; g.links.push([['sw', 'p' + n], ['pc', 'p' + n]]); });
   g.links.push([['sw2', 'p8'], ['sw', 'p24'], { col: 'amarillo', m: 0.3 }]);
   var el = $('rackvivo'), editar = false, V = { cid: 'RK-N1', sel: ['pc', 'p3'], tab: 'frente', zoom: null };
-  var H = { cabs: CABS, fibs: FIBS, devs: function () { return DEVS; }, editar: function () { return editar; }, guardar: function () {}, ir: function () {}, cerrar: function () {}, aviso: function () {}, largo: function (F) { return F.m || 0; }, cliente: function () { return 'Parque Logístico Norte (ejemplo)'; },
+  var H = { cabs: CABS, fibs: FIBS, devs: function () { return DEVS; }, editar: function () { return editar; }, guardar: function () {}, ir: function () {}, cerrar: function () {}, aviso: function (m) { if (!m) return; var t = $('avisoRed'); if (!t) { t = document.createElement('div'); t.id = 'avisoRed'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove('on'); }, 3200); }, largo: function (F) { return F.m || 0; }, cliente: function () { return 'Parque Logístico Norte (ejemplo)'; },
     titulo: function (cid) { return cid === 'RK-01' ? { t: 'Rack principal RK-01', s: 'Rack de piso 12U, sala técnica' } : { t: 'Rack RK-N1', s: 'Rack de pared 9U, galpón N1' }; }, racks: function () { return [['RK-N1', 'RK-N1, galpón N1'], ['RK-01', 'RK-01, sala técnica']]; } };
   OndiRed.pintar(el, H, V);
   $('editar').addEventListener('click', function () { editar = !editar; this.textContent = editar ? 'Volver a solo mirar' : 'Probar a editarlo'; OndiRed.pintar(el, H, V); }); }

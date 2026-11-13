@@ -54,6 +54,9 @@ const esSW = it => !!(it && CAT[it.type] && (CAT[it.type].rj || CAT[it.type].sfp
 const nomIt = it => it ? (it.name || (CAT[it.type] || {}).n || it.type) : '—';
 const nomP = (it, pid) => (pid[0] === 's' ? 'SFP ' : esPP(it) ? 'boca ' : 'puerto ') + pid.slice(1);
 const pd = (c, iid, pid, crear) => { if (crear) { const a = c.ports[iid] = c.ports[iid] || {}; return a[pid] = a[pid] || {}; } return ((c.ports[iid] || {})[pid]) || {}; };
+// cobre con cobre, fibra con fibra (patchera de fibra y SFP): un patch cord de cobre no entra en un puerto de fibra
+const medio = (c, iid, pid) => { const it = c.items.find(x => x.iid === iid), p = it ? puertos(it.type).find(x => x.id === pid) : null; return p ? (p.k === 'rj' ? 'cobre' : 'fibra') : ''; };
+const noEntra = (c, a, b) => { const m1 = medio(c, a[0], a[1]), m2 = medio(c, b[0], b[1]); return m1 && m2 && m1 !== m2 ? (m1 === 'cobre' ? 'Ese puerto es de fibra: un patch cord de cobre no entra ahí' : 'Ese puerto es de cobre: va un patch cord de cobre, no uno de fibra') : ''; };
 const lk = (c, iid, pid) => c.links.find(l => (l[0][0] === iid && l[0][1] === pid) || (l[1][0] === iid && l[1][1] === pid));
 const otro = (l, iid, pid) => l[0][0] === iid && l[0][1] === pid ? l[1] : l[0];
 const fibDe = (H, id) => H.fibs.find(f => f.id === id);
@@ -316,7 +319,7 @@ function evento(el, e) { const { H, V } = el.__red, t = e.target, c = H.cabs[V.c
     return; }
   if (e.type !== 'click' || V.tab !== 'frente' || V._arr) { V._arr = false; return; }
   if (p) { const [iid, pid] = p.dataset.rp.split(':');
-    if (V.linking && V.sel && V.sel[1] && H.editar()) { const s0 = V.sel; V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
+    if (V.linking && V.sel && V.sel[1] && H.editar()) { const s0 = V.sel; const no = noEntra(c, s0, [iid, pid]); if (no) { H.aviso(no); return; } V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
     V.sel = [iid, pid]; return R(); }
   if (it) { V.sel = [it.dataset.it]; V.linking = false; return R(); }
   if (t.closest('.red-svg')) { V.sel = null; V.linking = false; R(); } }
@@ -348,11 +351,13 @@ function arrastrarCable(el, e) { const { H, V } = el.__red || {}; if (!H || !H.e
       t0 = document.createElementNS(NS, 'path'); t0.setAttribute('class', 'r-pc0'); t1 = document.createElementNS(NS, 'path'); t1.setAttribute('class', 'r-pc r-tira'); t1.setAttribute('stroke', col); svg.append(t0, t1); }
     const fr = el.querySelector('.red-fr'); if (fr) { const r = fr.getBoundingClientRect(), m = 36; if (ev.clientX > r.right - m) fr.scrollLeft += 14; else if (ev.clientX < r.left + m) fr.scrollLeft -= 14; if (ev.clientY > r.bottom - m) fr.scrollTop += 14; else if (ev.clientY < r.top + m) fr.scrollTop -= 14; }
     const bajo = document.elementFromPoint(ev.clientX, ev.clientY), t = bajo && bajo.closest ? bajo.closest('[data-rp]') : null;
-    if (dest && dest !== t) dest.classList.remove('r-dest'); dest = t && svg.contains(t) && t.dataset.rp !== fijo.join(':') ? t : null; if (dest) dest.classList.add('r-dest');
+    if (dest && dest !== t) dest.classList.remove('r-dest', 'r-no'); dest = t && svg.contains(t) && t.dataset.rp !== fijo.join(':') ? t : null;
+    if (dest) { const no = noEntra(c, fijo, dest.dataset.rp.split(':')); dest.classList.toggle('r-no', !!no); dest.classList.toggle('r-dest', !no); }
     const q = enSvg(ev), B = dest ? V._pos[dest.dataset.rp] : [q.x, q.y], d = curva(A, B); t0.setAttribute('d', d); t1.setAttribute('d', d); };
   const fin = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', fin); removeEventListener('pointercancel', fin); if (!movio) return;
     V._arr = true; setTimeout(() => { V._arr = false; }, 60);
-    if (dest) { const [i2, p2] = dest.dataset.rp.split(':'), viejo = lk(c, i2, p2); c.links = c.links.filter(x => x !== l && x !== viejo); const nuevo = [fijo.slice(), [i2, p2]]; if (l && l[2]) nuevo.push(l[2]); c.links.push(nuevo);
+    if (dest && dest.classList.contains('r-no')) { dest.classList.remove('r-no'); H.aviso(noEntra(c, fijo, dest.dataset.rp.split(':'))); }
+    else if (dest) { const [i2, p2] = dest.dataset.rp.split(':'), viejo = lk(c, i2, p2); c.links = c.links.filter(x => x !== l && x !== viejo); const nuevo = [fijo.slice(), [i2, p2]]; if (l && l[2]) nuevo.push(l[2]); c.links.push(nuevo);
       V.sel = [i2, p2]; V.linking = false; H.guardar(); H.aviso(l ? 'Patch cord movido al puerto ' + p2.replace(/^p/, '') : 'Patch cord conectado'); }
     pintar(el, H, V); };
   addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', fin); addEventListener('pointercancel', fin); return true; }
@@ -401,7 +406,7 @@ function css() { if (document.getElementById('red-css')) return; const s = docum
 .r-p.crit .r-led{animation:red-par 1s steps(2) infinite}@keyframes red-par{50%{opacity:.2}}
 .r-ada{stroke:rgba(0,0,0,.5);stroke-width:.6}.r-etq{fill:#f3f4f2;stroke:#b9bfc4;stroke-width:.4}.r-et{font:600 4.3px var(--f-mono,ui-monospace,monospace);fill:#20262b;text-anchor:middle}
 .r-bahia{fill:rgba(0,0,0,.32);stroke:rgba(255,255,255,.1);stroke-width:.6}.r-lcd{fill:#06181d;stroke:#274a55;stroke-width:.7}.r-rej{fill:rgba(0,0,0,.45)}.r-toma{fill:#1d2125;stroke:#555e66;stroke-width:1}.r-aro{fill:none;stroke:#3a4148;stroke-width:3;stroke-linecap:round}
-.red-svg.ed [data-rp]{cursor:grab;touch-action:none}.red-svg.arr,.red-svg.arr *{cursor:grabbing!important}.r-tira{opacity:1!important;stroke-width:3!important}.red-svg [data-rp].r-dest{filter:drop-shadow(0 0 4px #0B5FFF) drop-shadow(0 0 2px #fff)}.r-pc0{fill:none;stroke:rgba(0,0,0,.42);stroke-width:3.4;pointer-events:none}.r-pc{fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none;opacity:.74}
+.red-svg.ed [data-rp]{cursor:grab;touch-action:none}.red-svg.arr,.red-svg.arr *{cursor:grabbing!important}.r-tira{opacity:1!important;stroke-width:3!important}.red-svg [data-rp].r-no{filter:drop-shadow(0 0 4px #E5383B) drop-shadow(0 0 2px #E5383B);cursor:not-allowed}.red-svg [data-rp].r-dest{filter:drop-shadow(0 0 4px #0B5FFF) drop-shadow(0 0 2px #fff)}.r-pc0{fill:none;stroke:rgba(0,0,0,.42);stroke-width:3.4;pointer-events:none}.r-pc{fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none;opacity:.74}
 .r-pc0.on{stroke:#fff;stroke-width:5.6}.r-pc.on{stroke-width:3.2;opacity:1}.red-svg.sel .r-pc:not(.on){opacity:.3}.red-svg.sel .r-pc0:not(.on){opacity:.25}
 .red-h small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5D6973)}.red-h b{font-size:18px}
 .red-sec{margin:16px 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5D6973);font-weight:700}
