@@ -389,6 +389,14 @@ body.portal .app{grid-template-columns:minmax(0,1fr)!important}body.portal .app>
 .fsal{font-size:22px;letter-spacing:-.01em}.fsal.debe{color:var(--warn,#c80)}.fsal.pagar{color:var(--ok)}.fsal-b span{font-size:13px}.fsal-b small{color:var(--muted);font-size:12.5px;margin-top:4px}
 .fmov .num.pos{color:var(--ok)}
 /* fin 1.51s */
+/* 1.51v */
+.md-est{margin:0 0 18px}.md-est-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 8px}.md-est-h h2{font-size:16px;margin:0}
+.md-est-c,.estav-c{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}.md-est-c::-webkit-scrollbar{display:none}.estav-c{flex-wrap:wrap;margin:8px 0}
+.estc{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:14px;font-weight:550;white-space:nowrap;cursor:pointer;flex:none}
+.estc .ic{width:18px;height:18px}.estc.on{background:var(--fg);color:var(--bg);border-color:transparent}
+#estAviso{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9000;width:min(440px,calc(100vw - 24px));box-sizing:border-box;padding:16px;border-radius:20px;background:var(--surface);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.25)}
+#estAviso p{margin:0 0 6px}#estAviso .actions{margin:8px 0 0;flex-wrap:wrap}
+/* fin 1.51v */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -1569,7 +1577,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos','estados'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -2256,7 +2264,7 @@ function vCampoDia(){
   const lim=localISO(new Date(Date.now()-14*864e5)).slice(0,10),rels=AS&&has('proyectos')?arr('relevamientos').filter(r=>(r.responsable===ME||!ME)&&(r.fecha||'')>=lim&&!r.presupuestoId).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,6):[];
   const relsHtml=rels.length?`<section class="group" style="margin:0 0 18px"><h2>Mis relevamientos <span class="num">${rels.length}</span></h2><div class="list">${rels.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),fdate(r.fecha)].filter(Boolean).join(' · '))}</span></div><span class="muted">${(r.items||[]).length} ítem${(r.items||[]).length===1?'':'s'}</span></div>`).join('')}</div></section>`:'';
   const list=jobs.length?`<div class="jobs">${jobs.map(jobCard).join('')}</div>`:empty(campoAll?'Sin trabajos para este día':'No tenés trabajos asignados','Los trabajos se agendan desde un ticket o desde el calendario. Cada técnico ve acá los suyos, con planos, contacto, cómo llegar y el botón para sacar fotos.','','');
-  return head+obsMiasHtml()+mdEvHtml(day)+misTareasHtml()+relsHtml+list+mdProxHtml(day)+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
+  return head+mdEstHtml()+obsMiasHtml()+mdEvHtml(day)+misTareasHtml()+relsHtml+list+mdProxHtml(day)+(late.length?`<section class="group" style="margin-top:22px"><h2>Quedaron sin terminar <span class="num">${late.length}</span></h2><div class="jobs">${late.map(jobCard).join('')}</div></section>`:'');
 }
 
 /* ---------- facturación ---------- */
@@ -4623,6 +4631,43 @@ gastoAct=async function(k,arg,el){
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-fondotec]');if(b)FONDOTEC=b.dataset.fondotec},true);
 let FONDOTEC='';
 /* === fin 1.51s === */
+/* === 1.51v · en qué estás === */
+/* «¿En qué estás?» (13/11, Christian): cada persona dice en qué está (reunión, llamada, relevamiento, presupuestando…) y se ve
+   en la maqueta de la oficina. Es semiautomático: cuando empieza algo de tu agenda te pone el estado (o te pregunta), y cuando
+   termina te pregunta si seguís. Colección `estados` (un documento por persona). */
+Object.assign(ICN,{reunion:'<circle cx="8" cy="9" r="2.6"/><circle cx="16" cy="9" r="2.6"/><path d="M3 18.5c.6-2.8 2.6-4.3 5-4.3s4.4 1.5 5 4.3M11 18.5c.6-2.8 2.6-4.3 5-4.3s4.4 1.5 5 4.3"/>',
+  regla:'<path d="M3.5 15.5L15.5 3.5l5 5-12 12z"/><path d="M7 12l2 2M9.5 9.5l1.5 1.5M12 7l2 2"/>',cafe:'<path d="M5 9.5h11v5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5 14.5zM16 11h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5c0 1 1 1.5 1 2.5M11.5 3.5c0 1 1 1.5 1 2.5"/>'});
+const ESTA=[['disp','Disponible','check','✓'],['reunion','Reunión','reunion','👥'],['llamada','Llamada o videollamada','llamar','📞'],['relev','Relevamiento','regla','📐'],['presup','Presupuestando','presupuesto','🧮'],['almuerzo','Almuerzo','cafe','☕']];
+const estaK=k=>ESTA.find(x=>x[0]===k)||ESTA[0];
+const hm2ms=(d,h)=>{const[a,b]=String(h||'0:0').split(':').map(Number);const x=new Date(d+'T00:00:00');x.setHours(a||0,b||0,0,0);return x.getTime()};
+function estDe(u){const e=D.estados&&D.estados[u];if(!e||!e.e||e.e==='disp')return'';if(localISO(new Date(n0(e.desde))).slice(0,10)!==today())return'';return e.e}
+const estOut=u=>estDe(u)==='relev';
+function estInfer(t){t=qn(t||'');return/reuni|meet|zoom|teams|junta|coordinac/.test(t)?'reunion':/llamad|video|call\b|telef/.test(t)?'llamada':/relev|medic|visita tecnica|site survey/.test(t)?'relev':/presup|cotiz/.test(t)?'presup':/almuerzo|comida/.test(t)?'almuerzo':''}
+async function estPon(k,extra={}){if(!ME||readonly&&!isTec())return;const doc={e:k,desde:Date.now(),por:ME,...extra};
+  try{await put('estados',ME,doc)}catch(x){if(!(x&&x.code==='loading'))handleErr(x);return}(D.estados=D.estados||{})[ME]=doc;arrDirty();estAvisoCierra();sr()}
+function mdEstHtml(){if(!ME)return'';const e=(D.estados||{})[ME]||{},k=estDe(ME)||'disp',ev=e.ev&&D.eventos&&D.eventos[e.ev];
+  return`<section class="md-est" aria-label="En qué estás"><div class="md-est-h"><h2>¿En qué estás?</h2>${k!=='disp'?`<span class="muted">${esc(estaK(k)[1])} desde las ${ofiHM(e.desde)}${ev?' · '+esc(ev.titulo||''):''}</span>`:'<span class="muted">Se ve en la oficina</span>'}</div>
+    <div class="md-est-c">${ESTA.map(([key,n,i])=>`<button type="button" class="estc${key===k?' on':''}" data-est="${key}" aria-pressed="${key===k}">${ic(i)}<span>${n}</span></button>`).join('')}</div></section>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-est]');if(!b)return;e.preventDefault();estPon(b.dataset.est)});
+/* lo semiautomático: cada 30 s mira tu agenda de hoy */
+function estMis(){const t=today();return arr('eventos').filter(e=>e.fecha===t&&e.hora&&!e.hecho&&(e.de===ME||(!e.de&&e.por===ME))).map(e=>({e,ini:hm2ms(t,e.hora),fin:hm2ms(t,e.hora)+Math.max(.25,n0(e.duracion)||1)*3600e3}))}
+let ESTPREG={};
+function estAviso(html){let w=document.getElementById('estAviso');if(!w){w=document.createElement('div');w.id='estAviso';w.setAttribute('role','alertdialog');document.body.append(w)}w.innerHTML=html;w.hidden=false}
+function estAvisoCierra(){const w=document.getElementById('estAviso');if(w)w.hidden=true}
+function estTick(){if(!ME||!ROLE||PORTAL()||!arr)return;const now=Date.now(),mi=(D.estados||{})[ME]||{},L=estMis();
+  const cur=L.find(x=>now>=x.ini&&now<x.fin);
+  if(cur&&mi.ev!==cur.e.id&&n0(mi.desde)<cur.ini&&!ESTPREG['ini:'+cur.e.id]){ESTPREG['ini:'+cur.e.id]=1;const k=estInfer(cur.e.titulo+' '+(cur.e.lugar||''));
+    if(k){estPon(k,{ev:cur.e.id,hasta:cur.fin,auto:true});toast(`Empezó «${cur.e.titulo}»: te puse en ${estaK(k)[1]}`)}
+    else estAviso(`<p><b>Empezó «${esc(cur.e.titulo||'Evento')}»</b><br><span class="muted">¿En qué estás?</span></p><div class="estav-c">${ESTA.slice(1).map(([key,n,i])=>`<button type="button" class="estc" data-estev="${key}|${esc(cur.e.id)}|${cur.fin}">${ic(i)}<span>${n}</span></button>`).join('')}</div><button type="button" class="btn ghost" data-estx>Ahora no</button>`)}
+  if(mi.ev&&mi.hasta&&now>=n0(mi.hasta)&&estDe(ME)&&!ESTPREG['fin:'+mi.ev+':'+mi.hasta]){ESTPREG['fin:'+mi.ev+':'+mi.hasta]=1;const ev=D.eventos&&D.eventos[mi.ev];
+    estAviso(`<p><b>Terminó «${esc((ev&&ev.titulo)||'lo agendado')}»</b><br><span class="muted">¿Seguís con ${esc(estaK(mi.e)[1].toLowerCase())}?</span></p><div class="actions"><button type="button" class="btn" data-estsigo="15">Sigo 15 min</button><button type="button" class="btn" data-estsigo="30">Sigo 30 min</button><button type="button" class="btn pri" data-estfin="${esc(mi.ev)}">${ic('check')}Terminé</button><button type="button" class="btn ghost" data-estx>Después</button></div><div class="estav-c">${ESTA.slice(1).filter(x=>x[0]!==mi.e).map(([key,n,i])=>`<button type="button" class="estc" data-est="${key}">${ic(i)}<span>${n}</span></button>`).join('')}</div>`)}}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-estev],[data-estx],[data-estsigo],[data-estfin]');if(!t)return;e.preventDefault();
+  if(t.dataset.estx!=null){estAvisoCierra();return}
+  if(t.dataset.estev){const[k,ev,fin]=t.dataset.estev.split('|');estPon(k,{ev,hasta:+fin});return}
+  if(t.dataset.estsigo){const mi=(D.estados||{})[ME]||{};estPon(mi.e||'reunion',{ev:mi.ev||'',hasta:Date.now()+(+t.dataset.estsigo)*60e3,desde:n0(mi.desde)||Date.now()});return}
+  if(t.dataset.estfin){const id=t.dataset.estfin;estPon('disp');const ev=D.eventos&&D.eventos[id];if(ev&&!ev.hecho&&typeof evHecho==='function')evHecho(id)}});
+setInterval(()=>{try{estTick()}catch(_){}},30e3);setTimeout(()=>{try{estTick()}catch(_){}},4e3);
+/* === fin 1.51v === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -7526,7 +7571,7 @@ function ofiData(){const d=ofiData0();if(agOk())d.people=[...d.people,...Object.
 function ofiData0(){
   const m=stockMap(),hoy=today(),dep=deps().find(d=>d.tipo!=='vehiculo'),vans=deps().filter(d=>d.tipo==='vehiculo');
   const enCurso=new Set();arr('trabajos').forEach(j=>{if(j.estado==='en_curso'&&(!j.fecha||j.fecha===hoy))(j.tecnicos||[]).forEach(t=>enCurso.add(t))});
-  const people=Object.entries(MEMBERS||{}).filter(([id,mb])=>mb&&OFI_ROL[mb.role]).map(([id,mb])=>({id,n:String((NAMES[id]&&NAMES[id].name)||(mb.email||'Compañero').split('@')[0]).split(' ')[0],role:OFI_ROL[mb.role],out:enCurso.has(id)}));
+  const people=Object.entries(MEMBERS||{}).filter(([id,mb])=>mb&&OFI_ROL[mb.role]).map(([id,mb])=>({id,n:String((NAMES[id]&&NAMES[id].name)||(mb.email||'Compañero').split('@')[0]).split(' ')[0],role:OFI_ROL[mb.role],out:enCurso.has(id)||estOut(id),st:estDe(id)}));
   const inVan=new Set();vans.forEach(v=>Object.keys(m).forEach(pid=>{if(stockOf(m,pid,v.id)>0)inVan.add(pid)}));
   const prods=invProds().filter(p=>(dep&&stockOf(m,p.id,dep.id)>0)||n0(p.stockMin)>0||inVan.has(p.id)).slice(0,60)
     .map(p=>{const u=uq(p)==='m'?'m':'u';return{id:p.id,n:p.nombre||'Producto',u,q:dep?r2(stockOf(m,p.id,dep.id)):0,min:n0(p.stockMin),step:u==='m'?10:1}});

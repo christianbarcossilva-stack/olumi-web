@@ -1130,6 +1130,15 @@ function wander(){const gente=S.people.filter(p=>!p.inVan&&!p.virtual&&!p.busy),
   if(r<.4)alCafe(p,()=>{say(p,'☕',2);back(4000)});
   else if(r<.7&&p.role!=='recepcion')aReunion(p,()=>{say(p,'Reunión',2);back(6000)});
   else if(p.role==='tecnico')goTo(p,SPOTS.deposito.x,SPOTS.deposito.y,()=>{say(p,'📦 material',2);back()})}
+// 1.51v · «¿En qué estás?»: el estado de cada persona (lo manda Olumi en olumiDatos.people[].st) se ve en la maqueta
+const ESTL={reunion:'👥 En reunión',llamada:'📞 En llamada',relev:'📐 Relevamiento',presup:'🧮 Presupuestando',almuerzo:'☕ Almuerzo'};
+function estAplica(){S.people.forEach(p=>{const st=p.st||'';p.stl=ESTL[st]||'';if(p.virtual||p.inVan)return;if(st===p._st)return;const ant=p._st;p._st=st;
+  if(ant&&p._stb){p.busy=0;p._stb=0;if(p.sit&&!st){p.sit=null}}
+  if(!st||st==='relev'){if(ant&&!p.out){const d=deskOf(p);goTo(p,d.x+.2,d.y+1.1)}return}
+  p.busy=1;p._stb=1;const d=deskOf(p),dice=()=>say(p,ESTL[st],8);
+  if(st==='reunion')aReunion(p,dice);else if(st==='almuerzo')alCafe(p,dice);else goTo(p,d.x+.2,d.y+1.1,dice)})}
+window.__est=()=>S.people.map(p=>[p.n,p.st,p.stl,p.say]);
+setInterval(()=>{if(typeof S==='undefined')return;S.people.forEach(p=>{if(p.stl&&!p.inVan&&p.tx==null&&(!p.say||T>p.sayT-1))say(p,p.stl,8)})},4000);
 // ---------- eventos de la empresa ----------
 const CLI=['Barraca Norte','Clínica Sur','Estudio Gómez','Colegio del Parque','Depósito Logístico','Hotel Rambla','Farmacia Central','Edificio Torre Sur'];
 const feed=[];let tk=151,pr=232,pm=41;
@@ -1567,7 +1576,7 @@ function personPop(p,where){if(p.virtual){const r=ROLES[p.role]||['Equipo','#8e8
     <ul class="fns">${(AGFN[p.ag]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
     <div class="row">${APP?`<button class="btn pri" id="b_go" data-go="agentes:${esc(p.ag)}">Hablar con ${esc(p.n)}</button>`:''}</div>`}
   const me=S.me&&p.id===S.me,r=ROLES[p.role]||['Equipo','#8e8e93'],d=deskOf(p),v=VIEWOF[p.role];
-  return `<h3>${me?'Vos · ':''}${esc(p.n)}</h3><p><span style="color:${r[1]}">●</span> ${r[0]}${d?' · '+esc(d.n):''}</p><p>Ahora: <b>${p.out?'en la calle':where}</b></p>
+  return `<h3>${me?'Vos · ':''}${esc(p.n)}</h3><p><span style="color:${r[1]}">●</span> ${r[0]}${d?' · '+esc(d.n):''}</p><p>Ahora: <b>${p.stl?esc(p.stl):p.out?'en la calle':where}</b></p>
     <ul class="fns">${(ROLEFN[p.role]||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
     <div class="row">${roomOfP(p)?`<button class="btn" id="b_ar" data-room="${roomOfP(p)}">${me?'Ver mi área':'Ver su área'}</button>`:''}${p.role==='tecnico'?`<button class="btn acc" id="b_ped">Preparar su pedido</button>`:''}${APP&&v?`<button class="btn pri" id="b_go" data-go="${v[0]}">${me?v[1].replace('su día','mi día'):v[1]}</button>`:''}</div>`}
 const inOffice=()=>S.people.filter(p=>!p.inVan);
@@ -1688,8 +1697,8 @@ function applyData(d){
   // personas: se mantienen las que ya caminan, entran las nuevas por la puerta
   const old=Object.fromEntries(S.people.map(p=>[p.id,p]));const np=[];
   (d.people||[]).forEach(x=>{let p=old[x.id];if(!p){p={id:x.id,n:x.n,role:x.role,desk:'',x:SPOTS.puerta.x,y:SPOTS.puerta.y,tx:null,ty:null,path:[],busy:0,say:null,sayT:0,state:'',inVan:false,look:lookOf(x.n,x.role),carry:false,dir:1,ph:0,nuevo:SEEN!==null}}
-    else{p.n=x.n;if(p.role!==x.role){p.role=x.role;p.look=lookOf(x.n,x.role)}}p.out=!!x.out;p.virtual=!!x.virtual;p.ag=x.ag||'';if(p.virtual){p.out=false;p.look={...p.look,skin:x.ag==='ada'?'#d6c7ff':'#e5d9ff',hair:x.ag==='ada'?'#3a4fd8':'#7c5cff',pants:'#3b3b46'}}np.push(p)});
-  S.people=np;S.desks=layoutDesks(np);
+    else{p.n=x.n;if(p.role!==x.role){p.role=x.role;p.look=lookOf(x.n,x.role)}}p.out=!!x.out;p.st=x.st||'';p.virtual=!!x.virtual;p.ag=x.ag||'';if(p.virtual){p.out=false;p.look={...p.look,skin:x.ag==='ada'?'#d6c7ff':'#e5d9ff',hair:x.ag==='ada'?'#3a4fd8':'#7c5cff',pants:'#3b3b46'}}np.push(p)});
+  S.people=np;S.desks=layoutDesks(np);setTimeout(()=>{try{estAplica()}catch(_){}},50);
   if(!S.desks.length)S.desks=DESKS0.map(q=>({...q}));
   // camionetas reales
   const ov=Object.fromEntries(S.vans.map(v=>[v.id,v]));
