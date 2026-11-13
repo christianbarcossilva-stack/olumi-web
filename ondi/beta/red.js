@@ -345,7 +345,7 @@ function arrastrar(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar
 function css() { if (document.getElementById('red-css')) return; const s = document.createElement('style'); s.id = 'red-css'; s.textContent = `
 .red-on{width:min(1320px,calc(100% - 20px))!important;padding:0!important;overflow:hidden}.red-on:not([hidden]){display:block!important}
 .red{display:flex;flex-direction:column;max-height:calc(100dvh - 104px);color:var(--ink,#1B242B);font-family:var(--f-ui,system-ui,sans-serif);font-size:14px}
-.red *{box-sizing:border-box}
+.red *{box-sizing:border-box}.red-top,.red-tabs{flex:none}
 .red-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:16px 18px 10px}
 .red-eb{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted,#5D6973)}
 .red-tt h3{margin:2px 0 1px;font-size:20px;line-height:1.2}.red-sub{color:var(--muted,#5D6973);font-size:13px}
@@ -406,7 +406,7 @@ function css() { if (document.getElementById('red-css')) return; const s = docum
 .red-hc{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.3);box-shadow:0 0 0 1px rgba(255,255,255,.35);margin-right:7px;vertical-align:-2px}
 .red-fib{margin-bottom:22px}.red-fib header{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px}.red-fib header b{font-size:16px}.red-fib header span{color:var(--muted,#5D6973);font-size:13px}
 .red-hoja{display:none}
-@media (max-width:860px){.red{max-height:calc(100dvh - 86px)}.red-top{flex-direction:column;gap:10px;padding:12px 12px 8px}.red-tools{justify-content:flex-start;width:100%}.red-q{flex:1 1 100%}.red-q input{width:100%}.red-l.pop{left:0;right:auto}.red-b span{display:none}.red-x{position:absolute;top:10px;right:10px}
+@media (max-width:860px){.red{max-height:calc(100dvh - 86px)}.red-top{flex-direction:column;gap:10px;padding:12px 12px 8px}.red-tools{justify-content:flex-start;width:100%}.red-tools>select{flex:1 1 0;min-width:0}.red-q{order:3;flex:1 1 100%}.red-q input{width:100%}.red-l.pop{left:0;right:auto}.red-b span{display:none}.red-x{position:absolute;top:10px;right:10px}
   .red-tabs{padding:0 8px}.red-body{display:block;overflow:auto}.red-fr{padding:10px 8px;overflow-x:auto;overflow-y:visible}.red-lado{border-left:0;border-top:1px solid var(--line,rgba(27,36,43,.09));overflow:visible;padding:14px 12px 24px}.red-body.uno{padding:10px}.red-g4{grid-template-columns:1fr 1fr}.red-tt h3{padding-right:44px}}
 @media (prefers-reduced-motion:reduce){.r-p.crit .r-led{animation:none}}
 @media print{html.red-imp,html.red-imp body{height:auto!important;overflow:visible!important;position:static!important;background:#fff!important}html.red-imp body>*:not(.red-hoja){display:none!important}
