@@ -303,6 +303,10 @@ html #sheet .fi-menu>.arm{background:color-mix(in srgb,var(--bad) 14%,transparen
 .clibus input{width:100%;padding-left:36px!important}
 .vhead .tools .icb{width:38px;height:38px}
 /* fin 1.51i */
+/* 1.51j */
+.pryq{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.pryq .tfq{flex:1 1 260px;margin:0}
+.row .code{margin-right:6px}
+/* fin 1.51j */
 </style>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1429,12 +1433,12 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
     <button data-view="trabajos" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="M20 19l2 2"/></svg>Historial</button>
     <button data-view="proyectos" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6M9 11h1M14 11h1"/></svg>Proyectos</button>
     <button data-view="tecnicos" class="dsk"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 11.5l1.6 1.6 3.4-3.4"/></svg>Técnicos</button>
-    <button data-view="inventario" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Inventario</button>
     <span class="navsec dsk">Comercial</span>
     <button data-view="pipeline"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>CRM</button>
     <button data-view="clientes" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Clientes</button>
     <button data-view="presupuestos" class="dsk"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Presupuestos</button>
     <button data-view="agenda" class="dsk"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Seguimientos<span class="pill" id="navOver" hidden></span></button>
+    <button data-view="inventario" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Inventario</button>
     <span class="navsec dsk">Administración</span>
     <button data-view="facturacion" class="dsk"><svg viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Facturación<span class="pill" id="navFa" hidden></span></button>
     <button data-view="gastos" class="dsk"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M8 6l1.5-2.5h5L16 6"/></svg>Gastos<span class="pill" id="navGa" hidden></span></button>
@@ -2153,8 +2157,8 @@ function jobCard(j){
     <span class="sub2">${esc([j.titulo,j.obra||c?.direccion].filter(Boolean).join(' · '))}${(j.fotos||[]).length?` · ${j.fotos.length} foto${j.fotos.length>1?'s':''}`:''}</span></article>`;
 }
 function vCampo(){const t=lsGet('olumi.md')||'dia';
-  const head=`<div class="vhead"><div><h1>${esc(myFirst())}</h1><p class="sub">Lo tuyo: visitas, tickets, vehículo, facturas, reportes y ubicación.</p></div></div><div class="seg md-seg" role="tablist" style="margin-bottom:14px">${MDT.map(([k,n])=>`<button class="${t===k?'on':''}" data-act="mdt:${k}">${n}</button>`).join('')}</div>`;
-  if(t!=='dia')return head+({tk:mdTk,veh:mdVeh,fac:mdFac,rep:mdRep,ubi:mdUbi}[t]||mdTk)();
+  const head=`<div class="vhead"><div><h1>${esc(myFirst())}</h1><p class="sub">Lo tuyo: visitas, tickets, relevamientos, vehículo, facturas, reportes y ubicación.</p></div></div><div class="seg md-seg" role="tablist" style="margin-bottom:14px">${MDT.map(([k,n])=>`<button class="${t===k?'on':''}" data-act="mdt:${k}">${n}</button>`).join('')}</div>`;
+  if(t!=='dia')return head+({tk:mdTk,rel:mdRel,veh:mdVeh,fac:mdFac,rep:mdRep,ubi:mdUbi}[t]||mdTk)();
   return head+vCampoDia().replace('<div class="vhead"><div><h1>Mi día</h1>','<div class="vhead"><div><h2 class="ofih2" style="margin:0">Tu día</h2>')}
 function vCampoDia(){
   const d=new Date();d.setDate(d.getDate()+campoDay);const day=localISO(d).slice(0,10);
@@ -2928,8 +2932,8 @@ function flujoPuede(o,k,id){const a=fjE(o),b=EK[k];if(!b||a.k===k)return'';
 const fjSig=o=>{const a=fjE(o),i=ETAPAS.indexOf(a);if(a.c==='p'||a.fijo)return null;return ETAPAS.slice(i+1).find(e=>e.c!=='p'&&(!a.sig||!a.sig.length||a.sig.includes(e.k)))||null};
 // número de la oportunidad: nace con ella (P1, P2…) y es el que después lleva el proyecto y sus presupuestos
 let FJ_N=0;
-function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0))}
-function opNumPre(){const p=CRMC().numPre;return String(p==null?'P':p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
+function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0))}
+function opNumPre(){const p=CRMC().numPre;return String(p==null?(pryPlano()?'':'P'):p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
 function opNumNuevo(){return opNumPre()+(FJ_N=opNumMax()+1)}
 function opNumSig(){return opNumPre()+(opNumMax()+1)}
 async function fjNumPres(q){try{if(!CRMC().cotNum||!q.oportunidadId)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
@@ -3568,7 +3572,7 @@ function crmAjVista(){
   return`<div class="vhead"><div><h1>Ajustes del CRM</h1><p class="sub">Numeración, metas, seguimiento, proceso de ventas y motivos de pérdida.</p></div>
     <div class="tools"><button class="btn" data-act="crmaj:0">‹ Volver al CRM</button>${readonly?'':'<button class="btn pri" data-act="crmsave">Guardar</button>'}</div></div>
     <div class="panel cv" style="margin-bottom:12px"><h2 style="margin:0">Numeración de las oportunidades</h2>
-      <div class="cvr cvr2"><span>La próxima oportunidad sale con el número</span><span class="numrow"><input type="text" data-cv="numPre" value="${val(v.numPre==null?'P':v.numPre)}" maxlength="6" aria-label="Letras de adelante"><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="${opNumMax()+1}" aria-label="Próximo número"></span></div>
+      <div class="cvr cvr2"><span>La próxima oportunidad sale con el número</span><span class="numrow"><input type="text" data-cv="numPre" value="${val(v.numPre==null?opNumPre():v.numPre)}" maxlength="6" aria-label="Letras de adelante"><input type="number" min="1" step="1" inputmode="numeric" data-cv="numDesde" value="${val(v.numDesde)}" placeholder="${opNumMax()+1}" aria-label="Próximo número"></span></div>
       <p class="hint">Poné el número con el que vienen trabajando y Olumi sigue desde ahí. Tal como está hoy, la próxima sale como <b>${esc(opNumSig())}</b>. No puede ser menor que una que ya existe. El proyecto hereda ese número y, si lo elegís más abajo, también sus presupuestos.</p>${crmSinNumHtml()}</div>`+resto;
 }
 async function crmAjAct(k,el,arg){
@@ -3594,6 +3598,8 @@ async function crmNumAct(k,el){
    por un campo con buscador. La lista original queda escondida y sigue siendo la que guarda. */
 const CPK_N=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 function cpkTexto(c){return CPK_N([c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion].filter(Boolean).join(' '))}
+const CPK_SEL='select[id$="clienteId"],select[data-q="clienteId"],select[id$="proyectoId"],select[data-q="proyectoId"]';
+const cpkKind=sel=>/proyecto/i.test(sel.id+' '+(sel.dataset.q||''))?'pry':'cli';
 function cpkSub(c){return[c.contacto,c.direccion||c.telefono].filter(Boolean).join(' · ')}
 function cpkLabel(sel){const o=sel.options[sel.selectedIndex];const b=sel._cpk;if(!b)return;
   const vacio=!sel.value;b.querySelector('span').textContent=o?o.textContent:'';b.classList.toggle('vacio',vacio);b.disabled=sel.disabled}
@@ -3616,7 +3622,7 @@ function cpkAbre(sel){
   if(CPK&&CPK.sel===sel){cpkCierra(true);return}
   cpkCierra();if(sel.disabled)return;
   const box=document.createElement('div');box.className='cpk';
-  box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="Buscar por nombre, RUT, contacto o teléfono" aria-label="Buscar cliente" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
+  box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="${cpkKind(sel)==='pry'?'Buscar por número, nombre o cliente':'Buscar por nombre, RUT, contacto o teléfono'}" aria-label="${cpkKind(sel)==='pry'?'Buscar proyecto':'Buscar cliente'}" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
   sel._cpk.after(box);sel._cpk.setAttribute('aria-expanded','true');
   CPK={sel,box,i:0,items:[]};
   const q=box.querySelector('input');q.addEventListener('input',()=>{CPK.i=0;cpkPinta()});q.addEventListener('keydown',cpkTecla);
@@ -3628,19 +3634,21 @@ function cpkAbre(sel){
 function cpkPinta(){
   if(!CPK)return;const {sel,box}=CPK;const qv=box.querySelector('input').value;const q=CPK_N(qv);const ws=q.split(/\s+/).filter(Boolean);
   const ops=[...sel.options];const vacio=ops.find(o=>!o.value);
-  let l=ops.filter(o=>o.value).map(o=>{const c=D.clientes&&D.clientes[o.value]||{nombre:o.textContent};return{id:o.value,n:o.textContent,c}});
-  if(ws.length){l=l.map(x=>{const t=cpkTexto(x.c)||CPK_N(x.n),n=CPK_N(x.n);if(!ws.every(w=>t.includes(w)))return null;
+  const pry=cpkKind(sel)==='pry';
+  let l=ops.filter(o=>o.value).map(o=>{const d=pry?(D.proyectos&&D.proyectos[o.value]):(D.clientes&&D.clientes[o.value]);
+    const c=pry?{direccion:d&&d.direccion||'',t:CPK_N([o.textContent,d&&d.direccion,d&&d.numero].filter(Boolean).join(' '))}:(d||{nombre:o.textContent});return{id:o.value,n:o.textContent,c}});
+  if(ws.length){l=l.map(x=>{const t=(pry?x.c.t:cpkTexto(x.c))||CPK_N(x.n),n=CPK_N(x.n);if(!ws.every(w=>t.includes(w)))return null;
     return{...x,p:n.startsWith(q)?0:n.split(/\s+/).some(w=>w.startsWith(ws[0]))?1:2}}).filter(Boolean).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n,'es'))}
   const exacto=l.some(x=>CPK_N(x.n)===q);
   const items=[];
   if(!ws.length&&vacio)items.push({id:'',n:vacio.textContent,vacio:1});
   l.slice(0,60).forEach(x=>items.push(x));
-  if(ws.length&&!exacto&&!readonly)items.push({id:'+',n:qv.trim()});
+  if(ws.length&&!exacto&&!readonly&&!pry)items.push({id:'+',n:qv.trim()});
   CPK.items=items;if(CPK.i>=items.length)CPK.i=Math.max(0,items.length-1);
   const lst=box.querySelector('.cpk-l');
   lst.innerHTML=items.map((x,i)=>x.id==='+'?`<button type="button" role="option" class="cpk-o nuevo${i===CPK.i?' on':''}" data-cpk="+"><b>Crear cliente «${esc(x.n)}»</b><span>Después completás sus datos en Clientes</span></button>`
-    :`<button type="button" role="option" class="cpk-o${x.vacio?' vacio':''}${x.id===sel.value?' sel':''}${i===CPK.i?' on':''}" data-cpk="${esc(x.id)}" aria-selected="${x.id===sel.value}"><b>${esc(x.n)}</b>${x.c&&cpkSub(x.c)?`<span>${esc(cpkSub(x.c))}</span>`:''}</button>`).join('')
-    +(ws.length&&!l.length&&readonly?`<p class="cpk-nada">No hay clientes con «${esc(qv.trim())}».</p>`:'')
+    :`<button type="button" role="option" class="cpk-o${x.vacio?' vacio':''}${x.id===sel.value?' sel':''}${i===CPK.i?' on':''}" data-cpk="${esc(x.id)}" aria-selected="${x.id===sel.value}"><b>${esc(x.n)}</b>${(s2=>s2?`<span>${esc(s2)}</span>`:'')(x.c?(pry?x.c.direccion:cpkSub(x.c)):'')}</button>`).join('')
+    +(ws.length&&!l.length&&(readonly||pry)?`<p class="cpk-nada">No hay ${pry?'proyectos':'clientes'} con «${esc(qv.trim())}».</p>`:'')
     +(l.length>60?`<p class="cpk-nada">Hay ${l.length-60} más. Escribí un poco más para encontrarlo.</p>`:'');
   const on=lst.querySelector('.on');on&&on.scrollIntoView({block:'nearest'});
 }
@@ -3659,8 +3667,8 @@ async function cpkElige(id){
   sel.value=id;cpkCierra(true);
   sel.dispatchEvent(new Event('input',{bubbles:true}));sel.dispatchEvent(new Event('change',{bubbles:true}));
 }
-function cpkBusca(raiz){(raiz.querySelectorAll?raiz:document).querySelectorAll('select[id$="clienteId"],select[data-q="clienteId"]').forEach(cpkMonta)}
-new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.matches&&n.matches('select[id$="clienteId"],select[data-q="clienteId"]'))cpkMonta(n);else if(n.querySelector&&n.querySelector('select'))cpkBusca(n)}
+function cpkBusca(raiz){(raiz.querySelectorAll?raiz:document).querySelectorAll(CPK_SEL).forEach(cpkMonta)}
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.matches&&n.matches(CPK_SEL))cpkMonta(n);else if(n.querySelector&&n.querySelector('select'))cpkBusca(n)}
   if(CPK&&!CPK.box.isConnected)CPK=null}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('pointerdown',e=>{if(CPK&&!CPK.box.contains(e.target)&&e.target!==CPK.sel._cpk)cpkCierra()});
 cpkBusca(document);
@@ -3999,6 +4007,30 @@ const cliCoincide=c=>{const ws=qn(CLIQ).split(/\s+/).filter(Boolean);if(!ws.leng
   const t=qn([c.nombre,c.contacto,c.rut,c.departamento,c.direccion,c.email,c.telefono,String(c.telefono||'').replace(/\D/g,''),...(c.contactos||[]).flatMap(x=>[x.nombre,x.area,x.telefono,x.email])].join(' '));return ws.every(w=>t.includes(w))};
 document.addEventListener('input',e=>{const t=e.target;if(!t||t.id!=='cli_q')return;clearTimeout(qT);qT=setTimeout(()=>{CLIQ=t.value;const p=t.selectionStart;sr();const n=document.getElementById('cli_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}},120)});
 /* === fin 1.51i === */
+/* === 1.51j · proyectos numerados === */
+/* Proyectos con la numeración de la empresa (12/11, Christian): cada proyecto nuevo sale con el número que sigue
+   (el más alto entre proyectos y oportunidades + 1; Phitel lo escribe adelante del nombre: «3472 - …»).
+   Un proyecto que no se hizo se archiva («No se realizó»): sale de la lista, guarda todo y su número no se repite. */
+const PRY_NUM_RE=/^\s*[A-Za-z]{0,2}-?(\d{3,})\b/;
+const pryNumOf=p=>p?(String(p.numero||'').trim()||((String(p.nombre||'').match(PRY_NUM_RE)||[])[1]||'')):'';
+const pryNumN=p=>parseInt(String(pryNumOf(p)).replace(/\D/g,''),10)||0;
+const pryLabel=p=>{if(!p)return'';const n=String(p.numero||'').trim(),nm=String(p.nombre||'Proyecto');return n&&!nm.trim().startsWith(n)?`${n} - ${nm}`:nm};
+const pryTitulo=p=>String(p&&p.nombre||'').replace(/^\s*[A-Za-z]{0,2}-?\d{3,}\s*[-–·]\s*/,'')||'Proyecto';
+/* la «P» se saca sola cuando la empresa ya numera sus proyectos con números solos (3472 - …) */
+const pryPlano=()=>arr('proyectos').some(p=>/^\d{3,}$/.test(pryNumOf(p)));
+function pryNumMax(){let m=0;for(const p of arr('proyectos')){const n=pryNumN(p);if(n>m)m=n}return m}
+let PRYARCH=false;
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pryarch]');if(!b)return;PRYARCH=!PRYARCH;sr()});
+/* Mi día → Relevamientos (los tuyos; los jefes ven también los del equipo) */
+function mdRel(){const mios=r=>r.por===ME||r.responsable===ME||(r.tecnicos||[]).includes(ME);
+  const todos=arr('relevamientos').sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')||n0(b.creado)-n0(a.creado));
+  const l=ME?todos.filter(mios):todos,otros=ME&&isLead()?todos.filter(r=>!mios(r)).slice(0,20):[];
+  const fila=r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),(r.items||[]).length?r.items.length+' ítem'+(r.items.length===1?'':'s'):'',(r.fotos||[]).length?r.fotos.length+' foto'+(r.fotos.length===1?'':'s'):'',r.presupuestoId?'con presupuesto':''].filter(Boolean).join(' · '))}</span></div><span class="muted">${r.fecha?fdate(r.fecha):''}</span></div>`;
+  const nuevo=readonly?'':`<div class="tools" style="margin:0 0 14px"><button class="btn pri" data-new="rel">+ Relevamiento</button></div>`;
+  return nuevo+(l.length?`<section class="group" style="margin:0 0 18px"><h2>Tus relevamientos <span class="num">${l.length}</span></h2><div class="list">${l.map(fila).join('')}</div></section>`
+    :empty('Sin relevamientos tuyos','Cuando vayas a medir una obra (cámaras, metros de cable, puntos, jornales), empezalo acá. Con eso después se arma el presupuesto.','',''))
+   +(otros.length?`<section class="group"><h2>Del resto del equipo <span class="num">${otros.length}</span></h2><div class="list">${otros.map(fila).join('')}</div></section>`:'')}
+/* === fin 1.51j === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -4016,11 +4048,11 @@ const PORTAL=()=>ROLE==='cliente';
 const MYCLI=()=>PORTAL()&&MEMBERS[ME]?MEMBERS[ME].client_id:null;
 
 /* --- proyectos --- */
-const PRYE=[['activo','En curso'],['pausado','En pausa'],['terminado','Terminado']];
-const PRYEC={activo:'t-acc',pausado:'t-warn',terminado:'t-ok'};
-const pryName=id=>(D.proyectos&&D.proyectos[id]?.nombre)||'';
+const PRYE=[['activo','En curso'],['pausado','En pausa'],['terminado','Terminado'],['perdido','No se realizó (archivado)']];
+const PRYEC={activo:'t-acc',pausado:'t-warn',terminado:'t-ok',perdido:'t-none'};
+const pryName=id=>pryLabel(D.proyectos&&D.proyectos[id]);
 function pryOpts(cli){const l=arr('proyectos').filter(p=>!cli||p.clienteId===cli).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
-  return[['','Sin proyecto'],...l.map(p=>[p.id,p.nombre+(cli?'':' · '+(cliName(p.clienteId)||''))])]}
+  l.sort((a,b)=>(a.estado==='perdido')-(b.estado==='perdido')||pryNumN(b)-pryNumN(a));return[['','Sin proyecto'],...l.map(p=>[p.id,pryLabel(p)+(cli?'':' · '+(cliName(p.clienteId)||''))+(p.estado==='perdido'?' · archivado':'')])]}
 const PRYF=()=>[{k:'nombre',l:'Nombre del proyecto',w:'full',ph:'Ej.: CCTV depósito 2026'},{k:'clienteId',l:'Cliente',t:'select',o:cliOpts()},
   {k:'estado',l:'Estado',t:'select',o:PRYE},{k:'direccion',l:'Dirección de la obra',w:'full'},{k:'contactoLugar',l:'Contacto en el lugar',ph:'Quién recibe al técnico'},{k:'telLugar',l:'Teléfono del contacto',t:'tel'},{k:'inicio',l:'Inicio',t:'date'},{k:'fin',l:'Fin estimado',t:'date'},
   {k:'descripcion',l:'Descripción',t:'rich',w:'full',ph:'Alcance, equipos, contactos en obra. Usá listas y casillas ☐ para lo pendiente.'}];
@@ -4045,12 +4077,13 @@ function sheetPry(id,p){
     ${it.qs.length?`<section class="rel"><h3>Presupuestos</h3>${it.qs.map(q=>`<div class="item link" role="button" tabindex="0" data-open="pres:${q.id}"><span class="code">${esc(q.numero)}</span><span class="grow">${fdate(q.fecha)}</span><span class="num">${money(calcQ(q).total,q.moneda)}</span><span class="tag ${ESTC[q.estado]||'t-none'}">${esc((EST.find(e=>e[0]===q.estado)||EST[0])[1])}</span></div>`).join('')}</section>`:''}
     ${it.fs.length?`<section class="rel"><h3>Facturas</h3>${it.fs.map(f=>{const s=factState(f);return`<div class="item link" role="button" tabindex="0" data-open="fact:${f.id}"><span class="code">${esc(f.numero)}</span><span class="grow">${fdate(f.fecha)}</span><span class="num">${money(factCalc(f).total,f.moneda)}</span><span class="tag ${FST[s][1]}">${FST[s][0]}</span></div>`}).join('')}</section>`:''}`;
   }
-  return sheetFrame('Proyecto',id?r.nombre:'Nuevo proyecto',body,{del:!!id});
+  return sheetFrame('Proyecto '+(id?pryNumOf(r):opNumSig()),id?pryTitulo(r):'Nuevo proyecto',body,{del:!!id});
 }
 async function savePry(){
   const v=readForm(PRYF());if(!v.nombre){const e=$('#shErr');e.textContent='Poné el nombre del proyecto.';e.hidden=false;return}
   if(!v.clienteId){const e=$('#shErr');e.textContent='Elegí el cliente.';e.hidden=false;return}
   const id=SH.id||uid(),base=SH.id?{...D.proyectos[SH.id]}:{creado:Date.now()};
+  if(!SH.id&&!base.numero){const m=String(v.nombre).match(PRY_NUM_RE);base.numero=m?m[1]:opNumNuevo()}
   await put('proyectos',id,{...base,...v,actualizado:Date.now()});toast('Proyecto guardado');
   if(!SH.id){D.proyectos[id]={...base,...v};openSheet('pry',id)}else closeSheet();
 }
@@ -4538,7 +4571,7 @@ const RELF=()=>[{k:'titulo',l:'Qué se releva',w:'full',ph:'Ej.: CCTV perímetro
 let RELJ=null;
 async function saveRel(close=true){
   const v=readForm(RELF()),e=$('#shErr');if(!v.clienteId&&!v.titulo){if(e){e.textContent='Poné qué se releva o elegí el cliente.';e.hidden=false}else toast('Poné qué se releva o elegí el cliente.');return false}
-  const base=SH.id?{...D.relevamientos[SH.id]}:{creado:Date.now(),fotos:[]};const q={...(base.q||{})};
+  const base=SH.id?{...D.relevamientos[SH.id]}:{creado:Date.now(),por:ME||'',fotos:[]};const q={...(base.q||{})};
   (RSERV[v.servicio]||[]).forEach(f=>{const el=document.getElementById('rq_'+f.k);if(el)q[f.k]=el.type==='checkbox'?el.checked:(f.t==='number'?n0(el.value):el.value)});
   const id=SH.id||uid();const r={...base,...v,q,items:relItemsClean(relReadItems()),actualizado:Date.now()};if(RELJ&&RELJ.geo)r.geo=RELJ.geo;await put('relevamientos',id,r);D.relevamientos[id]=r;if(RELJ)RELJ.items=r.items.map(x=>({...x}));
   if(close){toast('Relevamiento guardado');if(!SH.id)openSheet('rel',id);else closeSheet()}return id;
@@ -4611,14 +4644,15 @@ function vProyectos(){
     ${l.length?`<div class="list">${l.map(r=>`<div class="row" role="button" tabindex="0" data-open="rel:${r.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(r.titulo||r.servicio||'Relevamiento')}</strong><span class="muted">${esc([cliName(r.clienteId),pryName(r.proyectoId),r.servicio,(r.items||[]).length?r.items.length+' ítem'+(r.items.length===1?'':'s'):'',(r.fotos||[]).length?r.fotos.length+' foto'+(r.fotos.length===1?'':'s'):''].filter(Boolean).join(' · '))}</span></div><span class="muted">${fdate(r.fecha)}</span></div>`).join('')}</div>`
       :`<div class="empty"><h2>Sin relevamientos</h2><p>Cargá lo que medís en la obra (cámaras, metros, puntos, jornales) y Olumi arma el presupuesto solo.</p>${readonly?'':'<button class="btn pri" data-new="rel">+ Relevamiento</button>'}</div>`}`;
   }
-  const l=arr('proyectos').filter(p=>!q||qn([p.nombre,cliName(p.clienteId),p.direccion,p.estado].join(' ')).includes(q)).sort((a,b)=>n0(b.creado||0)-n0(a.creado||0));
+  const nArch=arr('proyectos').filter(p=>p.estado==='perdido').length;
+  const l=arr('proyectos').filter(p=>((p.estado==='perdido')===PRYARCH)&&(!q||qn([pryLabel(p),cliName(p.clienteId),p.direccion,p.estado].join(' ')).includes(q))).sort((a,b)=>pryNumN(b)-pryNumN(a)||n0(b.creado||0)-n0(a.creado||0));
   const J=arr('trabajos'),R=arr('relevamientos');const card=p=>{const pls=pryPlanos(p.id),av=pryAvance(p.id),jobs=J.filter(j=>j.proyectoId===p.id),rels=R.filter(r=>r.proyectoId===p.id).length;
     const pend=jobs.filter(j=>j.estado!=='terminado').length;
-    return`<div class="row" role="button" tabindex="0" data-open="pry:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${esc(p.nombre||'Proyecto')}</strong><span class="muted">${esc(cliName(p.clienteId)||'Sin cliente')} · ${pls.length} plano${pls.length===1?'':'s'} · ${jobs.length} visita${jobs.length===1?'':'s'}${pend?` (${pend} pendiente${pend===1?'':'s'})`:''}${rels?` · ${rels} relevamiento${rels===1?'':'s'}`:''}</span>
+    return`<div class="row" role="button" tabindex="0" data-open="pry:${p.id}" style="grid-template-columns:minmax(0,1fr) auto"><div class="r-main"><strong>${pryNumOf(p)?`<span class="code">${esc(pryNumOf(p))}</span>`:''}${esc(pryTitulo(p))}</strong><span class="muted">${esc(cliName(p.clienteId)||'Sin cliente')} · ${pls.length} plano${pls.length===1?'':'s'} · ${jobs.length} visita${jobs.length===1?'':'s'}${pend?` (${pend} pendiente${pend===1?'':'s'})`:''}${rels?` · ${rels} relevamiento${rels===1?'':'s'}`:''}</span>
       ${av.t?`<div class="bar" style="--bc:var(--ok);margin-top:6px"><span class="lbl">Instalado</span><span class="val">${av.d} de ${av.t} · ${av.pct}%</span><div class="trk"><div class="fil" style="width:${Math.max(2,av.pct)}%"></div></div></div>`:''}</div>
-      <span class="tag ${p.estado==='terminado'?'t-ok':p.estado==='pausado'?'t-warn':'t-none'}">${esc({activo:'Activo',pausado:'Pausado',terminado:'Terminado'}[p.estado]||'Activo')}</span></div>`};
+      <span class="tag ${p.estado==='terminado'?'t-ok':p.estado==='pausado'?'t-warn':'t-none'}">${esc({activo:'Activo',pausado:'Pausado',terminado:'Terminado',perdido:'No se realizó'}[p.estado]||'Activo')}</span></div>`};
   const sinObra=isLead()?quotesSinObra():[];
-  return`${sinObra.length?`<p class="note">${sinObra.length} presupuesto${sinObra.length===1?' aceptado no tiene':'s aceptados no tienen'} obra todavía: ${sinObra.slice(0,3).map(q=>`<button class="btn ghost" data-act="q2obra:${q.id}">${esc((q.numero||'')+' · '+cliName(q.clienteId))}</button>`).join(' ')}</p>`:''}<div class="vhead"><div><h1>Proyectos y obras</h1><p class="sub">${l.length} proyecto${l.length===1?'':'s'} · planos, avance de la instalación, visitas y relevamientos</p></div></div>${tabs}${search}
+  return`${sinObra.length?`<p class="note">${sinObra.length} presupuesto${sinObra.length===1?' aceptado no tiene':'s aceptados no tienen'} obra todavía: ${sinObra.slice(0,3).map(q=>`<button class="btn ghost" data-act="q2obra:${q.id}">${esc((q.numero||'')+' · '+cliName(q.clienteId))}</button>`).join(' ')}</p>`:''}<div class="vhead"><div><h1>Proyectos y obras</h1><p class="sub">${l.length} proyecto${l.length===1?'':'s'} · planos, avance de la instalación, visitas y relevamientos</p></div></div>${tabs}<div class="pryq">${search}${nArch||PRYARCH?`<button type="button" class="tgl${PRYARCH?' on':''}" data-pryarch aria-pressed="${PRYARCH}">${PRYARCH?'Ver los activos':`Archivados (${nArch})`}</button>`:''}</div>
   ${l.length?`<div class="list">${l.map(card).join('')}</div>`:`<div class="empty"><h2>Sin proyectos</h2><p>Un proyecto agrupa la obra de un cliente: planos, puntos marcados, visitas, informes y presupuestos.</p>${readonly?'':'<button class="btn pri" data-new="pry">+ Proyecto</button>'}</div>`}`;
 }
 
@@ -5465,7 +5499,7 @@ const TECV=['oficina','campo','gastos','calendario','tickets','trabajos','proyec
 const ROLV={
   owner:null,admin:null,
   encargado:['oficina','agentes','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','agenda','reportes','mas','ajustes','menu'],
-  ventas:['oficina','agentes','campo','calendario','proyectos','pipeline','clientes','presupuestos','agenda','mas','ajustes','menu'],
+  ventas:['oficina','agentes','campo','calendario','proyectos','pipeline','clientes','presupuestos','agenda','inventario','mas','ajustes','menu'],
   administracion:['oficina','agentes','campo','bandeja','calendario','trabajos','inventario','clientes','presupuestos','facturacion','gastos','personal','agenda','reportes','mas','ajustes','menu'],
   tecnico:TECV,subcontratista:SUBV,
   viewer:['oficina','gastos','vivo','hoy','bandeja','tickets','calendario','campo','trabajos','proyectos','tecnicos','inventario','pipeline','clientes','presupuestos','facturacion','agenda','reportes','mas','ajustes','menu']};
@@ -7234,7 +7268,7 @@ function saveTabs(){const v=[0,1,2].map(i=>$('#tab_'+i)?.value).filter(Boolean);
 function ofiMiDia(){if(!ME)return'';const jobs=arr('trabajos').filter(j=>j.fecha===today()&&(j.tecnicos||[]).includes(ME)).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const tar=misTareasHtml();
   return`<section class="group ofidia"><h2>Tu día <span class="num">${jobs.length}</span><button class="btn ghost" data-view="campo" style="margin-left:auto;min-height:32px">Ver todo lo tuyo</button></h2>${jobs.length?`<div class="jobs">${jobs.slice(0,4).map(jobCard).join('')}</div>${jobs.length>4?`<p class="hint">y ${jobs.length-4} más en Mi día</p>`:''}`:'<p class="hint" style="margin:0 0 6px">No tenés visitas asignadas para hoy.</p>'}</section>${tar}`}
-const MENUSEC=[['Inicio',['oficina','campo','agentes','inicio']],['Operación',['vivo','bandeja','tickets','calendario','trabajos','proyectos','tecnicos','inventario']],['Comercial',['pipeline','clientes','presupuestos','agenda']],
+const MENUSEC=[['Inicio',['oficina','campo','agentes','inicio']],['Operación',['vivo','bandeja','tickets','calendario','trabajos','proyectos','tecnicos']],['Comercial',['pipeline','clientes','presupuestos','agenda','inventario']],
   ['Administración',['facturacion','gastos','personal','reportes']],['Empresa',['mas','ajustes','plan','admin']]];
 const MENUEXTRA={campo:['Mi día','Tus visitas, tareas y relevamientos'],tickets:['Tickets','Pedidos y fallas de los clientes'],calendario:['Calendario','Visitas de la semana'],pipeline:['CRM','Oportunidades y embudo de ventas'],tecnicos:['Técnicos','Fichas, horas, productividad y liquidación']};
 
@@ -7254,7 +7288,7 @@ function cliSoporteHtml(id){const c=D.clientes[id];if(!c||!n0(c.horasSoporte))re
   return`<section class="rel"><h3>Contrato de soporte</h3><p style="margin:0 0 8px">${esc(hsLine(id,ym))}</p>${ls.map(j=>`<div class="item link" role="button" tabindex="0" data-open="trab:${j.id}"><span class="grow">${esc(fdate(j.fecha))} · ${esc(j.titulo||'Trabajo')}</span><b class="num">${hsTxt(j.horasMO)}</b></div>`).join('')||'<p class="muted" style="margin:0">Este mes todavía no usó horas.</p>'}</section>`}
 async function avReporte(id){const j=D.trabajos[id];if(!j)return;const to=Object.keys(MEMBERS).filter(u=>u!==ME&&['owner','admin','encargado','administracion'].includes(MEMBERS[u].role));if(!to.length)return;
   avSend({org:ORG,to,titulo:'Reporte firmado · '+(jCli(j)||j.titulo||'Trabajo'),texto:[personName(ME).replace(' (vos)',''),j.titulo,j.cargo==='soporte'&&j.horasMO?hsTxt(j.horasMO)+' de soporte':''].filter(Boolean).join(' · '),ir:'trab:'+id})}
-const MDT=[['dia','Hoy'],['tk','Tickets'],['veh','Vehículo'],['fac','Facturas'],['rep','Reportes'],['ubi','Ubicación']];
+const MDT=[['dia','Hoy'],['tk','Tickets'],['rel','Relevamientos'],['veh','Vehículo'],['fac','Facturas'],['rep','Reportes'],['ubi','Ubicación']];
 function mdTk(){const mine=arr('tickets').filter(t=>tkOpen(t)&&(t.responsable===ME||arr('trabajos').some(j=>j.ticketId===t.id&&(j.tecnicos||[]).includes(ME)&&j.estado!=='terminado')));
   return mine.length?`<p class="hint" style="margin-top:0">Cuando termines, hacé el reporte desde el ticket: queda unido y, con la firma del cliente, el ticket pasa a Resuelto.</p><div class="list">${tkSorted(mine).map(t=>tkRow(t)+(readonly?'':`<div class="mdtk-act"><button class="btn" data-act="reptk:${t.id}">Hacer reporte</button></div>`)).join('')}</div>`:'<div class="empty"><p>No tenés tickets abiertos a tu cargo.</p></div>'}
 function mdVeh(){const f=tecFicha(ME)||{},tools=String(f.herramientas||'').split('\n').map(x=>x.trim()).filter(Boolean);
