@@ -4,7 +4,7 @@
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo } from './piezas.js';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=3';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const IC = {
@@ -60,8 +60,9 @@ export async function abrirMaqueta(o) {
   const hint = m => { const h = $('#mhint'); h.hidden = !m; if (m) h.innerHTML = m; };
 
   // suelo de fondo (pasto) que acompaña el tema
-  const suelo = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 1 })); suelo.position.y = -0.02; suelo.receiveShadow = true; motor.scene.add(suelo);
-  const pintaSuelo = () => suelo.material.color.set(motor.tema === 'oscuro' ? '#25321f' : (E.suelo || '#a3bb8f'));
+  const pg = new THREE.PlaneGeometry(9000, 9000).rotateX(-Math.PI / 2); { const uv = pg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 9000, uv.getY(i) * 9000); }
+  const suelo = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ roughness: 1 })); suelo.position.y = -0.02; suelo.receiveShadow = true; motor.scene.add(suelo);
+  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); };
 
   // ---------- equipos reales (Ondi) ----------
   const EQ = { lista: [], porUid: new Map(), at: 0 };
@@ -101,10 +102,16 @@ export async function abrirMaqueta(o) {
       const [x, z] = centro(p); etq.push({ p, el, v: new THREE.Vector3(x, altoDe(p) + (T.equipo ? 0.9 : 2), z), eq: !!T.equipo, cap: T.capa, siempre: !!T.siempre }); }
     motor.dirty = true; }
   motor.despues.push(() => { const lejos = motor.C.d > 420, w = canvas.clientWidth, h = canvas.clientHeight; lbl.classList.toggle('lejos', lejos);
-    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible; if (!vis) { e.el.style.display = 'none'; continue; }
+    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible; if (!vis) { e.fuera = true; continue; }
       if (e.p.pts) { const [x, z] = centro(e.p); e.v.set(x, e.v.y, z); } else e.v.set(e.p.x || 0, e.v.y, e.p.z || 0);
       const s = motor.aPantalla(e.v); const fuera = s.z > 1 || s.x < -60 || s.y < -30 || s.x > w + 60 || s.y > h + 30 || (lejos && e.eq && motor.C.d > 900) || (!e.eq && !e.siempre && motor.C.d > 300);
-      e.el.style.display = fuera ? 'none' : ''; if (!fuera) e.el.style.transform = `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) translate(-50%,-100%)`; } });
+      e.fuera = fuera; e.sx = s.x; e.sy = s.y; e.sz = s.z; }
+    // las que se pisan con una más cercana (o con la elegida) no se muestran
+    let sel = null; try { sel = SEL; } catch (er) {} const vis = etq.filter(e => e.fuera === false).sort((a, b) => (b.p === sel) - (a.p === sel) || a.sz - b.sz), puestas = [];
+    for (const e of vis) { if (!e.w) { e.el.style.display = ''; e.w = e.el.offsetWidth || 80; e.h = e.el.offsetHeight || 24; }
+      const r = [e.sx - e.w / 2 - 3, e.sy - e.h - 3, e.sx + e.w / 2 + 3, e.sy + 3], tapa = puestas.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+      e.el.style.display = tapa ? 'none' : ''; if (!tapa) { puestas.push(r); e.el.style.transform = `translate(${e.sx.toFixed(1)}px,${e.sy.toFixed(1)}px) translate(-50%,-100%)`; } }
+    for (const e of etq) if (e.fuera) e.el.style.display = 'none'; });
 
   // ---------- elegir y ficha ----------
   let SEL = null, HOV = null; const caja = new THREE.Box3Helper(new THREE.Box3(), 0x1d9bf0), cajaH = new THREE.Box3Helper(new THREE.Box3(), 0x8ecbff); caja.visible = cajaH.visible = false; motor.scene.add(caja, cajaH);
