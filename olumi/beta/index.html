@@ -3665,7 +3665,11 @@ async function crmNumAct(k,el){
 const CPK_N=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 function cpkTexto(c){return CPK_N([c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion].filter(Boolean).join(' '))}
 const CPK_SEL='select[id$="clienteId"],select[data-q="clienteId"],select[id$="proyectoId"],select[data-q="proyectoId"]';
-const cpkKind=sel=>/proyecto/i.test(sel.id+' '+(sel.dataset.q||''))?'pry':'cli';
+const cpkKind=sel=>{const k=sel.id+' '+(sel.dataset.q||'');return/proyecto|(^|_)pry/i.test(k)?'pry':/cliente|(^|_)cli/i.test(k)?'cli':/prod/i.test(k)?'prod':'gen'};
+/* 1.51m (Christian: «revisar todo… otro menú sin la lupa»): toda lista larga de una ficha (10 opciones o más) se elige escribiendo */
+const cpkQuiere=s=>s.tagName==='SELECT'&&!s.multiple&&!s.dataset.nocpk&&(s.matches(CPK_SEL)||(!!s.closest('#sheet,.filters')&&s.options.length>=10));
+const cpkNombre=sel=>{const l=sel.closest('label');const t=l&&(l.querySelector('span')||l).firstChild;return String((t&&t.textContent)||'').trim().toLowerCase()};
+const CPK_TXT={cli:['Buscar por nombre, RUT, contacto o teléfono','clientes'],pry:['Buscar por número, nombre o cliente','proyectos'],prod:['Buscar por nombre o código','productos'],gen:['Buscar','resultados']};
 function cpkSub(c){return[c.contacto,c.direccion||c.telefono].filter(Boolean).join(' · ')}
 function cpkLabel(sel){const o=sel.options[sel.selectedIndex];const b=sel._cpk;if(!b)return;
   const vacio=!sel.value;b.querySelector('span').textContent=o?o.textContent:'';b.classList.toggle('vacio',vacio);b.disabled=sel.disabled}
@@ -3688,7 +3692,7 @@ function cpkAbre(sel){
   if(CPK&&CPK.sel===sel){cpkCierra(true);return}
   cpkCierra();if(sel.disabled)return;
   const box=document.createElement('div');box.className='cpk';
-  box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="${cpkKind(sel)==='pry'?'Buscar por número, nombre o cliente':'Buscar por nombre, RUT, contacto o teléfono'}" aria-label="${cpkKind(sel)==='pry'?'Buscar proyecto':'Buscar cliente'}" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
+  box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="${CPK_TXT[cpkKind(sel)][0]}" aria-label="Buscar${cpkNombre(sel)?' '+esc(cpkNombre(sel)):''}" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
   sel._cpk.after(box);sel._cpk.setAttribute('aria-expanded','true');
   CPK={sel,box,i:0,items:[]};
   const q=box.querySelector('input');q.addEventListener('input',()=>{CPK.i=0;cpkPinta()});q.addEventListener('keydown',cpkTecla);
@@ -3700,9 +3704,9 @@ function cpkAbre(sel){
 function cpkPinta(){
   if(!CPK)return;const {sel,box}=CPK;const qv=box.querySelector('input').value;const q=CPK_N(qv);const ws=q.split(/\s+/).filter(Boolean);
   const ops=[...sel.options];const vacio=ops.find(o=>!o.value);
-  const pry=cpkKind(sel)==='pry';
-  let l=ops.filter(o=>o.value).map(o=>{const d=pry?(D.proyectos&&D.proyectos[o.value]):(D.clientes&&D.clientes[o.value]);
-    const c=pry?{direccion:d&&d.direccion||'',t:CPK_N([o.textContent,d&&d.direccion,d&&d.numero].filter(Boolean).join(' '))}:(d||{nombre:o.textContent});return{id:o.value,n:o.textContent,c}});
+  const kd=cpkKind(sel),pry=kd!=='cli';
+  let l=ops.filter(o=>o.value&&!o.disabled).map(o=>{const d=kd==='pry'?(D.proyectos&&D.proyectos[o.value]):kd==='cli'?(D.clientes&&D.clientes[o.value]):kd==='prod'?(D.productos&&D.productos[o.value]):null;
+    const c=kd==='cli'?(d||{nombre:o.textContent}):{direccion:kd==='pry'&&d&&d.direccion||'',t:CPK_N([o.textContent,d&&d.direccion,d&&d.numero,d&&d.codigo,d&&d.marca,d&&d.categoria].filter(Boolean).join(' '))};return{id:o.value,n:o.textContent,c}});
   if(ws.length){l=l.map(x=>{const t=(pry?x.c.t:cpkTexto(x.c))||CPK_N(x.n),n=CPK_N(x.n);if(!ws.every(w=>t.includes(w)))return null;
     return{...x,p:n.startsWith(q)?0:n.split(/\s+/).some(w=>w.startsWith(ws[0]))?1:2}}).filter(Boolean).sort((a,b)=>a.p-b.p||a.n.localeCompare(b.n,'es'))}
   const exacto=l.some(x=>CPK_N(x.n)===q);
@@ -3714,7 +3718,7 @@ function cpkPinta(){
   const lst=box.querySelector('.cpk-l');
   lst.innerHTML=items.map((x,i)=>x.id==='+'?`<button type="button" role="option" class="cpk-o nuevo${i===CPK.i?' on':''}" data-cpk="+"><b>Crear cliente «${esc(x.n)}»</b><span>Después completás sus datos en Clientes</span></button>`
     :`<button type="button" role="option" class="cpk-o${x.vacio?' vacio':''}${x.id===sel.value?' sel':''}${i===CPK.i?' on':''}" data-cpk="${esc(x.id)}" aria-selected="${x.id===sel.value}"><b>${esc(x.n)}</b>${(s2=>s2?`<span>${esc(s2)}</span>`:'')(x.c?(pry?x.c.direccion:cpkSub(x.c)):'')}</button>`).join('')
-    +(ws.length&&!l.length&&(readonly||pry)?`<p class="cpk-nada">No hay ${pry?'proyectos':'clientes'} con «${esc(qv.trim())}».</p>`:'')
+    +(ws.length&&!l.length&&(readonly||pry)?`<p class="cpk-nada">No hay ${CPK_TXT[kd][1]} con «${esc(qv.trim())}».</p>`:'')
     +(l.length>60?`<p class="cpk-nada">Hay ${l.length-60} más. Escribí un poco más para encontrarlo.</p>`:'');
   const on=lst.querySelector('.on');on&&on.scrollIntoView({block:'nearest'});
 }
@@ -3733,8 +3737,8 @@ async function cpkElige(id){
   sel.value=id;cpkCierra(true);
   sel.dispatchEvent(new Event('input',{bubbles:true}));sel.dispatchEvent(new Event('change',{bubbles:true}));
 }
-function cpkBusca(raiz){(raiz.querySelectorAll?raiz:document).querySelectorAll(CPK_SEL).forEach(cpkMonta)}
-new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.matches&&n.matches(CPK_SEL))cpkMonta(n);else if(n.querySelector&&n.querySelector('select'))cpkBusca(n)}
+function cpkBusca(raiz){(raiz.querySelectorAll?raiz:document).querySelectorAll('select').forEach(s=>{if(cpkQuiere(s))cpkMonta(s)})}
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT'){if(cpkQuiere(n))cpkMonta(n)}else if(n.querySelector&&n.querySelector('select'))cpkBusca(n)}
   if(CPK&&!CPK.box.isConnected)CPK=null}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('pointerdown',e=>{if(CPK&&!CPK.box.contains(e.target)&&e.target!==CPK.sel._cpk)cpkCierra()});
 cpkBusca(document);
