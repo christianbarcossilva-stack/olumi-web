@@ -4,7 +4,7 @@
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=3';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=4';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const IC = {
@@ -12,7 +12,7 @@ const IC = {
   maza: '<path d="M14 4l6 6-3 3-6-6zM11 7l-8 8 2 2 8-8M3 21h8"/>', gotero: '<path d="M14 4l6 6M16.5 2.5l5 5-3 3-5-5zM13.5 8.5 5 17l-1 4 4-1 8.5-8.5"/>',
   catalogo: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>',
   deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/>', rehacer: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/>',
-  grilla: '<path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/>', capas: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  grilla: '<path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/>', capas: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>', tema: '<circle cx="12" cy="12" r="5.2"/><path d="M12 6.8a5.2 5.2 0 0 0 0 10.4z" fill="currentColor" stroke="none"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M4.9 19.1l1.4-1.4M2 12h2"/><path d="M18.6 6.2a7 7 0 0 1 0 11.6" opacity=".55"/>',
   vista: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>', full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
   cerrar: '<path d="M6 6l12 12M18 6 6 18"/>', buscar: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', equipos: '<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>',
   borrar: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/>', duplicar: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>', enfocar: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4"/>',
@@ -43,7 +43,7 @@ export async function abrirMaqueta(o) {
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover, rueda para acercar, clic derecho para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
-    <div class="mbtns"><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
+    <div class="mbtns"><button id="btema" class="mbtn" aria-label="Cambiar entre día y noche" title="Día o noche">${svg('tema')}</button><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
   <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'estiba' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}</div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">
@@ -62,7 +62,13 @@ export async function abrirMaqueta(o) {
   // suelo de fondo (pasto) que acompaña el tema
   const pg = new THREE.PlaneGeometry(9000, 9000).rotateX(-Math.PI / 2); { const uv = pg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 9000, uv.getY(i) * 9000); }
   const suelo = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ roughness: 1 })); suelo.position.y = -0.02; suelo.receiveShadow = true; motor.scene.add(suelo);
-  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); };
+  // de noche, una grilla de 10 m en el color de la app que se apaga hacia lo lejos (la vibra de tecnología)
+  const grillaNoche = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(240, 240); t.anisotropy = 8;
+    const f = document.createElement('canvas'); f.width = f.height = 256; const y = f.getContext('2d'), gr = y.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, '#fff'); gr.addColorStop(0.35, '#888'); gr.addColorStop(1, '#000'); y.fillStyle = gr; y.fillRect(0, 0, 256, 256);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t, alphaMap: new THREE.CanvasTexture(f), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false, polygonOffset: true, polygonOffsetFactor: -16, polygonOffsetUnits: -12 }));
+    m.position.y = 0.06; m.renderOrder = 1; m.visible = false; motor.scene.add(m); return m; })();
+  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); grillaNoche.visible = motor.tema === 'oscuro'; grillaNoche.material.color.set(getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea'); };
 
   // ---------- equipos reales (Ondi) ----------
   const EQ = { lista: [], porUid: new Map(), at: 0 };
@@ -277,7 +283,10 @@ export async function abrirMaqueta(o) {
   motor.cada.push((dt, t) => { let x = false; for (const p of E.piezas) { const g = objs.get(p.id); if (g && g.userData.estado === 'crit' && g.userData.aro) { g.userData.aro.material.opacity = 0.45 + 0.45 * Math.sin(t * 0.008); x = true; } } return x; });
   if (/[?&]medir=1/.test(location.search)) { const s = $('#mstats'); s.hidden = false; setInterval(() => { const m = motor.stats; s.textContent = `${m.fps} c/s · ${m.ms} ms · ${m.dibujos} dibujos · ${Math.round(m.triangulos / 1000)} mil triángulos`; }, 700); }
   addEventListener('message', e => { const d = e.data || {}; if (d.tema) motor.ponerTema(d.tema === 'dark' || d.tema === 'oscuro' ? 'oscuro' : 'claro'); });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', m => { if (!o.tema) motor.ponerTema(m.matches ? 'oscuro' : 'claro'); });
+  let elegido = false; try { elegido = !!localStorage.getItem('motor.tema'); } catch (e) {}
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', m => { if (!o.tema && !elegido) motor.ponerTema(m.matches ? 'oscuro' : 'claro'); });
+  // día o noche: lo elige cada uno y queda guardado en su navegador
+  $('#btema').addEventListener('click', () => { const t = motor.tema === 'oscuro' ? 'claro' : 'oscuro'; elegido = true; try { localStorage.setItem('motor.tema', t); } catch (e) {} motor.ponerTema(t); });
   document.addEventListener('fullscreenchange', () => document.documentElement.classList.toggle('mfull', !!document.fullscreenElement));
 
   armarTodo();
