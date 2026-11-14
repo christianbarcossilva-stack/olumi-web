@@ -538,6 +538,34 @@ html.d2[data-paleta][data-mode="dark"] .btn.danger:not(.pri){color:#FFA59B}
 html.d2[data-paleta][data-mode="light"]{--gl-bar:rgb(248 249 251 / .84)}
 html.d2[data-paleta][data-mode="dark"]{--gl-bar:rgb(16 17 20 / .82)}
 @media (max-width:899px){html.d2[data-paleta] :is(.nav,.top){background:linear-gradient(180deg,var(--gl-sheen),transparent 40%) padding-box,linear-gradient(var(--gl-bar),var(--gl-bar)) padding-box,var(--rim) border-box}}
+/* === 14/11 · lo que mostró Christian en la lista del equipo, y lo que encontró el examen al recorrer cada pestaña === */
+/* renglón de cada persona del equipo: en el celular el nombre va arriba y el rol y el botón abajo (antes el nombre quedaba en una columna de 40 px y se partía letra por letra) */
+.mrow>div:first-child{min-width:0}
+.mrow>div:first-child strong{display:block;overflow-wrap:break-word}
+.mrow>div:first-child .muted{display:block;overflow-wrap:anywhere}
+/* todos los renglones «texto + acciones»: en el celular las acciones bajan a otro renglón solo si no entran al lado (lo mismo pasaba en los presupuestos del portal) */
+@media (max-width:700px){.row[style*="minmax(0,1fr) auto"]{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px 12px}
+  .row[style*="minmax(0,1fr) auto"]>:first-child{flex:1 1 170px;min-width:0}
+  .row[style*="minmax(0,1fr) auto"]>:not(:first-child){flex:0 1 auto;max-width:100%}
+  .mrow>span select{flex:1 1 150px;min-width:0}}
+/* el número de la campana no tenía fondo (solo se veía el número suelto) */
+html.d2[data-paleta] .bell .pill{background:var(--d2-red,#ff453a);color:#fff;font-size:10.5px;font-weight:600;line-height:18px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;box-sizing:border-box;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+/* celular: la barra de arriba va de lado a lado, así que no lleva marco (se veía un rectángulo); solo una línea fina abajo */
+@media (max-width:899px){html.d2[data-paleta] .top{border:0;border-bottom:1px solid var(--line);box-shadow:none;background:linear-gradient(var(--gl-bar),var(--gl-bar))}}
+/* una tarjeta adentro de otra no vuelve a ser vidrio: es una pieza lisa de 16 (antes se sumaban dos vidrios y quedaba un cuadro gris más claro) */
+html.d2[data-paleta] :is(.panel,.card) :is(.list,.tablewrap,.panel,.rel,.empty){background:var(--surface-2);border:1px solid var(--line);border-radius:16px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* elegido suelto (fuera de un grupo de pestañas): naranja suave con borde naranja, igual en todos lados */
+html.d2[data-paleta] :is(.estc.on,.tgl.on,.chipb.on,.apf [aria-pressed="true"]){background:var(--accent-soft);border-color:transparent;color:var(--fg);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 75%,transparent)}
+/* En vivo: el cartelito de cada técnico se salía de su tarjeta y pisaba la de al lado */
+.tech .st{max-width:100%;box-sizing:border-box;vertical-align:top}
+.fleet .tech{min-width:0}.tech>span{min-width:0}
+#vivoMapHost>p.muted{padding:58px 16px 16px!important;text-align:center}
+#vivoMapBox:has(#vivoMapHost>p.muted) .vr-empty{display:none}
+html.d2[data-paleta] .pcard{border-radius:16px}
+/* sin marrones (Christian, 13/11: «no me convencen los colores marrones»): lo que quedaba de la paleta cálida */
+html.d2[data-paleta][data-mode="light"]{--s-pres:#08707a}
+html.d2[data-paleta][data-mode="dark"]{--s-pres:#4fd1dc}
+html.d2[data-paleta] .vr-pr.p2{background:#ffc93c}
 /* fin 1.52a */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
@@ -5310,7 +5338,7 @@ const PTIPOS=[
 const RTIPOS=[
   {k:'utp',n:'Cable UTP',c:'#2F7FD0',kw:['utp','cat6','cat 6','cable de red']},
   {k:'fibra',n:'Fibra óptica',c:'#E6A800',kw:['fibra']},
-  {k:'coax',n:'Coaxil',c:'#8A5A2B',kw:['coaxil','coax','rg59','rg6']},
+  {k:'coax',n:'Coaxil',c:'#7A46CC',kw:['coaxil','coax','rg59','rg6']},
   {k:'elec',n:'Eléctrico',c:'#D93A30',kw:['eléctric','electric','taller','energía']},
   {k:'canal',n:'Caño o canaleta',c:'#6B6E76',kw:['caño','cano','canaleta','ducto','bandeja']}];
 const PTK=Object.fromEntries(PTIPOS.map(t=>[t.k,t])),RTK=Object.fromEntries(RTIPOS.map(t=>[t.k,t]));
@@ -7895,7 +7923,7 @@ function ofiData0(){
     else if(ty==='tk'){ic='🎫';col=i.cls==='bad'?'#ff453a':'#ff9f0a';kind='wa'}
     else if(ty==='trab'){ic=i.cls==='ok'?'✓':'🚐';col=i.cls==='ok'?'#34c759':'#ff9f0a'}
     else if(ty==='pres'){ic='$';col='#f5b800';kind=i.cls==='ok'?'pres':''}
-    else if(ty==='mov'){ic='⬇';col='#a2845e';kind='mov'}
+    else if(ty==='mov'){ic='⬇';col='#40c8e0';kind='mov'}
     return{id:i.open+':'+i.ts,open:i.open,ic,col,b:i.b,s:i.s||'',t:minAgo(i.ts)<1?'ahora':ofiHM(i.ts),kind}});
   const ents=arr('entradas').filter(e=>String(e.creado?new Date(Number(e.creado)).toISOString().slice(0,10):'')===hoy&&!entCharla(e));
   const mes=hoy.slice(0,7);
@@ -8757,7 +8785,7 @@ function equipoHtml(){
   return`<div class="vhead" style="margin-top:34px"><div><h1>Equipo</h1><p class="sub">Quién usa Olumi en ${esc((ORGINFO&&ORGINFO.name)||'tu empresa')}${PLAN?` · ${PLAN.users} de ${PLAN.max_users} usuarios del plan ${esc(PLAN.nombre)}`:''}</p></div></div>
   ${MEMS.length>1?`<div class="panel" style="margin-bottom:12px"><label class="fld" for="orgsel" style="max-width:420px"><span>Empresa</span><select id="orgsel" data-orgsel>${opts(MEMS.map(m=>[m.org_id,(m.orgs&&m.orgs.name)||m.org_id]),ORG)}</select></label></div>`:''}<div class="panel">${admin?`<p style="margin:0 0 10px">Para sumar a alguien: que instale Olumi, cree su cuenta y elija <b>Unirme a la empresa</b> con este código. Queda esperando hasta que lo apruebes acá abajo y le elijas el rol.</p>
     <div class="actions" style="margin-bottom:16px;align-items:center"><span class="num" style="font-size:24px;letter-spacing:.18em">${esc((ORGINFO&&ORGINFO.join_code)||'')}</span><button class="btn" data-act="copycode">Copiar código</button><button class="btn ghost" data-act="newcode">Cambiar código</button></div>`:''}
-  <div class="list">${ms.map(m=>`<div class="row" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
+  <div class="list">${ms.map(m=>`<div class="row mrow" style="grid-template-columns:minmax(0,1fr)${admin&&m.role==='pendiente'?'':' auto'};cursor:default"><div><strong>${esc(m.display_name||m.email||'Sin nombre')}${m.user_id===ME?' (vos)':''}</strong><span class="muted">${esc(m.email||'')}</span></div>
     ${admin&&m.role==='pendiente'?pendHtml(m):admin&&m.user_id!==ME&&m.role!=='owner'?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select data-role="${esc(m.user_id)}" aria-label="Rol de ${esc(m.display_name||m.email||'')}">${opts(ROLES,m.role)}</select>${m.email?`<button class="btn ghost" data-act="pwreset:${esc(m.email)}" title="Le llega un email para elegir una contraseña nueva">Contraseña</button>`:''}</span>`:`<span class="tag t-none">${ROLEN[m.role]||m.role}</span>`}</div>`).join('')}</div>
   ${admin?inviteHtml():''}
   ${admin?soporteHtml():''}
