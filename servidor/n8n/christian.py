@@ -119,12 +119,14 @@ CLASIF = (
     "No escribís respuesta. Usá el MENSAJE y el CONTEXTO de Olumi (cliente, tickets, historial). Devolvé SOLO JSON: "
     "{ \"carril\": \"soporte\" | \"comercial\" | \"administrativo\" | \"coordinar\" | \"personal\" | \"proveedor\" | \"spam\", "
     "\"urgencia\": \"alta\" | \"media\" | \"baja\" (alta solo si algo dejó de funcionar y afecta la operación), "
-    "\"nombre\": \"de la persona o ''\", \"empresa\": \"empresa o lugar o ''\", \"titulo\": \"máximo 60 letras\", \"resumen\": \"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\" }. "
+    "\"nombre\": \"de la persona o ''\", \"empresa\": \"empresa o lugar o ''\", \"rol\": \"qué hace en su empresa o ''\", \"direccion\": \"si la dijo o ''\", \"datos\": { \"dato\": \"valor\" } (solo lo que dijo y sirve la próxima vez: galpón, equipo, horario en que se lo encuentra), "
+    "\"titulo\": \"máximo 60 letras\", \"resumen\": \"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\" }. "
+    "Para nombre y empresa usá primero QUIÉN ES (lo que Olumi ya sabe de este número); si el mensaje lo contradice, gana el mensaje. "
     "soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden documentos, facturas, carnés, datos de la empresa; coordinar = fechas, horarios, confirmar una visita; "
     "personal = no tiene que ver con el trabajo."
 )
 cla = cerebro("Clasificar", (1780, 160), CLASIF,
-    "={{ 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) }}")
+    "={{ 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nQUIÉN ES: ' + JSON.stringify($json.quienEs || {}) + '\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) }}")
 link(ctx1, cla)
 reg = code("Armar entrada de bandeja", (2420, 160), r"""
 const m = $('¿Quién escribe?').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}
@@ -132,7 +134,7 @@ const carril = ['soporte','comercial','administrativo','coordinar','personal','p
 if (carril === 'personal') return [];                                     // no es trabajo: no se anota
 const urg = ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : 'media';
 const tipoEntrada = { soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo', proveedor: 'proveedor', spam: 'spam' }[carril] || 'consulta';
-return [{ json: { modo: 'registrar', registrar: true, soloGuardar: false, autor: 'cliente', org: '%s', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '',
+return [{ json: { modo: 'registrar', registrar: true, soloGuardar: false, autor: 'cliente', org: '%s', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '', rol: j.rol || '', direccion: j.direccion || '', datos: (j.datos && typeof j.datos === 'object') ? j.datos : {},
   texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '', titulo: j.titulo || '', intencion: carril, tema: carril, tipoEntrada, tipo: urg === 'alta' ? 'emergencia' : 'consulta',
   destino: 'bandeja', urgente: urg === 'alta', canal: 'whatsapp', origen: 'WhatsApp de Christian', carril, urgencia: urg, msgId: m.msgId, esAudio: m.esAudio, respuestaAuto: '' } }];
 """ % ORG)
@@ -155,7 +157,7 @@ cmd = code("Comandos y prueba", (1560, 680), r"""
 const m = $json, sd = $getWorkflowStaticData('global'); sd.prueba = sd.prueba || { desde: 0, soy: '' }; sd.bloq = sd.bloq || {};
 const low = m.texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 const out = t => [{ json: { ...m, respuesta: '🤖 ' + t, comando: true } }];
-if (/^(ayuda|comandos)$/.test(low)) return out('Modo prueba. Escribime como si fueras un cliente y te contesto acá. Comandos:\n• reiniciar prueba → empiezo una charla nueva\n• prueba soy Nombre de Empresa → hago de cuenta que escribe ese cliente de Olumi\n• bloquear 099123456 → ese número nunca se anota ni se contesta');
+if (/^(ayuda|comandos)$/.test(low)) return out('Modo prueba. Escribime como si fueras un cliente y te contesto acá. «prueba soy +598 99 123 456» hace de cuenta que escribís desde ese número (con lo que Olumi sabe de él). Comandos:\n• reiniciar prueba → empiezo una charla nueva\n• prueba soy Nombre de Empresa → hago de cuenta que escribe ese cliente de Olumi\n• bloquear 099123456 → ese número nunca se anota ni se contesta');
 if (/^reiniciar( prueba)?$/.test(low)) { sd.prueba = { desde: Date.now(), soy: '' }; return out('Listo, charla nueva. Escribime como cliente.'); }
 const soy = m.texto.match(/^prueba soy (.+)$/i); if (soy) { sd.prueba.soy = soy[1].trim(); sd.prueba.desde = Date.now(); return out('Ok, ahora sos ' + sd.prueba.soy + '. Charla nueva: escribime como ese cliente.'); }
 const bl = low.match(/^bloquear\s+\+?(\d[\d ]{6,})$/); if (bl) { let n = bl[1].replace(/\D/g, ''); if (n.startsWith('0')) n = '598' + n.slice(1); sd.bloq[n] = Date.now(); return out('Bloqueado +' + n + ': nunca se anota ni se contesta.'); }
@@ -194,15 +196,19 @@ return [{ json: { charla: L.slice(-40).map(l => '[' + hora(l.ts) + '] ' + l.quie
 """)
 link(charla, leer_charla)
 ctx2 = http("Olumi (cliente de la prueba)", (2660, 780), OLUMI, credkey="olumi", soft=True,
-    body="={{ JSON.stringify({ modo: 'contexto', org: '%s', de: '+00000000', nombre: ($json.soy || '').split(/ de /i)[0] || '', empresa: ($json.soy || '').split(/ de /i).slice(1).join(' de ') }) }}" % ORG)
+    body="={{ JSON.stringify(/^\\+?[\\d ]{8,}$/.test($json.soy || '') ? { modo: 'contexto', org: '%s', de: '+' + String($json.soy).replace(/\\D/g, '').replace(/^0/, '598') } : { modo: 'contexto', org: '%s', de: '+00000000', nombre: ($json.soy || '').split(/ de /i)[0] || '', empresa: ($json.soy || '').split(/ de /i).slice(1).join(' de ') }) }}" % (ORG, ORG))
 link(leer_charla, ctx2)
 PENSAR = (
     "Sos Christian Barcos, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). "
     "Alguien te escribió por WhatsApp. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. "
     "Te paso la CHARLA REAL (en orden, con hora: Cliente o Asistente), LO NUEVO que dijo el cliente y lo que sabe OLUMI (cliente, tickets, visitas, presupuestos, notas internas, mails, cómo escribe Christian). "
-    "Devolvé SOLO JSON: { \"ficha\": { \"quePide\": \"...\", \"carril\": \"soporte|comercial|administrativo|coordinar\", \"yaSabemos\": [ { \"dato\": \"direccion|fecha|hora|equipo|contacto|otro\", \"valor\": \"...\", \"fuente\": \"whatsapp 10:32 | mail | olumi\" } ], \"yaAcordado\": \"\", \"falta\": [\"solo lo imprescindible\"], \"pidioQueNoEscriba\": true|false }, "
+    "Devolvé SOLO JSON: { \"ficha\": { \"quienEs\": \"nombre y empresa como los sabés, o ''\", \"quePide\": \"...\", \"carril\": \"soporte|comercial|administrativo|coordinar\", \"yaSabemos\": [ { \"dato\": \"direccion|fecha|hora|equipo|contacto|otro\", \"valor\": \"...\", \"fuente\": \"whatsapp 10:32 | mail | olumi\" } ], \"yaAcordado\": \"\", \"falta\": [\"solo lo imprescindible\"], \"pidioQueNoEscriba\": true|false }, "
     "\"responder\": true|false, \"porque\": \"una frase\", \"respuesta\": \"el texto exacto o ''\", \"pasarAPersona\": true|false, \"motivoPase\": \"una frase o ''\" }. "
     "REGLAS: "
+    "0) QUIÉN ES: en OLUMI.quienEs está lo que ya sabemos de esta persona (nombre, empresa, cliente, rol, otros referentes, lo que ya nos dijo) y cómo lo sabemos. "
+    "Si dice su nombre, usalo como lo usaría Christian (solo el nombre de pila, no en cada mensaje). Nunca le preguntes quién es, de qué empresa es ni algo que ya esté en quienEs, la charla, los mails o las notas. "
+    "Si no sabemos de qué empresa es y hace falta para avanzar, preguntalo UNA vez y natural ('¿de qué empresa me escribís?'); si quienEs.posiblesClientes trae uno, podés confirmarlo ('¿sos de X, no?'). "
+    "Si es referente de un cliente con soporte (OLUMI.soporte), tratalo como cliente de la casa. "
     "1) Leé TODO antes de escribir. Lo que ya se dijo en cualquier lado (dirección, día, hora, equipo, qué pasó) va en yaSabemos y NO se vuelve a preguntar. Si ya quedó acordado ('vengan el jueves a las 11'), confirmalo, no lo preguntes. "
     "2) Si el cliente pidió que no le escriban más, o dijo que ya está, o que lo habla con otra persona: pidioQueNoEscriba=true y responder=false. "
     "3) Respondé solo si le sirve: una pregunta sin contestar, un pedido nuevo o algo urgente. Si lo último es 'ok', 'gracias', 'dale', un saludo de cierre o un dato que ya confirmamos: responder=false. "
@@ -253,7 +259,7 @@ const sabeTxt = (f.yaSabemos || []).map(x => x.dato + ': ' + x.valor).join(' · 
 const manda = mot.length === 0;
 const pase = j.pasarAPersona ? '\n🚨 Te lo pasaría a vos: ' + (j.motivoPase || 'conviene que lo veas') + '. El asistente se calla en esta charla.' : '';
 const texto = (manda ? '🤖 ' + r : '🤖 (No le respondería: ' + mot.join('; ') + '.' + (r ? ' Había pensado: “' + r + '”' : '') + ')') + pase;
-return [{ json: { ownerNum: $('Comandos y prueba').item.json.ownerNum, texto, nota: '🧠 ' + (f.quePide ? 'Pide: ' + f.quePide + '. ' : '') + (f.carril ? 'Carril: ' + f.carril + '. ' : '') + (sabeTxt ? 'Ya sé: ' + sabeTxt + '. ' : '') + ((f.falta || []).length ? 'Falta: ' + f.falta.join(', ') + '.' : '') } }];
+return [{ json: { ownerNum: $('Comandos y prueba').item.json.ownerNum, texto, nota: '🧠 ' + (f.quienEs ? 'Es: ' + f.quienEs + (ctx.quienEs?.comoLoSabemos ? ' (' + ctx.quienEs.comoLoSabemos + ')' : '') + '. ' : '') + (f.quePide ? 'Pide: ' + f.quePide + '. ' : '') + (f.carril ? 'Carril: ' + f.carril + '. ' : '') + (sabeTxt ? 'Ya sé: ' + sabeTxt + '. ' : '') + ((f.falta || []).length ? 'Falta: ' + f.falta.join(', ') + '.' : '') } }];
 """)
 link(pensar, control)
 mandar = http("Contestarme en mi chat", (3740, 780), f"{EVO}/message/sendText/{INST}", credkey="evo", soft=True,

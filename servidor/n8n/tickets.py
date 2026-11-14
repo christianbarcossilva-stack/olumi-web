@@ -6,6 +6,10 @@
 #     un solo dato que falte. Nunca repite preguntas, nunca inventa fechas ni precios.
 #   · Si el cliente pide que no le escriban, deja de contestar a ese número (se sigue anotando en Olumi).
 #   · Bloqueados: familia, pareja y equipo de Phitel (ni se anotan ni se contestan). Grupos y estados: no.
+#   · 14/11 (Christian): el número es para clientes registrados o cercanos que tienen soporte y horas por mes. Un cliente puede tener
+#     varios referentes (ej. un parque logístico): se reconoce a cada uno por su teléfono en la ficha del cliente o porque ya lo
+#     dijo antes. Si no sabemos de qué cliente es, NO se crea ticket: queda en la bandeja y se le pregunta una sola vez la empresa.
+#     La respuesta la escribe la IA con las reglas de whatsapp-voz.md (como una persona); si suena a robot, va la de la función.
 # Uso: python3 n8n/tickets.py credenciales.json > tickets.json
 import json, sys, os
 
@@ -117,18 +121,26 @@ return [{ json: { ...a, texto: nuevos.join('\n') || a.texto, charla: L.slice(-40
 """)
 link(charla, armar)
 ctx = http("Contexto en Olumi", (2200, 300), OLUMI, credkey="olumi", soft=True,
-    body="={{ JSON.stringify({ modo: 'contexto', org: '%s', de: '+' + $json.from, nombre: $json.nombre }) }}" % ORG)
+    body="={{ JSON.stringify({ modo: 'contexto', org: '%s', de: '+' + $json.from, nombre: $json.nombre, conClientes: true }) }}" % ORG)
 link(armar, ctx)
 CLASIF = (
     "Leés una charla de WhatsApp que entró al número de soporte de Phitel (instalaciones en Uruguay: fibra, CCTV, cableado, control de acceso, porteros, redes, alarmas). "
-    "Usá TODA la charla y lo que sabe Olumi. No inventes nada. Devolvé SOLO JSON: "
+    "Este número es para clientes registrados que tienen soporte. Usá TODA la charla y lo que sabe Olumi (QUIÉN ES: nombre, empresa, cliente, rol y lo que ya dijo). No inventes nada. Devolvé SOLO JSON: "
     "{ \"carril\": \"soporte\" | \"comercial\" | \"administrativo\" | \"coordinar\" | \"personal\" | \"spam\", \"urgencia\": \"alta\" | \"media\" | \"baja\", "
-    "\"nombre\": \"\", \"empresa\": \"\", \"titulo\": \"máx 60 letras\", \"resumen\": \"1-2 frases: lugar, equipo, desde cuándo, lo acordado\", "
-    "\"yaSabemos\": [\"datos que ya dio o que están en Olumi\"], \"falta\": \"UN solo dato imprescindible para ir, o ''\", \"pidioQueNoEscriba\": true|false }. "
-    "alta = algo dejó de funcionar y afecta la operación. falta: nunca algo que ya esté en la charla o en Olumi (dirección, contacto, equipo)."
+    "\"cliente\": \"el nombre EXACTO de la lista CLIENTES si sabés de cuál es (por QUIÉN ES o porque lo dijo), o ''\", "
+    "\"nombre\": \"\", \"empresa\": \"como la dijo\", \"rol\": \"qué hace en su empresa o ''\", \"direccion\": \"si la dijo o ''\", \"datos\": { \"dato\": \"valor\" } (solo lo que dijo y sirve la próxima vez: galpón, sector, equipo), "
+    "\"titulo\": \"máx 60 letras\", \"resumen\": \"1-2 frases: lugar, equipo, desde cuándo, lo acordado\", "
+    "\"yaSabemos\": [\"datos que ya dio o que están en Olumi\"], \"falta\": \"UN solo dato imprescindible para ir, o ''\", \"pidioQueNoEscriba\": true|false, "
+    "\"respuesta\": \"lo que le contestaría una persona del equipo\" }. "
+    "alta = algo dejó de funcionar y afecta la operación. falta: nunca algo que ya esté en la charla, en QUIÉN ES o en Olumi (dirección, contacto, equipo, empresa). "
+    "Si no sabemos de qué cliente es, falta = 'de qué empresa' (nada más). "
+    "RESPUESTA (reglas de Christian): como en WhatsApp, 1 o 2 renglones, voseo, tono del cliente, sin listas ni menús, sin '¡Hola! Gracias por comunicarte', sin 'a la brevedad', 'estimado', 'su solicitud', sin firma. "
+    "Usá su nombre de pila si lo sabés. Si es un pedido nuevo de un cliente conocido, decí que ya lo anotaste y poné {pedido} donde va el número (ej. 'Hola Ana! Ya lo anoté, es el pedido {pedido}. Lo vemos y te escribo.'). "
+    "Si es urgente, decí que lo marcaste urgente y que lo llaman enseguida, sin prometer hora. Si falta un dato, terminá con UNA pregunta natural para ese dato. "
+    "Nunca inventes precios, fechas ni horarios. Si pregunta si es un bot, decí la verdad: 'Soy el asistente de Phitel, si querés te escribe alguien del equipo ya'."
 )
 cla = cerebro("Entender el pedido", (2420, 300), CLASIF,
-    "'CHARLA:\\n' + $('Armar la charla').item.json.charla + '\\n\\nLO NUEVO:\\n' + $('Armar la charla').item.json.texto + '\\n\\nOLUMI: ' + JSON.stringify({ cliente: $('Contexto en Olumi').item.json.cliente || null, ticketsAbiertos: $('Contexto en Olumi').item.json.ticketsAbiertos || [], historial: ($('Contexto en Olumi').item.json.historial || []).slice(-8) })")
+    "'CHARLA:\\n' + $('Armar la charla').item.json.charla + '\\n\\nLO NUEVO:\\n' + $('Armar la charla').item.json.texto + '\\n\\nQUIÉN ES: ' + JSON.stringify($('Contexto en Olumi').item.json.quienEs || {}) + '\\n\\nOLUMI: ' + JSON.stringify({ cliente: $('Contexto en Olumi').item.json.cliente || null, soporte: $('Contexto en Olumi').item.json.soporte || null, ticketsAbiertos: $('Contexto en Olumi').item.json.ticketsAbiertos || [], historial: ($('Contexto en Olumi').item.json.historial || []).slice(-8) }) + '\\n\\nCLIENTES: ' + JSON.stringify($('Contexto en Olumi').item.json.clientesNombres || [])")
 link(ctx, cla)
 reg = code("Armar el ticket", (3300, 300), r"""
 const m = $('Armar la charla').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}
@@ -136,11 +148,14 @@ const carril = ['soporte','comercial','administrativo','coordinar','personal','s
 if (carril === 'spam') return [];
 const urg = ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : (m.urgPrevia ? 'alta' : 'media');
 const tipoEntrada = { soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo', personal: 'consulta' }[carril];
-const aTicket = carril === 'soporte' || carril === 'coordinar';                     // lo comercial y administrativo va a la bandeja
-return [{ json: { modo: 'registrar', registrar: true, autor: 'cliente', org: '%s', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '',
+const ctx = $('Contexto en Olumi').item.json || {}, lista = ctx.clientesNombres || [];
+const cliente = ctx.quienEs?.cliente || (lista.includes(j.cliente) ? j.cliente : '');      // solo un nombre que exista tal cual
+const aTicket = !!cliente && (carril === 'soporte' || carril === 'coordinar');   // ticket solo si sabemos de qué cliente es; lo demás, a la bandeja
+return [{ json: { modo: 'registrar', registrar: true, autor: 'cliente', org: '%s', de: '+' + m.from, nombre: j.nombre || ctx.quienEs?.nombre || m.nombre, empresa: cliente || j.empresa || '',
+  rol: j.rol || '', direccion: j.direccion || '', datos: (j.datos && typeof j.datos === 'object') ? j.datos : {}, _resp: String(j.respuesta || '').trim().slice(0, 400), _cliente: cliente,
   texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '', titulo: j.titulo || '', intencion: carril, tema: carril, tipoEntrada, tipo: urg === 'alta' ? 'emergencia' : 'consulta',
   destino: aTicket ? 'ticket' : 'bandeja', urgente: urg === 'alta', canal: 'whatsapp', origen: 'WhatsApp de soporte', carril, urgencia: urg, msgId: m.msgId, esAudio: m.esAudio,
-  _falta: String(j.falta || '').slice(0, 120), _parar: m.parar || !!j.pidioQueNoEscriba, _from: m.from } }];
+  _falta: cliente ? String(j.falta || '').slice(0, 120) : 'de qué empresa me escribís', _parar: m.parar || !!j.pidioQueNoEscriba, _from: m.from } }];
 """ % ORG)
 link(cla, reg)
 olumi_in = http("Crear en Olumi", (3520, 300), OLUMI, credkey="olumi", soft=True,
@@ -148,17 +163,22 @@ olumi_in = http("Crear en Olumi", (3520, 300), OLUMI, credkey="olumi", soft=True
 link(reg, olumi_in)
 control = code("Control antes de contestar", (3740, 300), r"""
 // Frenos en código: una sola respuesta por pedido nuevo, nada si pidió parar, nada si es un mensaje repetido.
+// La respuesta la escribe la IA (como una persona); si suena a robot, es larga o tiene más de una pregunta, va la de la función.
 const t = $('Armar el ticket').item.json, r = $json || {}, sd = $getWorkflowStaticData('global'); sd.ult = sd.ult || {};
 if (!r.ok || r.repetido || t._parar) return [];
 const ahora = Date.now(), ult = sd.ult[t._from] || 0;
-let texto = '';
-if (r.nuevo) texto = String(r.respuesta || '');
-else if (ahora - ult > 2 * 3600e3) texto = String(r.respuesta || '');            // sumado a un pedido abierto: como mucho un aviso cada 2 h
+if (!r.nuevo && ahora - ult < 2 * 3600e3) return [];                       // sumado a un pedido abierto: como mucho un aviso cada 2 h
+const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+let ia = t._resp.replace(/\{pedido\}/g, r.ticket || '').trim();
+const robot = /a la brevedad|estimad|su solicitud|hemos recibido|gracias por (comunicarte|escribir|contactarte)|marca (1|uno)|asistente virtual/.test(norm(ia));
+const malo = !ia || robot || (ia.match(/\?/g) || []).length > 1 || ia.length > 320 || /^\s*([-•*]|\d+[).])\s/m.test(ia)
+  || (/\{pedido\}/.test(t._resp) && !r.ticket) || (r.ticket && r.nuevo && !ia.includes(r.ticket));   // si hay pedido nuevo, el número tiene que estar
+let texto = malo ? String(r.respuesta || '') : ia;
+if (!malo && r.nuevo && !t._cliente && !/empresa/.test(norm(ia))) texto += (/\?/.test(ia) ? '' : ' ¿De qué empresa me escribís?');
+if (malo && r.nuevo && t._falta) texto += '\n¿Me pasás ' + t._falta.replace(/^(el|la|los|las)\s+/i, (x) => x.toLowerCase()).replace(/[?.]+$/, '') + '?';
 if (!texto) return [];
-if (r.nuevo && t._falta) texto += '\n¿Me pasás ' + t._falta.replace(/^(el|la|los|las)\s+/i, (x) => x.toLowerCase()).replace(/[?.]+$/, '') + '?';
-if (/a la brevedad/i.test(texto) && t.urgente) texto = texto.replace(/Te respondemos a la brevedad\.?/i, 'Te contactamos enseguida.');
 sd.ult[t._from] = ahora;
-return [{ json: { number: t._from, text: texto } }];
+return [{ json: { number: t._from, text: texto, _deIA: !malo } }];
 """)
 link(olumi_in, control)
 mandar = http("Contestar al cliente", (3960, 300), f"{EVO}/message/sendText/{INST}", credkey="evo", soft=True,
