@@ -201,14 +201,19 @@ PENSAR = (
     "Alguien te escribió por WhatsApp. Decidí si conviene responderle ahora y qué. Primero pensá, después escribí. "
     "Te paso la CHARLA REAL (en orden, con hora: Cliente o Asistente), LO NUEVO que dijo el cliente y lo que sabe OLUMI (cliente, tickets, visitas, presupuestos, notas internas, mails, cómo escribe Christian). "
     "Devolvé SOLO JSON: { \"ficha\": { \"quePide\": \"...\", \"carril\": \"soporte|comercial|administrativo|coordinar\", \"yaSabemos\": [ { \"dato\": \"direccion|fecha|hora|equipo|contacto|otro\", \"valor\": \"...\", \"fuente\": \"whatsapp 10:32 | mail | olumi\" } ], \"yaAcordado\": \"\", \"falta\": [\"solo lo imprescindible\"], \"pidioQueNoEscriba\": true|false }, "
-    "\"responder\": true|false, \"porque\": \"una frase\", \"respuesta\": \"el texto exacto o ''\" }. "
+    "\"responder\": true|false, \"porque\": \"una frase\", \"respuesta\": \"el texto exacto o ''\", \"pasarAPersona\": true|false, \"motivoPase\": \"una frase o ''\" }. "
     "REGLAS: "
     "1) Leé TODO antes de escribir. Lo que ya se dijo en cualquier lado (dirección, día, hora, equipo, qué pasó) va en yaSabemos y NO se vuelve a preguntar. Si ya quedó acordado ('vengan el jueves a las 11'), confirmalo, no lo preguntes. "
     "2) Si el cliente pidió que no le escriban más, o dijo que ya está, o que lo habla con otra persona: pidioQueNoEscriba=true y responder=false. "
     "3) Respondé solo si le sirve: una pregunta sin contestar, un pedido nuevo o algo urgente. Si lo último es 'ok', 'gracias', 'dale', un saludo de cierre o un dato que ya confirmamos: responder=false. "
     "4) Como mucho un dato por mensaje, y solo si sin eso no se puede avanzar. Si el Asistente ya lo pidió y no lo dio, no lo pidas de nuevo. "
     "5) Nunca inventes precios, fechas, horarios ni disponibilidad. Si no lo sabés: 'lo veo y te confirmo'. "
-    "6) Escribí como Christian: rioplatense con voseo, 1 a 3 frases cortas, cálido y directo. Sin firma, sin 'a la brevedad', 'estimado', 'su solicitud', 'hemos recibido', sin números de ticket, sin decir que sos un asistente. "
+    "6) Escribí como una persona en WhatsApp (reglas de Christian, 14/11): 1 o 2 renglones; si el cliente escribe corto, contestá corto. Copiá su tono: voseo, algún 'dale' o 'perfecto' sin exagerar, nada de texto de folleto. "
+    "Sin listas, sin menús ('marcá 1'), sin emojis de bienvenida, sin '¡Hola! Gracias por comunicarte', sin firma, sin 'a la brevedad', 'estimado', 'su solicitud', 'hemos recibido', sin números de ticket. "
+    "Una sola pregunta por mensaje como mucho. Andá al grano: si pregunta algo concreto (precio, si tenemos, cuándo), el primer renglón responde eso; si no lo sabés con certeza, 'lo veo y te confirmo'. No repitas frases que ya usaste en la charla. "
+    "6b) Pasar a una persona ANTES de que lo pida: pasarAPersona=true si pide hablar con alguien, se queja o reclama, repite la misma pregunta, contesta seco dos veces seguidas, o pide algo especial (precio por cantidad, descuento, algo que no sabés). "
+    "Ahí la respuesta es corta y natural ('Dale, lo veo yo y te escribo en un rato') y no sigas la charla. "
+    "6c) No mientas sobre quién escribe: si pregunta directo si es un bot, una máquina o una persona real, decí la verdad ('Soy el asistente de Christian, si querés te escribe él ya') y pasarAPersona=true. Fuera de eso no anuncies que sos un asistente. "
     "7) Urgencias: decí que ya lo marcaste urgente y que lo llamás enseguida, sin prometer hora. "
     "8) Pedidos administrativos (carné de salud, facturas, documentos): decí que se lo pasás en un rato; nunca mandes documentos vos."
 )
@@ -218,8 +223,11 @@ link(ctx2, pensar)
 control = code("Control antes de mandar", (3520, 780), r"""
 // Frenos en código, iguales a los de la versión para clientes. En la prueba siempre te muestro qué haría y por qué.
 const ch = $('Armar la charla de prueba').item.json, ctx = $('Olumi (cliente de la prueba)').item.json || {};
+const sd = $getWorkflowStaticData('global'), desde = $('Comandos y prueba').item.json.desde || 0, own = $('Comandos y prueba').item.json.ownerNum;
+if (sd.pasado != null && sd.pasado === desde) return [{ json: { ownerNum: own, texto: '🤖 (Ya te pasé esta charla: me callo hasta que escribas «reiniciar prueba».)', nota: '' } }];
 let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}
 const f = j.ficha || {}, r = String(j.respuesta || '').trim();
+if (j.pasarAPersona) sd.pasado = desde;
 const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const todo = norm((ch.charla || '') + ' ' + JSON.stringify(ctx.mails || []) + ' ' + JSON.stringify(ctx.notasInternas || []) + ' ' + (ctx.cliente?.direccion || ''));
 const sabe = d => (f.yaSabemos || []).some(x => norm(x.dato).includes(d) && String(x.valor || '').trim());
@@ -232,20 +240,26 @@ const hayDir = sabe('direc') || !!ctx.cliente?.direccion || /\b(calle|avenida|av
 const hayFecha = sabe('fecha') || sabe('hora') || /(nos vemos|quedamos|vengan|venite|pasen|paso|pasamos|vamos|voy)[^.\n]{0,40}\b(hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|\d{1,2}(:\d{2})? ?(hs|h|horas)?)\b/.test(todo);
 if (preg && /(direccion|donde (queda|es|estan)|ubicacion|zona|barrio)/.test(rn) && (hayDir || asis.some(t => /direccion/.test(t)))) mot.push('iba a pedir la dirección y ya está');
 if (preg && /(que dia|cuando|que hora|horario|a que hora|fecha)/.test(rn) && (hayFecha || asis.some(t => /(que dia|que hora|horario)/.test(t)))) mot.push('iba a preguntar día u hora y ya está hablado');
-if (/a la brevedad|estimad|su solicitud|hemos recibido|ticket|\bt-\d+|numero de pedido|asistente virtual|inteligencia artificial|\bia\b/.test(rn)) mot.push('frase de robot');
+const pregBot = /\b(bot|robot|maquina|automatic[oa]|inteligencia artificial|ia|chatgpt)\b|persona real|sos (una )?persona|hablo con (alguien|una persona)/.test(norm(ch.nuevos.join(' ')));
+if (/a la brevedad|estimad|su solicitud|hemos recibido|gracias por (comunicarte|escribir|contactarte)|ticket|\bt-\d+|numero de pedido|marca (1|uno)|asistente virtual|inteligencia artificial|\bia\b/.test(rn) && !pregBot) mot.push('frase de robot');
+if (/asistente/.test(rn) && !pregBot) mot.push('dice que es un asistente sin que se lo pregunten');
+if (r && (r.match(/\?/g) || []).length > 1) mot.push('hace más de una pregunta');
+if (r && (r.split(/\n+/).filter(x => x.trim()).length > 3 || r.length > 320)) mot.push('mensaje largo');
+if (/^\s*([-•*]|\d+[).])\s/m.test(r)) mot.push('lista o menú');
 const pal = t => new Set(norm(t).split(/[^a-z0-9]+/).filter(w => w.length > 3));
 const par = (x, y) => { const A = pal(x), B = pal(y); if (!A.size || !B.size) return 0; let n = 0; A.forEach(w => { if (B.has(w)) n++ }); return n / Math.min(A.size, B.size) };
 if (r && asis.some(t => par(t, r) > 0.45)) mot.push('se parece a algo que ya dijo');
 const sabeTxt = (f.yaSabemos || []).map(x => x.dato + ': ' + x.valor).join(' · ');
 const manda = mot.length === 0;
-const texto = manda ? '🤖 ' + r : '🤖 (No le respondería: ' + mot.join('; ') + '.' + (r ? ' Había pensado: “' + r + '”' : '') + ')';
+const pase = j.pasarAPersona ? '\n🚨 Te lo pasaría a vos: ' + (j.motivoPase || 'conviene que lo veas') + '. El asistente se calla en esta charla.' : '';
+const texto = (manda ? '🤖 ' + r : '🤖 (No le respondería: ' + mot.join('; ') + '.' + (r ? ' Había pensado: “' + r + '”' : '') + ')') + pase;
 return [{ json: { ownerNum: $('Comandos y prueba').item.json.ownerNum, texto, nota: '🧠 ' + (f.quePide ? 'Pide: ' + f.quePide + '. ' : '') + (f.carril ? 'Carril: ' + f.carril + '. ' : '') + (sabeTxt ? 'Ya sé: ' + sabeTxt + '. ' : '') + ((f.falta || []).length ? 'Falta: ' + f.falta.join(', ') + '.' : '') } }];
 """)
 link(pensar, control)
 mandar = http("Contestarme en mi chat", (3740, 780), f"{EVO}/message/sendText/{INST}", credkey="evo", soft=True,
     body="={{ JSON.stringify({ number: $json.ownerNum, text: $json.texto }) }}")
 link(control, mandar)
-anot = code("Anotar respuesta del asistente", (3960, 780), "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); return [{ json: { ownerNum: $('Control antes de mandar').item.json.ownerNum, nota: $('Control antes de mandar').item.json.nota } }];")
+anot = code("Anotar respuesta del asistente", (3960, 780), "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); if (!$('Control antes de mandar').item.json.nota) return []; return [{ json: { ownerNum: $('Control antes de mandar').item.json.ownerNum, nota: $('Control antes de mandar').item.json.nota } }];")
 link(mandar, anot)
 nota = http("Mostrarme cómo pensó", (4180, 780), f"{EVO}/message/sendText/{INST}", credkey="evo", soft=True,
     body="={{ JSON.stringify({ number: $json.ownerNum, text: $json.nota }) }}")
