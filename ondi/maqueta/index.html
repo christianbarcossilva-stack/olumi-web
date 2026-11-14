@@ -1743,11 +1743,11 @@ function tick() {
   const inside = TRUCKS.filter(t => t.state !== 'idle' && t.x > 45 - OX && t.x < 772 - OX && t.z > 18 - OZ && t.z < 1100 - OZ).length;
   $('#kTr').innerHTML = inside + ' <em>en tránsito ' + TRUCKS.filter(t => t.state === 'arriving' || t.state === 'leaving').length + '</em>';
   $('#kDk').innerHTML = DOCKS.filter(d => d.occ && d.occ.state === 'docked').length + ' <em>de ' + DOCKS.length + '</em>';
-  const tot = DEV.length, bad = DEV.filter(d => d.status === 'crit').length; $('#kEq').innerHTML = (tot - bad) + ' <em class="al">de ' + tot + '</em>';
+  const RL = REALM() ? EXT.list.filter(x => !x.consola) : null, tot = RL ? RL.length : DEV.filter(d => !d.plan).length, bad = RL ? RL.filter(x => extSt(x.estado) === 'crit').length : DEV.filter(d => !d.plan && d.status === 'crit').length; $('#kEq').innerHTML = (tot - bad) + ' <em class="al">de ' + tot + '</em>';
   $('#kIn').innerHTML = BLANK ? (INGRESOS ? String(INGRESOS) : '—') : INGRESOS + ' <em class="up">+9 %</em>';
-  $('#bellN').textContent = DEV.filter(d => d.status !== 'ok').length;
+  $('#bellN').textContent = DEV.filter(d => !d.plan && d.status !== 'ok').length;
   updateChips(); if (SEL && !panel.contains(document.activeElement)) renderPanel(false);
-  if (!BLANK && Math.random() < 0.12) { const msgs = [['ok', 'Cámara de frío ' + naveById('e5').full + ': 3,6 °C, dentro del rango', 'e5'], ['ok', 'Cámara de frío ' + naveById('e10').full + ': 2,9 °C, dentro del rango', 'e10'], ['info', 'Tarjeta de personal aceptada en el molinete de las oficinas del polo', 'R-03'], ['ok', 'Respaldo nocturno del NVR verificado', 'RK-01'], ['info', 'Pico de 46 dispositivos Wi-Fi en Moda Express E7', DEV.find(d => d.nave === 'e7' && d.type === 'ap').id], ['info', 'Playa 0 km: 12 autos despachados en la última hora', 'sr']];
+  if (!BLANK && !REALM() && Math.random() < 0.12) { const msgs = [['ok', 'Cámara de frío ' + naveById('e5').full + ': 3,6 °C, dentro del rango', 'e5'], ['ok', 'Cámara de frío ' + naveById('e10').full + ': 2,9 °C, dentro del rango', 'e10'], ['info', 'Tarjeta de personal aceptada en el molinete de las oficinas del polo', 'R-03'], ['ok', 'Respaldo nocturno del NVR verificado', 'RK-01'], ['info', 'Pico de 46 dispositivos Wi-Fi en Moda Express E7', DEV.find(d => d.nave === 'e7' && d.type === 'ap').id], ['info', 'Playa 0 km: 12 autos despachados en la última hora', 'sr']];
     const m = msgs[Math.floor(Math.random() * msgs.length)]; log(m[0], m[1], m[2]); }
 }
 
@@ -2174,7 +2174,12 @@ function buildInner(N) { const g = new Geo(), dk = isDark();
     else if (it.k === 'mez') { const H = mzH(it), OR = '#E8641E', T2 = H + 0.25;
       for (let a = 0; a <= len + 0.01; a += Math.max(3, len / Math.ceil(len / 5))) for (const c of [0.1, wid - 0.1]) R(a - 0.12, a + 0.12, c - 0.12, c + 0.12, 0, H, OR, { ao: 1 });
       R(0, len, 0, wid, H, H + 0.06, OR, { ao: 1 }); R(0, len, 0, wid, H + 0.06, T2, dk ? '#58636B' : '#B8C1C7', { top: dk ? '#6A757D' : '#C9D0D4', ao: 0.9 });
-      for (const [a0, a1, c0, c1] of [[0, len, 0, 0.05], [0, len, wid - 0.05, wid], [len - 0.05, len, 0, wid], [0, 0.05, 0, wid]]) { for (const y of [0.5, 0.8, 1.1]) R(a0, a1, c0, c1, T2 + y - 0.03, T2 + y + 0.02, OR, { ao: 1 }); R(a0, a1, c0, c1, T2, T2 + 0.12, '#E8B52A', { ao: 1 }); } }
+      const GAP = mzGaps(N, it, along, len, wid, yo + T2);
+      for (const [a0, a1, c0, c1, ax] of [[0, len, 0, 0.05, 'a'], [0, len, wid - 0.05, wid, 'a'], [len - 0.05, len, 0, wid, 'c'], [0, 0.05, 0, wid, 'c']]) {
+        const edge = ax === 'a' ? (c0 < 0.1 ? 0 : wid) : (a0 < 0.1 ? 0 : len), G = GAP.filter(g => g.ax === ax && g.e === edge).map(g => [g.p - g.w, g.p + g.w]).sort((p, q) => p[0] - q[0]);
+        let s0 = ax === 'a' ? a0 : c0; const s1 = ax === 'a' ? a1 : c1, PC = []; for (const [g0, g1] of G) { if (g0 > s0) PC.push([s0, Math.min(g0, s1)]); s0 = Math.max(s0, g1); } if (s0 < s1) PC.push([s0, s1]);
+        for (const [p0, p1] of PC) { const A0 = ax === 'a' ? p0 : a0, A1 = ax === 'a' ? p1 : a1, C0 = ax === 'a' ? c0 : p0, C1 = ax === 'a' ? c1 : p1;
+          for (const y of [0.5, 0.8, 1.1]) R(A0, A1, C0, C1, T2 + y - 0.03, T2 + y + 0.02, OR, { ao: 1 }); R(A0, A1, C0, C1, T2, T2 + 0.12, '#E8B52A', { ao: 1 }); } } }
     else if (it.k === 'ofi') { const [ax, az] = NP(N, it.u, -it.d), [bx, bz] = NP(N, it.u + it.su, -(it.d + it.sd)), x0 = Math.min(ax, bx), x1 = Math.max(ax, bx), z0 = Math.min(az, bz), z1 = Math.max(az, bz);
       g.box(x0, 0, z0, x1, 3, z1, P.wall, { top: P.roof, ao: 0.9 }); g.win(x0, z0, x1, z1, 1.1, 1.4, P.glass, P.glassE); }
     else { const col = it.k === 'zona' ? (dk ? '#5A5236' : '#EAD9A0') : (dk ? '#34445E' : '#BFD0EE'), ln = it.k === 'zona' ? '#E2B93B' : '#5B8FE0';
@@ -2225,6 +2230,13 @@ const planAng = (N, yaw) => { const fx = Math.cos(yaw), fz = -Math.sin(yaw); ret
 const yawPlan = (N, a) => { const du = Math.cos(a), dd = Math.sin(a), fx = du * N.t[0] - dd * N.n[0], fz = du * N.t[1] - dd * N.n[1]; return Math.atan2(-fz, fx); };
 const ortho = (p, q) => Math.abs(q[0] - p[0]) >= Math.abs(q[1] - p[1]) ? [q[0], p[1]] : [p[0], q[1]];
 const segLen = pts => pts.reduce((s, p, i) => i ? s + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0, 0);
+// dónde llega una escalera al borde de un entrepiso: ahí la baranda se abre (en coordenadas del entrepiso: a = a lo largo, c = a lo ancho)
+function mzGaps(N, it, along, len, wid, topY) { const out = [];
+  for (const p of PROPS) { if (p.k !== 'escal' || Math.abs((p.y || 0) + (p.h || 3.4) - topY) > 0.6) continue; const [u, d] = toLocal(N, p.x, p.z), run = (p.h || 3.4) * 1.55, w = (p.w || 1.1) / 2 + 0.2;
+    const a = along === 'd' ? d - it.d : u - it.u, c = along === 'd' ? u - it.u : d - it.d;
+    { const e = a < len / 2 ? 0 : len; if (Math.abs(a - e) <= run + 0.5 && c > -0.5 && c < wid + 0.5) out.push({ ax: 'c', e, p: c, w, run }); }
+    { const e = c < wid / 2 ? 0 : wid; if (Math.abs(c - e) <= run + 0.5 && a > -0.5 && a < len + 0.5) out.push({ ax: 'a', e, p: a, w, run }); } }
+  return out; }
 function aislesOf(I) { const R = I.items.filter(o => isRack(o.k)), out = [];
   for (const dir of ['d', 'u']) { const rs = R.filter(o => alongOf(o) === dir);
     const c0 = o => dir === 'd' ? o.u : o.d, c1 = o => dir === 'd' ? o.u + o.su : o.d + o.sd, a0 = o => dir === 'd' ? o.d : o.u, a1 = o => dir === 'd' ? o.d + o.sd : o.u + o.su;
@@ -3824,7 +3836,17 @@ async function extLoad(force) { if (EXT.busy) return; const now = Date.now(); if
     else { EXT.list = EXT_DEMO.map(x => ({ ...x })); EXT.errs = []; EXT.demo = true; }
     EXT.at = new Date(); } catch (e) { EXT.errs = ['No se pudieron leer los equipos: ' + ((e && e.message) || e)]; }
   EXT.busy = false; extSync(); extCat(); }
-function extSync() { for (const d of DEV) { if (!d.ext) continue; const x = extOf(d.ext.uid); const st = x ? extSt(x.estado) : 'warn';
+// hay datos reales cuando el cliente está enlazado y llegó la lista de equipos (no la demo)
+function REALM() { return !!(EXT.at && !EXT.demo && EXT.list.some(x => !x.consola)); }
+const PLANT = new Set(['gab', 'wr', 'rack']);
+function planSync() { const R = REALM(); let ch = false;
+  if (R && !planSync.ya) { planSync.ya = true; FEED.length = 0; log('info', `Datos en vivo: ${EXT.list.filter(x => !x.consola).length} equipos reales. Lo que no está enlazado se ve en gris, "a instalar".`); }
+  for (const d of DEV) { const p = R && !d.ext && !PLANT.has(d.type); if (!!d.plan !== p) { d.plan = p; if (p) d.status = 'ok'; devObj(d); devTag(d); ch = true; } }
+  if (ch && SEL) renderPanel(true); }
+devGeo = (o => function (d) { if (!d.plan) return o(d); const k = P.ok; P.ok = '#7E8890'; try { return o(d); } finally { P.ok = k; } })(devGeo);
+panelContent = (o => function (id) { const r = o(id); const d = DEV.find(q => q.id === id); if (!r || !d || !d.plan) return r;
+  r.pill = '<span class="pill info">A instalar</span>'; r.body = `<div class="edbox"><b>A instalar</b><p class="ehelp">Este equipo está dibujado en la maqueta pero todavía no aparece en el monitoreo. Cuando se instale, enlazalo con el equipo real${canEdit() ? ' desde acá, en modo edición' : ''}.</p></div>` + (r.body || ''); return r; })(panelContent);
+function extSync() { planSync(); for (const d of DEV) { if (!d.ext) continue; const x = extOf(d.ext.uid); const st = x ? extSt(x.estado) : 'warn';
     if (x) { d.extInfo = x; if (d.name !== x.nombre) d.name = x.nombre; }
     if (d.status !== st) { const was = d.status; d.status = st; devObj(d); devTag(d); if (was && was !== st && EXT.at) { if (st === 'crit') { log('crit', `${x ? x.nombre : d.id} se cayó`, d.id); toast(`${x ? x.nombre : d.id} se cayó`); } else if (was === 'crit' && st === 'ok') log('ok', `${x ? x.nombre : d.id} volvió`, d.id); } } }
   if (SEL && DEV.some(d => d.id === SEL && d.ext)) renderPanel(true); }
@@ -5745,7 +5767,7 @@ avSync = (o => function (dt = 0) { const show = WALK.on && TP.on && !TP.near; if
   avHide(); AV3.t += dt; const sp = TP.sp || 0; AV3.x += sp * dt;
   try { AV3.CORE.avPose(AV3.av, sp > 0.25 ? 'walk' : 'idle', dt, { x: AV3.x, y: 0, t: AV3.t }); AV3.av.sync(); av3Skin(); } catch (e) { console.warn('avatar 3D', e); AV3.st = -1; for (const p of AV3.parts) p.o.on = false; return o(dt); }
   const Mo = M.trs(WALK.x, WALK.y - 1.7, WALK.z, TP.h, 0); for (const p of AV3.parts) { p.o.on = true; p.o.version++; p.o.model = Mo; } })(avSync);
-window.__av3 = { AV3, cargar: () => av3Load(), caminar: i => enterWalk(NAVES[i || 0]), ir: (id, u, d, yaw) => { const N = naveById(id); enterWalk(N); const [x, z] = NP(N, u, -d); WALK.x = x; WALK.z = z; if (yaw != null) WALK.yaw = yaw; return [x, z, WALK.yaw]; }, labels: () => LBL.filter(L => !L.el.classList.contains('off')).map(L => L.el.textContent), estado: () => ({ st: AV3.st, partes: AV3.parts.length, on: AV3.parts.filter(p => p.o.on).length, walk: WALK.on, tp: TP.on, near: TP.near }) };
+window.__av3 = { AV3, gaps: id => { const N = naveById(id); return innerOf(N).items.filter(it => it.k === 'mez').map(it => { const along = alongOf(it), len = along === 'd' ? it.sd : it.su, wid = along === 'd' ? it.su : it.sd; return [it.name, along, len, wid, mzGaps(N, it, along, len, wid, (it.y0 || 0) + mzH(it) + 0.25)]; }); }, ext: l => { EXT.list = l; EXT.at = new Date(); EXT.demo = false; extSync(); return REALM(); }, kpi: () => document.getElementById('kEq').textContent, cargar: () => av3Load(), caminar: i => enterWalk(NAVES[i || 0]), ir: (id, u, d, yaw, y) => { const N = naveById(id); enterWalk(N); const [x, z] = NP(N, u, -d); WALK.x = x; WALK.z = z; if (yaw != null) WALK.yaw = yaw; if (y != null) WALK.y = y; return [x, z, WALK.yaw]; }, labels: () => LBL.filter(L => !L.el.classList.contains('off')).map(L => L.el.textContent), estado: () => ({ st: AV3.st, partes: AV3.parts.length, on: AV3.parts.filter(p => p.o.on).length, walk: WALK.on, tp: TP.on, near: TP.near }) };
 window.__dbg = { ed: { setEdit, setTool, openCab, FIBS, CABS, DEV, NAVES, flyTo, groundAt: (x, y) => groundAt(x, y) }, sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>
