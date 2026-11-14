@@ -133,7 +133,7 @@ CLASIF = (
     "seguro = false si no estás seguro del carril."
 )
 cla = cerebro("Clasificar", (1780, 160), CLASIF,
-    "={{ 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nQUIÉN ES: ' + JSON.stringify($json.quienEs || {}) + '\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) }}")
+    "={{ 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nQUIÉN ES: ' + JSON.stringify($json.quienEs || {}) + '\\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) }}")
 link(ctx1, cla)
 reg = code("Armar entrada de bandeja", (2420, 160), r"""
 const m = $('¿Quién escribe?').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}
