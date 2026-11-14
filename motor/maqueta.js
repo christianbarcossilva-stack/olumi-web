@@ -5,6 +5,7 @@
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js';
 import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=4';
+import { ve, dominio, DOMINIOS } from './plano.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const IC = {
@@ -44,7 +45,7 @@ export async function abrirMaqueta(o) {
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
     <div class="mbtns"><button id="btema" class="mbtn" aria-label="Cambiar entre día y noche" title="Día o noche">${svg('tema')}</button><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
-  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'estiba' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}</div>
+  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'estiba' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}<p class="mvacio" id="mocultos" hidden></p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">
     <button data-h="mano" aria-pressed="true" title="Mano: elegir y mover (H)">${svg('mano')}</button><button data-h="maza" title="Maza: sacar (K)">${svg('maza')}</button><button data-h="gotero" title="Gotero: copiar (E)">${svg('gotero')}</button>
@@ -91,7 +92,11 @@ export async function abrirMaqueta(o) {
 
   // ---------- armar la escena ----------
   function rehacer(p) { const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); }
-  function armarTodo() { for (const g of objs.values()) { mundo.remove(g); limpiar(g); } objs.clear(); for (const p of E.piezas) { const g = armarPieza(p, ctx); if (g) { objs.set(p.id, g); mundo.add(g); aplicarCapas(g); } } pintaSuelo(); etiquetas(); motor.dirty = true; }
+  // cada app muestra su parte del plano; lo que no muestra queda guardado tal cual para la app que lo usa
+  const veo = p => ve(app, p);
+  function ocultas() { const c = {}; for (const p of E.piezas) if (!veo(p)) c[dominio(p)] = (c[dominio(p)] || 0) + 1; const t = Object.entries(c).map(([k, n]) => `${n} de ${DOMINIOS[k]}`).join(' y '), el = $('#mocultos'); if (!el) return;
+    el.hidden = !t; el.textContent = t ? `Este plano también tiene ${t}${c.equipos ? ' (se ven en Ondi)' : ''}. Acá no se muestran y no se tocan.` : ''; }
+  function armarTodo() { for (const g of objs.values()) { mundo.remove(g); limpiar(g); } objs.clear(); ocultas(); for (const p of E.piezas) { if (!veo(p)) continue; const g = armarPieza(p, ctx); if (g) { objs.set(p.id, g); mundo.add(g); aplicarCapas(g); } } pintaSuelo(); etiquetas(); motor.dirty = true; }
   function limpiar(g) { g.traverse(k => { if (k.geometry && !k.geometry.parameters?.width && k.geometry.type !== 'BoxGeometry' && k.geometry.type !== 'CylinderGeometry' && k.geometry.type !== 'IcosahedronGeometry' && k.geometry.type !== 'ConeGeometry') k.geometry.dispose(); }); }
   const capas = Object.fromEntries(CAPAS.map(([k]) => [k, true]));
   function aplicarCapas(g) { const T = g.userData.tipo; g.visible = capas[T.capa] !== false; g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; }); }
@@ -102,7 +107,7 @@ export async function abrirMaqueta(o) {
   // ---------- etiquetas (nombres de filas, galpones y equipos) ----------
   let etq = [];
   function etiquetas() { lbl.innerHTML = ''; etq = [];
-    for (const p of E.piezas) { const T = TIPOS[p.t]; if (!T || !T.etiqueta) continue; const txt = T.etiqueta({ ...T.def, ...p }); if (!txt && !T.equipo) continue;
+    for (const p of E.piezas) { const T = TIPOS[p.t]; if (!T || !T.etiqueta || !veo(p)) continue; const txt = T.etiqueta({ ...T.def, ...p }); if (!txt && !T.equipo) continue;
       const el = document.createElement('button'); el.className = 'metq' + (T.equipo ? ' eq ' + ctx.estado(p) : ''); el.tabIndex = -1;
       el.innerHTML = T.equipo ? `<i></i><span>${esc(txt || T.n)}</span>` : `<span>${esc(txt)}</span>`; el.addEventListener('click', () => elegir(p, true)); lbl.appendChild(el);
       const [x, z] = centro(p); etq.push({ p, el, v: new THREE.Vector3(x, altoDe(p) + (T.equipo ? 0.9 : 2), z), eq: !!T.equipo, cap: T.capa, siempre: !!T.siempre }); }
@@ -162,7 +167,7 @@ export async function abrirMaqueta(o) {
     if (on && d.requestFullscreen) d.requestFullscreen().catch(() => d.classList.add('mfull')); else if (!on && document.fullscreenElement) document.exitFullscreen(); else d.classList.toggle('mfull', on); }
   const q = $('#mq'), res = $('#mres');
   q.addEventListener('input', () => { const t = q.value.trim().toLowerCase(); if (!t) { res.hidden = true; return; }
-    const hits = E.piezas.map(p => { const d = p.uid && EQ.porUid.get(p.uid), T = TIPOS[p.t]; return { p, txt: [p.nombre, T && T.n, p.ip, d && d.ip, d && d.modelo, p.modelo].filter(Boolean).join(' ') }; }).filter(x => x.p.nombre && x.txt.toLowerCase().includes(t)).slice(0, 8);
+    const hits = E.piezas.map(p => { const d = p.uid && EQ.porUid.get(p.uid), T = TIPOS[p.t]; return { p, txt: [p.nombre, T && T.n, p.ip, d && d.ip, d && d.modelo, p.modelo].filter(Boolean).join(' ') }; }).filter(x => x.p.nombre && veo(x.p) && x.txt.toLowerCase().includes(t)).slice(0, 8);
     res.innerHTML = hits.length ? hits.map((x, i) => `<button data-i="${i}"><b>${esc(x.p.nombre)}</b><small>${esc(TIPOS[x.p.t].n)}${x.p.ip ? ' · ' + esc(x.p.ip) : ''}</small></button>`).join('') : '<p>Sin resultados</p>'; res.hidden = false; res._h = hits; });
   res.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; elegir(res._h[+b.dataset.i].p, true); res.hidden = true; q.value = ''; q.blur(); });
   q.addEventListener('keydown', e => { if (e.key === 'Enter' && res._h && res._h[0]) { elegir(res._h[0].p, true); res.hidden = true; q.value = ''; q.blur(); } if (e.key === 'Escape') { res.hidden = true; q.blur(); } });
@@ -294,7 +299,7 @@ export async function abrirMaqueta(o) {
   const api = { motor, E, objs, elegir, editar, guardar, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = JSON.stringify(E.piezas); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
-function normal(e) { e = JSON.parse(JSON.stringify(e || {})); e.v = 1; e.piezas = (e.piezas || []).filter(p => p && p.t && TIPOS[p.t]); let n = 0; for (const p of e.piezas) if (!p.id) p.id = p.t.slice(0, 3) + 'x' + (n++); return e; }
+function normal(e) { e = JSON.parse(JSON.stringify(e || {})); e.v = 1; e.piezas = (e.piezas || []).filter(p => p && p.t && TIPOS[p.t]); let n = 0; const ids = new Set(); for (const p of e.piezas) { if (!p.id) p.id = p.t.slice(0, 3) + 'x' + (n++); if (ids.has(p.id)) { let i = 2; while (ids.has(p.id + '-' + i)) i++; p.id += '-' + i; } ids.add(p.id); } return e; }
 // las personas del catálogo vienen con los brazos abiertos: se bajan al costado del cuerpo
 function brazos(p) { p.updateMatrixWorld(true); const B = {}; p.traverse(o => { if (o.isBone) B[o.name.replace(/^mixamorig:?/, '')] = o; }); if (!B.LeftArm) return;
   const wp = n => B[n].getWorldPosition(new THREE.Vector3()), gira = (n, a, b, s) => { if (!B[n] || !B[b]) return; const d = wp(b).sub(wp(a)).normalize(), q = new THREE.Quaternion().setFromUnitVectors(d, new THREE.Vector3(s * 0.12, -1, 0.04).normalize()), pw = B[n].parent.getWorldQuaternion(new THREE.Quaternion()), bw = B[n].getWorldQuaternion(new THREE.Quaternion());

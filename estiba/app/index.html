@@ -91,6 +91,11 @@ dialog .pie{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .opc label:has(input:checked){border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
 .opc input{margin-top:3px;accent-color:var(--acc)}
 .opc b{display:block}.opc small{color:var(--muted)}
+.fuentes{display:grid;gap:8px;max-height:46vh;overflow:auto}
+.fuentes button{display:grid;gap:2px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+.fuentes button:hover:not(:disabled){border-color:var(--acc)}.fuentes button:disabled{opacity:.55;cursor:default}
+.fuentes small,.nota{color:var(--muted);font-size:13.5px;margin:0}
+.resumen{margin:0;padding:12px;border-radius:8px;background:var(--sunk);display:grid;gap:6px;font-size:14px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--es-tinta);color:#fff;padding:12px 16px;border-radius:8px;z-index:20;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100vw - 32px)}
 @media (max-width:820px){#auth{grid-template-columns:minmax(0,1fr);align-content:start}#auth .lado{padding:22px 20px 30px;gap:14px}#auth .lado h1{font-size:26px}#auth .lado p,#auth .lado .placa{display:none}#auth .forma{place-items:start center;padding:28px 20px}}
 @media (max-width:560px){.yo,.barra .wm b{display:none}.barra .in{gap:8px}.barra select{max-width:150px}#vdep .tira .btn span{display:none}#vdep .tira .btn{padding:0 10px}main{padding-top:24px}}
@@ -122,6 +127,7 @@ dialog .pie{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
       <button class="btn chico" type="button" data-ir="deps" aria-label="Volver a depósitos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg><span>Depósitos</span></button>
       <h1 class="tit" id="dnom"></h1>
       <button class="btn chico" type="button" id="bimp" aria-label="Importar armado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><span>Importar armado</span></button>
+      <button class="btn chico" type="button" id="bond" aria-label="Traer el plano de Ondi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/></svg><span>Traer de Ondi</span></button>
       <button class="btn chico" type="button" id="bexp" aria-label="Exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M4 21h16"/></svg><span>Exportar</span></button>
       <button class="btn chico" type="button" id="bdat" aria-label="Datos del depósito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Datos</span></button>
     </div>
@@ -237,13 +243,13 @@ function nuevo() { const f = $('#fdlg');
 let guardT = null, pendiente = null;
 async function abrir(id) { const d = S.deps.find(x => x.id === id); if (!d) return; S.dep = d; history.replaceState(null, '', HERE + '?d=' + encodeURIComponent(id));
   $('#vdeps').hidden = true; $('#vdep').hidden = false; $('#dnom').textContent = d.name; document.title = d.name + ' · Estiba';
-  $('#bimp').hidden = !edita(); $('#bdat').hidden = !edita();
+  $('#bimp').hidden = !edita(); $('#bdat').hidden = !edita(); $('#bond').hidden = !edita();
   const r = await SB.from('estiba_maquetas').select('data').eq('org_id', S.org).eq('deposito_id', id).maybeSingle();
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
   window.__maquetaHost = { state: (r.data && r.data.data) || null, role: edita() ? 'inst' : 'cli', park: d.name,
     save(s) { pendiente = s; clearTimeout(guardT); guardT = setTimeout(guardar, 400); },
     juego(on) { document.body.classList.toggle('juego', !!on); } };
-  $('#marco').innerHTML = `<iframe src="../../motor/?app=estiba&v=2" title="Maqueta 3D de ${esc(d.name)}" allow="fullscreen"></iframe>`;
+  $('#marco').innerHTML = `<iframe src="../../motor/?app=estiba&v=5" title="Maqueta 3D de ${esc(d.name)}" allow="fullscreen"></iframe>`;
 }
 async function guardar() { if (!pendiente || !S.dep) return; const s = pendiente; pendiente = null;
   const r = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: S.dep.id, data: s }, { onConflict: 'org_id,deposito_id' });
@@ -255,6 +261,21 @@ $('#bexp').addEventListener('click', () => { const h = window.__maquetaHost; con
   l.href = u; l.download = 'estiba-' + S.dep.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); });
 $('#bimp').addEventListener('click', () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
   i.onchange = async () => { if (!i.files[0]) return; try { const d = await leerArmado(i.files[0]); const r = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: S.dep.id, data: d }, { onConflict: 'org_id,deposito_id' }); if (r.error) throw r.error; toast('Armado importado'); abrir(S.dep.id); } catch (er) { toast(errTxt(er)); } }; i.click(); });
+// Traer el plano de Ondi: el predio (y los equipos, que acá no se muestran) viene de Ondi; la logística de este depósito no se toca.
+$('#bond').addEventListener('click', async () => { const f = $('#fdlg'), dep = S.dep; f.onsubmit = null;
+  f.innerHTML = `<h2 class="tit">Traer el plano de Ondi</h2><p class="nota">Elegí el cliente de Ondi que es este mismo predio. Viene el predio como está dibujado allá; las filas, máquinas y camiones de este depósito quedan como están.</p><div class="fuentes" id="ofu"><p class="nota">Buscando…</p></div><div id="ores"></div><div class="pie"><button class="btn" value="no" formnovalidate>Cerrar</button></div>`;
+  $('#dlg').showModal();
+  const [st, mq] = await Promise.all([SB.from('ondi_sites').select('id,name').eq('org_id', S.org).order('name'), SB.from('ondi_maquetas').select('site_id,updated_at,motor:data->motor').eq('org_id', S.org)]);
+  const box = $('#ofu'); if (!box) return; if (st.error || mq.error) { box.innerHTML = `<p class="msg">${esc(errTxt(st.error || mq.error))}</p>`; return; }
+  const M = new Map((mq.data || []).map(m => [m.site_id, m])), ant = (window.__maquetaHost && window.__maquetaHost.state && window.__maquetaHost.state.origen) || {};
+  box.innerHTML = (st.data || []).length ? st.data.map(x => { const m = M.get(x.id), ok = m && (m.motor === 1 || (m.data && m.data.motor === 1));
+    return `<button type="button" data-sitio="${esc(x.id)}" ${ok ? '' : 'disabled'}><b>${esc(x.name)}${ant.de === 'ondi' && ant.id === x.id ? ' · el que ya trajiste' : ''}</b><small>${ok ? 'Cambios ' + hace(m.updated_at) : m ? 'Tiene la maqueta anterior de Ondi: se va a poder traer cuando pase al motor común' : 'Todavía no tiene maqueta'}</small></button>`; }).join('') : '<p class="nota">Esta empresa todavía no tiene clientes en Ondi.</p>';
+  box.onclick = async e => { const b = e.target.closest('[data-sitio]'); if (!b || b.disabled) return; const sitio = st.data.find(x => x.id === b.dataset.sitio), res = $('#ores'); res.innerHTML = '<p class="nota">Leyendo el plano…</p>';
+    try { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', S.org).eq('site_id', sitio.id).maybeSingle(); if (r.error) throw r.error;
+      const P = await import('../../motor/plano.js?v=1'), mio = (window.__maquetaHost && window.__maquetaHost.state) || null, t = P.traer(mio, r.data && r.data.data, 'estiba', { de: 'ondi', id: sitio.id, nombre: sitio.name, cuando: new Date().toISOString() }), c = P.cuenta(t.plano), a = P.cuenta(mio);
+      res.innerHTML = `<div class="resumen"><b>${esc(sitio.name)} → ${esc(dep.name)}</b><span>El predio de este depósito (${a.base} piezas) se reemplaza por el de Ondi (${c.base}).</span><span>${t.quedan ? `Tu logística queda como está: ${t.quedan} piezas.` : `Este depósito no tenía logística: viene la del plano de Ondi (${c.logistica} piezas).`}</span>${c.equipos ? `<span>Vienen ${c.equipos} equipos de Ondi: quedan guardados en el plano, pero en Estiba no se muestran.</span>` : ''}<button class="btn pri" type="button" id="otraer">Traer este plano</button></div>`;
+      $('#otraer').onclick = async ev => { ev.target.disabled = true; try { const q = await SB.from('estiba_maquetas').upsert({ org_id: S.org, deposito_id: dep.id, data: t.plano }, { onConflict: 'org_id,deposito_id' }); if (q.error) throw q.error; $('#dlg').close(); toast('Plano traído de Ondi'); abrir(dep.id); } catch (er) { res.innerHTML = `<p class="msg">${esc(errTxt(er))}</p>`; } };
+    } catch (er) { res.innerHTML = `<p class="msg">${esc(errTxt(er))}</p>`; } }; });
 $('#bdat').addEventListener('click', () => { const d = S.dep, f = $('#fdlg');
   f.innerHTML = `<h2 class="tit">Datos del depósito</h2><label class="f">Nombre<input type="text" id="dnm" maxlength="120" value="${esc(d.name)}" required></label><label class="f">Dirección<input type="text" id="ddi" maxlength="200" value="${esc((d.data && d.data.direccion) || '')}"></label><p class="msg" id="dmsg" hidden></p>
     <div class="pie">${admin() ? `<button class="btn peligro" value="borrar" formnovalidate style="margin-right:auto">Borrar</button>` : ''}<button class="btn" value="no" formnovalidate>Cancelar</button><button class="btn pri" value="si">Guardar</button></div>`;
