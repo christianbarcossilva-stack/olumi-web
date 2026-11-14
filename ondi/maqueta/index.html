@@ -5709,8 +5709,12 @@ function avGesto(o,id,dur){if(!o||!AV_GES[id]||o.ges&&o.ges.id===id)return;o.ges
 ;return {avatarGLB,avPose,avGesto,AV_GES,avMat}}
 const AV3 = { st: 0, x: 0, t: 0, parts: [], lib: window.ONDI_LIB || '/olumi/beta/lib/', glb: window.ONDI_AVGLB || '/olumi/beta/3d/tec-h-epp.glb' };
 async function av3Load() { if (AV3.st) return; AV3.st = 1;
-  try { const THREE = await import(AV3.lib + 'three.module.min.js'), { GLTFLoader } = await import(AV3.lib + 'GLTFLoader.js'), CORE = AV3_CORE(THREE);
-    const gltf = await new GLTFLoader().loadAsync(AV3.glb), av = CORE.avatarGLB(gltf.scene, 1.73); if (!av) throw new Error('el modelo no tiene esqueleto');
+  // copia privada (artifact): three.js de cdn.jsdelivr, el modelo escrito adentro de la página y las texturas como imágenes data:, sin pedir archivos al costado
+  try { const S = window.ONDI_AV3 || {}, THREE = await import(S.three || AV3.lib + 'three.module.min.js'), { GLTFLoader } = await import(S.gltf || AV3.lib + 'GLTFLoader.js'), CORE = AV3_CORE(THREE);
+    const el = S.datos && document.getElementById(S.datos), gltf = el ? await new GLTFLoader().parseAsync(el.textContent, '') : await new GLTFLoader().loadAsync(AV3.glb);
+    if (S.mapas) { const imgs = {}; await Promise.all(Object.entries(S.mapas).map(([k, u]) => new Promise(r => { const im = new Image(); im.onload = () => { imgs[k] = im; r(); }; im.onerror = () => r(); im.src = u; })));
+      gltf.scene.traverse(m => { if (m.isMesh && m.material && imgs[m.material.name]) m.material.map = { image: imgs[m.material.name] }; }); }
+    const av = CORE.avatarGLB(gltf.scene, 1.73); if (!av) throw new Error('el modelo no tiene esqueleto');
     av.g.updateMatrixWorld(true); let n = 0;
     gltf.scene.traverseVisible(m => { if (!m.isSkinnedMesh) return; const g = m.geometry, A = g.attributes, nv = A.position.count, I = g.index, mat = Array.isArray(m.material) ? m.material[0] : m.material, map = mat && mat.map;
       const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4);
