@@ -115,25 +115,37 @@ ctx1 = http("Contexto en Olumi", (1560, 160), OLUMI, credkey="olumi", soft=True,
     body="={{ JSON.stringify({ modo: 'contexto', org: '%s', de: '+' + $json.from, nombre: $json.nombre }) }}" % ORG)
 link(ruta, ctx1, 0)
 CLASIF = (
-    "Clasificás un mensaje de WhatsApp que le llegó a Christian, jefe de operaciones de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). "
-    "No escribís respuesta. Usá el MENSAJE y el CONTEXTO de Olumi (cliente, tickets, historial). Devolvé SOLO JSON: "
-    "{ \"carril\": \"soporte\" | \"comercial\" | \"administrativo\" | \"coordinar\" | \"personal\" | \"proveedor\" | \"spam\", "
+    "Clasificás un mensaje de WhatsApp que le llegó al celular de Christian. Christian es socio de Phitel (instalaciones en Uruguay: fibra óptica, CCTV, cableado estructurado, control de acceso, porteros, redes, alarmas). "
+    "A este celular le escriben clientes y técnicos, pero TAMBIÉN su familia, amigos, la inmobiliaria, el banco, publicidad y spam. La bandeja de Olumi es SOLO para trabajo de Phitel: nada personal tiene que entrar. "
+    "No escribís respuesta. Usá el MENSAJE, QUIÉN ES (si es cliente de Phitel y cómo lo sabemos) y el historial. Devolvé SOLO JSON: "
+    "{ \"carril\": \"soporte\" | \"comercial\" | \"administrativo\" | \"coordinar\" | \"personal\" | \"proveedor\" | \"spam\" | \"dudoso\", \"seguro\": true|false, \"porque\": \"una frase\", "
     "\"urgencia\": \"alta\" | \"media\" | \"baja\" (alta solo si algo dejó de funcionar y afecta la operación), "
     "\"nombre\": \"de la persona o ''\", \"empresa\": \"empresa o lugar o ''\", \"rol\": \"qué hace en su empresa o ''\", \"direccion\": \"si la dijo o ''\", \"datos\": { \"dato\": \"valor\" } (solo lo que dijo y sirve la próxima vez: galpón, equipo, horario en que se lo encuentra), "
     "\"titulo\": \"máximo 60 letras\", \"resumen\": \"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\" }. "
-    "Para nombre y empresa usá primero QUIÉN ES (lo que Olumi ya sabe de este número); si el mensaje lo contradice, gana el mensaje. "
-    "soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden documentos, facturas, carnés, datos de la empresa; coordinar = fechas, horarios, confirmar una visita; "
-    "personal = no tiene que ver con el trabajo."
+    "Para nombre y empresa usá primero QUIÉN ES; si el mensaje lo contradice, gana el mensaje. "
+    "TRABAJO (soporte, comercial, administrativo, coordinar) SOLO si habla de un servicio, obra, equipo, red, cámaras, fibra, cableado, visita, presupuesto, factura o documento DE PHITEL, o si lo escribe un cliente de Phitel (QUIÉN ES.cliente) sobre su trabajo. "
+    "soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden a Phitel documentos, facturas, carnés o datos de la empresa; coordinar = fechas, horarios o confirmar una visita de un trabajo. "
+    "PERSONAL: su casa o alquiler (inmobiliaria, inquilino, visitas para mostrar la casa, gastos comunes, mudanza), familia, pareja, amigos, salud, auto, compras, delivery, bancos y tarjetas, pagos o cobros personales, trámites personales, invitaciones, saludos, chistes, ideas o negocios que le propone un amigo. "
+    "SPAM: promociones, ofertas, descuentos, sorteos, cursos, inversiones, préstamos, cobranzas automáticas, códigos de verificación, encuestas, cadenas. "
+    "PROVEEDOR: alguien que le vende a Phitel (precios, stock, facturas de compra). "
+    "DUDOSO: no se puede saber si es trabajo (mensaje muy corto, un número o un monto sin contexto, de alguien que no es cliente). "
+    "Reglas: ante la duda, dudoso; nunca supongas que es trabajo. Un número que NO es cliente y no menciona nada de Phitel ni de un trabajo es personal o dudoso. "
+    "seguro = false si no estás seguro del carril."
 )
 cla = cerebro("Clasificar", (1780, 160), CLASIF,
     "={{ 'MENSAJE: ' + $('¿Quién escribe?').item.json.texto + '\\nDE: ' + ($('¿Quién escribe?').item.json.nombre || '') + ' (+' + $('¿Quién escribe?').item.json.from + ')\\nQUIÉN ES: ' + JSON.stringify($json.quienEs || {}) + '\nCONTEXTO OLUMI: ' + JSON.stringify({ cliente: $json.cliente || null, ticketsAbiertos: $json.ticketsAbiertos || [], historial: ($json.historial || []).slice(-8) }) }}")
 link(ctx1, cla)
 reg = code("Armar entrada de bandeja", (2420, 160), r"""
 const m = $('¿Quién escribe?').item.json; let j = {}; try { j = JSON.parse(String($json.choices[0].message.content).replace(/^```(json)?|```$/g, '').trim()); } catch (e) {}
-const carril = ['soporte','comercial','administrativo','coordinar','personal','proveedor','spam'].includes(j.carril) ? j.carril : 'soporte';
+const ctx = $('Contexto en Olumi').item.json || {};
+if (ctx.quienEs && ctx.quienEs.marca === 'personal') return [];            // Christian lo marcó «No es trabajo»: no entra nunca
+const carril = ['soporte','comercial','administrativo','coordinar','personal','proveedor','spam','dudoso'].includes(j.carril) ? j.carril : 'dudoso';
 if (carril === 'personal') return [];                                     // no es trabajo: no se anota
-const urg = ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : 'media';
-const tipoEntrada = { soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo', proveedor: 'proveedor', spam: 'spam' }[carril] || 'consulta';
+const trabajo = ['soporte','comercial','administrativo','coordinar'].includes(carril);
+const conocido = !!(ctx.registrado || (ctx.quienEs && (ctx.quienEs.cliente || ctx.quienEs.marca === 'trabajo')));
+const aCharla = !trabajo || (!conocido && j.seguro === false);              // lo dudoso de alguien que no es cliente va a «Charla y otros»
+const urg = aCharla ? 'baja' : ['alta','media','baja'].includes(j.urgencia) ? j.urgencia : 'media';   // lo que va a «Charla y otros» nunca avisa como urgente
+const tipoEntrada = aCharla ? ({ proveedor: 'proveedor', spam: 'spam' }[carril] || 'charla') : ({ soporte: 'falla', comercial: 'presupuesto', administrativo: 'consulta', coordinar: 'trabajo' }[carril] || 'consulta');
 return [{ json: { modo: 'registrar', registrar: true, soloGuardar: false, autor: 'cliente', org: '%s', de: '+' + m.from, nombre: j.nombre || m.nombre, empresa: j.empresa || '', rol: j.rol || '', direccion: j.direccion || '', datos: (j.datos && typeof j.datos === 'object') ? j.datos : {},
   texto: (m.esAudio ? '🎤 ' : '') + m.texto, resumen: j.resumen || '', titulo: j.titulo || '', intencion: carril, tema: carril, tipoEntrada, tipo: urg === 'alta' ? 'emergencia' : 'consulta',
   destino: 'bandeja', urgente: urg === 'alta', canal: 'whatsapp', origen: 'WhatsApp de Christian', carril, urgencia: urg, msgId: m.msgId, esAudio: m.esAudio, respuestaAuto: '' } }];
