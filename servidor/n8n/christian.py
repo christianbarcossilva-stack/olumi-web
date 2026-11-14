@@ -124,12 +124,13 @@ CLASIF = (
     "\"titulo\": \"máximo 60 letras\", \"resumen\": \"1 o 2 frases con lugar, equipo, desde cuándo y lo ya acordado\" }. "
     "Para nombre y empresa usá primero QUIÉN ES; si el mensaje lo contradice, gana el mensaje. "
     "TRABAJO (soporte, comercial, administrativo, coordinar) SOLO si habla de un servicio, obra, equipo, red, cámaras, fibra, cableado, visita, presupuesto, factura o documento DE PHITEL, o si lo escribe un cliente de Phitel (QUIÉN ES.cliente) sobre su trabajo. "
+    "También es TRABAJO (comercial) aunque no sea cliente si pide que le instalen, coloquen, conecten, arreglen o coticen algo técnico: cámaras, teléfono IP, pantallas, red, wifi, fibra, porteros, alarmas, control de acceso, cableado. "
     "soporte = algo no anda o hay que reparar; comercial = pide precio, presupuesto o un trabajo nuevo; administrativo = piden a Phitel documentos, facturas, carnés o datos de la empresa; coordinar = fechas, horarios o confirmar una visita de un trabajo. "
     "PERSONAL: su casa o alquiler (inmobiliaria, inquilino, visitas para mostrar la casa, gastos comunes, mudanza), familia, pareja, amigos, salud, auto, compras, delivery, bancos y tarjetas, pagos o cobros personales, trámites personales, invitaciones, saludos, chistes, ideas o negocios que le propone un amigo. "
     "SPAM: promociones, ofertas, descuentos, sorteos, cursos, inversiones, préstamos, cobranzas automáticas, códigos de verificación, encuestas, cadenas. "
     "PROVEEDOR: alguien que le vende a Phitel (precios, stock, facturas de compra). "
     "DUDOSO: no se puede saber si es trabajo (mensaje muy corto, un número o un monto sin contexto, de alguien que no es cliente). "
-    "Reglas: ante la duda, dudoso; nunca supongas que es trabajo. Un número que NO es cliente y no menciona nada de Phitel ni de un trabajo es personal o dudoso. "
+    "Reglas: ante la duda, dudoso; nunca supongas que es trabajo. Un número que NO es cliente y no menciona nada de Phitel ni de un trabajo técnico es personal o dudoso. "
     "seguro = false si no estás seguro del carril."
 )
 cla = cerebro("Clasificar", (1780, 160), CLASIF,
