@@ -657,7 +657,7 @@ void main(){ vec4 w=uM*vec4(aP,1.0); vW=w.xyz; vN=mat3(uM)*aN; vC=aC; vT=aT; vL=
 const FS = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
 in vec3 vN; in vec4 vC; in vec4 vL; in vec4 vL2; in vec3 vW; in vec2 vT;
-uniform sampler2D uTex; uniform float uTexOn;
+uniform sampler2D uTex; uniform float uTexOn; uniform float uCut;
 uniform sampler2DShadow uS2; uniform vec4 uSB; uniform vec4 uSB2; uniform float uCas; uniform sampler2D uLM; uniform vec4 uLMc;
 uniform sampler2DShadow uS; uniform vec3 uLd; uniform vec3 uSunC; uniform float uSun; uniform vec3 uSky; uniform vec3 uGnd; uniform float uAmb;
 uniform vec3 uTint; uniform float uTintA; uniform vec3 uClear; uniform float uTexel; uniform vec2 uFade;
@@ -677,7 +677,7 @@ float sh(float d){ vec3 p=vL.xyz/vL.w*0.5+0.5; vec2 q=abs(p.xy-0.5)*2.0; float e
   if(in1&&e<0.88) return shc(uS,vL,uSB,tn);
   vec3 p2=vL2.xyz/vL2.w*0.5+0.5; float s2=(p2.x<0.0||p2.x>1.0||p2.y<0.0||p2.y>1.0||p2.z>1.0||p2.z<0.0)?1.0:shc(uS2,vL2,uSB2,tn);
   if(!in1) return s2; return mix(shc(uS,vL,uSB,tn),s2,smoothstep(0.88,1.0,e)); }
-void main(){ vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh(d):1.0;
+void main(){ if(uCut>0.5 && texture(uTex,vT).a<0.5) discard; vec3 n=normalize(vN); float d=max(dot(n,uLd),0.0); float s=d>0.0?sh(d):1.0;
   vec3 hemi=mix(uGnd,uSky,n.y*0.5+0.5);
   vec3 base=uTexOn>0.5 ? texture(uTex,vT).rgb*vC.rgb : vC.rgb;
   vec3 lamp=vec3(0.0); if(uLMc.a>0.5){ float lm=texture(uLM,vW.xz/1280.0+0.5).r; lamp=uLMc.rgb*lm*lm*(1.0-smoothstep(5.5,9.5,vW.y))*clamp(n.y*0.5+0.55,0.0,1.0); }
@@ -756,7 +756,7 @@ class Renderer {
     this.gl = gl; this.canvas = canvas; this.cache = new Map(); this.ss = shadowSize;
     this.p = compile(gl, VS, FS); this.pd = compile(gl, VSD, FSD); this.pk = compile(gl, VSK, FSK);
     const U = (p, names) => Object.fromEntries(names.map(n => [n, gl.getUniformLocation(p, n)]));
-    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn', 'uReal', 'uEye', 'uVd', 'uPersp', 'uHz', 'uZen', 'uGlass', 'uSolar', 'uWall', 'uRoof', 'uL2', 'uS2', 'uSB', 'uSB2', 'uCas', 'uLM', 'uLMc']); this.uk = U(this.pk, ['uVd', 'uX', 'uY', 'uHH', 'uHz', 'uZen', 'uLd', 'uSunC']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
+    this.u = U(this.p, ['uVP', 'uM', 'uL', 'uS', 'uLd', 'uSunC', 'uSun', 'uSky', 'uGnd', 'uAmb', 'uTint', 'uTintA', 'uClear', 'uTexel', 'uFade', 'uTex', 'uTexOn', 'uReal', 'uEye', 'uVd', 'uPersp', 'uHz', 'uZen', 'uGlass', 'uSolar', 'uWall', 'uRoof', 'uL2', 'uS2', 'uSB', 'uSB2', 'uCas', 'uLM', 'uLMc', 'uCut']); this.uk = U(this.pk, ['uVd', 'uX', 'uY', 'uHH', 'uHz', 'uZen', 'uLd', 'uSunC']); this.tex = null; if (PHOTO.img) this.setTex(PHOTO.img);
     this.ud = U(this.pd, ['uL', 'uM']);
     this.st = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.st);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, shadowSize, shadowSize);
@@ -783,9 +783,9 @@ class Renderer {
     m = { vao, bufs, count: o.geo.p.length / 3, v: o.version }; this.cache.set(o, m); return m;
   }
   texFor(img) { this.tcache = this.tcache || new Map(); let t = this.tcache.get(img); if (t) return t; const gl = this.gl; t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); this.tcache.set(img, t); return t; }
-  overlay(vp, objs) { const gl = this.gl, u = this.u; gl.clear(gl.DEPTH_BUFFER_BIT); gl.useProgram(this.p); gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uTexOn, 0); gl.uniform1f(u.uTintA, 0); gl.uniform2fv(u.uFade, [1e5, 2e5]);
+  overlay(vp, objs) { const gl = this.gl, u = this.u; gl.clear(gl.DEPTH_BUFFER_BIT); gl.useProgram(this.p); gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uTexOn, 0); gl.uniform1f(u.uTintA, 0); gl.uniform1f(u.uCut, 0); gl.uniform2fv(u.uFade, [1e5, 2e5]);
     for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); } gl.bindVertexArray(null); }
   // textura de sombras extra (nivel lejano) y recursos de la oclusión ambiental: se crean recién cuando hacen falta
   shTex(size) { const gl = this.gl, t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, size, size);
@@ -842,7 +842,7 @@ class Renderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, lm && this.lmt ? this.lmt : this.tex); gl.uniform1i(u.uLM, 3); gl.uniform4fv(u.uLMc, lm && this.lmt ? [lm[0], lm[1], lm[2], 1] : [0, 0, 0, 0]);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.uTex, 1); gl.activeTexture(gl.TEXTURE0);
-    let ot = false; for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.uniform1f(u.uTintA, noTint ? 0 : (o.tintA || 0));
+    let ot = false; for (const o of objs) { if (!o.on) continue; const m = this.mesh(o); gl.uniformMatrix4fv(u.uM, false, o.model || I4); gl.uniform1f(u.uTintA, noTint ? 0 : (o.tintA || 0)); gl.uniform1f(u.uCut, o.cut ? 1 : 0);
       if (o.texImg) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.texFor(o.texImg)); gl.activeTexture(gl.TEXTURE0); ot = true; gl.uniform1f(u.uTexOn, 1); }
       else { if (ot) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.activeTexture(gl.TEXTURE0); ot = false; } gl.uniform1f(u.uTexOn, o.tex && this.tex ? 1 : 0); }
       gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.count); }
@@ -1600,6 +1600,12 @@ function updateChips() {
   for (const N of NAVES) { const el = N.chip.el.querySelector('.chip'); el.classList.toggle('sel', SEL === N.id); if (N.free) continue; const S = naveStats(N);
     el.querySelector('span').textContent = `${N.code} · ${S.occ}/${N.docks.length} andenes`; const dot = el.querySelector('i'); dot.className = S.alerts.some(a => a.status === 'crit') ? 'crit' : S.alerts.length ? 'warn' : ''; }
 }
+// recorriendo: solo los carteles del piso donde estás, y si dos se pisan en pantalla queda el más cercano
+placeLabels = (o => function (V) { o(V); if (!WALK.on) return; const piso = WALK.y - 1.7, vis = [];
+  for (const L of LBL) { if (!L.walkOnly || L.el.classList.contains('off')) continue; if (L.piso != null && Math.abs(L.piso - piso) > 1.6) { L.el.classList.add('off'); continue; }
+    const p = L.pos(); vis.push([Math.hypot(p[0] - WALK.x, p[1] - WALK.y, p[2] - WALK.z), L]); }
+  vis.sort((a, b) => a[0] - b[0]); const usados = [];
+  for (const [, L] of vis) { const r = L.el.getBoundingClientRect(); if (!r.width) continue; if (usados.some(q => r.left < q.right + 6 && r.right > q.left - 6 && r.top < q.bottom + 3 && r.bottom > q.top - 3)) L.el.classList.add('off'); else usados.push(r); } })(placeLabels);
 function placeLabels(V) {
   for (const L of LBL) { let show = L.layer === 'sel' ? !!SEL && !['nave', 'gate', 'admin', 'zona', 'fiber'].includes((entity(SEL) || {}).t) : LAYERS[L.layer];
     if (L.layer === 'sel' && show) { const c = panelContent(SEL); L.el.firstChild.textContent = c ? (c.t.length < 14 ? c.t : c.ey) : ''; }
@@ -2221,8 +2227,8 @@ function aislesOf(I) { const R = I.items.filter(o => isRack(o.k)), out = [];
   for (const dir of ['d', 'u']) { const rs = R.filter(o => alongOf(o) === dir);
     const c0 = o => dir === 'd' ? o.u : o.d, c1 = o => dir === 'd' ? o.u + o.su : o.d + o.sd, a0 = o => dir === 'd' ? o.d : o.u, a1 = o => dir === 'd' ? o.d + o.sd : o.u + o.su;
     for (const A of rs) { let best = null, bg = 1e9;
-      for (const B of rs) { if (B === A) continue; const gap = c0(B) - c1(A); if (gap < 1.2 || gap > 6) continue; const ov = Math.min(a1(A), a1(B)) - Math.max(a0(A), a0(B)); if (ov < 3) continue; if (gap < bg) { bg = gap; best = B; } }
-      if (best) out.push({ dir, c: (c1(A) + c0(best)) / 2, lo: Math.max(a0(A), a0(best)), hi: Math.min(a1(A), a1(best)), w: bg }); } }
+      for (const B of rs) { if (B === A || Math.abs((A.y0 || 0) - (B.y0 || 0)) > 0.5) continue; const gap = c0(B) - c1(A); if (gap < 1.2 || gap > 6) continue; const ov = Math.min(a1(A), a1(B)) - Math.max(a0(A), a0(B)); if (ov < 3) continue; if (gap < bg) { bg = gap; best = B; } }
+      if (best) out.push({ dir, c: (c1(A) + c0(best)) / 2, lo: Math.max(a0(A), a0(best)), hi: Math.min(a1(A), a1(best)), w: bg, y0: A.y0 || 0 }); } }
   out.sort((p, q) => (p.dir === q.dir ? 0 : p.dir < q.dir ? -1 : 1) || p.c - q.c || p.lo - q.lo);
   let n = 0, last = null; for (const a of out) { if (!last || last.dir !== a.dir || Math.abs(last.c - a.c) > 0.6) n++; a.n = n; last = a; }
   return out; }
@@ -2887,11 +2893,13 @@ function walkHud() { const on = WALK.on; HUD.hidden = !on; $('#e3pad').hidden = 
 HUD.addEventListener('click', e => { const b = e.target.closest('button[data-w]'); if (!b) return; const a = b.dataset.w;
   if (a === 'exit') exitWalk(); if (a === 'eye') WALK.y = 1.7; if (a === 'top') WALK.y = WALK.N ? WALK.N.h - 0.6 : 12; if (a !== 'exit') { WALK.N = naveAt(WALK.x, WALK.z, WALK.y) || null; walkHud(); } });
 function walkLabels() { WALK.lbls.forEach(rmLabel); WALK.lbls = []; const N = WALK.on && WALK.N; if (!N) return; const I = innerOf(N);
-  for (const a of aislesOf(I)) for (const end of [a.lo - 0.6, a.hi + 0.6]) { const uu = a.dir === 'd' ? a.c : end, dd = a.dir === 'd' ? end : a.c, [x, z] = NP(N, uu, -dd);
-    const L = addLabel(`<span class="wsign">Pasillo ${a.n}</span>`, () => [x, Math.min(N.h - 1.5, 5.2), z], 'cli', null); L.walkOnly = true; L.maxD = 34; WALK.lbls.push(L); }
+  // un pasillo con estanterías en varios pisos aparece una vez por piso; se junta en un solo tramo por número y piso, con un cartel en cada punta
+  const PA = new Map(); for (const a of aislesOf(I)) { const k = a.n + '|' + a.y0.toFixed(1), q = PA.get(k); if (q) { q.lo = Math.min(q.lo, a.lo); q.hi = Math.max(q.hi, a.hi); } else PA.set(k, Object.assign({}, a)); }
+  for (const a of PA.values()) for (const end of [a.lo - 0.6, a.hi + 0.6]) { const uu = a.dir === 'd' ? a.c : end, dd = a.dir === 'd' ? end : a.c, [x, z] = NP(N, uu, -dd), y = a.y0 > 0.5 ? a.y0 + 2.4 : Math.min(N.h - 1.5, 5.2);
+    const L = addLabel(`<span class="wsign">Pasillo ${a.n}</span>`, () => [x, y, z], 'cli', null); L.walkOnly = true; L.maxD = 34; L.piso = a.y0; L.prio = 1; WALK.lbls.push(L); }
   for (const it of I.items) { if (!isRack(it.k)) continue; const along = alongOf(it), len = along === 'd' ? it.sd : it.su;
     for (const a of [0, len]) { const uu = along === 'd' ? it.u + it.su / 2 : it.u + a, dd = along === 'd' ? it.d + a : it.d + it.sd / 2, [x, z] = NP(N, uu, -dd);
-      const L = addLabel(`<span class="wrack">${escH(it.name)}</span>`, () => [x, Math.min((it.y0 || 0) + rackH(it) + 0.35, N.h - 0.8), z], 'cli', null); L.walkOnly = true; L.maxD = 20; WALK.lbls.push(L); } } }
+      const L = addLabel(`<span class="wrack">${escH(it.name)}</span>`, () => [x, Math.min((it.y0 || 0) + rackH(it) + 0.35, N.h - 0.8), z], 'cli', null); L.walkOnly = true; L.maxD = 20; L.piso = it.y0 || 0; WALK.lbls.push(L); } } }
 document.addEventListener('keydown', e => { if (!WALK.on) return; const t = e.target; if (t.closest && t.closest('input,select,textarea')) return; const k = e.key.toLowerCase();
   if (['w', 'a', 's', 'd', 'q', 'e', 'c', ' ', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { if (k.startsWith('arrow') && ED.on && selDev()) return; WALK.keys.add(k); if (k !== 'shift') { e.preventDefault(); e.stopImmediatePropagation(); } } }, true);
 document.addEventListener('keyup', e => WALK.keys.delete(e.key.toLowerCase()));
@@ -5569,6 +5577,169 @@ if (CINE.on && BLANK && FIBS.length) {
     if (acc < 1) return; for (let k = 0; k < 3; k++) PACKETS.push({ id: 'pkc-' + ri + '-' + k, route: r, lens: L, total: acc, s: ((k / 3) + ri * 0.11) % 1 * acc, sp: 42 + (ri % 3) * 4 }); });
   buildFiber(); PACKETS.forEach(p => obj(p.id, { geo: packetGeo(), layer: 'fib', noShadow: true })); PACKETS.forEach(p => stepPacket(p, 0)); applyLayers();
 }
+/* avatar de verdad: el mismo de Olumi (técnico con casco y chaleco: modelo con esqueleto y texturas) y el mismo núcleo de movimiento.
+   Se carga recién al entrar a recorrer; si no carga, queda el muñeco de siempre. La piel se calcula acá y se dibuja con el sombreado de la maqueta. */
+function AV3_CORE(THREE) {
+// ---------- avatares 3D · núcleo (sin nada propio de la oficina: lo usan la oficina y el visor del taller) ----------
+// avatarGLB(escena, alto): prepara un modelo GLB con esqueleto (nombres tipo Mixamo o "game_engine" de MakeHuman) y devuelve la persona:
+//   .g (grupo que se ubica y gira; mira hacia +x como el muñeco), las articulaciones que se pueden mover (hip, chest, head, lL/lR, aL/aR),
+//   .an (medidas del cuerpo, en metros) y .sync() (pasa las articulaciones a los huesos).
+// avPose(o, modo, dt, c): mueve esas articulaciones con anatomía: al caminar los pies siguen una pisada (apoyan planos, no patinan) y las
+//   rodillas salen de la geometría de la pierna; sentado, la cadera queda sobre el asiento, los pies en el piso y las manos llegan al teclado.
+const avatarGLB=(()=>{const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),Z=new THREE.Vector3(0,0,1),q=()=>new THREE.Quaternion(),aa=(ax,a)=>q().setFromAxisAngle(ax,a),J=()=>({rotation:new THREE.Euler(),position:new THREE.Vector3()}),fx=a=>aa(X,-a);
+  const ALIAS={pelvis:'Hips',spine_01:'Spine',spine_02:'Spine1',spine_03:'Spine2',neck_01:'Neck',head:'Head'};for(const [s,S] of [['l','Left'],['r','Right']])Object.assign(ALIAS,{['clavicle_'+s]:S+'Shoulder',['upperarm_'+s]:S+'Arm',['lowerarm_'+s]:S+'ForeArm',['hand_'+s]:S+'Hand',['thigh_'+s]:S+'UpLeg',['calf_'+s]:S+'Leg',['foot_'+s]:S+'Foot',['ball_'+s]:S+'ToeBase'});
+  return function(scene,alto){const g=new THREE.Group(),inner=new THREE.Group();inner.add(scene);g.add(inner);inner.rotation.y=Math.PI/2;scene.updateMatrixWorld(true);
+    const B={};scene.traverse(o=>{if(o.isBone){const n=o.name.replace(/^mixamorig:?/,'');B[ALIAS[n]||n]=o}});if(!B.Hips||!B.LeftUpLeg||!B.LeftLeg||!B.LeftFoot||!B.LeftArm||!B.LeftForeArm||!B.LeftHand)return null;
+    const box=new THREE.Box3(),bb=new THREE.Box3();scene.traverse(o=>{if(o.isSkinnedMesh){o.frustumCulled=false;if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();box.union(bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld))}});
+    const k=alto/(box.max.y-box.min.y);scene.scale.setScalar(k);scene.position.y=-box.min.y*k;scene.updateMatrixWorld(true);
+    // todo lo que sigue se mide en el "espacio del modelo": x = su izquierda, y = arriba, z = adelante, en metros
+    const inv=scene.getWorldQuaternion(q()).invert(),rest={},restL={},pm=n=>B[n].getWorldPosition(new THREE.Vector3()).applyQuaternion(inv);
+    for(const n in B){rest[n]=inv.clone().multiply(B[n].getWorldQuaternion(q()));restL[n]=B[n].quaternion.clone()}
+    const hipRest=B.Hips.position.clone(),sg=S=>S==='Left'?1:-1;
+    // piernas: el molde viene parado con las piernas abiertas y los pies hacia afuera; se llevan a caer derechas, con la punta apenas abierta
+    const LG={},AN={alto};
+    for(const S of ['Left','Right']){const h=pm(S+'UpLeg'),a=pm(S+'Foot'),t=B[S+'ToeBase']?pm(S+'ToeBase'):a.clone().add(Z),f=t.clone().sub(a),l=a.clone().sub(h);
+      const yaw=sg(S)*.07-Math.atan2(f.x,f.z),lat=Math.atan2(sg(S)*.085*alto/1.75-h.x,-l.y)-Math.atan2(l.x,-l.y);LG[S]=aa(Z,lat).multiply(aa(Y,yaw))}
+    {const h=pm('LeftUpLeg'),kn=pm('LeftLeg'),a=pm('LeftFoot'),s=pm('LeftArm'),e=pm('LeftForeArm'),w=pm('LeftHand'),t=B.LeftToeBase?pm('LeftToeBase'):a;
+      Object.assign(AN,{hipW:Math.abs(h.x),lat0:.085*alto/1.75,Lt:h.distanceTo(kn),Ls:kn.distanceTo(a),hipH:h.y,footH:a.y,toe:Math.hypot(t.z-a.z,t.x-a.x),La:s.distanceTo(e),Lf:e.distanceTo(w),shY:s.y-h.y,shZ:s.z-h.z,shX:Math.abs(s.x),hand:B.LeftHandMiddle1?pm('LeftHandMiddle1').distanceTo(w)*2.1:.17})}
+    // brazos y antebrazos: del reposo (en A, con el codo algo doblado) a colgar rectos al costado
+    const down=(S,a,b)=>q().setFromUnitVectors(pm(S+b).sub(pm(S+a)).normalize(),new THREE.Vector3(sg(S)*.1,-1,.02).normalize());
+    const R0={Left:down('Left','Arm','ForeArm'),Right:down('Right','Arm','ForeArm')},R1={Left:down('Left','ForeArm','Hand'),Right:down('Right','ForeArm','Hand')};
+    // manos: normal de la palma en reposo (para girar la muñeca) y dedos relajados, cada uno curvado un poco hacia la palma
+    const C={},mano={},PAL={},TH={},PUNO=[0,1.3,2.85,3.7],PULG=[.6,.0];
+    for(const S of ['Left','Right']){if(!B[S+'HandIndex1']||!B[S+'HandPinky1']||!B[S+'HandMiddle1'])continue;const n=pm(S+'HandIndex1').sub(pm(S+'HandPinky1')).cross(pm(S+'HandMiddle1').sub(pm(S+'Hand'))).normalize();{const ac=new THREE.Vector3();for(const F of ['Index','Middle','Ring','Pinky']){const a1=B[S+'Hand'+F+'1'],a2=B[S+'Hand'+F+'2'],a3=B[S+'Hand'+F+'3'];if(a1&&a2&&a3){const d1=pm(S+'Hand'+F+'2').sub(pm(S+'Hand'+F+'1')),d2=pm(S+'Hand'+F+'3').sub(pm(S+'Hand'+F+'2'));ac.add(d1.clone().cross(d2).cross(d1).normalize().multiplyScalar(d1.clone().normalize().cross(d2.clone().normalize()).length()))}}
+        AN['curva'+S]=+ac.length().toFixed(3);if(ac.length()>.05?n.dot(ac)<0:n.y>0)n.negate()}PAL[S]=n;
+      for(const F of ['Index','Middle','Ring','Pinky']){let d=null;for(let j=1;j<=3;j++){const nm=S+'Hand'+F+j,nx=S+'Hand'+F+(j+1);if(!B[nm])continue;if(B[nx])d=pm(nx).sub(pm(nm)).normalize();if(!d)continue;C[nm]={ax:d.clone().cross(n).normalize(),a:.2*j+(F==='Pinky'?.08:0),j,S};mano[nm]=S+'Hand'}}
+      /* pulgar: se abre girando en el plano de la palma, alejándose de los otros dedos (para el "me gusta") */
+      if(B[S+'HandThumb1']&&B[S+'HandThumb2']){const dT=pm(S+'HandThumb2').sub(pm(S+'HandThumb1')),dF=pm(S+'HandMiddle1').sub(pm(S+'Hand')),sgn=Math.sign(dF.clone().cross(dT).dot(n))||1;for(let j=1;j<=3;j++)if(B[S+'HandThumb'+j]){TH[S+'HandThumb'+j]={ax:n.clone(),sg:sgn,ej:dT.clone().normalize().cross(n).normalize(),j,S};mano[S+'HandThumb'+j]=S+'Hand'}}}
+    const o={g,an:AN,bones:B,hip:J(),chest:J(),head:J(),lL:{th:J(),kn:J(),an:J(),ab:0,yw:0},lR:{th:J(),kn:J(),an:J(),ab:0,yw:0},hipS:0,roll:0,aL:{sh:J(),el:J(),in:0,palma:0},aR:{sh:J(),el:J(),in:0,palma:0},hipY:null,hipX:0};o.hip.position.y=.95;
+    let top=B.Hips;while(top.parent&&top.parent.isBone)top=top.parent;const order=[];(function walk(b){if(b.isBone)order.push(b);b.children.forEach(walk)})(top);
+    const nameOf=new Map(Object.entries(B).map(([n,b])=>[b,n])),W={},DN=new THREE.Vector3(0,-1,0),v1=new THREE.Vector3(),v2=new THREE.Vector3(),v3=new THREE.Vector3(),v4=new THREE.Vector3();
+    o.sync=()=>{const D={},sp=aa(Y,o.chest.rotation.y).multiply(aa(Z,o.chest.rotation.x||0)).multiply(fx(o.chest.rotation.z));D.Hips=aa(Z,o.roll||0);D.Spine1=sp;D.Spine2=sp;D.Neck=sp;D.Head=sp.clone().multiply(aa(Y,o.head.rotation.y)).multiply(aa(Z,o.head.rotation.x||0)).multiply(fx(o.head.rotation.z));
+      for(const [S,l,a] of [['Left',o.lL,o.aL],['Right',o.lR,o.aR]]){const t=l.th.rotation.z,kn=t+l.kn.rotation.z,yq=aa(Y,sg(S)*(l.yw||0)),lq=yq.clone().multiply(aa(Z,l.ab||0));     // ab: la pierna se abre o se cierra desde la cadera; yw: la punta del pie gira hacia afuera
+        D[S+'UpLeg']=lq.clone().multiply(fx(t)).multiply(LG[S]);D[S+'Leg']=lq.multiply(fx(kn)).multiply(LG[S]);D[S+'Foot']=yq.multiply(fx(kn+l.an.rotation.z)).multiply(LG[S]);D[S+'ToeBase']=D[S+'Foot'];
+        // brazo: abre o cierra (in > 0 lo trae hacia el centro), sube hacia adelante y dobla el codo; la muñeca gira para dejar la palma hacia el cuerpo (0) o hacia abajo (1)
+        const up=sp.clone().multiply(aa(Y,sg(S)*((a.sh.rotation.x||0)-(a.in||0)))).multiply(fx(a.sh.rotation.z));/* ritmo del hombro: cuando el brazo sube, la clavícula sube con él (un tercio del camino); si no, el brazo parece salirse del hombro */
+        const cla=Math.min(.42,Math.max(0,Math.abs(a.sh.rotation.z)-.7)*.2);D[S+'Shoulder']=cla>.001?sp.clone().multiply(aa(Z,sg(S)*cla)):sp;D[S+'Arm']=up.clone().multiply(R0[S]);
+        let fo=up.clone().multiply(fx(a.el.rotation.z)).multiply(R1[S]);
+        if(PAL[S]){const f=v1.copy(pm0[S]).applyQuaternion(fo).normalize(),n=v2.copy(PAL[S]).applyQuaternion(fo),pf=a.pf||0,want=v3.set(-sg(S)*(1-(a.palma||0))*(1-pf),-(a.palma||0),pf-.15*(1-(a.palma||0))*(1-pf)).normalize();      // pf: palma hacia adelante (saludar)
+          n.addScaledVector(f,-n.dot(f)).normalize();want.addScaledVector(f,-want.dot(f));if(want.lengthSq()>1e-4){want.normalize();const ang=Math.atan2(v4.crossVectors(n,want).dot(f),n.dot(want));fo=aa(f,ang).multiply(fo)}}
+        D[S+'ForeArm']=fo}
+      for(const b of order){const n=nameOf.get(b),p=b.parent&&b.parent.isBone?nameOf.get(b.parent):null;if(!D[n]){const c=C[n],th=TH[n];
+          if(c){const pu=(c.S==='Left'?o.aL:o.aR).puno||0;D[n]=D[mano[n]].clone().multiply(aa(c.ax,c.a+(PUNO[c.j]-c.a)*pu))}
+          else if(th){const pg=(th.S==='Left'?o.aL:o.aR).pulgar||0;D[n]=pg>.001?D[mano[n]].clone().multiply(aa(th.ax,th.sg*pg*PULG[0])).multiply(aa(th.ej,pg*PULG[1]*(th.j-1))):D[mano[n]]}
+          else D[n]=p?D[p]:q()}const w=D[n].clone().multiply(rest[n]);W[n]=w;
+        if(p)b.quaternion.copy(W[p].clone().invert().multiply(w));else b.quaternion.copy(restL[n]).multiply(rest[n].clone().invert()).multiply(w)}
+      // cadera: altura de la articulación (hipY, en metros desde el piso) o, si no se dio, la del muñeco; y corrimiento hacia adelante (hipX)
+      B.Hips.position.copy(hipRest);B.Hips.position.y+=(o.hipY!=null?o.hipY-AN.hipH:(o.hip.position.y-.95)*(alto/1.75))/k;B.Hips.position.z+=(o.hipX||0)/k;B.Hips.position.x+=(o.hipS||0)/k};
+    const pm0={Left:pm('LeftHand').sub(pm('LeftForeArm')).normalize(),Right:pm('RightHand').sub(pm('RightForeArm')).normalize()};
+    return o}})();
+
+// dos huesos en un plano (muslo–pierna o brazo–antebrazo): ángulos para que la punta llegue a (dx hacia adelante, dy hacia abajo)
+// devuelve [a, b]: a = giro del primer hueso desde colgar (adelante +), b = flexión del segundo; dobla = +1 la articulación va hacia adelante (rodilla), -1 hacia atrás (codo)
+function av2(L1,L2,dx,dy,dobla){let d=Math.hypot(dx,dy);const m=(L1+L2)*.999,n=Math.abs(L1-L2)*1.02+.001;if(d>m){dx*=m/d;dy*=m/d;d=m}if(d<n){d=n}
+  const a1=Math.atan2(dx,dy),al=Math.acos(Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)))),be=Math.acos(Math.max(-1,Math.min(1,(L1*L1+L2*L2-d*d)/(2*L1*L2))));return[a1+dobla*al,-dobla*(Math.PI-be)]}
+const avSm=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+function avPose(o,mode,dt,c){c=c||{};const A=o.an,k=Math.min(1,dt*9),t=(c.t||0)+(o.seed||0),br=Math.sin(t*1.6),L=A.Lt+A.Ls,to=(j,v,kk)=>{j.rotation.z+=(v-j.rotation.z)*(kk==null?k:kk)};
+  // distancia caminada → fase del paso (los pies no patinan: un paso mide lo que se avanzó)
+  if(c.x!=null){if(o.lx!=null&&mode==='walk'){const d=Math.hypot(c.x-o.lx,c.y-o.ly);if(d<.3)o.gd=(o.gd||0)+d}o.lx=c.x;o.ly=c.y}else if(mode==='walk')o.gd=(o.gd||0)+(c.v||1.2)*dt;
+  const paso=.33*A.alto,TR=1.24*paso,mix=o.mix=(o.mix||0)+((mode==='walk'?1:0)-(o.mix||0))*Math.min(1,dt*7);
+  if(mode==='sit'){const asiento=c.asiento==null?.47:c.asiento,hy=asiento+.088*A.alto/1.75;o.hipY=o.hipY==null?hy:o.hipY+(hy-o.hipY)*k;o.hipX+=(-.03-o.hipX)*k;o.roll+=(0-o.roll)*k;o.hipS+=(0-o.hipS)*k;o.chest.rotation.x=-o.roll*.7;o.head.rotation.x=o.roll*.35;o.ges=null;
+    // piernas: muslos sobre el asiento y pies apoyados en el piso, un poco adelante de la rodilla
+    for(const [l,s] of [[o.lL,1],[o.lR,-1]]){const [th,kn]=av2(A.Lt,A.Ls,A.Lt*.94+.05+s*.012,o.hipY-A.footH,1);to(l.th,th);to(l.kn,kn);to(l.an,-(th+kn));l.ab+=(0-l.ab)*k;l.yw+=(0-l.yw)*k}
+    o.chest.rotation.z+=(-.03+br*.006-o.chest.rotation.z)*k;o.chest.rotation.y+=(0-o.chest.rotation.y)*k;
+    // brazos: al teclado (si hay) con las palmas hacia abajo; si no, las manos descansan sobre los muslos
+    const shy=o.hipY+A.shY,ms=!!c.teclado&&Math.sin(t*.37)>.6;
+    for(const [a,s] of [[o.aL,1],[o.aR,-1]]){let wx,wy,inn,pal;
+      if(c.teclado){const ty=Math.sin(t*(s>0?3.1:2.7)+s)*.008,mouse=ms&&s<0;wx=c.teclado.d-A.hand*.62+(mouse?.03:0)-A.shZ-o.hipX;wy=shy-(c.teclado.h+.045+ty);inn=mouse?-.22:(A.shX-.105)/Math.max(.2,wx);pal=1}
+      else{wx=A.Lt*.5-A.shZ-o.hipX;wy=shy-(o.hipY+.105*A.alto/1.75);inn=(A.shX-.1)/Math.max(.2,wx)*.6;pal=.9}
+      const [sh,el]=av2(A.La,A.Lf,wx,wy,-1);to(a.sh,sh);to(a.el,el);a.in+=(inn-a.in)*k;a.palma+=(pal-a.palma)*k;a.sh.rotation.x=0;a.pf=0;a.puno=0;a.pulgar=0}
+    o.head.rotation.z+=((c.teclado?.1:.02)+Math.sin(t*.5)*.03-o.head.rotation.z)*k;o.head.rotation.y+=((ms?-.14:Math.sin(t*.23)*.08)-o.head.rotation.y)*k;return}
+  // de pie: la postura de descanso y el paso se mezclan (mix), así arrancar y frenar no da saltos y al parar se vuelve sola al reposo
+  const a175=A.alto/1.75,sd=o.seed||0,fr=x=>x-Math.floor(x),ph=(o.gd||0)/(2*paso),s2=Math.sin(ph*2*Math.PI)*mix,cL=Math.cos(ph*2*Math.PI)*mix,q=1-mix,k2=Math.min(1,dt*10);
+  // reposo: el peso va sobre una pierna (la otra afloja la rodilla y esa cadera baja) y cada tanto cambia de lado; cada persona se para un poco distinto
+  const per=10+fr(sd*.61)*8,lado=(Math.floor(t/per+fr(sd*.37))%2?1:-1)*(fr(sd*.83)>.5?1:-1);o.pw=o.pw==null?lado:o.pw+(lado-o.pw)*Math.min(1,dt*1.5);
+  const ancho=(.078+.02*fr(sd*2.3))*a175,adel=(.012+.03*fr(sd*1.7))*(fr(sd*3.3)>.5?1:-1),punta=.05+.08*fr(sd*5.1);
+  const rollQ=q*o.pw*.075+s2*.035,hsQ=(q*o.pw*.034+s2*.014)*a175;o.roll+=(rollQ-o.roll)*k2;o.hipS+=(hsQ-o.hipS)*k2;
+  let hy=A.hipH-.0075*q-.022*mix+br*.002;const pie=[],yFin=.55*A.toe*.8;
+  for(const [l,s,off] of [[o.lL,1,0],[o.lR,-1,.5]]){const u=((ph+off)%1+1)%1;let x,y=0,psi=0;
+    if(u<.62){const w=u/.62;x=TR*(.46-w);psi=.24*(1-avSm(0,.14,w))-.55*avSm(.72,1,w)**1.5;y=Math.max(0,-psi)*A.toe*.8}      // apoyo: el pie va hacia atrás; al final levanta el talón
+    else{const w=(u-.62)/.38,e=avSm(0,1,w);x=TR*(-.54+e);y=yFin*(1-e)+.07*Math.sin(Math.PI*w)**.9;psi=-.55+.79*avSm(.15,1,w)}   // vuelo: el pie pasa despegado del piso
+    // caminando los pies caen casi en una línea (unos 8 cm entre uno y otro); quieto, al ancho de la cadera y con la punta algo abierta
+    const libre=Math.max(0,-s*o.pw)*q;pie.push([l,s,x*mix+s*adel*q,y*mix+libre*.012,psi*mix-libre*.1,s*(.05*a175*mix+ancho*q),punta*q])}
+  // la cadera baja lo justo para que ninguna pierna tenga que estirarse del todo (cada cadera sube o baja con el ladeo de la pelvis)
+  const cad=s=>s*o.roll*A.hipW,dl=(s,lat)=>lat-(s*A.hipW+o.hipS);
+  for(const [l,s,x,y,psi,lat] of pie){const m=Math.sqrt(Math.max(.01,(L*.9985)**2-x*x-dl(s,lat)**2))+A.footH+y-cad(s);if(m<hy)hy=m}
+  o.hipY=o.hipY==null?hy:o.hipY+(hy-o.hipY)*Math.min(1,dt*18);o.hipX+=(0-o.hipX)*k;
+  const ab0=Math.atan2(A.lat0-A.hipW,A.hipH-A.footH);
+  for(const [l,s,x,y,psi,lat,yw] of pie){const dy=o.hipY+cad(s)-A.footH-y,d=dl(s,lat),[th,kn]=av2(A.Lt,A.Ls,x,Math.hypot(dy,d),1);
+    l.th.rotation.z=th;l.kn.rotation.z=Math.min(kn,-.04);l.an.rotation.z=psi-(th+l.kn.rotation.z);l.ab=Math.atan2(d,dy)-s*ab0;l.yw=yw}
+  o.chest.rotation.z+=((-.035*mix+br*.008)-o.chest.rotation.z)*k;o.chest.rotation.y=cL*.09;o.chest.rotation.x=-o.roll*.7;o.head.rotation.x=o.roll*.35;
+  // gesto en curso (saludar, hablar, pensar, mirar la hora, me gusta): entra y sale suave, y al terminar el cuerpo vuelve a lo que estaba haciendo
+  let G=null,ge=0,gt=0;if(o.ges){const g=o.ges;if(g.t0==null)g.t0=c.t||0;gt=(c.t||0)-g.t0;if(gt>=g.dur||!AV_GES[g.id])o.ges=null;else{G=AV_GES[g.id];ge=avSm(0,.32,gt)*(1-avSm(g.dur-.4,g.dur,gt))}}
+  const gh=G&&G.cabeza?G.cabeza(gt):null,hy0=mix>.3?-cL*.07:Math.sin(t*.3)*.22+Math.sin(t*.071+sd)*.12,hz0=mix>.3?.02:Math.sin(t*.21)*.04;
+  o.head.rotation.y+=((gh?hy0+(gh[0]-hy0)*ge:hy0)-o.head.rotation.y)*k;o.head.rotation.z+=((gh?hz0+(gh[1]-hz0)*ge:hz0)-o.head.rotation.z)*k;
+  if(G&&G.pecho)o.chest.rotation.z+=G.pecho*ge*k;
+  for(const [a,s] of [[o.aL,1],[o.aR,-1]]){
+    if(o.carry){a.sh.rotation.x=0;to(a.sh,.5);to(a.el,1.2);a.in+=(.25-a.in)*k;a.palma+=(.2-a.palma)*k;a.pf=0;a.puno=0;a.pulgar=0;continue}
+    // brazos: al caminar acompañan el paso; quietos cuelgan sueltos, el del lado del peso apenas más atrás
+    const sw=-s*cL;let v=[mix*(sw*.3-.03)+q*(-.015-s*o.pw*.03+br*.006),0,mix*(.44+Math.max(0,sw)*.42)+q*(.3-s*o.pw*.04+.06*fr(sd*(s>0?4.1:6.7))),0,0,0,0,0],kk=.5;
+    const gv=G&&G.brazo?G.brazo(gt,s):null;if(gv){v=v.map((x,i)=>x+((gv[i]||0)-x)*ge);kk=Math.min(1,dt*12)}
+    to(a.sh,v[0],kk);a.sh.rotation.x+=(v[1]-a.sh.rotation.x)*kk;to(a.el,v[2],kk);a.in+=(v[3]-a.in)*k;a.palma+=(v[4]-a.palma)*k;a.pf=(a.pf||0)+(v[5]-(a.pf||0))*k;a.puno=(a.puno||0)+(v[6]-(a.puno||0))*kk;a.pulgar=(a.pulgar||0)+(v[7]-(a.pulgar||0))*kk}}
+// gestos: brazo(t, lado) devuelve [subir adelante, abrir al costado, doblar el codo, cerrar al centro, palma abajo, palma al frente, cerrar el puño, abrir el pulgar] (lado +1 izquierdo, −1 derecho; null = ese brazo sigue en lo suyo)
+// y cabeza(t) = [girar, bajar]. Para sumar uno alcanza con agregarlo acá.
+const AV_GES={
+  saludo:{dur:2.4,brazo:(t,s)=>s<0?[1.5,1.05+Math.sin(t*9)*.16,1.55+Math.sin(t*9)*.22,0,0,1]:null,cabeza:t=>[0,-.03]},
+  hablar:{dur:2.8,brazo:(t,s)=>[.36+Math.sin(t*3.7+s)*.07,.12,1.2+Math.sin(t*5.1+s*1.4)*.2,.1,.35,0],cabeza:t=>[Math.sin(t*2.1)*.06,.03+Math.sin(t*4.3)*.03]},
+  pensar:{dur:3.6,brazo:(t,s)=>s<0?[.5,0,2.22,.62,0,0]:[.3,0,1.5,.75,.6,0],cabeza:t=>[.12,.1]},
+  hora:{dur:2.8,brazo:(t,s)=>s>0?[.42,0,1.42,.78,1,0]:null,cabeza:t=>[.32,.36]},
+  like:{dur:2.6,brazo:(t,s)=>s<0?[.5+Math.sin(t*7)*.04*Math.exp(-t*1.2),.1,1.5,.32,0,0,1,1]:null,cabeza:t=>[-.1,.03+Math.sin(t*6)*.03*Math.exp(-t)]}};
+// materiales de una persona recién cargada: piel y ropa opacas y con sombra; pelo y ojos recortados (con borde suave si hay antialias);
+// cejas y pestañas mezcladas (así se ven pelos y no un trazo negro). lado = tamaño máximo de textura (en teléfonos conviene 1024).
+function avMat(scene,lado){const hecho=new Set();scene.traverse(o=>{if(!o.isMesh)return;const m=o.material;o.castShadow=true;if(!m)return;const n=(m.name||'')+' '+(o.name||'');
+  if(/brow|lash/i.test(n)){m.transparent=true;m.alphaTest=.03;m.depthWrite=false;m.side=THREE.DoubleSide;m.polygonOffset=true;m.polygonOffsetFactor=-1;m.polygonOffsetUnits=-1;o.castShadow=false}
+  else if(m.transparent||m.alphaTest>0){m.transparent=false;m.alphaTest=m.alphaTest>0?m.alphaTest:.32;m.alphaToCoverage=true;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}
+  if(/body/i.test(n)){m.roughness=.62;m.envMapIntensity=.5}
+  if(m.map&&!hecho.has(m.map)){hecho.add(m.map);m.map.anisotropy=4;const im=m.map.image;
+    if(lado&&im&&Math.max(im.width,im.height)>lado&&typeof document!=='undefined'){const k=lado/Math.max(im.width,im.height),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);m.map.image=c;m.map.needsUpdate=true}}})}
+function avGesto(o,id,dur){if(!o||!AV_GES[id]||o.ges&&o.ges.id===id)return;o.ges={id,dur:dur||AV_GES[id].dur,t0:null}}
+
+;return {avatarGLB,avPose,avGesto,AV_GES,avMat}}
+const AV3 = { st: 0, x: 0, t: 0, parts: [], lib: window.ONDI_LIB || '/olumi/beta/lib/', glb: window.ONDI_AVGLB || '/olumi/beta/3d/tec-h-epp.glb' };
+async function av3Load() { if (AV3.st) return; AV3.st = 1;
+  try { const THREE = await import(AV3.lib + 'three.module.min.js'), { GLTFLoader } = await import(AV3.lib + 'GLTFLoader.js'), CORE = AV3_CORE(THREE);
+    const gltf = await new GLTFLoader().loadAsync(AV3.glb), av = CORE.avatarGLB(gltf.scene, 1.73); if (!av) throw new Error('el modelo no tiene esqueleto');
+    av.g.updateMatrixWorld(true); let n = 0;
+    gltf.scene.traverseVisible(m => { if (!m.isSkinnedMesh) return; const g = m.geometry, A = g.attributes, nv = A.position.count, I = g.index, mat = Array.isArray(m.material) ? m.material[0] : m.material, map = mat && mat.map;
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4);
+      for (let i = 0; i < nv; i++) { pos[i * 3] = A.position.getX(i); pos[i * 3 + 1] = A.position.getY(i); pos[i * 3 + 2] = A.position.getZ(i);
+        nor[i * 3] = A.normal.getX(i); nor[i * 3 + 1] = A.normal.getY(i); nor[i * 3 + 2] = A.normal.getZ(i);
+        si[i * 4] = A.skinIndex.getX(i); si[i * 4 + 1] = A.skinIndex.getY(i); si[i * 4 + 2] = A.skinIndex.getZ(i); si[i * 4 + 3] = A.skinIndex.getW(i);
+        sw[i * 4] = A.skinWeight.getX(i); sw[i * 4 + 1] = A.skinWeight.getY(i); sw[i * 4 + 2] = A.skinWeight.getZ(i); sw[i * 4 + 3] = A.skinWeight.getW(i); }
+      const idx = I ? Uint32Array.from(I.array) : Uint32Array.from({ length: nv }, (_, i) => i), nk = idx.length, geo = new Geo();
+      geo.p = new Float32Array(nk * 3); geo.n = new Float32Array(nk * 3); geo.c = new Float32Array(nk * 4); geo.t = new Float32Array(nk * 2); geo.mn = [-1.2, -0.2, -1.2]; geo.mx = [1.2, 2.1, 1.2];
+      const col = !map && mat && mat.color ? [mat.color.r, mat.color.g, mat.color.b].map(v => Math.pow(v, 1 / 2.2)) : [1, 1, 1];
+      for (let k = 0; k < nk; k++) { const i = idx[k]; geo.c[k * 4] = col[0]; geo.c[k * 4 + 1] = col[1]; geo.c[k * 4 + 2] = col[2]; geo.c[k * 4 + 3] = AVK;
+        if (A.uv) { geo.t[k * 2] = A.uv.getX(i); geo.t[k * 2 + 1] = A.uv.getY(i); } }
+      const o = obj('av3-' + (n++), { geo, layer: 'base', pick: false, on: false, dyn: { p: geo.p, n: geo.n }, texImg: map ? map.image : null, cut: !!(mat && (mat.alphaTest > 0 || mat.transparent)) });
+      AV3.parts.push({ m, o, pos, nor, si, sw, idx, sp: new Float32Array(nv * 3), sn: new Float32Array(nv * 3), K: new Float32Array(m.skeleton.bones.length * 16), A: new THREE.Matrix4(), B: new THREE.Matrix4(), C: new THREE.Matrix4() }); });
+    AV3.av = av; AV3.CORE = CORE; AV3.st = 2; if (window.__dbg) window.__dbg.av3 = AV3; } catch (e) { console.warn('avatar 3D', e); AV3.st = -1; } }
+function av3Skin() { AV3.av.g.updateMatrixWorld(true);
+  for (const P of AV3.parts) { const m = P.m, bm = (m.skeleton.update(), m.skeleton.boneMatrices), nb = bm.length / 16, K = P.K;
+    P.A.multiplyMatrices(m.matrixWorld, m.bindMatrixInverse); for (let b = 0; b < nb; b++) { P.B.fromArray(bm, b * 16); P.C.multiplyMatrices(P.A, P.B).multiply(m.bindMatrix); K.set(P.C.elements, b * 16); }
+    const { pos, nor, si, sw, sp, sn } = P, nv = pos.length / 3;
+    for (let i = 0; i < nv; i++) { const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2], nx = nor[i * 3], ny = nor[i * 3 + 1], nz = nor[i * 3 + 2]; let X = 0, Y = 0, Z = 0, NX = 0, NY = 0, NZ = 0;
+      for (let j = 0; j < 4; j++) { const w = sw[i * 4 + j]; if (w <= 0) continue; const e = si[i * 4 + j] * 16;
+        X += w * (K[e] * x + K[e + 4] * y + K[e + 8] * z + K[e + 12]); Y += w * (K[e + 1] * x + K[e + 5] * y + K[e + 9] * z + K[e + 13]); Z += w * (K[e + 2] * x + K[e + 6] * y + K[e + 10] * z + K[e + 14]);
+        NX += w * (K[e] * nx + K[e + 4] * ny + K[e + 8] * nz); NY += w * (K[e + 1] * nx + K[e + 5] * ny + K[e + 9] * nz); NZ += w * (K[e + 2] * nx + K[e + 6] * ny + K[e + 10] * nz); }
+      const l = Math.hypot(NX, NY, NZ) || 1; sp[i * 3] = X; sp[i * 3 + 1] = Y; sp[i * 3 + 2] = Z; sn[i * 3] = NX / l; sn[i * 3 + 1] = NY / l; sn[i * 3 + 2] = NZ / l; }
+    const gp = P.o.geo.p, gn = P.o.geo.n, idx = P.idx; for (let k = 0; k < idx.length; k++) { const a = idx[k] * 3, b = k * 3; gp[b] = sp[a]; gp[b + 1] = sp[a + 1]; gp[b + 2] = sp[a + 2]; gn[b] = sn[a]; gn[b + 1] = sn[a + 1]; gn[b + 2] = sn[a + 2]; } } }
+avSync = (o => function (dt = 0) { const show = WALK.on && TP.on && !TP.near; if (show && !AV3.st) av3Load();
+  if (AV3.st !== 2 || !show) { for (const p of AV3.parts) p.o.on = false; return o(dt); }
+  avHide(); AV3.t += dt; const sp = TP.sp || 0; AV3.x += sp * dt;
+  try { AV3.CORE.avPose(AV3.av, sp > 0.25 ? 'walk' : 'idle', dt, { x: AV3.x, y: 0, t: AV3.t }); AV3.av.sync(); av3Skin(); } catch (e) { console.warn('avatar 3D', e); AV3.st = -1; for (const p of AV3.parts) p.o.on = false; return o(dt); }
+  const Mo = M.trs(WALK.x, WALK.y - 1.7, WALK.z, TP.h, 0); for (const p of AV3.parts) { p.o.on = true; p.o.version++; p.o.model = Mo; } })(avSync);
+window.__av3 = { AV3, cargar: () => av3Load(), caminar: i => enterWalk(NAVES[i || 0]), ir: (id, u, d, yaw) => { const N = naveById(id); enterWalk(N); const [x, z] = NP(N, u, -d); WALK.x = x; WALK.z = z; if (yaw != null) WALK.yaw = yaw; return [x, z, WALK.yaw]; }, labels: () => LBL.filter(L => !L.el.classList.contains('off')).map(L => L.el.textContent), estado: () => ({ st: AV3.st, partes: AV3.parts.length, on: AV3.parts.filter(p => p.o.on).length, walk: WALK.on, tp: TP.on, near: TP.near }) };
 window.__dbg = { ed: { setEdit, setTool, openCab, FIBS, CABS, DEV, NAVES, flyTo, groundAt: (x, y) => groundAt(x, y) }, sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>
