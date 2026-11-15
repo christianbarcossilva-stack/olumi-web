@@ -475,7 +475,7 @@ const H2=Math.PI/2,DEFLAY=[
 // muebles de Ondi (Furniture Kit de Kenney, CC0): el mismo archivo que usa el editor de Ondi
 const KM={st:'idle',data:null,pal:null,geo:new Map()},KMAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7,name:'km'});
 const b64u8=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
-function kmLoad(){if(KM.st!=='idle')return;KM.st='cargando';fetch('/ondi/beta/muebles.json').then(r=>r.ok?r.json():Promise.reject(r.status))
+function kmLoad(){if(KM.st!=='idle')return;KM.st='cargando';fetch('3d/muebles.json').then(r=>r.ok?r:Promise.reject()).catch(()=>fetch('/ondi/beta/muebles.json')).then(r=>r.ok?r.json():Promise.reject(r.status))
   .then(j=>{KM.data=j.m;KM.pal=j.pal.map(c=>new THREE.Color().setRGB(c[0]/255,c[1]/255,c[2]/255,THREE.SRGBColorSpace));KM.st='ok';LAYV++;if(ED.cat)edCat()}).catch(()=>{KM.st='error';if(ED.cat)edCat()})}
 function kmGeo(k){if(KM.geo.has(k))return KM.geo.get(k);const m=KM.data&&KM.data[k];if(!m)return null;
   const P=new Int16Array(b64u8(m.p).buffer),N=new Int8Array(b64u8(m.q).buffer),K=b64u8(m.k),n=K.length,pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);
@@ -513,7 +513,7 @@ function sync3D(dt){
     const geo=new THREE.PlaneGeometry(W,Hb).rotateX(-Math.PI/2);PLAN=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:t,transparent:true,opacity:.9,roughness:.8}));PLAN.position.set(W/2,.125,Hb/2);PLAN.receiveShadow=true;PLAN.userData.img=planImg;BLD.add(PLAN)}
   if(!planImg&&PLAN){BLD.remove(PLAN);PLAN=null}
   const e=1-Math.pow(1-Math.min(1,BUILD),3);BLD.visible=!!S.built;BLD.scale.y=Math.max(.001,e);
-  FURN.visible=!!S.built&&BUILD>.7;const f=Math.min(1,(BUILD-.7)/.3);FURN.scale.set(1,Math.max(.001,f),1);LUC.visible=FURN.visible;LUC.scale.copy(FURN.scale);
+  FURN.visible=!!S.built&&BUILD>.7;const f=Math.min(1,(BUILD-.7)/.3);FURN.scale.set(1,Math.max(.001,f),1);LUC.visible=FURN.visible;LUC.scale.copy(FURN.scale);ACT.visible=BUILD>=1;
   const a=TAB==='vivo'&&AREA&&S.built?(AREA==='est'?{x:.3,y:20,w:W-.6,h:4.4}:ROOMS.find(r=>r.id===AREA)):null;AREAM.visible=!!a;
   if(a){AREAM.position.set(a.x+a.w/2,.135,a.y+a.h/2);AREAM.scale.set(a.w-.12,1,a.h-.12);AREAM.material.opacity=.12+.1*Math.sin(T*3)}
   edCam();actors(dt);if(!WALK.on)camIso(1-Math.exp(-dt*12));if(CINE.on&&!WALK.on)cineCam(dt);
@@ -907,8 +907,8 @@ function overlay(){const PV=WALK.on||CINE.on,SZ=sc*ISO.zoom,FS=PV?13:Math.max(9,
   if(!S.built){const c=P(W/2,Hb/2,0);ctx.font='600 14px -apple-system,BlinkMacSystemFont,Inter,sans-serif';ctx.fillStyle=DARK?'rgba(235,235,245,.55)':'rgba(30,31,35,.45)';ctx.textAlign='center';ctx.fillText('Acá se va a levantar tu oficina',c[0],c[1]);return}
   if(!PV&&BUILD>.6&&SZ>=11){ctx.font=`600 ${FS}px -apple-system,BlinkMacSystemFont,Inter,sans-serif`;ctx.fillStyle=DARK?'rgba(235,235,245,.5)':'rgba(29,29,31,.5)';ctx.textAlign='left';ROOMS.concat(ZONES.filter(z=>z.n!=='Pasillo')).forEach(r=>{if(S.desks.some(d=>d.room===r.id&&d.n&&d.n.slice(0,5)===r.n.slice(0,5)))return;const p=P(r.x+.45,r.y+.8,.13);ctx.fillText(r.n,p[0],p[1])})}
   if(BUILD>.7&&!CINE.on)S.desks.forEach(d=>{const X=d.cx??d.x+.9,Y=d.cy??d.y+.45,c=P(X,Y,0);L.push({d:X+Y,f:()=>{if((PV||SZ>=11)&&near(X,Y,9)){const l=P(X,Y,1.95);pill(d.n,l[0],l[1],FS,DARK?'rgba(44,44,46,.94)':'rgba(255,255,255,.95)',INK())}},h:{k:'desk',id:d.id,x:c[0],y:c[1]-PPM(X,Y)*.5,r:PPM(X,Y)*1.1}})});
-  (actors.v||[]).forEach(([v,r])=>{if(!r)return;const c=P(r.cx,r.cy,1);L.push({d:r.cx+r.cy+2,f:()=>{if(near(r.cx,r.cy,16)){const l=P(r.cx,r.cy,r.o.Hh+.35);pill(v.plate,l[0],l[1],FS*.95,'rgba(29,29,31,.82)','#fff',17)}},h:{k:'van',id:v.id,x:c[0],y:c[1],r:PPM(r.cx,r.cy,1)*1.7}})});
-  (actors.p||[]).forEach(([p,r])=>{if(!r)return;const c=P(r.x,r.y,.9);L.push({d:r.x+r.y+.6,f:()=>{
+  (ACT.visible&&actors.v||[]).forEach(([v,r])=>{if(!r)return;const c=P(r.cx,r.cy,1);L.push({d:r.cx+r.cy+2,f:()=>{if(near(r.cx,r.cy,16)){const l=P(r.cx,r.cy,r.o.Hh+.35);pill(v.plate,l[0],l[1],FS*.95,'rgba(29,29,31,.82)','#fff',17)}},h:{k:'van',id:v.id,x:c[0],y:c[1],r:PPM(r.cx,r.cy,1)*1.7}})});
+  (ACT.visible&&actors.p||[]).forEach(([p,r])=>{if(!r)return;const c=P(r.x,r.y,.9);L.push({d:r.x+r.y+.6,f:()=>{
       if(p.say&&T<p.sayT&&near(r.x,r.y,18)){const s=P(r.x,r.y,r.z+.6);ctx.font=`600 ${PV?14:Math.max(10,Math.min(15,SZ*.42))}px -apple-system,BlinkMacSystemFont,Inter,sans-serif`;pill(p.say,s[0],s[1],PV?14:Math.max(10,Math.min(15,SZ*.42)),PILL(),INK(),24)}},h:{k:'person',id:p.id,x:c[0],y:c[1],r:PPM(r.x,r.y,.9)*.75}})});
   if(PV)L.sort((a,b)=>Math.hypot(b.h.x-VW/2,b.h.y-VH/2)-Math.hypot(a.h.x-VW/2,a.h.y-VH/2));else L.sort((a,b)=>a.d-b.d);
   L.forEach(o=>{o.f();if(o.h.x>-1e3)hits.push(o.h)});
@@ -1330,7 +1330,7 @@ function calidad(n,guardar){n=Math.max(0,Math.min(3,n));Q.n=n;QCAP=Math.min(CINE
       if(Q.prueba){if(!--Q.prueba){if(M.fps>=Q.antes*1.15)calidad(Q.n,true);else{calidad(Q.n-1);Q.inutil=true}}}      // ¿sirvió bajar? Si no mejoró, el freno no es el dibujo (ahorro de batería, ventana tapada): vuelve a la calidad de antes y no insiste
       else if(M.fps<obj*.66){Q.bien=0;if(++Q.mal>=3&&Q.n<3&&!Q.inutil){Q.mal=0;Q.antes=M.fps;Q.prueba=3;calidad(Q.n+1)}}
       else{Q.mal=0;if(M.fps>=obj*.95&&Q.n>0&&++Q.bien>=30*(1+(Q.sube||0))){Q.sube=(Q.sube||0)+1;Q.bien=0;calidad(Q.n-1,true)}}}if(M.el)M.el.textContent=`${M.fps} cuadros/s · calidad ${Q.n} · ${R3.info.render.calls} dibujos · ${Math.round(R3.info.render.triangles/1000)} mil triángulos`}};
-  window.__ofi=()=>({fps:M.fps,calidad:Q.n,dibujos:R3.info.render.calls,triangulos:R3.info.render.triangles,geometrias:R3.info.memory.geometries,texturas:R3.info.memory.textures,personas:S.people.length,atraviesa:MOV.fant,cede:MOV.cede,esperaPuerta:+MOV.esp.toFixed(1),trabado:+Math.max(0,...S.people.map(p=>p.tx!=null?p.stuck||0:0)).toFixed(1),
+  window.__ofi=()=>({fps:M.fps,armado:+BUILD.toFixed(2),calidad:Q.n,dibujos:R3.info.render.calls,triangulos:R3.info.render.triangles,geometrias:R3.info.memory.geometries,texturas:R3.info.memory.textures,personas:S.people.length,atraviesa:MOV.fant,cede:MOV.cede,esperaPuerta:+MOV.esp.toFixed(1),trabado:+Math.max(0,...S.people.map(p=>p.tx!=null?p.stuck||0:0)).toFixed(1),
     cerca:(()=>{const a=S.people.filter(p=>!p.inVan&&!sitting(p));let m=9;for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)m=Math.min(m,Math.hypot(a[i].x-a[j].x,a[i].y-a[j].y));return+m.toFixed(2)})()});
   // pruebas de choque: todos al mismo punto, o cada uno al escritorio de otro (se cruzan en pasillos y puertas)
   window.__ofi.juntar=(x,y)=>S.people.filter(p=>!p.inVan&&!p.virtual).forEach(p=>goTo(p,x??SPOTS.cafe.x,y??SPOTS.cafe.y));
