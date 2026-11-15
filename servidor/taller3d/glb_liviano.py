@@ -28,12 +28,13 @@ for me in J.get('meshes', []):
         ma = J['materials'][pr['material']]
         for t in (ma.get('pbrMetallicRoughness', {}).get('baseColorTexture'), ma.get('normalTexture')):
             if t is not None: usos.setdefault(J['textures'][t['index']]['source'], []).append((pr['attributes']['TEXCOORD_0'], pr['indices']))
-def sangrar(p, i, n=10):
-    w, h = p.size; m = Image.new('L', (w, h), 0); dr = ImageDraw.Draw(m)
-    for uv, ix in usos.get(i, []):
-        U = acc(uv); T = acc(ix).reshape(-1, 3)
-        for t in T: dr.polygon([(float(U[k][0]) * w, float(U[k][1]) * h) for k in t], fill=255, outline=255)
-    M = np.asarray(m) > 0
+def sangrar(p, i, n=10, M=None):
+    if M is None:
+        w, h = p.size; m = Image.new('L', (w, h), 0); dr = ImageDraw.Draw(m)
+        for uv, ix in usos.get(i, []):
+            U = acc(uv); T = acc(ix).reshape(-1, 3)
+            for t in T: dr.polygon([(float(U[k][0]) * w, float(U[k][1]) * h) for k in t], fill=255, outline=255)
+        M = np.asarray(m) > 0
     if not M.any() or M.all(): return p
     A = np.asarray(p.convert('RGB'), np.float32).copy()
     for _ in range(n):
@@ -56,6 +57,25 @@ for i, im in enumerate(J.get('images', [])):
     if alfa and max(p.size) > 1024 and not ('brow' in nom or 'lash' in nom or 'eye' in nom): lado = LH   # pelo: el borde contra la frente necesita resolución
     if max(p.size) > lado: k = lado / max(p.size); p = p.resize((max(1, round(p.size[0] * k)), max(1, round(p.size[1] * k))), Image.LANCZOS)
     if not alfa and i in usos: p = sangrar(p, i)
+    if alfa and not any(x in nl for x in ('brow', 'lash', 'eye')):
+        al = p.convert('RGBA').getchannel('A'); q = sangrar(p, i, 16, np.asarray(al) > 150); q.putalpha(al); p = q   # pelo: sin contornos claros en los mechones
+    if i in piel:
+        # piel: las islas del interior del párpado (a la izquierda, a media altura) son rojo vivo y asomaban como un borde rojo alrededor
+        # del ojo (ojos irritados). Se llevan a un rosado de carne, con el tono de la cara de esa misma piel.
+        A = np.asarray(p.convert('RGB')).astype(np.float32); H, W = A.shape[:2]
+        cara = A[int(.48 * H):int(.52 * H), int(.80 * W):int(.84 * W)].reshape(-1, 3).mean(0); meta = cara * np.array([.86, .74, .74], np.float32)
+        z = A[int(.34 * H):int(.465 * H), :int(.16 * W)]; rojo = (z[..., 0] - z[..., 1]) > 45
+        if rojo.any():
+            lum = z.mean(-1, keepdims=True); k = lum / max(1, z[rojo].mean()); z[rojo] = z[rojo] * .3 + (meta * k[rojo]) * .7
+            A[int(.34 * H):int(.465 * H), :int(.16 * W)] = z
+        # el borde del párpado tiene un naranja rojizo (ojos «irritados» de cerca): alrededor de cada ojo, el color se lleva al tono de la cara
+        yy, xx = np.mgrid[0:H, 0:W]; cl = cara / max(1, cara.mean())
+        for cx, cy in ((.837, .481), (.837, .552)):
+            dd = np.hypot((xx - cx * W) / W, (yy - cy * H) / H); w = (np.clip(1 - dd / .036, 0, 1) ** .7 * .75)[..., None]
+            A = A * (1 - w) + (A.mean(-1, keepdims=True) * 1.08 * (cl * .55 + .45)) * w   # tono de la cara, más neutro y un poco más claro
+        q = Image.fromarray(A.clip(0, 255).astype(np.uint8))
+        if p.mode in ('RGBA', 'LA'): q.putalpha(p.getchannel('A'))
+        p = q
     if 'brown_eye' in nl:
         # el iris «brown» de MakeHuman es rojizo (de cerca los ojos se veían rojos): se lleva a un marrón natural, menos saturado
         hsv = np.asarray(p.convert('RGB').convert('HSV')).astype(np.float32); iris = (hsv[..., 1] > 80) & (hsv[..., 2] < 215)

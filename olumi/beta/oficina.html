@@ -1484,6 +1484,7 @@ function avMat(scene,lado){const hecho=new Set();scene.traverse(o=>{if(!o.isMesh
   else if(m.transparent||m.alphaTest>0){m.transparent=false;m.alphaTest=m.alphaTest>0?m.alphaTest:.32;m.alphaToCoverage=true;m.depthWrite=true;m.side=THREE.DoubleSide;o.castShadow=false}
   if(/body/i.test(n)){m.roughness=.5;m.envMapIntensity=.6}
   if(/high-poly|low-poly|eye/i.test(n)&&!/brow|lash/i.test(n)){m.roughness=.08;m.metalness=0;m.envMapIntensity=1.3}   // ojos con brillo (antes mate: mirada apagada)
+  if(/hair|pelo|bob|ponytail|braid|bun|short0|long0|afro/i.test(n)&&!/brow|lash/i.test(n)){m.roughness=Math.max(m.roughness,.82);m.envMapIntensity=.28;m.alphaToCoverage=false}   // pelo sin motas ni contornos claros: los mechones reflejaban el cuarto como puntitos y el borde suavizado dejaba ver el fondo entre capas
   if(m.map&&!hecho.has(m.map)){hecho.add(m.map);m.map.anisotropy=4;const im=m.map.image;
     if(lado&&im&&Math.max(im.width,im.height)>lado&&typeof document!=='undefined'){const k=lado/Math.max(im.width,im.height),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);m.map.image=c;m.map.needsUpdate=true}}})}
 function avGesto(o,id,dur){if(!o||!AV_GES[id]||o.ges&&o.ges.id===id)return;o.ges={id,dur:dur||AV_GES[id].dur,t0:null}}
@@ -1585,7 +1586,7 @@ async function avLoad(){try{const base=new URL('./3d/',location.href),r=await fe
     const [{GLTFLoader},{clone}]=await Promise.all([import('./lib/GLTFLoader.js'),import('./lib/SkeletonUtils.js')]);const L=new GLTFLoader();AV.clone=clone;
     (cat.vehiculos||[]).forEach(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);AV.veh[a.id]={...a,re:a.modelo?new RegExp(a.modelo,'i'):null,scene:g.scene}}catch(e){}});
     await Promise.all((cat.avatares||[]).map(async a=>{try{const g=await L.loadAsync(new URL(a.archivo,base).href);avMat(g.scene,AV_TEX);   /* piel y ropa opacas, pelo recortado con borde suave, cejas y pestañas mezcladas (avatar-core.js) */
-        g.scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.receiveShadow=false;if(o.material)o.material.envMapIntensity=.6});AV.mod[a.id]={...a,scene:g.scene}}catch(e){}}));
+        g.scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.receiveShadow=false;if(o.material&&!/high-poly|low-poly|eye|hair|pelo|bob|ponytail|braid|bun|short0|long0|afro/i.test(o.material.name||''))o.material.envMapIntensity=.6});   /* ojos y pelo conservan lo suyo (avMat) */AV.mod[a.id]={...a,scene:g.scene}}catch(e){}}));
     AV.ok=Object.keys(AV.mod).length>0}catch(e){AV.err=String(e)}}
 try{window.__av=AV}catch(e){}
 avLoad();
