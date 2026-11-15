@@ -670,6 +670,8 @@ html.d2.d2rail[data-paleta] .nav>.navsec{display:block;font-size:0;padding:0;hei
 html.ofipan #sheetWrap,body:has(#ofiFrame.ofiFull) #sheetWrap{z-index:10003}
 html.ofipan #toast,body:has(#ofiFrame.ofiFull) #toast{z-index:10004}
 html.ofipan .btmenu{z-index:10005}
+/* 1.52b · en pantallas táctiles la pastilla se mueve con CSS (no se traba aunque la oficina 3D esté cargando) */
+@media (hover:none){html.d2 .d2sel,html.d2 .segpill{transition:transform .38s cubic-bezier(.22,1,.36,1),width .38s cubic-bezier(.22,1,.36,1),height .38s cubic-bezier(.22,1,.36,1),opacity .25s!important}}
 /* fin 1.52b */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
@@ -5048,7 +5050,7 @@ try{if(!localStorage.getItem('olumi.id152b')){localStorage.removeItem('olumi.tra
 // Con «Reducir movimiento» del sistema, todo aparece al instante.
 const MO={lead:340,trail:550,land:520,paso:45,ease:'cubic-bezier(.22,1,.36,1)',
   BLOQUE:'.vhead,.kpi,.card,.panel,.list,.tablewrap,.col,.flujo,.rel,.note,.empty,.plancard,.seg,.ajtabs,.filters,.pcard,.group,.reltools'};
-const moOk=()=>document.documentElement.hasAttribute('data-paleta')&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+const moOk=()=>document.documentElement.hasAttribute('data-paleta')&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!matchMedia('(hover: none)').matches;
 const moOut=t=>1-Math.pow(1-t,3),moIO=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 function moPillSet(el,e){el._e=e;el.style.transform=`translate(${e.l}px,${e.t}px)`;el.style.width=(e.r-e.l)+'px';el.style.height=(e.b-e.t)+'px'}
 function moPill(el,to,from){cancelAnimationFrame(el._raf);const a=from||el._e;
@@ -5456,6 +5458,30 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&OFP&&$('#sheetWrap').hidden&&!document.querySelector('.btmenu')){e.preventDefault();e.stopPropagation();ofpCerrar()}},true);
 // si se cambia de sección por el menú, el panel se cierra
 document.addEventListener('click',e=>{if(OFP&&e.target.closest&&e.target.closest('.nav [data-view],.tabbar [data-view]'))ofpCerrar()},true);
+// 1.52b · Arreglos del iPhone (Christian, 14/11 22:26-22:29, captura y video: «no me deja tocar bien los botones… no me dejaba cerrar la
+// ventana y abría bastantes bugs»). En el iPhone, mientras carga la oficina 3D, el reloj de las animaciones se frena: la pantalla se quedaba
+// en blanco (todo esperando aparecer), los íconos sin dibujar y la pastilla de la barra estirada entre dos pestañas.
+// 1) En pantallas táctiles no hay animaciones hechas con JavaScript (la pastilla se mueve con CSS, que no se traba). Ver el RI de moOk en parche-1.52b.py.
+// 2) Red de seguridad en todos lados: si una animación de entrada no terminó en 1,5 s, se termina de golpe. Nada queda invisible.
+// 3) En la beta, si algo falla aparece el aviso con el error (para mandar captura) y queda guardado en el dispositivo.
+// 4) La ficha siempre se cierra: con cambios sin guardar, el primer toque avisa y el botón lo dice; el segundo cierra.
+function estTermina(){try{for(const a of document.getAnimations()){if(typeof CSSAnimation!=='undefined'&&a instanceof CSSAnimation)continue;if(typeof CSSTransition!=='undefined'&&a instanceof CSSTransition)continue;
+  const t=a.effect&&a.effect.getComputedTiming&&a.effect.getComputedTiming();if(!t||!isFinite(t.endTime))continue;if(a.playState!=='finished')a.finish()}}catch(_){}}
+let estT=0;const _render152be=render;
+render=function(){const r=_render152be.apply(this,arguments);clearTimeout(estT);estT=setTimeout(estTermina,1500);return r};
+const _openSheet152be=openSheet;openSheet=function(){const r=_openSheet152be.apply(this,arguments);setTimeout(estTermina,1500);return r};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(estTermina,300)});
+// errores a la vista (solo en la beta)
+if(/\/beta\//.test(location.pathname)){
+  const est=(m)=>{m=String(m||'').slice(0,160);if(!m||/ResizeObserver|Script error/.test(m))return;
+    try{const l=JSON.parse(localStorage.getItem('olumi.errores')||'[]');l.unshift({m,t:Date.now(),v:typeof VIEW!=='undefined'?VIEW:''});localStorage.setItem('olumi.errores',JSON.stringify(l.slice(0,20)))}catch(_){}
+    try{toast('Algo falló: '+m)}catch(_){}};
+  addEventListener('error',e=>est(e.message||(e.error&&e.error.message)));
+  addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&(r.code==='loading'||r.name==='AbortError'))return;est(r&&(r.message||r.code)||r)});
+}
+// la ficha siempre se cierra (y avisa a la vista si hay cambios)
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#sheet [data-act="close"]');if(!b||!SH||!SH.dirty||SH.warned)return;
+  if(b.closest('.sh-f')){b.dataset.orig=b.textContent;b.textContent='Descartar cambios';b.classList.add('arm')}},true);
 /* === fin 1.52b === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
