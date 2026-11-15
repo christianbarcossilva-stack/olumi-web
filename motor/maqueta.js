@@ -1,11 +1,11 @@
 // Motor común · la maqueta: arma las piezas, muestra etiquetas y capas, y trae el editor con los comandos de Los Sims 4.
-// La usan Ondi (equipos en vivo), Estiba (patio y contenedores) y Olumi (oficina). Cada app le pasa su "anfitrión" (host):
+// La usan Ondi (equipos en vivo), Darvi (patio y contenedores) y Olumi (oficina). Cada app le pasa su "anfitrión" (host):
 //   host.state      lo guardado ({ v:1, motor:1, escena, ext })      host.save(state)   guarda
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js';
 import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=4';
-import { ve, dominio, DOMINIOS } from './plano.js?v=1';
+import { ve, dominio, DOMINIOS } from './plano.js?v=2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const IC = {
@@ -30,10 +30,10 @@ const tipoReal = d => { if (/^sensor_/.test(d.tipo || '')) return 'sen'; if (d.t
 
 // el logo de cada app en la barra (el mismo dibujo que su ícono)
 const LOGO = {
-  estiba: '<svg class="mapp" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="var(--acc)"/><rect x="24" y="74" width="70" height="15" rx="4.5" fill="var(--acc-ink)"/><rect x="24" y="53" width="54" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".82"/><rect x="24" y="32" width="38" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".62"/><circle cx="87" cy="38" r="10.5" fill="#3ddc97"/></svg>'
+  darvi: '<svg class="mapp" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="var(--acc)"/><rect x="24" y="74" width="70" height="15" rx="4.5" fill="var(--acc-ink)"/><rect x="24" y="53" width="54" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".82"/><rect x="24" y="32" width="38" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".62"/><circle cx="87" cy="38" r="10.5" fill="#3ddc97"/></svg>'
 };
-const BUSCA = { estiba: 'Buscar fila, galpón o máquina', olumi: 'Buscar sala, puesto o persona' };
-const SIN = { estiba: ['Equipos'] };   // Estiba es solo logística: lo informático es de Ondi
+const BUSCA = { darvi: 'Buscar fila, galpón o máquina', olumi: 'Buscar sala, puesto o persona' };
+const SIN = { darvi: ['Equipos'] };   // Darvi es solo logística: lo informático es de Ondi
 
 export async function abrirMaqueta(o) {
   const host = o.host || null, raiz = o.raiz || document.body, app = o.app || 'ondi';
@@ -45,7 +45,7 @@ export async function abrirMaqueta(o) {
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
     <div class="mbtns"><button id="btema" class="mbtn" aria-label="Cambiar entre día y noche" title="Día o noche">${svg('tema')}</button><button id="bcapas" class="mbtn" aria-label="Capas" title="Capas">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
-  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'estiba' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}<p class="mvacio" id="mocultos" hidden></p></div>
+  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'darvi' && (k === 'equipos' || k === 'campos'))).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}<p class="mvacio" id="mocultos" hidden></p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">
     <button data-h="mano" aria-pressed="true" title="Mano: elegir y mover (H)">${svg('mano')}</button><button data-h="maza" title="Maza: sacar (K)">${svg('maza')}</button><button data-h="gotero" title="Gotero: copiar (E)">${svg('gotero')}</button>

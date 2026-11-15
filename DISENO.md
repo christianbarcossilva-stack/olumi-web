@@ -26,16 +26,16 @@ Referencias que mandó: páginas que cuentan una historia mientras bajás (cáma
 
 # Diseño de las webs de Unity Tech · v3 (8/11/2026)
 
-Páginas: `index.html` (Unity Tech), `olumi/`, `ondi/`, `estiba/` (vista previa, noindex) y las legales `olumi/privacidad.html` y `olumi/terminos.html`.
+Páginas: `index.html` (Unity Tech), `olumi/`, `ondi/`, `darvi/` (vista previa, noindex; `estiba/` redirige ahí) y las legales `olumi/privacidad.html` y `olumi/terminos.html`.
 Todas comparten `familia.css` y `familia.js`. Hasta que Christian lo apruebe, el rediseño vive en `/nuevo/` (mismas rutas adentro);
 se pasa a definitivo con `bash servidor/web/pasar-nuevo.sh`.
 
 ## Idea
 - **Lo primero que se ve es el producto vivo.** La oficina de Olumi con el equipo moviéndose (iframe real de `/olumi/oficina/?embed=1`),
-  el gemelo digital de Ondi y el parque de Estiba (capturas de las maquetas 3D). El resto de la página se calla.
+  el gemelo digital de Ondi y el parque de Darvi (capturas de las maquetas 3D). El resto de la página se calla.
 - **Letra:** Instrument Sans (Google Fonts, variable 400–700) solo para titulares; la del sistema para el texto (SF en Apple, Segoe en Windows).
 - **Firma:** el rombo naranja de Unity Tech (`#ff6a13`) en la marca, las viñetas y el foco. Cada app usa un solo acento:
-  Olumi `#ffc93c` (texto oscuro), Ondi `#3fc6ea` en oscuro / `#0a7fa3` en claro, Estiba `#3ddc97` en oscuro / `#0f7a55` en claro.
+  Olumi `#ffc93c` (texto oscuro), Ondi `#3fc6ea` en oscuro / `#0a7fa3` en claro, Darvi `#3ddc97` en oscuro / `#0f7a55` en claro.
 - **Escenarios oscuros (`.stage`)** en los dos temas: ahí viven las capturas en marcos de Mac (`.mac`) e iPhone (`.phone`).
   En celular, `.vis .cel` reemplaza la captura de computadora por el teléfono o por una foto recortada (`.pic`).
 - **Un solo momento de movimiento:** la entrada del hero (`.in`, `.in.bloom`). Nada de aparecer-por-sección. Se respeta `prefers-reduced-motion`.

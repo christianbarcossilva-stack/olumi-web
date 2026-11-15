@@ -11,11 +11,12 @@ cp nuevo/olumi/index.html olumi/index.html
 cp nuevo/olumi/privacidad.html olumi/privacidad.html
 cp nuevo/olumi/terminos.html olumi/terminos.html
 cp nuevo/ondi/index.html ondi/index.html
-cp nuevo/estiba/index.html estiba/index.html
-# la vista previa llevaba noindex; en definitivo solo Estiba lo conserva (sigue siendo vista previa del producto)
+# (Estiba pasó a llamarse Darvi el 14/11: /estiba/ redirige a /darvi/)
+# cp nuevo/estiba/index.html darvi/index.html
+# la vista previa llevaba noindex; en definitivo solo Darvi lo conserva (sigue siendo vista previa del producto)
 for f in index.html olumi/index.html ondi/index.html olumi/privacidad.html olumi/terminos.html; do
   sed -i '/<meta name="robots" content="noindex"><!-- vista previa: sacar al pasar a definitivo -->/d' "$f"
 done
-sed -i 's|<meta name="robots" content="noindex"><!-- vista previa: sacar al pasar a definitivo -->||' estiba/index.html
+sed -i 's|<meta name="robots" content="noindex"><!-- vista previa: sacar al pasar a definitivo -->||' darvi/index.html
 rm -rf nuevo
 echo "Listo: páginas definitivas actualizadas y /nuevo/ eliminada."
