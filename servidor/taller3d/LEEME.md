@@ -39,3 +39,18 @@ Cómo se hacen las personas (y después autos y objetos) que usan las maquetas. 
 
 ## Visor: poses útiles
 - `idle@3.7` (otra persona, otra postura), `walk0.3` (fase del paso), `sit`, `tecla`, `g:saludo:1.2` (gesto a los 1,2 s), `para0.2` (0,2 s después de frenar). `h=1.5708&recto=1` mira de frente; `mira=1.25&fov=11` acerca al torso.
+
+## Personas de afuera a la oficina (15/11)
+Christian: «quiero que aprendas a hacer esto, porque los clientes nos pueden pedir avatares». Cualquier persona 3D (generador con IA como Tripo o Hunyuan 3D, escaneo, pack comprado o libre) entra así:
+1. **Sin esqueleto** (lo normal en un generador): `blender -b --python autoesqueleto.py -- entrada.glb salida-crudo.glb 1.76 [1]`
+   - Parada, de frente, brazos en T o en A. Si mira para atrás se gira sola (por los pies).
+   - Arma el esqueleto tipo Mixamo que usa `avatar-core.js` (cadera, columna, cuello, cabeza, hombros, brazos, manos, piernas, pies) por proporciones y por la punta de los dedos.
+   - Pesos: «calor» de Blender sobre una copia soldada (los modelos generados vienen en piezas y fallan) y se pasan a la malla real por cercanía.
+   - El `1` al final saca el esqueleto que traía (para rehacerlo).
+   - Probado 15/11 con Male_Adult_05 de Rocketbox sin su esqueleto: parado, caminando, sentado y saludando queda igual que con el original (falta: que el chaleco no siga al brazo al saludar).
+2. **Con esqueleto Biped (Rocketbox, Microsoft, MIT):** `blender -b --python rocketbox.py -- <carpeta con Export/ y Textures/> salida-crudo.glb hipoly` (renombra los huesos a Mixamo y arma los materiales).
+3. `python3 glb_liviano.py crudo.glb final.glb 1024 1024 1024 1024` (texturas a 1024; queda en 1 a 2 MB).
+4. Foto con el motor de la oficina: `cd visor && node foto.js salida.png "m=rb/final.glb&p=idle,walk0.3,sit,g:saludo:1.2&h=1.5708&recto=1"` (el visor tiene su copia de `avatar-core.js`: copiarla de `olumi-app/scripts/oficina-3d/` si cambió).
+5. Lámina contra la referencia (pedido de Christian: comparar cada hora): `blender -b x.blend --python vueltas.py -- lamina.png 700 20 [tinte=parte:#hex,…]` saca frente, tres cuartos, costado y espalda con fondo gris de estudio.
+
+**Lo que falta para la calidad que pide Christian:** el cuerpo y la cara de origen. MakeHuman y Rocketbox se ven viejos («parecen de los 90», «hacés chinos»). La entrada tiene que venir de un generador con IA a partir de imágenes nuestras (no de Google, por derechos) o de fotos del equipo con su permiso. Rocketbox bajado en la Mac: `Descargas/Olumi3D/rocketbox/` (5 personas).
