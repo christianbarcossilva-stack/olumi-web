@@ -12,14 +12,50 @@ piel = set()
 for m in J.get('materials', []):
     t = m.get('pbrMetallicRoughness', {}).get('baseColorTexture')
     if t is not None and m.get('name', '').endswith('.body'): piel.add(J['textures'][t['index']]['source'])
+# Islas de la textura: dónde cae cada triángulo en la imagen. Afuera de las islas la textura suele ser negra y las caras que tocan el borde
+# de una isla tomaban ese negro (rayitas oscuras en la cintura del suéter): el color de cada isla se corre unos píxeles hacia afuera.
+import numpy as np
+from PIL import ImageDraw
+def acc(i):
+    a = J['accessors'][i]; bv = vistas[a['bufferView']]; n = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4}[a['type']]
+    ct = {5126: np.float32, 5123: np.uint16, 5125: np.uint32, 5121: np.uint8}[a['componentType']]
+    x = np.frombuffer(BIN, dtype=ct, count=a['count'] * n, offset=bv.get('byteOffset', 0) + a.get('byteOffset', 0))
+    return x.reshape(a['count'], n) if n > 1 else x
+usos = {}
+for me in J.get('meshes', []):
+    for pr in me['primitives']:
+        if pr.get('material') is None or 'TEXCOORD_0' not in pr['attributes'] or pr.get('indices') is None: continue
+        ma = J['materials'][pr['material']]
+        for t in (ma.get('pbrMetallicRoughness', {}).get('baseColorTexture'), ma.get('normalTexture')):
+            if t is not None: usos.setdefault(J['textures'][t['index']]['source'], []).append((pr['attributes']['TEXCOORD_0'], pr['indices']))
+def sangrar(p, i, n=10):
+    w, h = p.size; m = Image.new('L', (w, h), 0); dr = ImageDraw.Draw(m)
+    for uv, ix in usos.get(i, []):
+        U = acc(uv); T = acc(ix).reshape(-1, 3)
+        for t in T: dr.polygon([(float(U[k][0]) * w, float(U[k][1]) * h) for k in t], fill=255, outline=255)
+    M = np.asarray(m) > 0
+    if not M.any() or M.all(): return p
+    A = np.asarray(p.convert('RGB'), np.float32).copy()
+    for _ in range(n):
+        S = np.zeros_like(A); C = np.zeros(M.shape, np.float32)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx or dy: mm = np.roll(np.roll(M, dy, 0), dx, 1); S += np.roll(np.roll(A, dy, 0), dx, 1) * mm[..., None]; C += mm
+        nu = (~M) & (C > 0)
+        if not nu.any(): break
+        A[nu] = S[nu] / C[nu][:, None]; M = M | nu
+    return Image.fromarray(A.clip(0, 255).astype(np.uint8))
+relieve = {J['textures'][m['normalTexture']['index']]['source'] for m in J.get('materials', []) if 'normalTexture' in m}
 for i, im in enumerate(J.get('images', [])):
     if 'bufferView' not in im: continue
     p = Image.open(io.BytesIO(datos[im['bufferView']])); lado = LP if i in piel else LR
     alfa = p.mode in ('RGBA', 'LA', 'P') and p.convert('RGBA').getchannel('A').getextrema()[0] < 250
-    conalfa[i] = alfa; nom = im.get('name', '')
-    if not alfa and i not in piel and 'shoe' not in nom and 'boot' not in nom: lado = LC      # ropa: se ve de cerca
+    conalfa[i] = alfa; nom = im.get('name', ''); nl = nom.lower()
+    if not alfa and i not in piel and not any(x in nl for x in ('shoe', 'boot', 'flat')): lado = LC      # ropa: se ve de cerca (los zapatos no)
+    if i in relieve: lado = min(lado, 512)   # el relieve de la tela no necesita más: así cada persona ocupa menos memoria en el teléfono
     if alfa and max(p.size) > 1024 and not ('brow' in nom or 'lash' in nom or 'eye' in nom): lado = LH   # pelo: el borde contra la frente necesita resolución
     if max(p.size) > lado: k = lado / max(p.size); p = p.resize((max(1, round(p.size[0] * k)), max(1, round(p.size[1] * k))), Image.LANCZOS)
+    if not alfa and i in usos: p = sangrar(p, i)
     o = io.BytesIO()
     if alfa:
         q = p.convert('RGBA')
