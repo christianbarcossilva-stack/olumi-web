@@ -282,7 +282,6 @@ a.btn,label.btn{box-sizing:border-box;display:inline-flex;align-items:center;jus
 .icb.ok .ic{stroke-width:2.4}
 .icb:disabled{opacity:.45;cursor:default}
 @media (pointer:coarse){.icb{width:42px;height:42px}.icb .ic{width:20px;height:20px}}
-html.d3 .icb.ok{background:var(--fg);color:var(--bg)}
 #sheet .sh-h .icb{border-radius:50%;width:36px;height:36px;font-size:0}
 @media (pointer:coarse){#sheet .sh-h .icb{width:42px;height:42px}}
 #sheet .sh-h{position:relative}
@@ -581,7 +580,7 @@ html.d2[data-paleta][data-mode="dark"] .nav{box-shadow:var(--gl-shadow),inset 1p
 .btf button.on{background:var(--accent-soft);border-color:transparent;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 75%,transparent)}
 .bt{display:grid;grid-template-columns:repeat(var(--btn,5),minmax(208px,1fr));gap:12px;align-items:start;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 @media (min-width:900px){.ofp-b .bt{display:flex;scroll-snap-type:x proximity}.ofp-b .btcol{flex:0 0 240px;scroll-snap-align:start}}
-.bt-canal,.bt-urgencia{--btn:4}.bt-urgencia{--btn:3}
+.bt-urgencia{--btn:3}
 .btcol{min-width:0;border-radius:20px;padding:10px;background:color-mix(in srgb,var(--surface-2) 70%,transparent);border:1px solid var(--line);transition:box-shadow .2s,background .2s}
 .btcol.sobre{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 70%,transparent)}
 .btcol h3{display:flex;align-items:center;gap:8px;margin:2px 4px 10px;font-size:14px;font-weight:600;color:var(--fg)}
@@ -673,6 +672,16 @@ html.ofipan .btmenu{z-index:10005}
 /* 1.52b · en pantallas táctiles la pastilla se mueve con CSS (no se traba aunque la oficina 3D esté cargando) */
 @media (hover:none){html.d2 .d2sel,html.d2 .segpill{transition:transform .38s cubic-bezier(.22,1,.36,1),width .38s cubic-bezier(.22,1,.36,1),height .38s cubic-bezier(.22,1,.36,1),opacity .25s!important}}
 /* fin 1.52b */
+/* 1.52c */
+/* 1.52c · En el celular el vidrio (desenfoque de lo de atrás) queda solo en lo que flota: barra de arriba, barra de abajo, fichas y menús.
+   Lo que está en la página va sobre el fondo liso o en degradé: desenfocar algo liso se ve igual y en el iPhone cuesta en cada desplazamiento.
+   Con una foto de fondo (marca o la propia) se deja como estaba. */
+@media (hover:none){
+  :root:is([data-fondo="paleta"],[data-fondo="liso"]) .shell:not(.fondo) :is(#main,#banner) :is(.note,.job,.flujo,.panel,.kpi,.rel,.card,.list,.col,.tablewrap,.empty){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}
+/* toques de app: sin zoom por doble toque (que agrandaba la pantalla al tocar rápido dos veces) y sin el destello gris al tocar */
+@media (hover:none){html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}button,[role=button],.tab,.btc,.tkrow{-webkit-touch-callout:none}}
+/* fin 1.52c */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -1433,15 +1442,14 @@ body.tv #main{padding:10px 14px}body.tv .vivo-grid{grid-template-columns:minmax(
 </style>
 
 <script>/*d2*//* diseño elegido (1 clásico, 2 vidrio, 3 estudio) y apariencia de este dispositivo: se aplica antes de dibujar para que no parpadee */
-(function(){try{var L=localStorage,R=document.documentElement,q=new URLSearchParams(location.search).get('diseno');
-  if(/^[123]$/.test(q))L.setItem('olumi.diseno',q);
-  if(!L.getItem('olumi.id152')){if(!/^[123]$/.test(q))L.removeItem('olumi.diseno');L.removeItem('olumi.paleta');L.setItem('olumi.id152','1')}var d=L.getItem('olumi.diseno')||'2';if(d!=='1')R.classList.add('d'+d);if(d!=='1'&&L.getItem('olumi.d2rail')==='1')R.classList.add('d2rail');if(d==='2')R.setAttribute('data-paleta','olumi');
+(function(){try{var L=localStorage,R=document.documentElement,q=null;   // 1.52c: un solo diseño, el de la identidad Olumi
+  L.removeItem('olumi.diseno');L.removeItem('olumi.paleta');R.classList.add('d2');if(L.getItem('olumi.d2rail')==='1')R.classList.add('d2rail');R.setAttribute('data-paleta','olumi');
   var CLARO=/^#(ffc93c|64d2ff|30d158|ff9f0a|ffd60a)$/i;
   window.__olumiAp=function(img){var a=L.getItem('olumi.acento')||'',f=L.getItem('olumi.fondo')||'auto',s=L.getItem('olumi.solido')==='1',st=document.getElementById('apst');
     if(!st){st=document.createElement('style');st.id='apst';document.head.appendChild(st)}
     var css='';if(a)css+=':root[data-acento][data-mode]{--accent:'+a+';--accent-fg:'+(CLARO.test(a)?'#1d1d1f':'#ffffff')+';--accent-soft:color-mix(in srgb,'+a+' 16%,transparent);--ring:color-mix(in srgb,'+a+' 45%,transparent)}';
     if(a)R.setAttribute('data-acento','');else R.removeAttribute('data-acento');
-    var dd=L.getItem('olumi.diseno')||'2',fe=f==='auto'?(dd==='2'?(R.hasAttribute('data-paleta')?'paleta':'maqueta'):'liso'):f,u='';
+    var dd='2',fe=f==='auto'?(dd==='2'?(R.hasAttribute('data-paleta')?'paleta':'maqueta'):'liso'):f,u='';
     if(fe==='foto')u=L.getItem('olumi.fondo.foto')||'';else if((fe==='logo'||fe==='empresa')&&img)u=img[fe]||'';
     if((fe==='foto'||fe==='logo'||fe==='empresa')&&!u)fe=dd==='2'?(R.hasAttribute('data-paleta')?'paleta':'maqueta'):'liso';
     if(u)css+=':root{--d-img:url("'+u+'")}';
@@ -1620,121 +1628,6 @@ html.d2 #toast{border-radius:999px;padding:11px 20px;background:var(--d2-pop);co
 }
 @media (prefers-reduced-motion: reduce){html.d2 .d2sel,html.d2 .d2hov,html.d2 .app,html.d2 .d2x,.d2tip,.d2pal .box,.d2menu{transition:none!important;animation:none!important}}
 
-/* ---------- 2.0 · diseño 3 "Estudio" (el de las fotos): papel cálido, tarjetas blancas, cápsulas negras, números finos ---------- */
-html.d3{--d2-ease:cubic-bezier(.32,1.18,.5,1);--d2-red:#ff5a2b;--d2-rim:rgb(25 24 23 / .09);--d2-hi:transparent;--d2-txt:#191817;--d2-mut:#8b867e;--d2-hov:rgb(25 24 23 / .05);
-  --d2-sel:#191817;--d2-selrim:none;--d2-pop:rgb(255 255 255 / .96);--d2-glass:#ffffff;--d2-foot:#ffffff;--d2-bar:rgb(255 255 255 / .92)}
-html.d3[data-mode="light"]{--bg:#f3f0eb;--surface:#ffffff;--surface-2:#f1ede7;--line:rgb(25 24 23 / .09);--line-2:rgb(25 24 23 / .06);--fg:#191817;--muted:#7f7a73;--glass:#fff;
-  --shadow:0 1px 2px rgb(60 45 30 / .05),0 24px 50px -30px rgb(60 45 30 / .28)}
-html.d3[data-mode="dark"]{--d2-rim:rgb(255 255 255 / .09);--d2-txt:#f4f1ec;--d2-mut:#8f8a83;--d2-hov:rgb(255 255 255 / .06);--d2-sel:#f4f1ec;--d2-pop:rgb(29 28 26 / .97);--d2-glass:#1b1a18;--d2-foot:#1b1a18;--d2-bar:rgb(27 26 24 / .94);
-  --bg:#100f0e;--surface:#1b1a18;--surface-2:#252422;--line:rgb(255 255 255 / .09);--line-2:rgb(255 255 255 / .06);--fg:#f4f1ec;--muted:#9b958d;--glass:#1b1a18;
-  --shadow:inset 0 1px 0 rgb(255 255 255 / .04),0 24px 50px -30px rgb(0 0 0 / .7)}
-html.d3 body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Hanken Grotesk",system-ui,sans-serif;letter-spacing:-.011em}
-html.d3 body::before{background:var(--bg)}
-/* menú: tarjeta blanca flotante; la opción elegida es una cápsula negra (como "Dashboard" en las fotos) */
-@media (min-width: 900px){
-  html.d3 .app{grid-template-columns:262px minmax(0,1fr);transition:grid-template-columns .5s var(--d2-ease)}
-  html.d3.d2rail .app{grid-template-columns:92px minmax(0,1fr)}
-  html.d3 .nav{top:14px;margin:14px 0 14px 14px;height:calc(100vh - 28px);height:calc(100dvh - 28px);border:0;border-radius:30px;padding:14px 10px 10px;gap:2px;background:var(--d2-glass);
-    box-shadow:var(--shadow);overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain}
-  html.d3 .nav::-webkit-scrollbar{display:none}
-  html.d3 .brand{padding:2px 6px 14px;gap:11px}
-  html.d3 .brand strong{font-size:15px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  html.d3 .brand span{font-size:12px;letter-spacing:0;text-transform:none;color:var(--d2-mut)}
-  html.d3 .brand>div{min-width:0}
-  html.d3 .brand svg,html.d3 .brand .blogo{width:34px;height:34px;border-radius:10px}
-  html.d3 .nav button{z-index:1;gap:12px;padding:7px 12px 7px 7px;border-radius:999px;font-size:14px;font-weight:500;color:var(--d2-txt);background:none!important;white-space:nowrap;min-height:44px;transition:color .25s}
-  /* cada ícono dentro de un círculo de línea fina */
-  html.d3 .nav button>svg:first-child{width:30px;height:30px;padding:6px;box-sizing:border-box;border-radius:50%;box-shadow:inset 0 0 0 1px var(--d2-rim);stroke-width:1.6;transition:box-shadow .25s}
-  html.d3 .nav button[aria-current="page"]{color:var(--bg)}
-  html.d3 .nav button[aria-current="page"]>svg:first-child{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bg) 30%,transparent)}
-  html.d3 .nav .lbl{overflow:hidden;text-overflow:ellipsis}
-  html.d3 .navsec{padding:16px 14px 6px;font-size:11px;font-weight:500;letter-spacing:.02em;text-transform:none;color:var(--d2-mut);white-space:nowrap}
-  html.d3 .nav .pill{background:var(--d2-red);color:#fff;font-size:10.5px;font-weight:600;line-height:19px;min-width:19px;padding:0 5px;box-sizing:border-box}
-  html.d3 .themebox{display:none!important}
-  html.d3 .d2sel,html.d3 .d2hov{position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;pointer-events:none;z-index:0;transition:transform .55s var(--d2-ease),width .55s var(--d2-ease),height .55s var(--d2-ease),opacity .25s}
-  html.d3 .d2sel{background:var(--d2-sel)}
-  html.d3 .d2hov{background:var(--d2-hov);opacity:0;transition-duration:.38s}
-  html.d3 .d2hov.on{opacity:1}
-  html.d3 .d2k{margin:0 0 8px;padding:7px 12px 7px 7px!important;border-radius:999px!important;color:var(--d2-mut)!important;box-shadow:inset 0 0 0 1px var(--d2-rim);font-weight:400!important}
-  html.d3 .d2k kbd{margin-left:auto;font:inherit;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface-2);color:var(--d2-mut)}
-  html.d3 .d2foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;position:sticky;bottom:-10px;z-index:2;margin-inline:-10px;padding:12px 10px 10px;background:linear-gradient(to bottom,transparent,var(--d2-foot) 18px);border-radius:0 0 30px 30px}
-  html.d3 .d2night .sw{margin-left:auto;width:36px;height:22px;border-radius:99px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--d2-rim);position:relative;flex:none;transition:background .3s}
-  html.d3 .d2night .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--d2-txt);transition:transform .35s var(--d2-ease)}
-  html.d3 .d2night[aria-checked="true"] .sw{background:var(--accent)}
-  html.d3 .d2night[aria-checked="true"] .sw::after{transform:translateX(14px);background:#191817}
-  html.d3 .d2me{padding:6px!important;border-radius:999px!important;gap:10px!important}
-  html.d3 .d2me:hover{background:var(--d2-hov)!important}
-  html.d3 .d2av{position:relative;width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;color:#191817}
-  html.d3 .d2me .who{display:flex;flex-direction:column;min-width:0;text-align:left;line-height:1.25}
-  html.d3 .d2me .who b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
-  html.d3 .d2me .who small{font-size:11.5px;color:var(--d2-mut);overflow:hidden;text-overflow:ellipsis}
-  html.d3 .d2me>svg:last-child{margin-left:auto;width:14px!important;height:14px!important;opacity:.5!important}
-  html.d3 .d2x{position:fixed;z-index:45;top:34px;left:262px;width:28px;height:28px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;cursor:pointer;background:var(--fg);color:var(--bg);
-    transform:translateX(-50%);transition:left .5s var(--d2-ease)}
-  html.d3 .d2x svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .5s var(--d2-ease)}
-  html.d3.d2rail .d2x{left:92px}
-  html.d3.d2rail .d2x svg{transform:rotate(180deg)}
-  html.d3.d2rail .nav button{justify-content:center;padding-inline:7px}
-  html.d3.d2rail .nav .lbl,html.d3.d2rail .brand>div,html.d3.d2rail .d2k kbd,html.d3.d2rail .d2me .who,html.d3.d2rail .d2me>svg:last-child,html.d3.d2rail .d2night .sw{display:none}
-  html.d3.d2rail .brand{justify-content:center;padding-inline:0}
-  html.d3.d2rail .navsec{font-size:0;padding:0;height:1px;margin:9px 18px;background:var(--d2-rim)}
-  html.d3.d2rail .nav .pill{position:absolute;top:4px;left:calc(50% + 7px);margin:0;min-width:10px;height:10px;padding:0;font-size:0;line-height:0;box-shadow:0 0 0 2px var(--d2-glass)}
-  html.d3.d2rail .d2k{box-shadow:none;justify-content:center}
-  html.d3.d2rail .d2me{justify-content:center}
-  html.d3 .top{position:sticky;top:0;margin:0;border:0;background:color-mix(in srgb,var(--bg) 80%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);padding:16px 24px 12px 28px;gap:10px}
-  html.d3 main,html.d3 #banner{padding-left:28px;padding-right:24px}
-}
-html.d3 .search input[type=search]{border-radius:999px;background:transparent;border:1px solid var(--line);height:42px}
-html.d3 .bell{border-radius:50%;border:1px solid var(--line);background:transparent;width:42px;height:42px}
-/* títulos en dos tonos y números finos */
-html.d3 .vhead h1{font-size:38px;font-weight:500;letter-spacing:-.045em;line-height:1.02}
-html.d3 .vhead .sub{font-size:20px;color:var(--muted);letter-spacing:-.025em;margin-top:2px}
-html.d3 .kpi b,html.d3 .fst b{font-weight:300;letter-spacing:-.06em}
-html.d3 .kpi b{font-size:44px}
-html.d3 .kpi span{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)}
-/* tarjetas blancas muy redondeadas, sin bordes */
-html.d3 .card,html.d3 .list,html.d3 .tablewrap,html.d3 .panel,html.d3 .kpi,html.d3 .rel,html.d3 .plancard,html.d3 .col,html.d3 .empty,html.d3 .menu button,html.d3 .flujo{border:0;border-radius:28px;box-shadow:var(--shadow);background:var(--surface)}
-html.d3 .kpi{padding:22px 24px}
-html.d3 .fst{border:1px solid var(--line);border-radius:22px;background:transparent}
-html.d3 .fst.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-html.d3 .fst.on svg{stroke:currentColor}
-html.d3 .fst.on small{color:color-mix(in srgb,var(--bg) 70%,transparent)}
-/* botones cápsula: el principal negro (de noche, claro) */
-html.d3 .btn{border-radius:999px;padding:9px 18px;font-weight:500;border:1px solid var(--line);background:transparent}
-html.d3 .btn:hover{border-color:var(--fg)}
-html.d3 .btn.pri{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-html.d3 .btn.pri:hover{filter:none;opacity:.88;background:var(--fg)}
-html.d3 .btn.ghost{border-color:transparent}
-html.d3 .tag{border-radius:999px;font-weight:500}
-html.d3 .note{border:0;border-radius:22px;box-shadow:var(--shadow);background:var(--surface)}
-html.d3 .beta-note{border:0;padding:9px 16px;font-size:13px;background:var(--surface);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line);border-radius:999px}
-html.d3 .seg{border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);padding:3px}
-html.d3 .seg button{border-radius:999px}
-html.d3 .seg button.on{background:var(--fg);color:var(--bg);box-shadow:none}
-html.d3 #sheet{background:var(--bg)}
-@media (min-width: 900px){html.d3 #sheet{top:14px;right:14px;bottom:14px;border-radius:30px;box-shadow:0 40px 90px -30px rgb(0 0 0 / .45)}}
-html.d3 #toast{border-radius:999px;padding:12px 20px;background:var(--fg);color:var(--bg)}
-html.d3 .ajtabs{background:var(--bg)}
-html.d3 .d2pal .box{border-radius:28px}
-html.d3 .d2pal li[aria-selected="true"]{background:var(--fg);color:var(--bg);box-shadow:none}
-html.d3 .d2pal li[aria-selected="true"] small{color:color-mix(in srgb,var(--bg) 60%,transparent)}
-html.d3 .d2menu .seg button.on{background:var(--fg);color:var(--bg)}
-/* celular: barra blanca flotante con la elegida en cápsula negra */
-@media (max-width: 899px){
-  html.d3 .nav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:6px;border:0;border-radius:32px;background:var(--d2-bar);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:var(--shadow),0 0 0 1px var(--line)}
-  html.d3 .nav button{z-index:1;border-radius:26px;padding:7px 2px 6px;font-size:10px;font-weight:500;color:var(--fg);background:none!important;gap:3px}
-  html.d3 .nav button svg{width:22px;height:22px;stroke-width:1.6}
-  html.d3 .nav button[aria-current="page"],html.d3 .nav button[aria-current="page"] svg{color:var(--bg);stroke:var(--bg)}
-  html.d3 .d2sel{position:absolute;left:0;top:0;border-radius:26px;pointer-events:none;background:var(--fg);transition:transform .55s var(--d2-ease),width .55s var(--d2-ease)}
-  html.d3 .d2hov,html.d3 .d2k,html.d3 .d2foot,html.d3 .d2x{display:none!important}
-  html.d3 .nav .pill{background:var(--d2-red);color:#fff;top:3px}
-  html.d3 .top{border:0;background:color-mix(in srgb,var(--bg) 85%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
-  html.d3 main{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
-  html.d3 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
-  html.d3 .vhead h1{font-size:32px}
-  html.d3 .vhead .sub{font-size:17px}
-}
-
 /* ---------- apariencia de cada dispositivo: fondo, color y transparencia (sirve para los tres diseños) ---------- */
 html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:none;filter:none;opacity:1}
 :root[data-fondo="liso"][data-mode] body::after{display:none}
@@ -1753,20 +1646,6 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
 .ap{display:grid;gap:6px}
 .ap h3{display:flex;align-items:center;gap:8px;font-size:15px;margin:18px 0 8px}
 .ap h3:first-child{margin-top:2px}
-.apd{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.apdc{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 10px 12px;border-radius:18px;border:1px solid var(--line);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s}
-.apdc[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
-.apdc strong{font-size:14px;margin-top:8px}
-.apdc small{font-size:12px;color:var(--muted);line-height:1.3}
-.apdc .pv{position:relative;display:block;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden}
-.apdc .pv b,.apdc .pv span{position:absolute;display:block}
-/* miniaturas: cómo se ve cada diseño */
-.apdc.d1 .pv{background:#1E1F23}.apdc.d1 .pv b{left:0;top:0;bottom:0;width:28%;background:#2A2C31;border-right:1px solid #3D3F46}
-.apdc.d1 .pv span{left:34%;right:6%;height:22%;border-radius:4px;background:#2A2C31;border:1px solid #3D3F46}.apdc.d1 .pv span:nth-of-type(1){top:12%}.apdc.d1 .pv span:nth-of-type(2){top:44%}
-.apdc.d2 .pv{background:radial-gradient(80% 70% at 60% 80%,#7a5a36,#2a2219 70%,#141210)}.apdc.d2 .pv b{left:5%;top:7%;bottom:7%;width:24%;border-radius:9px;background:rgb(60 58 56 / .55);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .18)}
-.apdc.d2 .pv span{left:35%;right:5%;height:22%;border-radius:7px;background:rgb(70 66 60 / .55);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .1)}.apdc.d2 .pv span:nth-of-type(1){top:12%}.apdc.d2 .pv span:nth-of-type(2){top:44%}
-.apdc.d3 .pv{background:#f3f0eb}.apdc.d3 .pv b{left:5%;top:7%;bottom:7%;width:24%;border-radius:9px;background:#fff;box-shadow:0 4px 10px -4px rgb(60 45 30 / .3)}
-.apdc.d3 .pv span{left:35%;right:5%;height:26%;border-radius:9px;background:#fff;box-shadow:0 4px 10px -4px rgb(60 45 30 / .3)}.apdc.d3 .pv span:nth-of-type(1){top:10%}.apdc.d3 .pv span:nth-of-type(2){top:44%;background:linear-gradient(140deg,#d39470,#a85d44)}
 .apc{display:flex;flex-wrap:wrap;gap:10px}
 .apc button{width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;position:relative;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .12)}
 .apc button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--fg)}
@@ -1778,7 +1657,6 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
 .apsw{display:flex;align-items:flex-start;gap:12px;margin-top:16px;cursor:pointer}
 .apsw input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
 .apsw span{display:flex;flex-direction:column}.apsw small{color:var(--muted)}
-@media (max-width:600px){.apd{grid-template-columns:1fr 1fr 1fr;gap:8px}.apdc small{display:none}}
 </style>
 </head>
 <body>
@@ -1984,15 +1862,18 @@ function actBadge(a){
 function overdueCount(){const t=today();return arr('actividades').filter(a=>!a.hecha&&a.fecha&&a.fecha.slice(0,10)<t&&(!mine||a.responsable===ME)).length}
 
 /* ---------- render ---------- */
-let rq=0;function sr(){if(!rq)rq=requestAnimationFrame(()=>{rq=0;render()})}
+let rq=0;var RQD=false,EMITE=0,TOQ=0,TOQF=0,SCRT=0,RQW=0,RQW0=0;   // 1.52c: lo que llega en vivo espera a que se levante el dedo
+function ocupado(){const n=performance.now();return TOQ>0||n-TOQF<140||n-SCRT<150}
+function sr(){if(EMITE>0){if(!rq)RQD=true}else RQD=false;if(!rq)rq=requestAnimationFrame(srCorre)}
+function srCorre(){rq=0;if(RQD&&ocupado()&&(!RQW0||performance.now()-RQW0<1200)){if(!RQW0)RQW0=performance.now();clearTimeout(RQW);RQW=setTimeout(()=>{if(!rq)rq=requestAnimationFrame(srCorre)},160);return}RQD=false;RQW0=0;render()}
 function render(){
   arrDirty();applyRubros();applyEtapas();fjTick();subGuard();
   if(ROLE==='pendiente'){document.body.classList.add('portal');$('#banner').innerHTML='';$('#main').innerHTML=pendingHtml();return}
   if(CFEI===undefined&&mode==='live'&&ORG&&PLAN&&has('cfe')&&!PORTAL())loadCfe();
-  if(PORTAL()){document.body.classList.add('portal');applyBrand();$('#banner').innerHTML='';$('#main').innerHTML=(loaded.size>=NEED||slow)?vPortal():loadingHtml();return}
+  if(PORTAL()){document.body.classList.add('portal');applyBrand();$('#banner').innerHTML='';setHTML($('#main'),(loaded.size>=NEED||slow)?vPortal():loadingHtml());return}
   document.body.classList.remove('portal');
   if(!VIEWS[VIEW])VIEW='pipeline';
-  $('#themeSide').innerHTML='<span class="hint">Apariencia</span>'+themeSeg();
+  setHTML($('#themeSide'),'<span class="hint">Apariencia</span>'+themeSeg());
   applyBrand();
   const nb=NEWBY[VIEW];$('#topNew').dataset.new=nb[0];$('#topNew .lbl-long').textContent=nb[1];$('#topNew').hidden=!!readonly||VIEW==='ajustes'||(isTec()&&['inventario','bandeja','mas','plan','admin'].includes(VIEW));
   const nh=$('#navHoy');if(nh)nh.hidden=!isLead();
@@ -2003,8 +1884,8 @@ function render(){
   {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  $('#banner').innerHTML=(BETA?`<p class="note beta-note">${ic('beta','in')}<b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner();
-  $('#prodlist').innerHTML=arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join('');
+  setHTML($('#banner'),(BETA?`<p class="note beta-note">${ic('beta','in')}<b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner());
+  setHTML($('#prodlist'),arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join(''));
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
   const ae=document.activeElement, aid=ae&&ae.id&&$('#main').contains(ae)?ae.id:null;
@@ -2017,7 +1898,7 @@ function render(){
   const view=Q&&['hoy','vivo','oficina','reportes','mas','ajustes','menu','calendario','campo','plan','admin','trabajos','proyectos','tecnicos','inventario'].includes(VIEW)?vSearch:gated(VIEW)?()=>lockedHtml(VIEW):VIEWS[VIEW];
   if(VIEW==='oficina'&&ready&&!Q&&$('#ofiFrame')&&viewOk('oficina')){const oh=$('#ofiHoy');if(oh){const x=ofiHoy();if(oh.dataset.k!==x){oh.dataset.k=x;oh.innerHTML=x}}const od=$('#ofiDia');if(od){const x=ofiMiDia();if(od.dataset.k!==x){od.dataset.k=x;od.innerHTML=x}}ofiPost();return}
   if(CRMAJ&&VIEW!=='pipeline'){CRMAJ=false;CRMD=null}
-  $('#main').innerHTML=ready?view():loadingHtml();calPost();
+  setHTML($('#main'),ready?view():loadingHtml());calPost();
   if(aid){const el=document.getElementById(aid);if(el){el.focus();if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
 }
 function bannerHtml(){
@@ -3041,7 +2922,7 @@ if(await planosAct(k,el,arg))return;
       if(o)await put('oportunidades',oid,{...o,etapa:'gan',prob:100,monto:Math.round(t.total),moneda:QE.moneda,ganadoEn:today(),actualizado:Date.now()});
       const opid=await obraFromQuote({...QE,id:SH.id});toast(o?'Presupuesto aceptado: oportunidad ganada y obra creada':'Presupuesto aceptado: obra creada con sus tareas');if(opid)openSheet('pry',opid);else closeSheet();break}
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
-    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.51',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
+    case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.52',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
     case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
     case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
@@ -3521,7 +3402,6 @@ window.addEventListener('resize',()=>{calAlto()});
 setInterval(calAhora,60000);
 
 /* tocar un hueco: qué agendar a esa hora */
-function calCierraNuevoYQ(){calCierraNuevo();calqCierra()}
 function calCierraNuevo(){document.querySelectorAll('.cg-nuevo,.cg-menu').forEach(x=>x.remove())}
 document.addEventListener('click',e=>{
   if(Date.now()-CALDR.fin<450){e.stopPropagation();e.preventDefault();return}
@@ -4850,7 +4730,6 @@ async function gPdf(id){const g=D.gastos[id];if(!g)return;toast('Armando el PDF�
   await savePdf(`Gasto ${g.proveedor||''} ${g.numero||''} ${g.fecha||''}`.replace(/\s+/g,' ').trim(),pdfBytes(d))}
 /* ---------- 3) Fondos: plata adelantada a cada técnico ---------- */
 let GTAB='facturas';
-const fondoMios=()=>gastoAdmin()?arr('fondos'):arr('fondos').filter(f=>f.tecnico===ME);
 function fondoSaldo(tec,mon){const F=arr('fondos').filter(f=>f.tecnico===tec&&(f.moneda||'UYU')===mon),G=arr('gastos').filter(g=>g.por===tec&&(g.moneda||'UYU')===mon&&g.estado!=='rechazado');
   const ent=F.filter(f=>f.tipo==='entrega').reduce((a,f)=>a+n0(f.monto),0),cie=F.filter(f=>f.tipo==='cierre').reduce((a,f)=>a+n0(f.monto),0);
   const ade=G.filter(g=>g.pago==='adelanto').reduce((a,g)=>a+n0(g.monto),0),pro=G.filter(g=>g.pago==='propio'&&(g.estado!=='reembolsado'||g.cierreId)).reduce((a,g)=>a+n0(g.monto),0);
@@ -5483,6 +5362,58 @@ if(/\/beta\//.test(location.pathname)){
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#sheet [data-act="close"]');if(!b||!SH||!SH.dirty||SH.warned)return;
   if(b.closest('.sh-f')){b.dataset.orig=b.textContent;b.textContent='Descartar cambios';b.classList.add('arm')}},true);
 /* === fin 1.52b === */
+/* === 1.52c · rendimiento === */
+// 1.52c · Rendimiento y toques (Christian, 14/11 22:57: «no creo que sea un tema de peso, sino de mejorar el rendimiento y usar el código
+// para bajar los tiempos»). Medido antes con prueba/rendimiento.js (celular, procesador ×4, datos del tamaño de Phitel):
+// cada cambio en vivo (por ejemplo la ubicación de un técnico) rehacía la pantalla entera: 20 de 20 veces, 1,5 s de trabajo en 3 s,
+// el tablero volvía al principio y solo 1 de cada 8 toques llegaba. Lo que hace esto:
+// 1) Solo se toca lo que cambió: si la pantalla queda igual, no se rehace (pantalla, avisos de arriba, lista de productos, apariencia).
+// 2) Si se rehace, todo lo que se desplaza (tablero, pestañas, tablas) queda donde estaba.
+// 3) Lo que llega en vivo espera mientras el dedo está apoyado o la pantalla se está desplazando (máximo 1,2 s). Ver sr() en parche-1.52c.py.
+// 4) La oficina 3D deja de dibujar cuando no se ve (al bajar en la pantalla o con una ficha encima).
+var SCRM=null,SCRV=null;                         // dónde quedó cada cosa desplazada, por pantalla · lo desplazado desde el último dibujo
+function scrFirma(el){let f=el.tagName+(el.id?'#'+el.id:'');for(const c of el.classList)if(!/^(on|sobre|arr|haspill|ready|arm)$/.test(c))f+='.'+c;return f}
+function scrToma(m){if(!SCRV||!SCRV.size)return;if(!SCRM)SCRM=new Map();
+  for(const x of SCRV){if(!x.isConnected||!m.contains(x))continue;const f=scrFirma(x),l=[...m.querySelectorAll(x.tagName)].filter(y=>scrFirma(y)===f);
+    SCRM.set(x.__v+'|'+f,[l.indexOf(x),x.scrollLeft,x.scrollTop])}SCRV.clear()}
+function scrRepone(m){if(!SCRM||!SCRM.size)return;const p=VIEW+'|';
+  for(const [k,[n,l,t]] of SCRM){if(!k.startsWith(p)||(!l&&!t))continue;const f=k.slice(p.length),tag=f.split(/[.#]/)[0];
+    const el=[...m.querySelectorAll(tag)].filter(x=>scrFirma(x)===f)[n];if(el){if(l)el.scrollLeft=l;if(t)el.scrollTop=t}}}
+// el reemplazo de HTML que solo trabaja si cambió algo
+var HTM=null;
+function setHTML(el,h){if(!el)return false;if(!HTM)HTM=new WeakMap();const k=HTM.get(el);
+  if(k&&k.h===h&&el.firstElementChild===k.f&&(!k.f||k.f.isConnected))return false;
+  const main=el.id==='main';if(main)scrToma(el);
+  el.innerHTML=h;HTM.set(el,{h,f:el.firstElementChild});if(main)scrRepone(el);return true}
+// el dedo y el desplazamiento (los usa sr() para que lo que llega en vivo no rehaga la pantalla debajo del dedo)
+addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')TOQ++},true);
+const toqFin=e=>{if(e.pointerType!=='mouse'){TOQ=Math.max(0,TOQ-1);TOQF=performance.now()}};
+addEventListener('pointerup',toqFin,true);addEventListener('pointercancel',toqFin,true);
+// solo cuenta lo que desplazó la persona (dedo, rueda o teclado; el envión del dedo dura un poco más): lo que mueve el navegador solo
+// al acomodar la pantalla no se recuerda (si no, un tablero recién abierto podía aparecer corrido)
+var RUEDA=0;addEventListener('wheel',()=>{RUEDA=performance.now()},{capture:true,passive:true});addEventListener('keydown',()=>{RUEDA=performance.now()},true);
+addEventListener('scroll',e=>{const n=performance.now();SCRT=n;const t=e.target;if(!(t&&t.nodeType===1&&t.closest('#main')))return;
+  if(!(TOQ>0||n-TOQF<1500||n-RUEDA<700))return;if(!SCRV)SCRV=new Set();t.__v=VIEW;SCRV.add(t)},{capture:true,passive:true});
+addEventListener('visibilitychange',()=>{TOQ=0},true);
+// lo que entra por emit() (cambios en vivo y lo guardado) se marca como «datos»: sr() puede esperar a que se levante el dedo
+const _emit152c=emit;emit=function(){EMITE++;try{return _emit152c.apply(this,arguments)}finally{EMITE--}};
+// oficina 3D: no dibuja si no se ve (fuera de la pantalla, o con una ficha encima)
+var OFIV=null;
+function ofiPausa(){const f=document.getElementById('ofiFrame');if(!f||!f.contentWindow)return;
+  const tapada=!document.getElementById('sheetWrap').hidden&&!f.classList.contains('ofiFull');
+  try{f.contentWindow.postMessage({ofiPausa:f.__fuera===true||tapada},'*')}catch(_){}}
+function ofiVista(){const f=document.getElementById('ofiFrame');if(!f||f.__vis)return;f.__vis=1;
+  if(f.dataset.src&&!f.getAttribute('src'))setTimeout(()=>{if(f.isConnected&&!f.getAttribute('src'))f.src=f.dataset.src},450);
+  if(!OFIV&&'IntersectionObserver' in window)OFIV=new IntersectionObserver(es=>{for(const e of es){e.target.__fuera=!e.isIntersecting;ofiPausa()}},{threshold:0});
+  if(OFIV)OFIV.observe(f)}
+const _render152c=render;render=function(){const r=_render152c.apply(this,arguments);try{if(VIEW==='oficina')ofiVista()}catch(_){}return r};
+const _openSheet152c=openSheet;openSheet=function(){const r=_openSheet152c.apply(this,arguments);ofiPausa();return r};
+const _closeSheet152c=closeSheet;closeSheet=function(){const r=_closeSheet152c.apply(this,arguments);ofiPausa();return r};
+// tiempos de arranque en la consola (se leen en Xcode al probar en el simulador o en el iPhone): primera pantalla con datos y oficina 3D lista
+var T_LOG={};function tLog(k){if(T_LOG[k])return;T_LOG[k]=Math.round(performance.now());try{console.log('[olumi] '+k+' '+T_LOG[k]+' ms')}catch(_){}}
+const _render152cT=render;render=function(){const r=_render152cT.apply(this,arguments);try{if(!T_LOG.pantalla&&mode==='live'&&(loaded.size>=NEED)&&document.querySelector('#main .vhead'))tLog('pantalla')}catch(_){}return r};
+addEventListener('message',e=>{const d=e.data||{};if(d&&d.ovListo)tLog('oficina')});
+/* === fin 1.52c === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
@@ -7205,7 +7136,7 @@ async function offRestore(quiet){
 /* el snapshot se vuelve a guardar unos segundos después de cada cambio, así lo que se trabajó hoy también queda en el equipo */
 let snapLT=null;function offSnapLive(){if(!ORG||mode!=='live'||OFF.stale||OFF.loading||!navigator.onLine)return;clearTimeout(snapLT);snapLT=setTimeout(()=>{if(OFF.stale||OFF.loading)return;const by={};[...COLS,'config'].forEach(c=>{const L=liveCol(c);if(L.loaded)by[c]=L.map});kvSet('snap-'+ORG,{at:Date.now(),by})},6000)}
 async function loadAll(){
-  const had=await offRestore(true);   // pinta enseguida lo último guardado; mientras tanto baja lo nuevo
+  const had=(mode==='live'&&liveCol('clientes').loaded)?true:await offRestore(true);   // pinta enseguida lo último guardado; mientras tanto baja lo nuevo
   OFF.loading=true;
   try{await loadAllNet();OFF.stale=false;if(OFF.q.length)offFlush()}
   catch(e){if(netErr(e)){if(had){OFF.stale=OFF.snapAt||true;sr();return}if(await offRestore())return}throw e}
@@ -8418,7 +8349,7 @@ const ofiHoy=()=>isLead()&&viewOk('hoy')?`<div class="ofihoy"><h2 class="ofih2">
 function vOficina(){OFI.ready=false;OFI.last='';
   return`<div class="vhead"><div><h1>${esc(saludo())}</h1><p class="sub">${fdateL(today())} · ${esc(CFG.nombre||ORGINFO?.name||'')} en vivo. Tocá un área, una persona o tu avatar.</p></div>
     <div class="tools">${readonly?'':'<button class="btn pri" data-new="tk">+ Ticket</button><button class="btn" data-new="trab">+ Visita</button>'}</div></div>
-  <div id="ofiDia">${ofiMiDia()}</div><div class="ofi"><iframe id="ofiFrame" src="oficina.html?embed=1&app=1${document.documentElement.classList.contains('d2')||document.documentElement.classList.contains('d3')?'&estilo=estudio':''}" title="Oficina en vivo" data-tema allow="fullscreen" allowfullscreen></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
+  <div id="ofiDia">${ofiMiDia()}</div><div class="ofi"><iframe id="ofiFrame" ${matchMedia('(hover: none)').matches?'data-src':'src'}="oficina.html?embed=1&app=1&estilo=estudio" title="Oficina en vivo" data-tema allow="fullscreen" allowfullscreen></iframe></div><div id="ofiHoy">${ofiHoy()}</div>`}
 function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].name)||'').split(' ')[0];return(h<12?'Buen día':h<20?'Buenas tardes':'Buenas noches')+(n?', '+n:'')}
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};if('ovFull' in d){f.classList.toggle('ofiFull',!!d.ovFull);document.documentElement.style.overflow=d.ovFull?'hidden':''}
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
@@ -9073,7 +9004,7 @@ const LIVE={};
 const liveCol=c=>LIVE[c]||(LIVE[c]={map:{},cbs:[],loaded:false});
 function snapOf(col){const L=liveCol(col);const docs=Object.entries(L.map).map(([id,data])=>({id,exists:true,data:()=>data,metadata:{fromCache:false,hasPendingWrites:false}}));
   return {docs,size:docs.length,empty:!docs.length,metadata:{fromCache:false,hasPendingWrites:false},docChanges:()=>[]}}
-function emit(col){arrDirty();offSnapLive();const L=liveCol(col);if(!L.loaded)return;const s=snapOf(col);L.cbs.forEach(cb=>{try{cb(s)}catch(e){console.error(e)}});if(col==='trabajos'||col==='clientes'||col==='config')prefetchUrls()}
+function emit(col){arrDirty();if(col!=='posiciones'&&col!=='estados')offSnapLive();const L=liveCol(col);if(!L.loaded)return;const s=snapOf(col);L.cbs.forEach(cb=>{try{cb(s)}catch(e){console.error(e)}});if(col==='trabajos'||col==='clientes'||col==='config')prefetchUrls()}
 const SBDB={
   collection(col){return{
     doc:id=>SBDB.doc(col+'/'+id),
@@ -9115,7 +9046,7 @@ function subscribeLive(){
     .on('postgres_changes',{event:'DELETE',schema:'public',table:'docs',filter:'org_id=eq.'+ORG},p=>{const r=p.old||{};if(r.org_id!==ORG)return;delete liveCol(r.col).map[r.id];emit(r.col)})
     .subscribe(st=>{if(st==='SUBSCRIBED'){if(subscribeLive.n++)loadAll().catch(()=>{})}});
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ORG&&SB){loadAll().catch(()=>{});loadPlan().catch(()=>{})}});
+var OCULTA=0;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){OCULTA=Date.now();return}if(document.visibilityState==='visible'&&ORG&&SB&&Date.now()-OCULTA>45000){loadAll().catch(()=>{});loadPlan().catch(()=>{})}});
 
 /* Personas del equipo */
 const AVC=['#FF7A1A','#E0A800','#3FA7FF','#2FA36B','#9A6BE0','#E0307A'];
@@ -9345,14 +9276,14 @@ async function boot(){
 if(SB)SB.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&ORG)location.reload()});
 /*d2*/window.__olumiMe=()=>{const m=MEMBERS[ME]||{};return{name:String((NAMES[ME]&&NAMES[ME].name)||m.display_name||'').replace(/ \(vos\)$/,''),email:m.email||'',rol:(typeof ROLEN!=='undefined'&&ROLEN[m.role])||''}};
 window.__olumiSr=()=>sr();window.__olumiImgs=()=>({logo:has('marca')&&CFG.logo?.id?blobUrl(CFG.logo.id):'',empresa:has('marca')&&CFG.fondo?.id?blobUrl(CFG.fondo.id):''});
-function apHtml(){const g=k=>{try{return localStorage.getItem(k)||''}catch(e){return''}},d=g('olumi.diseno')||'2',ac=g('olumi.acento'),fo=g('olumi.fondo')||'auto',so=g('olumi.solido')==='1',im=window.__olumiImgs();
+function apHtml(){const g=k=>{try{return localStorage.getItem(k)||''}catch(e){return''}},ac=g('olumi.acento'),fo=g('olumi.fondo')||'auto',so=g('olumi.solido')==='1',im=window.__olumiImgs();
   const SW=[['','De la empresa'],['#ffc93c','Ámbar'],['#ff9f0a','Naranja'],['#ff453a','Rojo'],['#ff375f','Rosa'],['#bf5af2','Violeta'],['#5e5ce6','Índigo'],['#0a84ff','Azul'],['#64d2ff','Celeste'],['#30d158','Verde'],['#8e8e93','Grafito']];
   const FO=[['auto','Del diseño'],['liso','Liso'],['maqueta','Tu oficina'],...(im.logo?[['logo','Logo de la empresa']]:[]),...(im.empresa?[['empresa','Foto de la empresa']]:[]),...(g('olumi.fondo.foto')?[['foto','Tu foto']]:[])];
   return`<div class="vhead" id="ap" style="margin-top:34px"><div><h1>Apariencia</h1><p class="sub">Cómo ves Olumi en este dispositivo. No cambia nada para los demás.</p></div></div>
   <div class="panel ap"><h3>Día y noche</h3>${themeSeg()}<p class="hint" style="margin:6px 0 0">Automático: claro de 7 a 19 h y oscuro el resto del día.</p>
   <h3>Color</h3><div class="apc">${SW.map(([c,n])=>`<button type="button" class="${c?'':'emp'}" style="${c?'background:'+c:''}" data-ap="acento:${c}" aria-pressed="${ac===c}" aria-label="${n}" title="${n}"></button>`).join('')}</div>
   <h3>Fondo</h3><div class="apf">${FO.map(([k,n])=>`<button type="button" data-ap="fondo:${k}" aria-pressed="${fo===k}">${n}</button>`).join('')}<label>Subir una foto…<input type="file" accept="image/png,image/jpeg,image/webp" data-ap-foto></label></div>
-  ${d==='2'?apTrHtml():`<label class="apsw"><input type="checkbox" data-ap="solido"${so?' checked':''}><span>Reducir transparencia<small>Todo sólido, sin vidrio ni desenfoques. Más liviano en compus o celulares viejos.</small></span></label>`}</div>`}
+  ${apTrHtml()}</div>`}
 /*/d2*/
 boot();
 })();
@@ -9361,7 +9292,7 @@ boot();
 
 
 <script id="d2js">/* ---------- 2.0 · diseño de vidrio: menú flotante, pastilla que sigue, ⌘K, tu tarjeta ---------- */
-(()=>{const R=document.documentElement;if(!R.classList.contains('d2')&&!R.classList.contains('d3'))return;
+(()=>{const R=document.documentElement;if(!R.classList.contains('d2'))return;
 const nav=document.querySelector('.nav');if(!nav)return;
 const $$=s=>[...nav.querySelectorAll(s)],ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}};
 const SV=(p,extra='')=>`<svg viewBox="0 0 24 24" aria-hidden="true"${extra}>${p}</svg>`;
@@ -9454,7 +9385,6 @@ addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&!e.altKey&&e.key.toLow
   const set=(k,v)=>{try{if(v==null||v==='')L.removeItem(k);else L.setItem(k,v)}catch(e){toastAp('No se pudo guardar en este navegador')}};
   const toastAp=t=>{const b=document.getElementById('toast');if(b){b.textContent=t;b.hidden=false;clearTimeout(toastAp.t);toastAp.t=setTimeout(()=>b.hidden=true,2600)}};
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ap]');if(!b||b.tagName==='INPUT')return;const [k,v]=b.dataset.ap.split(':');
-    if(k==='diseno'){if((L.getItem('olumi.diseno')||'2')===v)return;set('olumi.diseno',v);location.reload();return}
     if(k==='acento'){set('olumi.acento',v);re();return}
     if(k==='fondo'){if(v==='foto'&&!L.getItem('olumi.fondo.foto'))return;set('olumi.fondo',v==='auto'?'':v);re()}});
   document.addEventListener('change',e=>{const t=e.target;

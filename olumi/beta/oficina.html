@@ -1172,6 +1172,7 @@ function evPlan(){const p=byRole('tecnico')[0]||S.people[0];if(!p)return;const d
 const EVS=[evWa,evMail,evPres,evMail,evPlan,evWa];let evi=0,evT=0,wT=0;
 // ---------- dibujo ----------
 // 60 cuadros por segundo como máximo (aunque la pantalla dé 120) y 30 cuando nadie la está tocando: la maqueta abierta no calienta el equipo
+addEventListener('message',e=>{const d=e.data||{};if('ofiPausa' in d)CINE.pausa=!!d.ofiPausa});   // 1.52c: la app avisa cuando no se ve
 function frame(now){requestAnimationFrame(frame);if(CINE.pausa){frame.last=now;return}
   frame.lim=WALK.on||ED.on||CINE.on||BUILD<1||now-ACTV<2500?12:31;if(now-(frame.last||0)<frame.lim)return;
   T=now/1000;const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;step(dt);
@@ -1269,7 +1270,7 @@ if(APP)addEventListener('message',e=>{const d=(e.data||{}).olumiDatos;if(!d)retu
   ED.locked=d.editaOficina===false;document.getElementById('b_edit').hidden=ED.locked;if(ED.locked&&ED.on)edSet(false);
   if(Array.isArray(d.lay)&&d.lay.length&&!ED.on){const j=JSON.stringify(d.lay);if(j!==JSON.stringify(LAY)){LAY=JSON.parse(j);LAYV++;try{localStorage.setItem(LKEY,j)}catch(x){}}}
   const M=d.munecos||{},lk=o=>Object.fromEntries(Object.entries(o||{}).filter(([k,v])=>k!=='at'&&v!==''&&v!=null));
-  S.people.forEach(p=>{if(M[p.id])p.look={...p.look,...lk(M[p.id])}});if(d.me&&M[d.me])MYLOOK=lk(M[d.me])});
+  S.people.forEach(p=>{if(M[p.id])p.look={...p.look,...lk(M[p.id]),_yo:Object.keys(lk(M[p.id]))}});if(d.me&&M[d.me])MYLOOK=lk(M[d.me])});
 
 // ---------- estilo "estudio": la maqueta como un modelo de arquitecto (?estilo=estudio) ----------
 // Paleta propia de Unity Tech: blancos cálidos, madera clara, salvia, terracota y grafito; sin texturas ruidosas,
@@ -1490,7 +1491,44 @@ const AV_KB={d:.36,h:.755};   // teclado del puesto: distancia desde el centro d
 const AV_H=/^(luca|joshua|nicola|elias|matias|tobias|isaias|jeremias|josema|borja|garcia|andrea)$/;
 function avPick(p){const want=p.look&&p.look.avatar;if(want&&AV.mod[want])return want;const n=(String(p.name||p.n||'').trim().split(/\s+/)[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),fem=/a$/.test(n)&&!AV_H.test(n);
   const c=Object.values(AV.mod).filter(m=>(m.sexo==='m')===fem),r=c.filter(m=>m.rol===(p.role==='tecnico'?'tecnico':'oficina'));const l=r.length?r:c.length?c:Object.values(AV.mod);return l.length?l[hsh(p.id||p.name||'x')%l.length].id:null}
-function mkPersonGLB(p){const md=AV.mod[avPick(p)];if(!md)return null;let o;try{o=avatarGLB(AV.clone(md.scene),(md.alto||1.72)*(1+((hsh((p.id||p.name||'x')+'h')%7)-3)*.006))}catch(e){return null}if(!o)return null;const g=o.g;
+/* === 1.52c · avatares distintos === */
+// 1.52c · Cada persona distinta (Christian, 14/11 22:57: «mejorar el modelo de avatar y que haya 3 o 5 diferentes en la oficina cuando
+// la recorrés»). Hasta acá todas las mujeres eran el mismo modelo, igual en todo. Ahora, sobre los mismos modelos del catálogo (sin bajar
+// nada más), cada persona tiene su tono de piel, su color de pelo y el color de su ropa, siempre los mismos para esa persona.
+// El color se cambia en la placa de video conservando el dibujo de la tela y del pelo (luz y sombra de la textura original).
+const AVV={
+  PIEL:[[1,1,1],[.95,.88,.82],[.84,.71,.61],[.66,.5,.4],[.48,.35,.27]],              // de más clara a más oscura (multiplica la piel del modelo)
+  PELO:['#14100e','#2e211a','#5a3a24','#8a5c33','#c9a06a','#9b9ba1','#3d2b22'],      // negro, castaños, rubio, canoso
+  ROPA:{casual:['#3d5d8f','#2b2d33','#a99a7e','#4f5a3a','#6e2e37','#365a6e'],
+        mujer:['#6e2e37','#2f3d55','#3d5a4a','#55473e','#7a5a8a','#2b2b30'],
+        tecnico:['#3c6db0','#24334f','#56595f','#b4561f','#2f5d43'],
+        polo:['#d9d9dc','#FF7A1A','#203150','#3c3c42','#7a2030']}};
+function avvMedia(tex){try{const im=tex&&tex.image;if(!im)return .2;const c=document.createElement('canvas');c.width=c.height=12;const g=c.getContext('2d',{willReadFrequently:true});
+  g.drawImage(im,0,0,12,12);const d=g.getImageData(0,0,12,12).data;let s=0,n=0;
+  for(let i=0;i<d.length;i+=4){if(d[i+3]<128)continue;const l=x=>{x/=255;return x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4)};s+=.2126*l(d[i])+.7152*l(d[i+1])+.0722*l(d[i+2]);n++}
+  return n?Math.max(.01,s/n):.2}catch(e){return .2}}
+const AVV_MED=new WeakMap();
+// cambia el color de una tela o del pelo conservando su dibujo: el color nuevo por la luz relativa de cada punto de la textura
+function avvTinte(m,hex,mezcla){if(!m.map)return;let med=AVV_MED.get(m.map);if(med==null){med=avvMedia(m.map);AVV_MED.set(m.map,med)}
+  const u={tinte:{value:new THREE.Color(hex)},mezcla:{value:mezcla},media:{value:med}};m.userData.avv=u;
+  m.onBeforeCompile=sh=>{sh.uniforms.uAvTinte=u.tinte;sh.uniforms.uAvMezcla=u.mezcla;sh.uniforms.uAvMedia=u.media;
+    sh.fragmentShader='uniform vec3 uAvTinte;uniform float uAvMezcla;uniform float uAvMedia;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+      '#ifdef USE_MAP\n vec4 sampledDiffuseColor=texture2D(map,vMapUv);float avL=dot(sampledDiffuseColor.rgb,vec3(.2126,.7152,.0722));\n'+
+      ' sampledDiffuseColor.rgb=mix(sampledDiffuseColor.rgb,uAvTinte*clamp(avL/uAvMedia,0.,2.4),uAvMezcla);diffuseColor*=sampledDiffuseColor;\n#endif')};
+  m.customProgramCacheKey=()=>'avv';m.needsUpdate=true}
+// La piel: la que la persona eligió en «Mi personaje»; si no eligió, en la app queda el tono del modelo con un matiz suave (nadie aparece con
+// un tono que no eligió) y en la demostración de la web (personas inventadas) varía. El pelo y la ropa: los de su personaje, o uno propio.
+function avVaria(o,p,md){try{const id=String(p.id||p.name||p.n||'x'),h=hsh(id+'·v'),L=p.look||{},yo=Array.isArray(L._yo)?L._yo:[],eleg=k=>yo.includes(k)||(p.id===S.me&&MYLOOK&&MYLOOK[k]);
+    const si=SKIN.indexOf(L.skin),pi=si>=0&&(eleg('skin')||!APP)?si:h%2,piel=AVV.PIEL[pi],pelo=L.hair&&/^#[0-9a-f]{6}$/i.test(L.hair)?L.hair:AVV.PELO[(h>>>4)%AVV.PELO.length];
+    const ropa=k=>eleg('top')&&L.top&&k!=='tecnico'?L.top:AVV.ROPA[k][(h>>>8)%AVV.ROPA[k].length],hecho=new Map();
+    o.g.traverse(x=>{if(!x.isMesh||!x.material||Array.isArray(x.material))return;const n=(x.material.name||'')+' '+(x.name||'');
+      let tipo=/body/i.test(n)?'piel':/short|ponytail|hair|pelo/i.test(n)?'pelo':/elegantsuit/i.test(n)?'mujer':/casualsuit/i.test(n)?'casual':/worksuit/i.test(n)?'tecnico':/polo/i.test(n)?'polo':'';
+      if(!tipo)return;let m=hecho.get(x.material);if(!m){m=x.material.clone();hecho.set(x.material,m)}x.material=m;
+      if(tipo==='piel'){if(!m.userData.avPiel){m.color.setRGB(piel[0],piel[1],piel[2]);m.userData.avPiel=1}}
+      else if(!m.userData.avv)avvTinte(m,tipo==='pelo'?pelo:ropa(tipo),tipo==='pelo'?.92:.8)});
+    o.varia={piel:pi,pelo,id:md&&md.id}}catch(e){}}
+/* === fin 1.52c avatares === */
+function mkPersonGLB(p){const md=AV.mod[avPick(p)];if(!md)return null;let o;try{o=avatarGLB(AV.clone(md.scene),(md.alto||1.72)*(1+((hsh((p.id||p.name||'x')+'h')%7)-3)*.006))}catch(e){return null}if(!o)return null;avVaria(o,p,md);const g=o.g;
   o.box=new THREE.Mesh(pg('box',()=>new RoundedBoxGeometry(.3,.28,.36,2,.02)),MAT.box);o.box.position.set(.36,1.12,0);o.box.castShadow=true;g.add(o.box);o.star=null;
   o.ring=new THREE.Mesh(pg('ring',()=>new THREE.RingGeometry(.4,.47,32).rotateX(-Math.PI/2)),new THREE.MeshBasicMaterial({color:'#1d1d1f'}));o.ring.position.y=.135;g.add(o.ring);
   o.blob=new THREE.Mesh(pg('blob',()=>new THREE.PlaneGeometry(.8,.64).rotateX(-Math.PI/2)),BLOB());o.blob.position.y=.008;o.blob.renderOrder=2;g.add(o.blob);
