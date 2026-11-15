@@ -21,7 +21,7 @@ for o in mallas:
         bpy.context.view_layer.objects.active = o
         for sk in list(o.data.shape_keys.key_blocks)[::-1]: o.shape_key_remove(sk) if sk.name != 'Basis' else None
         if o.data.shape_keys: o.shape_key_remove(o.data.shape_keys.key_blocks[0])
-NO_ROPA = ('hair', 'brow', 'lash', 'high-poly', 'low-poly', 'eye', 'teeth', 'tongue', 'bob', 'ponytail', 'short0', 'braid', 'bun', 'long0', 'afro')
+NO_ROPA = ('hair', 'brow', 'lash', 'high-poly', 'low-poly', 'eye', 'teeth', 'tongue', 'bob', 'ponytail', 'short0', 'braid', 'bun', 'long0', 'afro', 'beard', 'moustache')
 def grupos(o, nombres):
     idx = {g.index for g in o.vertex_groups if any(g.name in (p + n) for p in ('mixamorig:', '') for n in nombres)}
     return [sum(gg.weight for gg in v.groups if gg.group in idx) for v in o.data.vertices]

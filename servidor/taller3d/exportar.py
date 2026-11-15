@@ -19,7 +19,7 @@ for o in ms: aplicar(o, ('MASK', 'SUBSURF'))
 import bmesh
 from mathutils.bvhtree import BVHTree
 # ropa = todo lo que se viste (también lo que no trae su grupo «Delete.…»: el suéter y el pantalón de lana no lo traen y la piel asomaba)
-NO_ROPA = ('hair', 'brow', 'lash', 'high-poly', 'low-poly', 'eye', 'teeth', 'tongue', 'bob', 'ponytail', 'short0', 'braid', 'bun', 'long0', 'afro')
+NO_ROPA = ('hair', 'brow', 'lash', 'high-poly', 'low-poly', 'eye', 'teeth', 'tongue', 'bob', 'ponytail', 'short0', 'braid', 'bun', 'long0', 'afro', 'beard', 'moustache')
 ropa = [o for o in ms if o is not bm and (('Delete.' + o.name.split('.', 1)[-1]) in bm.vertex_groups or not any(x in o.name.lower() for x in NO_ROPA))]
 # Zonas: con los brazos ya bajados (reposo horneado) las mangas quedan pegadas a la cadera y las manos a los muslos. Para decidir qué tapa
 # qué, cada punto solo mira la tela de su misma zona: antebrazo y mano, o el resto del cuerpo. Si no, la manga «tapaba» la cadera del

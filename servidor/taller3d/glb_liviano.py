@@ -56,6 +56,13 @@ for i, im in enumerate(J.get('images', [])):
     if alfa and max(p.size) > 1024 and not ('brow' in nom or 'lash' in nom or 'eye' in nom): lado = LH   # pelo: el borde contra la frente necesita resolución
     if max(p.size) > lado: k = lado / max(p.size); p = p.resize((max(1, round(p.size[0] * k)), max(1, round(p.size[1] * k))), Image.LANCZOS)
     if not alfa and i in usos: p = sangrar(p, i)
+    if 'brown_eye' in nl:
+        # el iris «brown» de MakeHuman es rojizo (de cerca los ojos se veían rojos): se lleva a un marrón natural, menos saturado
+        hsv = np.asarray(p.convert('RGB').convert('HSV')).astype(np.float32); iris = (hsv[..., 1] > 80) & (hsv[..., 2] < 215)
+        hsv[..., 0] = np.where(iris, 17, hsv[..., 0]); hsv[..., 1] = np.where(iris, hsv[..., 1] * .72, hsv[..., 1]); hsv[..., 2] = np.where(iris, hsv[..., 2] * .85, hsv[..., 2])
+        q = Image.fromarray(hsv.clip(0, 255).astype(np.uint8), 'HSV').convert('RGB')
+        if p.mode in ('RGBA', 'LA', 'P'): q.putalpha(p.convert('RGBA').getchannel('A'))   # la transparencia de la córnea se conserva
+        p = q
     o = io.BytesIO()
     if alfa:
         q = p.convert('RGBA')

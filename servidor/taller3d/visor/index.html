@@ -14,7 +14,8 @@ const caja=(w,h,d,x,y,z,c,par)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,
 const cam=new THREE.PerspectiveCamera(+P.get('fov')||30,W/H,.1,60);
 const files=(P.get('m')||'of-h.glb').split(','),poses=(P.get('p')||'idle,walk0.1,sit').split(','),L=new GLTFLoader(),out=[];
 let n=0;const tot=files.length*poses.length,gap=+P.get('gap')||1.05,rot=P.get('lado')?0:(+P.get('h')||1.0);
-for(const f of files){const g=await L.loadAsync(f);if(P.get('oculta')){const re=new RegExp(P.get('oculta'),'i');g.scene.traverse(o=>{if(o.isMesh&&re.test((o.name||'')+' '+((o.material&&o.material.name)||'')))o.visible=false})}   // oculta=pants: esconder piezas para ver qué es qué
+for(const f of files){const g=await L.loadAsync(f);if(P.get('tinte')){for(const par of P.get('tinte').split(',')){const [re,hx]=par.split(':');g.scene.traverse(o=>{if(o.isMesh&&o.material&&new RegExp(re,'i').test((o.name||'')+' '+(o.material.name||''))){o.material=o.material.clone();o.material.color.set('#'+hx)}})}}   // tinte=beard:2e211a,sweater:2f3d55 (como hará la oficina)
+if(P.get('oculta')){const re=new RegExp(P.get('oculta'),'i');g.scene.traverse(o=>{if(o.isMesh&&re.test((o.name||'')+' '+((o.material&&o.material.name)||'')))o.visible=false})}   // oculta=pants: esconder piezas para ver qué es qué
 let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}});avMat(g.scene,+P.get('tex')||0);
   for(const p of poses){const a=avatarGLB(clone(g.scene),+P.get('alto')||1.74),grp=new THREE.Group();grp.add(a.g);(window.__avs=window.__avs||[]).push(a);
     const [p0,sem]=p.split('@'),gs=p0.startsWith('g:')?p0.split(':'):null,sit=p0==='sit'||p0==='tecla',md=sit?'sit':p0.startsWith('walk')?'walk':'idle';if(sem)a.seed=+sem;   // idle@3.7 = otra persona (otra semilla) · g:saludo:1.2 = gesto a los 1,2 s
