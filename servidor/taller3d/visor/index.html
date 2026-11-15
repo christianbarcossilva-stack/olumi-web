@@ -14,7 +14,10 @@ const caja=(w,h,d,x,y,z,c,par)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,
 const cam=new THREE.PerspectiveCamera(+P.get('fov')||30,W/H,.1,60);
 const files=(P.get('m')||'of-h.glb').split(','),poses=(P.get('p')||'idle,walk0.1,sit').split(','),L=new GLTFLoader(),out=[];
 let n=0;const tot=files.length*poses.length,gap=+P.get('gap')||1.05,rot=P.get('lado')?0:(+P.get('h')||1.0);
-for(const f of files){const g=await L.loadAsync(f);if(P.get('tinte')){for(const par of P.get('tinte').split(',')){const [re,hx]=par.split(':');g.scene.traverse(o=>{if(o.isMesh&&o.material&&new RegExp(re,'i').test((o.name||'')+' '+(o.material.name||''))){o.material=o.material.clone();o.material.color.set('#'+hx)}})}}   // tinte=beard:2e211a,sweater:2f3d55 (como hará la oficina)
+for(const f of files){const g=await L.loadAsync(f);if(P.get('tinte')){for(const par of P.get('tinte').split(',')){const [re,hx]=par.split(':');g.scene.traverse(o=>{if(!(o.isMesh&&o.material&&new RegExp(re,'i').test((o.name||'')+' '+(o.material.name||''))))return;const m=o.material=o.material.clone();
+  // como la oficina (avatares-variedad.js): el color nuevo por la luz relativa de cada punto de la textura (se conserva el dibujo de la tela)
+  let med=.2;try{const c=document.createElement('canvas');c.width=c.height=12;const x=c.getContext('2d');x.drawImage(m.map.image,0,0,12,12);const d=x.getImageData(0,0,12,12).data;let su=0,nn=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<128)continue;const l=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};su+=.2126*l(d[i])+.7152*l(d[i+1])+.0722*l(d[i+2]);nn++}if(nn)med=su/nn}catch(e){}
+  const t=new THREE.Color('#'+hx);m.onBeforeCompile=sh=>{sh.uniforms.uT={value:t};sh.uniforms.uM={value:med};sh.fragmentShader='uniform vec3 uT;uniform float uM;\n'+sh.fragmentShader.replace('#include <map_fragment>','#ifdef USE_MAP\n vec4 sampledDiffuseColor=texture2D(map,vMapUv);float aL=dot(sampledDiffuseColor.rgb,vec3(.2126,.7152,.0722));sampledDiffuseColor.rgb=uT*clamp(aL/uM,.15,2.);diffuseColor*=sampledDiffuseColor;\n#endif')};m.customProgramCacheKey=()=>'tinte'+hx;m.needsUpdate=true})}}   // tinte=sweater:ece6da,pants:2b3346 (como en la oficina)
 if(P.get('oculta')){const re=new RegExp(P.get('oculta'),'i');g.scene.traverse(o=>{if(o.isMesh&&re.test((o.name||'')+' '+((o.material&&o.material.name)||'')))o.visible=false})}   // oculta=pants: esconder piezas para ver qué es qué
 let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}});avMat(g.scene,+P.get('tex')||0);
   for(const p of poses){const a=avatarGLB(clone(g.scene),+P.get('alto')||1.74),grp=new THREE.Group();grp.add(a.g);(window.__avs=window.__avs||[]).push(a);
@@ -27,7 +30,8 @@ let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.
     if(sit&&P.get('silla')!=='0'){// la misma silla y el mismo escritorio de la oficina (medidas de scene.js), con la persona mirando hacia +x
       caja(.52,.08,.52,0,.43,0,'#3b3f46',grp);caja(.08,.55,.48,-.24,.745,0,'#3b3f46',grp);caja(.06,.39,.06,0,.195,0,'#8a8f98',grp);
       if(p==='tecla'){caja(.9,.04,1.8,.24+.45,.72,0,'#c9a877',grp);caja(.15,.015,.48,.36,.7475,0,'#f2f2f2',grp);caja(.03,.36,.58,.24+.75,.74+.36,-.3,'#111',grp)}}
-    grp.position.set((n-(tot-1)/2)*gap,0,0);grp.rotation.y=P.get('lado')?0:-rot;sc.add(grp);n++}
+    grp.position.set((n-(tot-1)/2)*gap,0,0);{const gi=(P.get('giros')||'').split(',').filter(Boolean).map(Number);grp.rotation.y=gi.length?-gi[n%gi.length]:P.get('lado')?0:-rot}   // giros=1.57,0.8,0,-1.57: una vuelta (frente, tres cuartos, costado, espalda)
+    sc.add(grp);n++}
   out.push(f+': '+Math.round(tris)+' tri')}
 if(P.get('cara')){cam.fov=14;cam.updateProjectionMatrix();cam.position.set(1.6,1.72,2.6);cam.lookAt(0,1.62,0)}
 else if(P.get('lado')){const d=3.2+tot*.66;cam.position.set(0,1.05,d);cam.lookAt(0,.9,0)}
