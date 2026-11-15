@@ -15,7 +15,7 @@ const cam=new THREE.PerspectiveCamera(+P.get('fov')||30,W/H,.1,60);
 const files=(P.get('m')||'of-h.glb').split(','),poses=(P.get('p')||'idle,walk0.1,sit').split(','),L=new GLTFLoader(),out=[];
 let n=0;const tot=files.length*poses.length,gap=+P.get('gap')||1.05,rot=P.get('lado')?0:(+P.get('h')||1.0);
 for(const f of files){const g=await L.loadAsync(f);let tris=0;g.scene.traverse(o=>{if(o.isMesh){tris+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}});avMat(g.scene,+P.get('tex')||0);
-  for(const p of poses){const a=avatarGLB(clone(g.scene),+P.get('alto')||1.74),grp=new THREE.Group();grp.add(a.g);
+  for(const p of poses){const a=avatarGLB(clone(g.scene),+P.get('alto')||1.74),grp=new THREE.Group();grp.add(a.g);(window.__avs=window.__avs||[]).push(a);
     const [p0,sem]=p.split('@'),gs=p0.startsWith('g:')?p0.split(':'):null,sit=p0==='sit'||p0==='tecla',md=sit?'sit':p0.startsWith('walk')?'walk':'idle';if(sem)a.seed=+sem;   // idle@3.7 = otra persona (otra semilla) · g:saludo:1.2 = gesto a los 1,2 s
     if(md==='walk'){a.gd=(+p0.slice(4)||0)*2*.33*a.an.alto;a.mix=1}if(gs)a.ges={id:gs[1],dur:AV_GES[gs[1]].dur,t0:1.3-(+gs[2]||1)};
     if(p0.startsWith('para')){// para0.3 = venía caminando y hace 0,3 s que frenó (para ver cómo vuelve al reposo)

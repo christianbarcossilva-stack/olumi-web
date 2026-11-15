@@ -2,7 +2,7 @@
 # Saca los ayudantes y lo que tapa la ropa, baja triángulos donde sobran y deja materiales simples (color + transparencia).
 import bpy, sys, os
 from bl_ext.user_default.mpfb.services.targetservice import TargetService
-a = sys.argv[sys.argv.index('--') + 1:]; out = a[0]; TRI = int(a[1]) if len(a) > 1 else 14000
+a = sys.argv[sys.argv.index('--') + 1:]; out = a[0]; TRI = int(a[1]) if len(a) > 1 else 14000; RELIEVE = 'relieve' in a[2:]   # relieve: la ropa conserva su mapa de relieve (pliegues con volumen)
 bm = [o for o in bpy.data.objects if o.type == 'MESH' and o.name == 'Human'][0]
 if bm.data.shape_keys: TargetService.bake_targets(bm)
 ms = [o for o in bpy.data.objects if o.type == 'MESH']
@@ -53,11 +53,17 @@ for m in bpy.data.materials:
     if not m.use_nodes: continue
     if not m.name.endswith('.body'): m.use_backface_culling = False
     # sin relieve ni oclusión: en la web pesan y casi no se notan a este tamaño
+    ropa = not any(x in m.name.lower() for x in ('body', 'hair', 'brow', 'lash', 'eye', 'teeth', 'tongue', 'bob', 'ponytail', 'short0'))
     for n in list(m.node_tree.nodes):
-        if n.bl_idname == 'ShaderNodeNormalMap': m.node_tree.nodes.remove(n)
+        if n.bl_idname == 'ShaderNodeNormalMap' and not (RELIEVE and ropa): m.node_tree.nodes.remove(n)
     bs = [n for n in m.node_tree.nodes if n.bl_idname == 'ShaderNodeBsdfPrincipled']
     for b in bs:
-        usados = {l.from_node for l in m.node_tree.links if l.to_node == b}
+        # lo que llega al material, directo o a través de otro nodo (el relieve pasa por el nodo «mapa de normales»)
+        usados, cola = set(), [b]
+        while cola:
+            x = cola.pop()
+            for l in m.node_tree.links:
+                if l.to_node == x and l.from_node not in usados: usados.add(l.from_node); cola.append(l.from_node)
         for n in list(m.node_tree.nodes):
             if n.bl_idname == 'ShaderNodeTexImage' and n not in usados: m.node_tree.nodes.remove(n)
         b.inputs['Roughness'].default_value = max(.55, b.inputs['Roughness'].default_value); b.inputs['Metallic'].default_value = 0

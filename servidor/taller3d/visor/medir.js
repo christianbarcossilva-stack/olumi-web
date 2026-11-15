@@ -1,0 +1,8 @@
+// mide la postura: dónde quedan las articulaciones (en metros, la persona mirando hacia +x). uso: node medir.js "m=a.glb&p=idle"
+const {chromium}=require('playwright'),fs=require('fs'),path=require('path');const [qs='']=process.argv.slice(2);
+const DIRS=[__dirname,'/home/claude/olumi-app/scripts/oficina-3d','/home/claude/olumi-web/olumi/beta/lib','/home/claude/taller3d/salida'];
+(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});const p=await b.newPage({viewport:{width:300,height:300}});p.on('pageerror',e=>console.log('ERR',e.message));
+ await p.route('**/*',r=>{const u=new URL(r.request().url());const n=decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname);for(const d of DIRS){const f=path.join(d,n);if(fs.existsSync(f))return r.fulfill({body:fs.readFileSync(f),contentType:n.endsWith('.html')?'text/html':n.endsWith('.js')?'text/javascript':'application/octet-stream'})}r.fulfill({status:404,body:''})});
+ await p.goto('http://visor.test/?h=0.000001&'+qs);await p.waitForFunction('window.__ok',null,{timeout:120000});
+ console.log(await p.evaluate(()=>{const out=[];for(const a of window.__avs){const B=a.bones,V=n=>{if(!B[n])return '—';B[n].updateWorldMatrix(true,false);const e=B[n].matrixWorld.elements;return [e[12],e[13],e[14]].map(x=>x.toFixed(3)).join(' ')};
+   out.push(['Hips','Spine2','Neck','Head','LeftShoulder','LeftArm','LeftForeArm','LeftHand','LeftHandMiddle1','LeftUpLeg','LeftLeg','LeftFoot','LeftToeBase'].map(n=>n.padEnd(16)+V(n)).join('\n'))}return out.join('\n---\n')}));await b.close()})();
