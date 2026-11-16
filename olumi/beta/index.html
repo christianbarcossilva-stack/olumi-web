@@ -682,6 +682,24 @@ html.ofipan .btmenu{z-index:10005}
 /* toques de app: sin zoom por doble toque (que agrandaba la pantalla al tocar rápido dos veces) y sin el destello gris al tocar */
 @media (hover:none){html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}button,[role=button],.tab,.btc,.tkrow{-webkit-touch-callout:none}}
 /* fin 1.52c */
+/* 1.52d */
+/* 1.52d · Pantalla completa en el teléfono (Christian 15/11: «mucha pantalla en negro y el cartel que dice de prueba hay que minimizarlo, roba pantalla»).
+   El margen a los costados es el de iOS (16 px); el borde seguro de los costados solo cuenta acostado (la isla y las esquinas). */
+@media (max-width:699px){
+  :root{--gl:16px;--gr:16px}
+  main,#main,#banner{margin-left:0!important;margin-right:0!important;max-width:none!important;width:auto}
+  #main{padding-left:var(--gl)!important;padding-right:var(--gr)!important}
+}
+@media (max-width:699px) and (orientation:landscape){:root{--gl:max(16px, env(safe-area-inset-left,0px));--gr:max(16px, env(safe-area-inset-right,0px))}}
+/* el cartel de prueba: una etiqueta chica; tocándola se abre la explicación */
+#banner .beta-note.chip{display:inline-flex;align-items:center;gap:6px;width:auto;max-width:100%;margin:0;padding:4px 11px 4px 8px;font-size:12px;line-height:1.35;border-radius:999px;cursor:pointer;
+  background:color-mix(in srgb,#ffd60a 12%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,#ffd60a 32%,transparent);-webkit-tap-highlight-color:transparent;user-select:none}
+#banner .beta-note.chip .mas{display:none;font-weight:400;color:var(--muted)}
+#banner .beta-note.chip.abre{border-radius:14px;align-items:flex-start;padding:8px 12px}
+#banner .beta-note.chip.abre .mas{display:inline}
+#banner .beta-note.chip .med{display:block;margin-top:4px;font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--muted)}
+#banner:has(> .beta-note.chip:only-child){padding-block:8px 0}
+/* fin 1.52d */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -1884,7 +1902,7 @@ function render(){
   {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  setHTML($('#banner'),(BETA?`<p class="note beta-note">${ic('beta','in')}<b>Versión de prueba</b> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.</p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner());
+  setHTML($('#banner'),(BETA?`<p class="note beta-note chip beta-chip" role="button" aria-label="Versión de prueba">${ic('beta','in')}<span><b>Prueba</b><span class="mas"> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.<span class="med"></span></span></span></p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner());
   setHTML($('#prodlist'),arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join(''));
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -5414,6 +5432,12 @@ var T_LOG={};function tLog(k){if(T_LOG[k])return;T_LOG[k]=Math.round(performance
 const _render152cT=render;render=function(){const r=_render152cT.apply(this,arguments);try{if(!T_LOG.pantalla&&mode==='live'&&(loaded.size>=NEED)&&document.querySelector('#main .vhead'))tLog('pantalla')}catch(_){}return r};
 addEventListener('message',e=>{const d=e.data||{};if(d&&d.ovListo)tLog('oficina')});
 /* === fin 1.52c === */
+/* === 1.52d · compacto === */
+// 1.52d · el cartel de prueba se abre y se cierra tocándolo. Abierto muestra también las medidas de la pantalla (para revisar márgenes en el iPhone).
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('#banner .beta-chip');if(!c)return;c.classList.toggle('abre');
+  const m=c.querySelector('.med');if(!m||!c.classList.contains('abre'))return;try{const q=s=>document.querySelector(s),r=s=>{const x=q(s);return x?Math.round(x.getBoundingClientRect().left):'–'},
+    cs=getComputedStyle(q('#main')||document.body);m.textContent=`pantalla ${innerWidth}×${innerHeight} · ${devicePixelRatio}x · título ${r('#main h1')} · margen ${cs.paddingLeft}/${cs.paddingRight} · app ${r('.app')}`}catch(x){}});
+/* === fin 1.52d === */
 async function personSearch(inp){
   const sel=document.getElementById(inp.dataset.psearch);const q=inp.value.trim();if(!USER||!sel)return;
   const hits=await USER.search(q);if(inp.value.trim()!==q)return;
