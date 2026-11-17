@@ -66,7 +66,7 @@ canvas{display:block;width:100%;height:100%;cursor:pointer;touch-action:manipula
 .pop h3{margin:0 0 2px;font:600 17px var(--f-display);letter-spacing:-.02em}.pop p{margin:0 0 8px;color:var(--muted);font-size:13px}
 .mechip{cursor:pointer;font:inherit;color:inherit}.medot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .pop .fns{margin:0 0 10px;padding-left:16px;font-size:13px;line-height:1.45}.pop .fns li{margin:2px 0}.pop .row{flex-wrap:wrap}
-.pop .x{position:absolute;right:10px;top:10px;width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);font-size:14px;line-height:24px;color:var(--muted);cursor:pointer;padding:0}
+#pop{z-index:7}.hud{z-index:2}.stage>.toast{z-index:7}.pop .x{position:absolute;right:10px;top:10px;width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);font-size:14px;line-height:24px;color:var(--muted);cursor:pointer;padding:0}
 .panel{background:var(--card);border-radius:30px;padding:8px;min-width:0;box-shadow:var(--shadow)}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--fill);border-radius:12px;padding:2px}
 .tabs button{font:500 13px var(--f-body);letter-spacing:-.01em;border:0;background:transparent;border-radius:10px;padding:7px 6px;color:var(--ink);cursor:pointer;transition:background .2s}
@@ -217,7 +217,7 @@ html.en-app .ev[data-feed]{cursor:pointer}html.en-app .ev[data-feed]:hover{backg
 import * as THREE from './lib/three.module.min.js';import {RoomEnvironment} from './lib/RoomEnvironment.js';import {RoundedBoxGeometry} from './lib/RoundedBoxGeometry.js';import {mergeGeometries} from './lib/BufferGeometryUtils.js';
 (()=>{
 const APP=document.documentElement.classList.contains('en-app');
-const post=m=>{try{parent.postMessage(m,'*')}catch(e){}};
+const post=m=>{try{if(m&&(m.olumiAbrir||m.olumiNuevo)&&document.pointerLockElement)document.exitPointerLock()}catch(e){}try{parent.postMessage(m,'*')}catch(e){}};
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage');
 const CL={floor:'#ffffff',wall:'#f7f7f9',wallTop:'#e2e2e7',glass:'rgba(205,218,232,.22)',glassTop:'rgba(150,165,185,.55)',desk:'#ebe3d6',deskSide:'#e0d6c6',deskTop:'#f6f0e6',dark:'#1d1d1f',street:'#ececf0',park:'#f4f4f7',lines:'#e0e0e6'};
 const mq=matchMedia('(prefers-color-scheme: dark)');let DARK=false;
@@ -950,13 +950,12 @@ let FULLW=false;
 // pantalla completa: sola al recorrer y al entrar a editar; con el botón se entra o se sale cuando uno quiera (FULLU = lo que eligió la persona)
 let FULLU=null;const bFull=document.getElementById('b_full');
 function fullSync(){const want=WALK.on||(FULLU!=null?FULLU:ED.on);if(bFull){bFull.hidden=WALK.on;bFull.setAttribute('aria-pressed',want);bFull.title=want?'Salir de pantalla completa':'Pantalla completa';bFull.setAttribute('aria-label',bFull.title)}if(want===FULLW)return;FULLW=want;
-  if(want){const req=!matchMedia('(pointer:coarse)').matches&&(stage.requestFullscreen||stage.webkitRequestFullscreen);let p=null;try{p=req&&req.call(stage)}catch(e){}
-    if(p&&p.catch)p.catch(()=>fakeFull(true));else if(!p&&!document.webkitFullscreenElement)fakeFull(true)}
+  if(want)fakeFull(true)
   else{if(document.fullscreenElement||document.webkitFullscreenElement)(document.exitFullscreen||document.webkitExitFullscreen).call(document);fakeFull(false)}}
 function fakeFull(on){stage.classList.toggle('fullfake',on);if(parent!==window)parent.postMessage({ovFull:on},'*')}
 const onFs=()=>{const fs=document.fullscreenElement||document.webkitFullscreenElement;if(!fs&&FULLW&&!stage.classList.contains('fullfake')){FULLW=false;FULLU=ED.on?false:null;if(WALK.on)setWalk(false);fullSync()}setTimeout(fit,60)};
 if(bFull)bFull.addEventListener('click',()=>{FULLU=!FULLW;fullSync();setTimeout(fit,80)});
-document.addEventListener('fullscreenchange',onFs);document.addEventListener('webkitfullscreenchange',onFs);
+document.addEventListener('fullscreenchange',onFs);document.addEventListener('webkitfullscreenchange',onFs);addEventListener('keydown',e=>{if(e.key==='Escape'&&FULLW&&!WALK.on&&!ED.on){FULLU=false;fullSync();setTimeout(fit,80)}});
 function setWalk(on){if(on===WALK.on)return;stage.classList.add('fade');setTimeout(()=>{WALK.on=on;if(!on){usoClose();uhint.hidden=true;joyOff();drag=pin=null}CAM=on?FP:ISO;walkui.hidden=!on;bWalk.hidden=on;stage.classList.toggle('walking',on);
     if(on){const me=APP&&S.me&&S.people.find(p=>p.id===S.me&&!p.inVan);let wx=me?me.x:3.5,wy=me?me.y:16.8;if(me){navReady();const [ci,cj]=nvNear(...nvI(me.x,me.y));wx=NV.x0+ci*NV.c;wy=NV.y0+cj*NV.c}Object.assign(WALK,{camS:null,x:wx,y:wy,yaw:-Math.PI/2,pitch:-.12,ty:-Math.PI/2,tp:-.12,vx:0,vy:0,dist:WALK.dist||2.6,keys:{},joy:[0,0],third:WALK.third!==false});whint.textContent=TOUCH?'Joystick para caminar · arrastrá para mirar':'Hacé clic para mirar con el mouse · W A S D camina · 1 a 5 hace gestos · V cambia la vista · F edita · Esc sale'}
     else if(document.pointerLockElement)document.exitPointerLock();
