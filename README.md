@@ -21,3 +21,8 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 - `darvi/`: página de Darvi (software de logística: andenes y patio, depósito, personal, autoelevadores y parque logístico), con calculadora de ahorro. Nombre provisorio.
 - `darvi/maqueta/`: maqueta 3D de Darvi con el motor completo de Ondi (editor con catálogo, barra 1–0, deshacer, planta 2D del galpón, caminar adentro, sacar el techo), sin nada informático: ni cámaras, ni Wi-Fi, ni sensores, ni gabinetes, ni fibra, ni tickets. Agrega alertas de operación, turnos de andén por nave, balanza, playa de espera y las ubicaciones con código de cada estantería (Nave-Estantería-Módulo-Nivel-Posición). Empresas y cifras de ejemplo, sin nombres reales ni foto aérea. Se arma con los scripts del proyecto Unity Tech (estiba-desde-ondi.py + estiba-capa.js + estiba-publica.py).
 - Está en vista previa: franja "Vista previa", `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
+
+## Portuno (vista previa)
+- `portuno/`: demostración de Portuno (control de acceso multimarca: ZKTeco, Hikvision, Dahua e Intelbras en un solo panel). Nombre provisorio.
+- Es la página de la demo con datos inventados (no hay servidor detrás: todo corre en el navegador y se borra al recargar). Se genera con `npm run build:web` en el proyecto de Portuno (`web/dist/index.html`) y se le agrega `noindex`; no editarla a mano.
+- Está en vista previa: `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
