@@ -287,10 +287,20 @@ body{background:radial-gradient(1100px 760px at 100% 100%,var(--glow1),transpare
 .modal > div{background:color-mix(in srgb,var(--solid) 82%,transparent)}
 select option{background:var(--solid);color:var(--ink)}
 
-/* menú de la izquierda que se achica: quedan los íconos */
-.side{position:sticky}.sidetog{position:absolute;right:-13px;top:58px;z-index:5;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 12px -4px rgba(0,0,0,.35)}.sidetog:hover{color:var(--accent);border-color:var(--accent)}
-html.navmini .app{grid-template-columns:72px minmax(0,1fr)}html.navmini .side{padding:20px 10px}html.navmini .side .orgsel,html.navmini .side .side-foot,html.navmini .side .sopo,html.navmini .side .nav button span,html.navmini .side .brand-t,html.navmini .side .logo span,html.navmini .side .logo small{display:none}
-html.navmini .nav button{justify-content:center;padding:11px 0}html.navmini .side .logo{justify-content:center}
+/* menú de la izquierda: vidrio, pastilla que se estira hasta la opción elegida y modo chico con ícono y nombre (como el riel de Olumi) */
+.side{background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%)}
+.sidehead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidetog{flex:none;width:34px;height:34px;border-radius:10px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:color .2s,background .2s}
+.sidetog:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)}.sidetog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nav{position:relative;display:grid;gap:2px}
+.nav button{position:relative;z-index:1;border-radius:999px;min-height:40px;transition:color .2s}.nav button:hover{color:var(--ink)}.nav button[aria-current="page"]{color:var(--ink);font-weight:600}.nav button[aria-current="page"] svg{color:var(--accent)}
+.nav button svg{width:19px;height:19px;flex:none}
+.navpill{position:absolute;left:0;top:0;z-index:0;border-radius:999px;pointer-events:none;opacity:0;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 22%,transparent),color-mix(in srgb,var(--accent) 12%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 38%,transparent),0 8px 22px -12px var(--accent);transition:transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1)}
+.nav button[aria-current="page"]{background:none!important}.side .nav button[aria-current="page"]::before{display:none}
+html.navmini .app{grid-template-columns:84px minmax(0,1fr)}html.navmini .side{padding:18px 8px;align-items:stretch}html.navmini .sidehead{flex-direction:column;gap:12px}
+html.navmini .side .orgsel,html.navmini .side .side-foot,html.navmini .side .sopo,html.navmini .side .logo>span{display:none}
+html.navmini .nav button{flex-direction:column;justify-content:center;gap:3px;padding:8px 2px 7px;border-radius:18px;min-height:54px}html.navmini .nav button span{font-size:10px;font-weight:600;line-height:1.1;text-align:center;white-space:normal}html.navmini .navpill{border-radius:18px}
+@media (prefers-reduced-motion:reduce){.navpill{transition:none}}
 /* documentación de conexiones */
 .doc{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}
 .docl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto;padding:2px}
@@ -553,12 +563,13 @@ function render() {
   if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
   S.docRe = false;
   if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
-  $('#root').innerHTML = `<div class="app"><aside class="side"><button class="sidetog" data-sidetog aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${S.mini ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'}"/></svg></button>${logo()}
-      <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
+  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15"/><path d="${S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'}"/></svg></button></div>
+      <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav"><span class="navpill" aria-hidden="true"></span>${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
     <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
+  navPill();
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
   if (S.view === 'site' && S.tab === 'doc' && S.site && staff() && !S.falta) mountDoc();
   if (S.view === 'sim' && S.sim && staff() && !S.falta) mountSim();
@@ -1416,6 +1427,12 @@ function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.
     const fbs = new Set(fb.map(fk)), idos = (ca.fus || []).filter(x => x.a[0] && x.b[0] && !fbs.has(fk(x))); if (idos.length) out.push({ r: id, m: `Sacó ${idos.length === 1 ? 'el empalme ' + lt(idos[0]) : idos.length + ' empalmes'} en ${id}` });
     const ch = ['nombre', 'lugar', 't', 'cap', 'nota'].filter(k => (ca[k] || '') !== (cb[k] || '')); if (ch.length) out.push({ r: id, m: `Anotó en ${id}: ` + ch.map(k => ({ nombre: 'nombre', lugar: 'lugar', t: 'tipo', cap: 'capacidad', nota: 'nota' })[k]).join(', ') }); }
   return out; }
+
+// la pastilla del menú se estira hasta la opción elegida (el mismo movimiento que Olumi)
+function navPill() { const nav = document.querySelector('.side .nav'), pl = nav && nav.querySelector('.navpill'), b = nav && nav.querySelector('[aria-current="page"]'); if (!pl) return;
+  if (!b) { pl.style.opacity = 0; return; } const to = [b.offsetTop, b.offsetLeft, b.offsetWidth, b.offsetHeight], de = S.pill || to, quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pon = r => { pl.style.transform = `translate(${r[1]}px,${r[0]}px)`; pl.style.width = r[2] + 'px'; pl.style.height = r[3] + 'px'; };
+  pl.style.transition = 'none'; pon(de); pl.style.opacity = 1; void pl.offsetWidth; if (!quieto) pl.style.transition = ''; pon(to); S.pill = to; }
 })();
 </script>
 </body>
