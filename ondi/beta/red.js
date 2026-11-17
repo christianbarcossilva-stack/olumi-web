@@ -31,6 +31,29 @@ const CAT = {
   shelf: { n: 'Bandeja fija', U: 1, g: 'Orden y energía' },
   blank: { n: 'Tapa ciega', U: 1, g: 'Orden y energía' }
 };
+// switches de marca (datos de la ficha de cada fabricante): el modelo define puertos, SFP y PoE. Sumar uno es sumar un renglón.
+// [id, marca, modelo, puertos de cobre, SFP, puertos PoE, presupuesto PoE en W, SFP+ (10 G)]
+const MOD = [
+  ['ubi-lite8p', 'Ubiquiti', 'USW-Lite-8-PoE', 8, 0, 4, 52], ['ubi-16p', 'Ubiquiti', 'USW-16-PoE', 16, 2, 8, 42], ['ubi-24', 'Ubiquiti', 'USW-24', 24, 2, 0, 0], ['ubi-24p', 'Ubiquiti', 'USW-24-PoE', 24, 2, 16, 95],
+  ['ubi-pro24p', 'Ubiquiti', 'USW-Pro-24-PoE', 24, 2, 24, 400, 1], ['ubi-48', 'Ubiquiti', 'USW-48', 48, 4, 0, 0], ['ubi-48p', 'Ubiquiti', 'USW-48-PoE', 48, 4, 32, 195], ['ubi-pro48p', 'Ubiquiti', 'USW-Pro-48-PoE', 48, 4, 48, 600, 1],
+  ['ubi-agg', 'Ubiquiti', 'USW-Aggregation', 0, 8, 0, 0, 1],
+  ['tpl-2210mp', 'TP-Link', 'TL-SG2210MP', 8, 2, 8, 150], ['tpl-1016pe', 'TP-Link', 'TL-SG1016PE', 16, 0, 8, 110], ['tpl-1024d', 'TP-Link', 'TL-SG1024D', 24, 0, 0, 0], ['tpl-2428p', 'TP-Link', 'TL-SG2428P', 24, 4, 24, 250],
+  ['tpl-3428', 'TP-Link', 'TL-SG3428', 24, 4, 0, 0], ['tpl-3428mp', 'TP-Link', 'TL-SG3428MP', 24, 4, 24, 384], ['tpl-3452', 'TP-Link', 'TL-SG3452', 48, 4, 0, 0], ['tpl-3452p', 'TP-Link', 'TL-SG3452P', 48, 4, 48, 384],
+  ['tpl-3008f', 'TP-Link', 'TL-SX3008F', 0, 8, 0, 0, 1],
+  ['cis-1000-8p', 'Cisco', 'Catalyst C1000-8P-2G-L', 8, 2, 8, 67], ['cis-1000-24t', 'Cisco', 'Catalyst C1000-24T-4G-L', 24, 4, 0, 0], ['cis-1000-24p', 'Cisco', 'Catalyst C1000-24P-4G-L', 24, 4, 24, 195],
+  ['cis-1000-48t', 'Cisco', 'Catalyst C1000-48T-4G-L', 48, 4, 0, 0], ['cis-1000-48p', 'Cisco', 'Catalyst C1000-48P-4G-L', 48, 4, 48, 370], ['cis-350-24p', 'Cisco', 'CBS350-24P-4G', 24, 4, 24, 195],
+  ['cis-350-48p', 'Cisco', 'CBS350-48P-4G', 48, 4, 48, 370], ['cis-9200-24p', 'Cisco', 'Catalyst C9200L-24P-4G', 24, 4, 24, 370], ['cis-9200-48p', 'Cisco', 'Catalyst C9200L-48P-4G', 48, 4, 48, 370]];
+for (const [id, marca, modelo, rj, sfp, poe, w, x] of MOD) CAT['sw-' + id] = { n: marca + ' ' + modelo, U: 1, rj, sfp, g: 'Switches de marca', marca, modelo, poe, w, x: !!x };
+const MARCAS = [...new Set(MOD.map(m => m[1]))];
+const modTxt = K => [K.rj ? K.rj + ' puertos' : '', K.sfp ? K.sfp + (K.x ? ' SFP+' : ' SFP') : '', K.poe ? (K.poe === K.rj ? 'todos PoE' : K.poe + ' PoE') + ' · ' + K.w + ' W' : K.rj ? 'sin PoE' : ''].filter(Boolean).join(' · ');
+// buscador: «cisco 24 poe», «48», «usw pro», «simple» (sin PoE), «fibra» (solo SFP)
+function modBusca(q, marca) { const w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  return Object.keys(CAT).filter(k => { const K = CAT[k]; if (!K.marca || (marca && K.marca !== marca)) return false; const t = (K.n + ' ' + K.rj + ' ' + (K.poe ? 'poe' : 'simple') + (K.rj ? '' : ' fibra sfp') + (K.x ? ' 10g sfp+' : '')).toLowerCase(); return w.every(x => t.includes(x)); }); }
+function modPick(V, r) { const L = modBusca(V.mq, V.mm);
+  return `<div class="red-mp"><input data-r="mq" type="search" placeholder="Buscar: cisco 24 poe, usw 48, tl-sg…" value="${esc(V.mq || '')}" aria-label="Buscar modelo de switch" autocomplete="off">
+    <div class="red-mm">${['', ...MARCAS].map(m => `<button data-r="mm" data-v="${esc(m)}" class="${(V.mm || '') === m ? 'on' : ''}">${m || 'Todas'}</button>`).join('')}</div>
+    <div class="red-mres" data-mr="${r}">${modLista(L, r)}</div></div>`; }
+const modLista = (L, r) => L.length ? `<ul class="red-ml">${L.map(k => `<li><button data-r="${r}" data-v="${k}"><b>${esc(CAT[k].n)}</b><span>${modTxt(CAT[k])}</span></button></li>`).join('')}</ul>` : '<p class="red-nada">No hay modelos con eso. Probá con menos palabras.</p>';
 const COL = { azul: ['Azul', '#2F6FD6'], gris: ['Gris', '#8D979F'], blanco: ['Blanco', '#E9ECEE'], amarillo: ['Amarillo', '#E6BE1E'], verde: ['Verde', '#2E9E5B'], rojo: ['Rojo', '#D2474B'], naranja: ['Naranja', '#E07A1F'], violeta: ['Violeta', '#8E5BD0'], negro: ['Negro', '#3A4046'], aqua: ['Aguamarina', '#35C2C1'] };
 // colores de los hilos de fibra, norma TIA-598
 const TIA = [['azul', '#2F6FD6'], ['naranja', '#E07A1F'], ['verde', '#2E9E5B'], ['marrón', '#8A5A3C'], ['gris', '#8D979F'], ['blanco', '#EDEFF1'], ['rojo', '#D2474B'], ['negro', '#23272B'], ['amarillo', '#E6BE1E'], ['violeta', '#8E5BD0'], ['rosa', '#E58FB1'], ['aguamarina', '#35C2C1']];
@@ -226,7 +249,9 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
       ${real ? fila('Estado', `<span class="red-pill ${real.estado}">${EST[real.estado] || 'sin dato'}</span>`) + (real.ip ? fila('IP', esc(real.ip)) : '') + (real.version ? fila('Firmware', esc(real.version)) : '') : ''}
       ${!ed ? (it.modelo ? fila('Modelo', esc(it.modelo)) : '') + (it.serie ? fila('N.º de serie', esc(it.serie)) : '') + (it.mac ? fila('MAC', `<span class="red-mono">${esc(it.mac)}</span>`) : '') + (it.ip ? fila('IP de gestión', esc(it.ip)) : '') + (it.nota ? fila('Nota', esc(it.nota)) : '') : ''}</dl>`;
     if (!ed) return h; const rs = H.reales ? H.reales() : [];
-    return h + `${campo('Nombre', inp('it', 'name', it.name, 'maxlength="50" placeholder="' + esc(K.n) + '"'))}
+    const swM = esSW(it) && !['gw', 'fw'].includes(it.type);
+    return h + `${swM ? `<div class="red-sec">Modelo</div>${K.marca ? `<p class="red-mod"><b>${esc(K.n)}</b><span>${modTxt(K)}</span></p>` : '<p class="red-ayuda">Elegí la marca y el modelo: así quedan los puertos, los SFP y el PoE reales.</p>'}${V.mpick ? modPick(V, 'setm') : `<div class="red-g"><button class="red-b${K.marca ? '' : ' pri'}" data-r="mpick">${K.marca ? 'Cambiar de modelo' : 'Elegir modelo'}</button></div>`}` : ''}
+      ${campo('Nombre', inp('it', 'name', it.name, 'maxlength="50" placeholder="' + esc(K.n) + '"'))}
       <div class="red-g2">${campo('Marca y modelo', inp('it', 'modelo', it.modelo, 'maxlength="60" placeholder="Ej.: USW Pro 24 PoE"'))}${campo('N.º de serie', inp('it', 'serie', it.serie, 'maxlength="40"'))}
       ${campo('MAC', inp('it', 'mac', it.mac, 'maxlength="17" placeholder="aa:bb:cc:dd:ee:ff"'))}${campo('IP de gestión', inp('it', 'ip', it.ip, 'maxlength="40" placeholder="Ej.: 10.0.10.2"'))}
       ${campo('Color del frente', sel('it', 'piel', it.piel, Object.entries(PIEL), 'Automático'))}${campo('Posición', `<span class="red-stp"><button class="red-b" data-r="up" title="Subir">↑</button><select data-r="set" data-o="it" data-k="u">${Array.from({ length: c.cap }, (_, i) => i + 1).filter(u => entra(c, it, u)).map(u => opt(u, 'U' + u + (K.U > 1 ? '–' + (u + K.U - 1) : ''), it.u)).join('')}</select><button class="red-b" data-r="dn" title="Bajar">↓</button></span>`)}</div>
@@ -237,11 +262,11 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
   let rj = 0, rjU = 0, fo = 0, foU = 0; const caidos = [];
   for (const it of c.items) for (const p of puertos(it.type)) { const st = estadoP(H, devs, V.cid, it.iid, p.id); if (p.k === 'fo') { fo++; if (st) foU++; } else if (esSW(it)) { rj++; if (st) rjU++; }
     if (st === 'crit' && (esPP(it) ? !lk(c, it.iid, p.id) : true)) { const eq = cadena(H, V.cid, it.iid, p.id).find(x => x.t === 'eq'); if (eq && !caidos.some(z => z[2] === eq.dev) && esSW(it)) caidos.push([it, p.id, eq.dev]); } }
-  const grupos = {}; for (const k in CAT) (grupos[CAT[k].g] = grupos[CAT[k].g] || []).push(k);
+  const grupos = {}; for (const k in CAT) if (!CAT[k].marca) (grupos[CAT[k].g] = grupos[CAT[k].g] || []).push(k);
   return `<div class="red-h"><small>Resumen</small><b>${occ.size} de ${c.cap} U ocupadas</b></div>
     <dl class="red-rows">${rj ? fila('Puertos de switch', rjU + ' usados · ' + (rj - rjU) + ' libres') : ''}${fo ? fila('Bocas de fibra', foU + ' usadas · ' + (fo - foU) + ' libres') : ''}${fila('Patch cords', String(c.links.length))}</dl>
     ${caidos.length ? `<div class="red-sec">Sin señal</div><ul class="red-l">${caidos.map(([it, pid, dev]) => `<li><a href="#" data-r="ver" data-v="${esc(V.cid + '|' + it.iid + '|' + pid)}"><i class="crit"></i>${esc(nomDev(devs[dev]) || dev)} · ${esc(nomIt(it))} ${nomP(it, pid)}</a></li>`).join('')}</ul>` : ''}
-    ${ed ? `<div class="red-sec">Agregar al rack · ${c.cap - occ.size} U libres</div><div class="red-g"><select id="red-tipo">${Object.entries(grupos).map(([g, ks]) => `<optgroup label="${g}">${ks.map(k => `<option value="${k}">${CAT[k].n}${CAT[k].U > 1 ? ' · ' + CAT[k].U + 'U' : ''}</option>`).join('')}</optgroup>`).join('')}</select><button class="red-b pri" data-r="add">Agregar</button></div>` : ''}
+    ${ed ? `<div class="red-sec">Agregar al rack · ${c.cap - occ.size} U libres</div><div class="red-g"><select id="red-tipo">${Object.entries(grupos).map(([g, ks]) => `<optgroup label="${g}">${ks.map(k => `<option value="${k}">${CAT[k].n}${CAT[k].U > 1 ? ' · ' + CAT[k].U + 'U' : ''}</option>`).join('')}</optgroup>`).join('')}</select><button class="red-b pri" data-r="add">Agregar</button></div><div class="red-sec">Switch de marca</div>${modPick(V, 'addm')}` : ''}
     <p class="red-ayuda">${ed ? 'Tocá una boca para ver todo su recorrido y documentarla. Tocá el frente de un equipo para ponerle nombre, modelo y serie.' : 'Tocá una boca para ver todo su recorrido, del switch al equipo.'}</p>`; }
 function entra(c, it, u) { const U = CAT[it.type].U; if (u < 1 || u + U - 1 > c.cap) return false; const occ = new Set(); c.items.forEach(o => { if (o !== it) for (let k = 0; k < (CAT[o.type] || { U: 1 }).U; k++) occ.add(o.u + k); }); for (let k = 0; k < U; k++) if (occ.has(u + k)) return false; return true; }
 
@@ -260,12 +285,14 @@ const fibsDe = (H, V) => H.fibs.filter(F => V.todos || F.from === V.cid || F.to 
 function tablaCables(H, V, imp) { const R = filas(H, V.todos ? Object.keys(H.cabs) : [V.cid]);
   if (!R.length) return '<p class="red-nada">Todavía no hay cables documentados' + (V.todos ? '' : ' en este rack') + '. Tocá una boca en el frente y completá a dónde va.</p>';
   return `<div class="red-tw"><table class="red-t"><thead><tr>${V.todos ? '<th>Rack</th>' : ''}<th>Etiqueta</th><th>Switch · puerto</th><th>Patchera · boca</th><th>Categoría</th><th>Color</th><th class="n">m</th><th>Destino</th><th>Estado</th><th>VLAN</th><th>PoE</th><th>Certif.</th><th>Nota</th></tr></thead><tbody>${R.map(r => `<tr>${V.todos ? `<td>${esc(r.cid)}</td>` : ''}<td><b>${imp ? esc(r.et) : `<a href="#" data-r="ver" data-v="${esc(r.v)}">${esc(r.et || '—')}</a>`}</b></td><td>${esc(r.sw) || '<span class="t-warn">sin patch cord</span>'}</td><td>${esc(r.pp)}</td><td>${esc(r.cat)}</td><td>${esc(r.col)}</td><td class="n">${esc(r.m)}</td><td>${esc(r.dst)}</td><td>${r.est ? `<span class="t-${r.est}">${EST[r.est]}</span>` : ''}</td><td>${esc(r.vlan)}</td><td>${esc(r.poe)}</td><td>${r.cert ? `<span class="${r.cert === 'Aprobado' ? 't-ok' : 't-crit'}">${r.cert}</span>` : ''}</td><td>${esc(r.nota)}</td></tr>`).join('')}</tbody></table></div>`; }
-function tablaFibras(H, V, imp) { const L = fibsDe(H, V), ed = H.editar() && !imp;
-  if (!L.length) return '<p class="red-nada">Este rack no tiene fibras. Se dibujan en la maqueta y después se asigna cada hilo a una boca de la patchera.</p>';
-  return L.map(F => { const hs = hilos(H, F), m = H.largo ? H.largo(F) : 0, usados = hs.filter(x => x.e.length).length, lado = e => e ? `${esc(e.cid)} · ${esc(nomIt(e.it))} · ${nomP(e.it, e.pid)}` : '<span class="red-mut">—</span>';
-    return `<section class="red-fib"><header><b>${imp ? esc(F.id) : `<a href="#" data-r="ir" data-v="${esc(F.id)}">${esc(F.id)}</a>`}${F.nombre ? ' · ' + esc(F.nombre) : ''}</b><span>${esc(F.from || '?')} → ${esc(F.to || '?')} · ${F.hilos} hilos · ${usados} en uso${m ? ' · ' + m + ' m' : ''}${F.tipo ? ' · ' + FTIPO[F.tipo][0] : ''}${F.con ? ' · ' + FCON[F.con] : ''}${F.tend ? ' · ' + esc(F.tend) : ''}</span></header>
-      ${ed ? `<div class="red-g4">${campo('Nombre', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="nombre" value="${esc(F.nombre || '')}" maxlength="40" placeholder="Ej.: Troncal norte">`)}${campo('Tipo', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tipo">${opt('', 'Sin anotar', F.tipo)}${Object.entries(FTIPO).map(([k, v]) => opt(k, v[0], F.tipo)).join('')}</select>`)}${campo('Conector', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="con">${opt('', 'Sin anotar', F.con)}${Object.entries(FCON).map(([k, v]) => opt(k, v, F.con)).join('')}</select>`)}${campo('Tendido', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tend">${opt('', 'Sin anotar', F.tend)}${FTEND.map(x => opt(x, x, F.tend)).join('')}</select>`)}</div>` : ''}
-      <div class="red-tw"><table class="red-t"><thead><tr><th>Hilo</th><th>Color</th><th>En ${esc(F.from || 'una punta')}</th><th>En ${esc(F.to || 'la otra punta')}</th><th class="n">dB</th><th>Estado</th></tr></thead><tbody>${hs.map(x => { const a = x.e.find(e => e.cid === F.from) || (x.e[0] && x.e[0].cid !== F.to ? x.e[0] : null), b = x.e.find(e => e !== a) || null, db = F.db && F.db[x.h];
+function tablaFibras(H, V, imp) { const L = fibsDe(H, V), ed = H.editar() && !imp, racks = H.racks ? H.racks() : Object.keys(H.cabs).map(k => [k, k]);
+  const nueva = ed ? `<div class="red-g red-fnew"><button class="red-b pri" data-r="nfib">Nueva fibra desde ${esc(V.cid)}</button><span class="red-ayuda">Después asignás cada hilo a una boca de la patchera tocándola en el frente.</span></div>` : '';
+  const punta = (F, k, kt) => `${campo(k === 'from' ? 'Desde' : 'Hasta', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${k}">${opt('', 'Otro lugar', F[k])}${racks.map(([r, t]) => opt(r, t, F[k])).join('')}</select>`)}${F[k] ? '' : campo(k === 'from' ? 'Lugar de origen' : 'Lugar de destino', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${kt}" value="${esc(F[kt] || '')}" maxlength="60" placeholder="Ej.: cámara del portón, ODF de la UTE">`)}`;
+  if (!L.length) return nueva + '<p class="red-nada">Este rack no tiene fibras. Creala acá o dibujala en la maqueta, y después asigná cada hilo a una boca de la patchera.</p>';
+  return nueva + L.map(F => { const hs = hilos(H, F), m = (H.largo ? H.largo(F) : 0) || F.m || 0, usados = hs.filter(x => x.e.length).length, lado = e => e ? `${esc(e.cid)} · ${esc(nomIt(e.it))} · ${nomP(e.it, e.pid)}` : '<span class="red-mut">—</span>';
+    return `<section class="red-fib"><header><b>${imp ? esc(F.id) : `<a href="#" data-r="ir" data-v="${esc(F.id)}">${esc(F.id)}</a>`}${F.nombre ? ' · ' + esc(F.nombre) : ''}</b><span>${esc(F.from || F.fromTxt || '?')} → ${esc(F.to || F.toTxt || '?')} · ${F.hilos} hilos · ${usados} en uso${m ? ' · ' + m + ' m' : ''}${F.tipo ? ' · ' + FTIPO[F.tipo][0] : ''}${F.con ? ' · ' + FCON[F.con] : ''}${F.tend ? ' · ' + esc(F.tend) : ''}</span></header>
+      ${ed ? `<div class="red-g4">${punta(F, 'from', 'fromTxt')}${punta(F, 'to', 'toTxt')}${campo('Hilos', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="hilos">${[2, 4, 6, 8, 12, 24, 48, 72, 96, 144].map(n => opt(n, n + ' hilos', F.hilos)).join('')}</select>`)}${campo('Largo (m)', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="m" value="${F.m != null ? String(F.m).replace('.', ',') : ''}" inputmode="decimal" maxlength="7" placeholder="${H.largo && H.largo(F) ? 'Medido en la maqueta: ' + H.largo(F) : 'Ej.: 180'}">`)}${campo('Nombre', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="nombre" value="${esc(F.nombre || '')}" maxlength="40" placeholder="Ej.: Troncal norte">`)}${campo('Tipo', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tipo">${opt('', 'Sin anotar', F.tipo)}${Object.entries(FTIPO).map(([k, v]) => opt(k, v[0], F.tipo)).join('')}</select>`)}${campo('Conector', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="con">${opt('', 'Sin anotar', F.con)}${Object.entries(FCON).map(([k, v]) => opt(k, v, F.con)).join('')}</select>`)}${campo('Tendido', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tend">${opt('', 'Sin anotar', F.tend)}${FTEND.map(x => opt(x, x, F.tend)).join('')}</select>`)}</div>` : ''}
+      <div class="red-tw"><table class="red-t"><thead><tr><th>Hilo</th><th>Color</th><th>En ${esc(F.from || F.fromTxt || 'una punta')}</th><th>En ${esc(F.to || F.toTxt || 'la otra punta')}</th><th class="n">dB</th><th>Estado</th></tr></thead><tbody>${hs.map(x => { const a = x.e.find(e => e.cid === F.from) || (x.e[0] && x.e[0].cid !== F.to ? x.e[0] : null), b = x.e.find(e => e !== a) || null, db = F.db && F.db[x.h];
         return `<tr class="${x.e.length ? '' : 'lib'}"><td>${x.h}</td><td><i class="red-hc" style="background:${hiloCol(x.h)[1]}"></i>${may(hiloCol(x.h)[0])}</td><td>${lado(a)}</td><td>${lado(b)}</td><td class="n">${db != null ? String(db).replace('.', ',') : ''}</td><td>${x.e.length >= 2 ? '<span class="t-ok">conectado</span>' : x.e.length ? '<span class="t-warn">una sola punta</span>' : '<span class="red-mut">libre</span>'}</td></tr>`; }).join('')}</tbody></table></div></section>`; }).join(''); }
 function bajar(H, V) { const q = v => { v = String(v == null ? '' : v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }, L = [];
   L.push(['Rack', 'Etiqueta', 'Switch y puerto', 'Patchera y boca', 'Categoría', 'Color', 'Metros', 'Destino', 'Estado', 'VLAN', 'PoE', 'Certificación', 'Nota']);
@@ -300,19 +327,27 @@ function pintar(el, H, V) { css(); const c = H.cabs[V.cid]; if (!c) return; V.ta
 
 function evento(el, e) { const { H, V } = el.__red, t = e.target, c = H.cabs[V.cid]; e.stopPropagation(); if (!c) return;
   const R = () => pintar(el, H, V), G = () => { H.guardar(); V._mismo = true; R(); };
-  if (e.type === 'input') { if (t.dataset.r === 'q') { V.q = t.value; const r = el.querySelector('.red-res'); if (r) r.innerHTML = buscar(H, V); } return; }
+  if (e.type === 'input') { if (t.dataset.r === 'q') { V.q = t.value; const r = el.querySelector('.red-res'); if (r) r.innerHTML = buscar(H, V); }
+    if (t.dataset.r === 'mq') { V.mq = t.value; const r = el.querySelector('.red-mres'); if (r) r.innerHTML = modLista(modBusca(V.mq, V.mm), r.dataset.mr); } return; }
   if (e.type === 'change') { const k = t.dataset.r; if (k === 'rack') { V.cid = t.value; V.sel = null; V.linking = false; if (H.abrir) H.abrir(V.cid); R(); return; }
     if (k !== 'set' || !H.editar()) return; aplicar(H, V, t.dataset.o, t.dataset.k, t.value.trim(), t.dataset.id); G(); return; }
   const a = t.closest('[data-r]'), p = t.closest('[data-rp]'), it = t.closest('[data-it]');
   if (a && !/^(INPUT|SELECT)$/.test(a.tagName)) { const k = a.dataset.r, v = a.dataset.v || ''; e.preventDefault();
     if (k === 'cerrar') return H.cerrar(); if (k === 'tab') { V.tab = v; return R(); } if (k === 'ir') return H.ir(v); if (k === 'csv') return bajar(H, V); if (k === 'imp') return imprimir(H, V); if (k === 'todos') { V.todos = !V.todos; return R(); }
+    if (k === 'mm') { V.mm = v; V._mismo = true; R(); const q = el.querySelector('[data-r="mq"]'); if (q) q.focus(); return; }
     if (k === 'zoom') { V.zoom = Math.max(1, Math.min(2.5, (V.zoom || 1) + (+v))); return R(); }
     if (k === 'ver') { const [cid, iid, pid] = v.split('|'); if (!H.cabs[cid]) return; V.cid = cid; V.sel = pid ? [iid, pid] : iid ? [iid] : null; V.tab = 'frente'; V.linking = false; V.q = ''; if (H.abrir) H.abrir(cid); return R(); }
     if (!H.editar()) return; const [iid, pid] = V.sel || [];
+    if (k === 'mpick') { V.mpick = true; V._mismo = true; R(); const q = el.querySelector('[data-r="mq"]'); if (q) q.focus(); return; }
+    if (k === 'nfib') { let n = 1; while (H.fibs.some(f => f.id === 'FO-' + String(n).padStart(2, '0'))) n++; const id = 'FO-' + String(n).padStart(2, '0'); H.fibs.push({ id, from: V.cid, to: '', hilos: 12, tipo: 'os2', pts: [] }); V.tab = 'fibras'; H.aviso('Fibra ' + id + ' creada: completá hasta dónde llega y asigná los hilos a las bocas.'); return G(); }
+    if (k === 'setm' && iid) { const item = itemDe(c, iid), K = CAT[v]; if (!item || !K) return; const quedan = new Set(puertos(v).map(x => x.id)); let fuera = 0;
+      c.links = c.links.filter(l => { const ok = !((l[0][0] === iid && !quedan.has(l[0][1])) || (l[1][0] === iid && !quedan.has(l[1][1]))); if (!ok) fuera++; return ok; });
+      if (c.ports[iid]) for (const q in c.ports[iid]) if (!quedan.has(q)) delete c.ports[iid][q];
+      item.type = v; item.modelo = K.n; V.mpick = false; V.mq = ''; H.aviso(fuera ? `Modelo cambiado. Se quitaron ${fuera} patch cords de puertos que este modelo no tiene.` : 'Modelo: ' + K.n); return G(); }
     if (k === 'link') { V.linking = true; V._mismo = true; return R(); } if (k === 'nolink') { V.linking = false; V._mismo = true; return R(); }
     if (k === 'unlink' && pid) { c.links = c.links.filter(l => l !== lk(c, iid, pid)); return G(); }
-    if (k === 'add') { const tp = el.querySelector('#red-tipo').value, U = CAT[tp].U; let u = 0; for (let x = 1; x + U - 1 <= c.cap && !u; x++) if (entra(c, { type: tp }, x)) u = x; if (!u) return H.aviso('No hay lugar: quitá un equipo o usá un rack más grande');
-      let n = 1; while (c.items.some(x => x.iid === tp + n)) n++; c.items.push({ iid: tp + n, type: tp, u }); c.items.sort((x, y) => x.u - y.u); V.sel = [tp + n]; return G(); }
+    if (k === 'add' || k === 'addm') { const tp = k === 'addm' ? v : el.querySelector('#red-tipo').value, U = CAT[tp].U; V.mq = ''; let u = 0; for (let x = 1; x + U - 1 <= c.cap && !u; x++) if (entra(c, { type: tp }, x)) u = x; if (!u) return H.aviso('No hay lugar: quitá un equipo o usá un rack más grande');
+      let n = 1; while (c.items.some(x => x.iid === tp + n)) n++; c.items.push(Object.assign({ iid: tp + n, type: tp, u }, CAT[tp].marca ? { modelo: CAT[tp].n } : {})); c.items.sort((x, y) => x.u - y.u); V.sel = [tp + n]; V.mpick = false; return G(); }
     const item = itemDe(c, iid);
     if ((k === 'up' || k === 'dn') && item) { let u = item.u + (k === 'dn' ? 1 : -1); while (u >= 1 && u <= c.cap && !entra(c, item, u)) u += k === 'dn' ? 1 : -1; if (entra(c, item, u)) { item.u = u; c.items.sort((x, y) => x.u - y.u); return G(); } return; }
     if (k === 'rm' && item) { if (a.dataset.ok !== '1') { a.dataset.ok = '1'; a.textContent = '¿Seguro? Tocá de nuevo'; return; } c.items = c.items.filter(x => x.iid !== iid); delete c.ports[iid]; c.links = c.links.filter(l => l[0][0] !== iid && l[1][0] !== iid); V.sel = null; return G(); }
@@ -321,7 +356,7 @@ function evento(el, e) { const { H, V } = el.__red, t = e.target, c = H.cabs[V.c
   if (p) { const [iid, pid] = p.dataset.rp.split(':');
     if (V.linking && V.sel && V.sel[1] && H.editar()) { const s0 = V.sel; const no = noEntra(c, s0, [iid, pid]); if (no) { H.aviso(no); return; } V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
     V.sel = [iid, pid]; return R(); }
-  if (it) { V.sel = [it.dataset.it]; V.linking = false; return R(); }
+  if (it) { V.sel = [it.dataset.it]; V.linking = false; V.mpick = false; return R(); }
   if (t.closest('.red-svg')) { V.sel = null; V.linking = false; R(); } }
 
 function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.sel || [], num = x => x === '' ? null : +String(x).replace(',', '.');
@@ -337,7 +372,7 @@ function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.se
   if (o === 'it' && iid) { const it = itemDe(c, iid); if (!it) return;
     if (k === 'u') { if (entra(c, it, +v)) { it.u = +v; c.items.sort((x, y) => x.u - y.u); } }
     else { pon(it, k, v); if (k === 'ext' && v && H.reales) { const x = H.reales().find(r => r.uid === v); if (x) { if (!it.name) it.name = x.nombre; if (!it.mac && x.mac) it.mac = x.mac; if (!it.modelo && x.modelo) it.modelo = x.modelo; if (!it.ip && x.ip) it.ip = x.ip; } } } }
-  if (o === 'F') { const F = fibDe(H, id); if (F) pon(F, k, v); } }
+  if (o === 'F') { const F = fibDe(H, id); if (F) pon(F, k, k === 'hilos' || k === 'm' ? (v === '' ? '' : +String(v).replace(',', '.')) : v); } }
 
 // agarrar la punta de un patch cord y soltarla en otro puerto (o tirar un cable nuevo desde un puerto libre); con mouse o con el dedo
 function arrastrarCable(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar() || V.tab !== 'frente' || e.button > 0) return false;
@@ -369,7 +404,12 @@ function arrastrar(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar
   const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); if (du) { it.u += du; c.items.sort((x, y) => x.u - y.u); V._arr = true; V.sel = [it.iid]; H.guardar(); pintar(el, H, V); setTimeout(() => { V._arr = false; }, 50); } };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); }
 
-function css() { if (document.getElementById('red-css')) return; const s = document.createElement('style'); s.id = 'red-css'; s.textContent = `
+function css() { if (document.getElementById('red-css')) return; const s = document.createElement('style'); s.id = 'red-css'; s.textContent = `.red-mp{display:grid;gap:8px}.red-mp input{width:100%;padding:8px 10px;border:1px solid var(--line-strong,#c9cfd4);border-radius:8px;background:var(--glass-strong,#fff);color:inherit;font:inherit}
+.red-mm{display:flex;gap:6px;flex-wrap:wrap}.red-mm button{border:1px solid var(--line-strong,#c9cfd4);background:transparent;color:inherit;border-radius:999px;padding:4px 11px;font:500 12.5px var(--f-ui,inherit);cursor:pointer}.red-mm button.on{background:var(--accent,#0B5FFF);border-color:var(--accent,#0B5FFF);color:#fff}
+.red-ml{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:260px;overflow:auto}.red-ml button{display:grid;gap:1px;width:100%;text-align:left;border:1px solid var(--line-strong,#c9cfd4);background:var(--glass-strong,#fff);color:inherit;border-radius:8px;padding:7px 10px;cursor:pointer;font:inherit}
+.red-ml button:hover,.red-ml button:focus-visible{border-color:var(--accent,#0B5FFF);outline:none}.red-ml b{font-weight:600;font-size:13.5px}.red-ml span,.red-mod span{font-size:12px;opacity:.72}.red-mod{display:grid;gap:1px;margin:0 0 6px}
+.red-fnew{margin:0 0 12px;align-items:center}
+
 .red-on{width:min(1320px,calc(100% - 20px))!important;padding:0!important;overflow:hidden}.red-on:not([hidden]){display:block!important}
 .red{display:flex;flex-direction:column;max-height:calc(100dvh - 104px);color:var(--ink,#1B242B);font-family:var(--f-ui,system-ui,sans-serif);font-size:14px}
 .red *{box-sizing:border-box}.red-top,.red-tabs{flex:none}

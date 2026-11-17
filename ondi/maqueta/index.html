@@ -562,7 +562,7 @@ html:not(.blank) .blankonly{display:none!important}
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
 
-<script src="/ondi/beta/red.js?v=4"></script>
+<script src="/ondi/beta/red.js?v=5"></script>
 <script>
 (() => {
 'use strict';
@@ -5568,8 +5568,21 @@ if (window.OndiRed) { for (const k in OndiRed.CAT) if (!CAT[k]) CAT[k] = OndiRed
   markMoved = (o => function (d) { if (d && d.sinUbicar) { delete d.sinUbicar; toast(d.id + ' quedó ubicado en la maqueta'); } o(d); })(markMoved);
   setEdit = (o => function (on) { o(on); const n = DEV.filter(d => d.sinUbicar).length; if (ED.on && n) toast(n === 1 ? 'Hay un rack sin ubicar, creado en la documentación: arrastralo a su lugar' : 'Hay ' + n + ' racks sin ubicar, creados en la documentación: arrastralos a su lugar'); })(setEdit);
   setTimeout(() => { pub(); const id = HOST && HOST.ir; if (!id || !DEV.some(d => d.id === id)) return; HOST.ir = null; const d = DEV.find(x => x.id === id);
-    if (d.sinUbicar && canEdit()) setEdit(true); select(id); }, 300);
-  window.__doc = { DEV, CABS, sel: () => SEL, ed: () => ED.on, mover: (id, dx) => { const d = DEV.find(x => x.id === id); d.x += dx; devObj(d); markMoved(d); edSave(); } }; }
+    if (d.sinUbicar && canEdit()) { setEdit(true); select(id); ubicar(id); } else select(id); }, 300);
+  let UBIC = null; const ub = document.createElement('div'); ub.id = 'ubic'; ub.hidden = true; document.body.appendChild(ub);
+  const ubicPanel = () => { const L = DEV.filter(d => d.sinUbicar); ub.hidden = !(ED.on && L.length && canEdit()); document.documentElement.classList.toggle('ubicando', !ub.hidden && !!UBIC); if (ub.hidden) return;
+    ub.innerHTML = `<b>Para ubicar · ${L.length}</b><small>Creados en la documentación. Elegí uno y tocá su lugar en la maqueta.</small>` + L.map(d => `<button data-ub="${escH(d.id)}" class="${UBIC === d.id ? 'on' : ''}" aria-pressed="${UBIC === d.id}"><b>${escH(d.id)}${d.name ? ' · ' + escH(d.name) : ''}</b><span>${escH(d.kind || '')}${d.loc ? ' · ' + escH(d.loc) : ''}</span></button>`).join(''); };
+  const ubicar = id => { UBIC = id; if (id) { setTool('sel'); toast('Tocá en la maqueta el lugar donde va ' + id + ' (Esc para cancelar)'); } ubicPanel(); };
+  ub.addEventListener('click', e => { const b = e.target.closest('[data-ub]'); if (b) ubicar(UBIC === b.dataset.ub ? null : b.dataset.ub); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && UBIC) { e.stopImmediatePropagation(); ubicar(null); } }, true);
+  edUp = (o => function (e, wasDrag) { if (ED.on && UBIC && !wasDrag) { const d = DEV.find(x => x.id === UBIC); UBIC = null; if (d) { const loc = d.loc; placeAt(d, e.clientX, e.clientY); d.loc = loc || locFor(d); devObj(d); devTag(d); markMoved(d); edSave(); select(d.id, false); } ubicPanel(); return true; } return o(e, wasDrag); })(edUp);
+  setEdit = (o => function (on) { o(on); if (!ED.on) UBIC = null; ubicPanel(); })(setEdit);
+  { const css = document.createElement('style'); css.textContent = `#ubic{position:fixed;left:16px;bottom:92px;z-index:30;width:min(300px,calc(100vw - 32px));max-height:46vh;overflow:auto;display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--glass-strong);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 18px 40px -18px rgba(0,0,0,.45);font:13px var(--f-ui,system-ui)}
+#ubic>b{font-weight:600;font-size:14px}#ubic>small{opacity:.7;font-size:12px;margin-bottom:2px}#ubic button{display:grid;gap:1px;text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+#ubic button b{font-weight:600}#ubic button span{font-size:12px;opacity:.7}#ubic button:hover{border-color:var(--accent)}#ubic button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media (min-width:900px){#ubic{left:332px;bottom:96px}}
+html.ubicando canvas{cursor:crosshair!important}`; document.head.appendChild(css); }
+  window.__doc = { ubicar, DEV, CABS, sel: () => SEL, ed: () => ED.on, mover: (id, dx) => { const d = DEV.find(x => x.id === id); d.x += dx; devObj(d); markMoved(d); edSave(); } }; }
 /* pisos del galpón: la planta baja y un piso por cada entrepiso. El plano muestra uno a la vez y cada equipo sabe en qué piso está */
 const pisosDe = N => [{ id: '', n: 'Planta baja', y: 0 }].concat(innerOf(N).items.filter(it => it.k === 'mez').sort((a, b) => mzH(a) - mzH(b)).map(m => ({ id: m.id, n: m.name, y: mzH(m) + 0.25, m })));
 const enMez = (m, u, d, mg = 0) => u >= m.u - mg && u <= m.u + m.su + mg && d >= m.d - mg && d <= m.d + m.sd + mg;
