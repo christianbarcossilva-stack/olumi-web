@@ -350,6 +350,11 @@ html.bfullon body::after{content:"";position:fixed;inset:0;background:rgba(0,0,0
 .bsum .btn svg{width:15px;height:15px}.prb{display:grid;gap:10px;padding:16px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface) 70%,transparent)}.prb h4{margin:0;font-size:15px}.prb p{margin:0;font-size:13.5px}
 .prb-f{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end}.prb-f label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.prb-f input{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
 .prb-r{display:flex;gap:6px;flex-wrap:wrap}.prb-e{color:var(--crit)}@media (max-width:700px){.prb-f{grid-template-columns:1fr}.brand.bfull{inset:0;border-radius:0}}
+.seg-w{flex-wrap:wrap}.cj{padding:18px 20px;display:grid;gap:12px;align-content:start}.cj-h{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.cj-h h2{margin:2px 0 0}.cj h3{margin:10px 0 0;font-size:16px}
+.cj-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.cj-g .w2{grid-column:span 2}.cj label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.cj input,.cj select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;min-width:0}
+.cj-f{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cj-f li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--line);border-radius:10px}.cj-f span{color:var(--muted);font-size:13.5px}
+.cj-n{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:12px;border:1px dashed var(--line);border-radius:10px}.cj-t td{padding:4px 6px;vertical-align:middle}.cj-t select,.cj-t input{padding:6px 8px;font-size:13px}.cj-x{color:var(--muted);text-align:center}
+.cjd{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -1160,8 +1165,8 @@ function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D
   const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
-  for (const k of ['bita', 'docidx'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
-  const nuevos = docDiff(prev, data); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
+  for (const k of ['bita', 'docidx', 'cajas'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
   S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
   const D = S.doc; if (D && D.site === st.id) { if (D.saving) D.W.bita = data.bita; else S.doc = null; }
   return data; }
@@ -1209,7 +1214,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=9'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=10'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1228,6 +1233,7 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
     titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? c.cap + 'U' : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
     racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
+    puntas: () => [...docRacks(W, D.idx).map(r => [r.id, r.id]), ...Object.entries(W.cajas || {}).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0] + (x.nombre ? ' · ' + x.nombre : '')])],
     acciones: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid), full = $('#docbox') && $('#docbox').classList.contains('full');
       return `<button class="red-b docback" data-r="acc" data-v="volver">${DIC.back}<span>Racks</span></button><button class="red-b ico" data-r="acc" data-v="full" title="${full ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}" aria-label="${full ? 'Salir de pantalla completa' : 'Pantalla completa'}">${full ? DIC.chico : DIC.grande}</button>`
         + (r && r.sin ? `<button class="red-b pri" data-r="acc" data-v="ir">Ubicar en la maqueta</button>` : `<button class="red-b" data-r="acc" data-v="ir">Ver en la maqueta</button>`); },
@@ -1250,19 +1256,23 @@ function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim
   const lugares = [...new Set(R.map(r => r.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
   let h = `<div class="docbar"><input id="docq" type="search" placeholder="Buscar rack o lugar" value="${esc(D.q)}" aria-label="Buscar rack o lugar">${ed ? `<button class="btn sm pri" data-dk="nuevo" aria-label="Nuevo rack o gabinete">${IC.plus}Nuevo</button>` : ''}</div>
     <button class="btn sm" data-dk="hist" aria-pressed="${D.hist}">${DIC.hist}Historial${(D.W.bita || []).length ? ' · ' + (D.W.bita || []).length : ''}</button>`;
-  if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo rack o gabinete</b>
-      <label>Tipo<span class="seg"><button type="button" data-dk="tipo" data-v="gab" aria-pressed="${D.nuevo.tipo === 'gab'}">Gabinete</button><button type="button" data-dk="tipo" data-v="wr" aria-pressed="${D.nuevo.tipo === 'wr'}">Rack</button></span></label>
-      <label>Tamaño<select id="docU">${(D.nuevo.tipo === 'gab' ? [6, 9, 12] : [6, 9, 12, 24, 42]).map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>
+  if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo</b>
+      <label>Tipo<span class="seg seg-w">${[['gab', 'Gabinete'], ['wr', 'Rack'], ...Object.entries(CAJT).map(([k, v]) => [k, v[0]])].map(([k, t]) => `<button type="button" data-dk="tipo" data-v="${k}" aria-pressed="${D.nuevo.tipo === k}">${t}</button>`).join('')}</span></label>
+      ${CAJT[D.nuevo.tipo] ? `<label>Capacidad<select id="docU">${CAJT[D.nuevo.tipo][2].map(u => `<option value="${u}"${u === CAJT[D.nuevo.tipo][3] ? ' selected' : ''}>${u} ${D.nuevo.tipo === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>`
+        : `<label>Tamaño<select id="docU">${(D.nuevo.tipo === 'gab' ? [6, 9, 12] : [6, 9, 12, 24, 42]).map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>`}
       <label>Nombre <input id="docN" maxlength="50" placeholder="Ej.: Gabinete de la portería"></label>
       <label>Lugar <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
       <span class="acts"><button class="btn pri" type="submit">Crear y documentar</button><button class="btn" type="button" data-dk="cancelar">Cancelar</button></span>
       <small class="muted">Aparece en la maqueta como «sin ubicar»: con el lápiz lo arrastrás a su lugar.</small></form>`;
-  if (!R.length && !D.nuevo) h += `<div class="card empty" style="padding:24px 14px"><b>Todavía no hay racks</b><span>${ed ? 'Creá el primero con «Nuevo», o ponelo en la maqueta con el lápiz: aparece acá solo.' : 'La instaladora todavía no documentó racks.'}</span></div>`;
+  if (!R.length && !Object.keys(D.W.cajas || {}).length && !D.nuevo) h += `<div class="card empty" style="padding:24px 14px"><b>Todavía no hay racks</b><span>${ed ? 'Creá el primero con «Nuevo», o ponelo en la maqueta con el lápiz: aparece acá solo.' : 'La instaladora todavía no documentó racks.'}</span></div>`;
+  const CJ = Object.entries(D.W.cajas || {}).filter(([id, c]) => !q || [id, c.nombre, c.lugar, CAJT[c.t][0]].join(' ').toLowerCase().includes(q));
+  const listaCajas = CJ.length ? `<div class="docg">Cajas y empalmes</div>` + CJ.map(([id, c]) => { const nf = (D.W.fibs || []).filter(f => f.from === id || f.to === id).length;
+    return `<button class="docr" data-dk="caja" data-v="${esc(id)}" aria-current="${D.caja === id && !D.hist}">${CAJI}<b>${esc(id)}${c.nombre ? ' · ' + esc(c.nombre) : ''}</b><span class="u">${(c.fus || []).length}/${c.cap}</span><small>${esc(CAJT[c.t][0])} · ${nf} ${nf === 1 ? 'fibra' : 'fibras'}${c.lugar ? ' · ' + esc(c.lugar) : ''}</small></button>`; }).join('') : '';
   let g = null; for (const r of F) { const lg = r.lugar || 'Sin lugar anotado'; if (lg !== g) { g = lg; h += `<div class="docg">${esc(lg)}</div>`; }
     h += `<button class="docr" data-dk="rack" data-v="${esc(r.id)}" aria-current="${D.cid === r.id && !D.hist}">${DIC[r.tipo === 'gab' ? 'gab' : 'wr']}<b>${esc(r.id)}${r.nombre ? ' · ' + esc(r.nombre) : ''}</b><span class="u">${r.usoU}/${r.cap}U</span>
       <span class="docu" aria-hidden="true"><i style="width:${Math.min(100, Math.round(r.usoU / Math.max(1, r.cap) * 100))}%"></i></span><small>${r.links} ${r.links === 1 ? 'patch cord' : 'patch cords'}</small>
       ${r.sin ? `<span class="docsin">Sin ubicar en la maqueta</span>` : ''}</button>`; }
-  if (R.length && !F.length) h += `<p class="muted" style="margin:6px 4px">No hay racks con «${esc(D.q)}».</p>`;
+  h += listaCajas; if ((R.length || Object.keys(D.W.cajas || {}).length) && !F.length && !CJ.length) h += `<p class="muted" style="margin:6px 4px">No hay nada con «${esc(D.q)}».</p>`;
   return h; }
 function docList() { const l = $('#docl'); if (l) l.innerHTML = docListHTML(); }
 function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D.cid ? all.filter(e => e.r === D.cid) : all;
@@ -1275,12 +1285,13 @@ function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D
   return h + '</div>'; }
 function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) return; const R = docRacks(D.W, D.idx);
   if (D.cid && !D.W.cabs[D.cid] && !R.some(r => r.id === D.cid)) D.cid = null;
-  if (!D.cid && !D.hist && R.length && innerWidth > 860) D.cid = R[0].id;
+  if (!D.cid && !D.hist && !D.caja && R.length && innerWidth > 860) D.cid = R[0].id;
   const r = R.find(x => x.id === D.cid);
-  box.innerHTML = `<div class="doc ${D.cid || D.hist ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
+  if (D.caja && !(D.W.cajas || {})[D.caja]) D.caja = null; if (D.caja) D.cid = null;
+  box.innerHTML = `<div class="doc ${D.cid || D.hist || D.caja ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.caja ? cajaHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
   if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
 function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
-function docCrear() { const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
+function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
   const home = ((D.idx || W.docidx || {}).home) || [0, 0], k = docRacks(W, D.idx).filter(r => r.sin).length * 2.5;
   let id;
   if (docMotor(W)) { if (!W.escena) { toast('Abrí la maqueta una vez para empezar el plano; después creá el rack acá.'); return; }
@@ -1294,12 +1305,20 @@ function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) retur
   delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
   D.cid = null; docSave(); docPaint(); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'); if (!b || !S.doc || b.tagName === 'FORM') return; const D = S.doc, k = b.dataset.dk, v = b.dataset.v;
-  if (k === 'rack') { D.cid = v; D.hist = false; D.V = { tab: 'frente', q: '' }; docPaint(); }
+  if (k === 'caja') { D.caja = v; D.cid = null; D.hist = false; docPaint(); return; }
+  if (k === 'fusa') { const c = D.W.cajas[D.caja]; (c.fus = c.fus || []).push({ a: ['', 1], b: ['', 1] }); docSave(); docPaint(); return; }
+  if (k === 'fusx') { const c = D.W.cajas[D.caja]; c.fus.splice(+v, 1); docSave(); docPaint(); return; }
+  if (k === 'fus11') { const c = D.W.cajas[D.caja], a = ($('#cj-a') || {}).value, b = ($('#cj-b') || {}).value, Fa = D.W.fibs.find(f => f.id === a), Fb = D.W.fibs.find(f => f.id === b); if (!Fa || !Fb || a === b) { toast('Elegí dos fibras distintas'); return; }
+    c.fus = (c.fus || []).filter(x => !((x.a[0] === a || x.b[0] === a) && (x.a[0] === b || x.b[0] === b))); for (let h = 1; h <= Math.min(Fa.hilos, Fb.hilos); h++) c.fus.push({ a: [a, h], b: [b, h] }); docSave(); docPaint(); toast(`Empalmados ${Math.min(Fa.hilos, Fb.hilos)} hilos: ${a} con ${b}, hilo por hilo`); return; }
+  if (k === 'cjfib') { const c = D.W.cajas[D.caja], de = ($('#cj-de') || {}).value, hs = +(($('#cj-h') || {}).value) || 12; let n = 1; while (D.W.fibs.some(f => f.id === 'FO-' + String(n).padStart(2, '0'))) n++; const id = 'FO-' + String(n).padStart(2, '0');
+    D.W.fibs.push({ id, from: de || '', to: D.caja, hilos: hs, tipo: 'os2', pts: [] }); docSave(); docPaint(); toast('Fibra ' + id + ' creada hasta ' + D.caja); return; }
+  if (k === 'cjx') { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'Tocá de nuevo para sacarla'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar la caja'; } }, 4000); return; } delete D.W.cajas[D.caja]; D.W.fibs.forEach(f => { if (f.to === D.caja) f.to = ''; if (f.from === D.caja) f.from = ''; }); D.caja = null; docSave(); docPaint(); return; }
+  if (k === 'rack') { D.caja = null; D.cid = v; D.hist = false; D.V = { tab: 'frente', q: '' }; docPaint(); }
   else if (k === 'hist') { D.hist = !D.hist; docPaint(); }
   else if (k === 'histr') { D.histR = v === '1'; docPaint(); }
-  else if (k === 'volver') { D.hist = false; D.cid = null; docPaint(); }
+  else if (k === 'volver') { D.hist = false; D.cid = null; D.caja = null; docPaint(); }
   else if (k === 'nuevo') { D.nuevo = D.nuevo ? false : { tipo: 'gab', u: 9 }; docList(); const n = $('#docN'); if (n) n.focus(); }
-  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = v === 'gab' ? 9 : 12; docList(); }
+  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = CAJT[v] ? CAJT[v][3] : v === 'gab' ? 9 : 12; docList(); }
   else if (k === 'cancelar') { D.nuevo = false; docList(); }
   else if (k === 'ir') docIr(v);
   else if (k === 'borrar') { if (b.dataset.ok !== '1') { const c = D.W.cabs[v] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos anotados: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(v); } });
@@ -1356,6 +1375,47 @@ async function probar(k) { const host = (($('#prb-h') || {}).value || '').trim()
     S.prb = Object.assign({ k, host, puertos }, r.error ? { error: (/not found|404|Failed to send/i.test(String(r.error.message || r.error)) || (r.error.context && r.error.context.status === 404)) ? 'La prueba desde afuera todavía no está publicada en el servidor.' : 'No se pudo probar: ' + (r.error.message || r.error) } : d); }
   catch (er) { S.prb = { k, host, puertos, error: 'No se pudo probar: ' + errTxt(er) }; } render(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.bfull) { S.bfull = null; document.documentElement.classList.remove('bfullon'); render(); } });
+
+/* ---------- cajas de empalme, rosetas, cajas FTTH y cámaras de registro: dónde termina o se empalma cada fibra ---------- */
+// [nombre, prefijo, capacidades, capacidad por defecto]
+const CAJT = { ce: ['Caja de empalme', 'CE-', [12, 24, 48, 72, 96, 144], 24], ro: ['Roseta óptica', 'RO-', [2, 4, 8, 12], 4], ft: ['Caja FTTH', 'FT-', [1, 2, 4, 8, 16], 16], cr: ['Cámara de registro', 'CR-', [1, 2, 4, 6], 2] };
+const TIAC = [['azul', '#2F6FD6'], ['naranja', '#E07A1F'], ['verde', '#2E9E5B'], ['marrón', '#8A5A3C'], ['gris', '#8D979F'], ['blanco', '#EDEFF1'], ['rojo', '#D2474B'], ['negro', '#23272B'], ['amarillo', '#E6BE1E'], ['violeta', '#8E5BD0'], ['rosa', '#E58FB1'], ['aguamarina', '#35C2C1']];
+const CAJI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M1 12h3M20 12h3M9 12h6"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/></svg>';
+function cajaCrear() { const D = S.doc, W = D.W, t = D.nuevo.tipo, T = CAJT[t], ids = new Set([...Object.keys(W.cajas || {}), ...Object.keys(W.cabs)]); let n = 1, id; do id = T[1] + String(n++).padStart(2, '0'); while (ids.has(id));
+  W.cajas = W.cajas || {}; W.cajas[id] = { t, cap: +($('#docU') || {}).value || T[3], nombre: (($('#docN') || {}).value || '').trim(), lugar: (($('#docL') || {}).value || '').trim(), fus: [] };
+  D.nuevo = false; D.caja = id; D.cid = null; D.hist = false; docSave(); docPaint(); toast(T[0] + ' ' + id + ' creada. Ahora tirá las fibras que llegan y anotá los empalmes.'); }
+function cajaHTML() { const D = S.doc, W = D.W, id = D.caja, c = W.cajas[id], T = CAJT[c.t], ed = siteEd(), FI = W.fibs.filter(f => f.from === id || f.to === id), otra = f => f.from === id ? (f.to || f.toTxt || '?') : (f.from || f.fromTxt || '?');
+  const puntas = [...docRacks(W, D.idx).map(r => [r.id, r.id + (r.nombre ? ' · ' + r.nombre : '')]), ...Object.entries(W.cajas).filter(([k]) => k !== id).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0]])];
+  const hSel = (i, lado, fib, h) => { const F = W.fibs.find(f => f.id === fib); return `<select data-cf="${i}|${lado}|1" ${ed ? '' : 'disabled'}>${Array.from({ length: F ? F.hilos : 12 }, (_, k) => `<option value="${k + 1}"${k + 1 === +h ? ' selected' : ''}>${k + 1} · ${TIAC[k % 12][0]}${F && F.hilos > 12 ? ' · tubo ' + (Math.floor(k / 12) + 1) : ''}</option>`).join('')}</select>`; };
+  const fSel = (i, lado, fib) => `<select data-cf="${i}|${lado}|0" ${ed ? '' : 'disabled'}><option value="">Fibra…</option>${FI.map(f => `<option value="${esc(f.id)}"${f.id === fib ? ' selected' : ''}>${esc(f.id)} · ${f.hilos} h · ${esc(otra(f))}</option>`).join('')}</select>`;
+  const dot = (fib, h) => { const k = (+h - 1) % 12; return fib ? `<i class="cjd" style="background:${TIAC[k][1]}"></i>` : ''; };
+  return `<div class="cj">
+    <header class="cj-h"><div><small class="muted">${esc(T[0])}</small><h2>${esc(id)}${c.nombre ? ' · ' + esc(c.nombre) : ''}</h2></div><span class="grow"></span><button class="btn sm docback" data-dk="volver">${DIC.back}Lista</button>${ed ? `<button class="btn sm" data-dk="cjx">Sacar la caja</button>` : ''}</header>
+    <div class="cj-g">${['nombre', 'lugar'].map(k => `<label>${k === 'nombre' ? 'Nombre' : 'Lugar'}<input data-ck="${k}" value="${esc(c[k] || '')}" maxlength="60" ${ed ? '' : 'disabled'} placeholder="${k === 'nombre' ? 'Ej.: Empalme del portón' : 'Ej.: Poste 14, frente al galpón E3'}"></label>`).join('')}
+      <label>Tipo<select data-ck="t" ${ed ? '' : 'disabled'}>${Object.entries(CAJT).map(([k, v]) => `<option value="${k}"${k === c.t ? ' selected' : ''}>${v[0]}</option>`).join('')}</select></label>
+      <label>Capacidad<select data-ck="cap" ${ed ? '' : 'disabled'}>${T[2].concat(T[2].includes(+c.cap) ? [] : [+c.cap]).map(u => `<option value="${u}"${+u === +c.cap ? ' selected' : ''}>${u} ${c.t === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>
+      <label class="w2">Nota<input data-ck="nota" value="${esc(c.nota || '')}" maxlength="120" ${ed ? '' : 'disabled'}></label></div>
+    <h3>Fibras que llegan <span class="muted">${FI.length}</span></h3>
+    ${FI.length ? `<ul class="cj-f">${FI.map(f => `<li><b>${esc(f.id)}</b><span>${f.hilos} hilos · ${f.from === id ? 'sale hacia' : 'viene de'} ${esc(otra(f))}${f.nombre ? ' · ' + esc(f.nombre) : ''}</span>${f.from && W.cabs[f.from] || f.to && W.cabs[f.to] ? `<button class="lnk" data-dk="rack" data-v="${esc(W.cabs[f.from] ? f.from : f.to)}">Ver el rack</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Todavía no llega ninguna fibra.</p>'}
+    ${ed ? `<div class="cj-n"><label>Nueva fibra desde<select id="cj-de"><option value="">Otro lugar</option>${puntas.map(([k, t]) => `<option value="${esc(k)}">${esc(t)}</option>`).join('')}</select></label><label>Hilos<select id="cj-h">${[2, 4, 6, 8, 12, 24, 48, 72, 96, 144].map(n => `<option${n === 12 ? ' selected' : ''}>${n}</option>`).join('')}</select></label><button class="btn sm pri" data-dk="cjfib">Crear fibra hasta ${esc(id)}</button></div>` : ''}
+    <h3>Empalmes <span class="muted">${(c.fus || []).length} de ${c.cap}</span></h3>
+    ${ed && FI.length > 1 ? `<div class="cj-n"><label>Empalmar todos los hilos de<select id="cj-a">${FI.map(f => `<option>${esc(f.id)}</option>`).join('')}</select></label><label>con<select id="cj-b">${FI.map((f, i) => `<option${i === 1 ? ' selected' : ''}>${esc(f.id)}</option>`).join('')}</select></label><button class="btn sm" data-dk="fus11">Empalmar 1 a 1</button></div>` : ''}
+    ${(c.fus || []).length ? `<div class="tscroll"><table class="cj-t"><thead><tr><th>#</th><th>Fibra</th><th>Hilo</th><th></th><th>Fibra</th><th>Hilo</th><th>Pérdida (dB)</th><th>Nota</th><th></th></tr></thead><tbody>${c.fus.map((x, i) => `<tr><td>${i + 1}</td><td>${fSel(i, 'a', x.a[0])}</td><td>${dot(x.a[0], x.a[1])}${hSel(i, 'a', x.a[0], x.a[1])}</td><td class="cj-x">⟷</td><td>${fSel(i, 'b', x.b[0])}</td><td>${dot(x.b[0], x.b[1])}${hSel(i, 'b', x.b[0], x.b[1])}</td>
+      <td><input data-cfx="${i}|db" value="${x.db != null ? String(x.db).replace('.', ',') : ''}" inputmode="decimal" maxlength="6" placeholder="0,05" ${ed ? '' : 'disabled'}></td><td><input data-cfx="${i}|nota" value="${esc(x.nota || '')}" maxlength="80" ${ed ? '' : 'disabled'}></td><td>${ed ? `<button class="lnk" data-dk="fusx" data-v="${i}" aria-label="Quitar el empalme ${i + 1}">Quitar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<p class="muted">${FI.length ? 'Todavía no hay empalmes anotados.' : 'Primero tirá las fibras que llegan a la caja.'}</p>`}
+    ${ed && FI.length ? `<button class="btn sm" data-dk="fusa">Agregar un empalme</button>` : ''}</div>`; }
+document.addEventListener('change', e => { const t = e.target, D = S.doc; if (!D || !D.caja || !siteEd()) return; const c = D.W.cajas[D.caja]; if (!c) return;
+  if (t.dataset.ck) { const k = t.dataset.ck, v = t.value.trim(); if (k === 'cap') c.cap = +v; else if (v) c[k] = v; else delete c[k]; docSave(); docPaint(); }
+  else if (t.dataset.cf) { const [i, lado, j] = t.dataset.cf.split('|'), x = c.fus[+i]; if (!x) return; x[lado][+j] = +j ? +t.value : t.value; if (!+j) x[lado][1] = 1; docSave(); docPaint(); }
+  else if (t.dataset.cfx) { const [i, k] = t.dataset.cfx.split('|'), x = c.fus[+i]; if (!x) return; const v = t.value.trim(); if (!v) delete x[k]; else x[k] = k === 'db' ? +v.replace(',', '.') : v; docSave(); } });
+// historial de las cajas
+function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.cajas) || {}, fk = x => x.a.join(':') + '|' + x.b.join(':'), lt = x => `${x.a[0] || '?'} hilo ${x.a[1]} con ${x.b[0] || '?'} hilo ${x.b[1]}`;
+  for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
+    if (!ca) { out.push({ r: id, m: `Creó ${CAJT[cb.t] ? CAJT[cb.t][0].toLowerCase() : 'la caja'} ${id}` }); continue; } if (!cb) { out.push({ r: id, m: `Sacó la caja ${id}` }); continue; }
+    const fa = new Set((ca.fus || []).filter(x => x.a[0] && x.b[0]).map(fk)), fb = (cb.fus || []).filter(x => x.a[0] && x.b[0]);
+    const nuevos = fb.filter(x => !fa.has(fk(x))); if (nuevos.length > 3) out.push({ r: id, m: `Anotó ${nuevos.length} empalmes en ${id}` }); else nuevos.forEach(x => out.push({ r: id, m: `Empalmó ${lt(x)} en ${id}` }));
+    const fbs = new Set(fb.map(fk)), idos = (ca.fus || []).filter(x => x.a[0] && x.b[0] && !fbs.has(fk(x))); if (idos.length) out.push({ r: id, m: `Sacó ${idos.length === 1 ? 'el empalme ' + lt(idos[0]) : idos.length + ' empalmes'} en ${id}` });
+    const ch = ['nombre', 'lugar', 't', 'cap', 'nota'].filter(k => (ca[k] || '') !== (cb[k] || '')); if (ch.length) out.push({ r: id, m: `Anotó en ${id}: ` + ch.map(k => ({ nombre: 'nombre', lugar: 'lugar', t: 'tipo', cap: 'capacidad', nota: 'nota' })[k]).join(', ') }); }
+  return out; }
 })();
 </script>
 </body>
