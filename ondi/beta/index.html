@@ -1251,7 +1251,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=20'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=21'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1268,6 +1268,7 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
     reales: () => (((S.eq[st.id] || {}).list) || []).filter(x => !x.consola).map(x => ({ uid: (x.marca || 'unifi') + ':' + (x.mac || x.id), nombre: x.nombre, modelo: x.modelo, mac: x.mac, ip: x.ip, version: x.version, estado: VIVO.includes(x.estado) ? 'ok' : ['offline', 'caido'].includes(x.estado) ? 'crit' : 'warn' })),
     guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
+    lugarDe: cid => (docRacks(W, D.idx).find(x => x.id === cid) || {}).lugar || '', sites: () => docRacks(W, D.idx).map(r => r.lugar).filter(Boolean),
     titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? (c.dim ? 'Gabinete metálico ' + c.dim.replace('x', ' × ') + ' cm' : c.cap + 'U') : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
     racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
     campo: () => (W.campo = W.campo || []), modelos: () => (W.modelos = W.modelos || []), modelosEd: true,
@@ -1293,14 +1294,14 @@ const DIC = { gab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' };
 function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim().toLowerCase(), F = R.filter(r => !q || [r.id, r.nombre, r.lugar].join(' ').toLowerCase().includes(q)), ed = siteEd();
   const lugares = [...new Set(R.map(r => r.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-  let h = `<div class="docbar"><input id="docq" type="search" placeholder="Buscar rack o lugar" value="${esc(D.q)}" aria-label="Buscar rack o lugar">${ed ? `<button class="btn sm pri" data-dk="nuevo" aria-label="Nuevo rack o gabinete">${IC.plus}Nuevo</button>` : ''}</div>
+  let h = `<div class="docbar"><input id="docq" type="search" placeholder="Buscar rack o site" value="${esc(D.q)}" aria-label="Buscar rack o site">${ed ? `<button class="btn sm pri" data-dk="nuevo" aria-label="Nuevo rack o gabinete">${IC.plus}Nuevo</button>` : ''}</div>
     <button class="btn sm" data-dk="hist" aria-pressed="${D.hist}">${DIC.hist}Historial${(D.W.bita || []).length ? ' · ' + (D.W.bita || []).length : ''}</button>`;
   if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo</b>
       <label>Tipo<span class="seg seg-w">${[['gab', 'Gabinete'], ['wr', 'Rack'], ...Object.entries(CAJT).map(([k, v]) => [k, v[0]])].map(([k, t]) => `<button type="button" data-dk="tipo" data-v="${k}" aria-pressed="${D.nuevo.tipo === k}">${t}</button>`).join('')}</span></label>
       ${CAJT[D.nuevo.tipo] ? `<label>Capacidad<select id="docU">${CAJT[D.nuevo.tipo][2].map(u => `<option value="${u}"${u === CAJT[D.nuevo.tipo][3] ? ' selected' : ''}>${u} ${D.nuevo.tipo === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>`
         : D.nuevo.tipo === 'gab' ? `<label>Medida (alto × ancho)<select id="docU">${GABD.map(d => `<option value="${d}"${d === (D.nuevo.dim || '40x30') ? ' selected' : ''}>${d.replace('x', ' × ')} cm</option>`).join('')}</select></label>` : `<label>Tamaño<select id="docU">${[4, 6, 9, 12, 15, 18, 22, 24, 27, 32, 36, 42, 45].map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>`}
       <label>Nombre <input id="docN" maxlength="50" placeholder="Ej.: Gabinete de la portería"></label>
-      <label>Lugar <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+      <label>Site <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Balanza, Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
       <span class="acts"><button class="btn pri" type="submit">Crear y documentar</button><button class="btn" type="button" data-dk="cancelar">Cancelar</button></span>
       <small class="muted">Aparece en la maqueta como «sin ubicar»: con el lápiz lo arrastrás a su lugar.</small></form>`;
   if (!R.length && !Object.keys(D.W.cajas || {}).length && !D.nuevo) h += `<div class="card empty" style="padding:24px 14px"><b>Todavía no hay racks</b><span>${ed ? 'Creá el primero con «Nuevo», o ponelo en la maqueta con el lápiz: aparece acá solo.' : 'La instaladora todavía no documentó racks.'}</span></div>`;
