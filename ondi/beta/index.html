@@ -337,6 +337,7 @@ select option{background:var(--solid);color:var(--ink)}
 .cfga{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.inq{max-width:260px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
 @media (prefers-reduced-motion:reduce){.brand,.chev{transition:none}.brand[open] .bbody{animation:none}}
 @media (max-width:700px){.mtab-h{flex-direction:column}.mtab-k{justify-items:start}.cfga{justify-content:flex-start}}
+.docsg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}.docsc{display:grid;gap:4px;text-align:left;padding:18px;cursor:pointer;font:inherit;color:var(--ink);transition:border-color .2s,box-shadow .2s}.docsc:hover{border-color:var(--accent);box-shadow:0 14px 34px -22px var(--accent)}.docsc b{font-size:17px}.docsa{margin-top:8px;color:var(--accent);font-weight:600;font-size:14px}
 </style>
 </head>
 <body>
@@ -525,7 +526,7 @@ async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { bo
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
-  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
+  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['docs', 'Documentación', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>'], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
   if (S.super) navItems.push(['super', 'Unity Tech', IC.shield]);
   const cur = S.view === 'site' ? 'clientes' : S.view;
   const nav = navItems.map(([k, n, ic]) => `<button data-nav="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic}<span>${n}</span></button>`).join('');
@@ -539,7 +540,7 @@ function render() {
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
-    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
   if (S.view === 'site' && S.tab === 'doc' && S.site && staff() && !S.falta) mountDoc();
@@ -1306,6 +1307,12 @@ function clientesCfgView() { const L = S.sites || [], q = (S.cfgQ || '').trim().
         <td>${r ? `${r.total}${r.caidos ? ` · <span style="color:var(--crit)">${r.caidos} caídos</span>` : ''}` : '—'}</td><td>${base(st)}</td>
         <td><div class="cfga"><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="integ">Integraciones</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="accesos">Accesos</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="doc">Documentación</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="datos">Datos</button></div></td></tr>`; }).join('') || '<tr><td colspan="5" class="muted">No hay clientes con ese nombre.</td></tr>'}</tbody></table></div></div>`; }
 document.addEventListener('input', e => { if (e.target.id === 'cfgq') { S.cfgQ = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#cfgq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } });
+
+// menú «Documentación»: se elige el cliente y se abre su documentación de racks, equipos y fibras
+function docsView() { const L = S.sites || [];
+  return `<div class="pagehead"><div><h1>Documentación</h1><p class="muted">Racks, gabinetes, equipos, patch cords y fibras de cada cliente. Elegí el cliente.</p></div></div>
+    ${L.length ? `<div class="docsg">${L.map(st => `<button class="card docsc" data-site="${esc(st.id)}" data-sitetab="doc"><b>${esc(st.name)}</b><span class="muted">${esc((st.data && st.data.direccion) || '')}</span><span class="docsa">Abrir documentación</span></button>`).join('')}</div>`
+      : '<div class="card empty"><b>Todavía no hay clientes</b><span>Creá un cliente y documentá sus racks.</span></div>'}`; }
 })();
 </script>
 </body>
