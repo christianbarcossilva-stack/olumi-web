@@ -563,7 +563,7 @@ html:not(.blank) .blankonly{display:none!important}
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
 
-<script src="/ondi/beta/red.js?v=12"></script>
+<script src="/ondi/beta/red.js?v=13"></script>
 <script>
 (() => {
 'use strict';
@@ -2004,7 +2004,7 @@ function edAction0(a, val) { const e = entity(SEL); if (!e) return;
 /* ---------- vista de gabinete / rack ---------- */
 const CABV = { cid: null, sel: null, linking: false };
 function openCab(cid) { if (GALV.id) closeGal(); if (!CABS[cid]) CABS[cid] = mkCab(9); CABV.cid = cid; CABV.sel = null; CABV.linking = false; $('#cabview').hidden = false; document.documentElement.classList.add('cabopen'); renderCab(); }
-function closeCab() { CABV.cid = null; $('#cabview').hidden = true; document.documentElement.classList.remove('cabopen'); }
+function closeCab() { CABV.cid = null; $('#cabview').hidden = true; document.documentElement.classList.remove('cabopen'); if (CABV.volver) { const g = CABV.volver; CABV.volver = null; openGal(g); } }
 function cabSvg(c) { const UH = 40, W0 = 600, top = 26, H0 = top + c.cap * UH + 22, x0 = 34, x1 = W0 - 34;
   let s = `<svg viewBox="0 0 ${W0} ${H0}" class="cabsvg" role="img" aria-label="Frente del gabinete">`;
   s += `<rect x="12" y="8" width="${W0 - 24}" height="${H0 - 16}" rx="10" class="cfr"/><rect x="${x0 - 10}" y="${top - 6}" width="${x1 - x0 + 20}" height="${c.cap * UH + 12}" rx="4" class="cin"/>`;
@@ -2394,7 +2394,7 @@ function galEsc() { const N = naveById(GALV.id); if (!N) return; if (GALV.draw) 
 function galAct(a, val) { const N = naveById(GALV.id); if (!N) return; const I = innerOf(N), S = selOf(I, GALV.sel), it = S && S.t === 'item' ? S.o : null;
   if (a === 'cut') { toggleCut(N); return; } if (a === 'walls') { N.wallsUp = !N.wallsUp; buildNave(N); renderGal(); return; }
   if (a === 'unsel') { GALV.sel = null; renderGal(); return; }
-  if (a === 'opencab' && S && S.t === 'dev') { const id = S.o.id; closeGal(); openCab(id); return; }
+  if (a === 'opencab' && S && S.t === 'dev') { const id = S.o.id, g = GALV.id; closeGal(); openCab(id); CABV.volver = g; return; }
   if (!canEdit()) return;
   if (a === 'clear') { if (Date.now() - GALV.armed > 4000) { GALV.armed = Date.now(); renderGal(); setTimeout(() => { if (GALV.id) renderGal(); }, 4100); return; } GALV.armed = 0; I.items.length = 0; I.walls.length = 0; I.trays.length = 0; toast('Galpón vacío'); }
   if (a === 'deldev' && S && S.t === 'dev') { removeId(S.o.id); GALV.sel = null; }
@@ -2424,6 +2424,8 @@ $('#galview').addEventListener('click', ev => { const go = ev.target.closest('[d
     if (k === 'fill') { const n = fillRows(N, innerOf(N).items); toast(n ? n + (n > 1 ? ' filas agregadas' : ' fila agregada') : 'No entran más filas: dejá lugar libre'); galCommit(N); return; }
     if (GALV.draw) finishDraw(N, innerOf(N)); GALV.place = GALV.place === k ? null : k; GALV.sel = null; renderGal(); return; }
   const b = ev.target.closest('button[data-g]'); if (b) galAct(b.dataset.g); });
+$('#galview').addEventListener('dblclick', ev => { const g = ev.target.closest('.gdev[data-dev]'); if (!g) return; const d = DEV.find(x => x.id === g.dataset.dev); if (!d || !['wr', 'gab', 'rack'].includes(d.type)) return;
+  ev.preventDefault(); const n = GALV.id; closeGal(); openCab(d.id); CABV.volver = n; });
 $('#galview').addEventListener('change', ev => { const f = ev.target.closest('[data-g]'); if (f && f.tagName !== 'BUTTON') galAct(f.dataset.g, f.value); });
 $('#galX').onclick = closeGal;
 document.addEventListener('keydown', e => { if (!GALV.id || (e.target.closest && e.target.closest('input,select,textarea'))) return;
