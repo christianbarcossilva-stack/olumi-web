@@ -1,178 +1,502 @@
 <!doctype html>
-<html lang="es-UY" data-theme="dark">
+<html lang="es-UY" data-tema="noche">
 <head>
-<script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Ondi by Unity Tech · Monitoreo de redes UniFi y multimarca</title>
-<meta name="description" content="Ondi vigila en tiempo real las cámaras, switches, access points y porteros de todos tus clientes. Pantallas para la sala de monitoreo, avisos por WhatsApp y el gemelo digital de cada predio. Hecho en Uruguay.">
-<meta property="og:title" content="Ondi by Unity Tech">
-<meta property="og:description" content="Monitoreo multicliente de redes UniFi y multimarca, hecho en Uruguay.">
-<meta property="og:image" content="https://unitytech.uy/img/ondi/maqueta.webp">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#000000">
-<link rel="icon" href="/ondi/icono.svg" type="image/svg+xml">
+<script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5));try{var t=localStorage.getItem('ondi.web.tema');if(t==='dia'||t==='noche')document.documentElement.dataset.tema=t}catch(e){}</script>
+<title>Ondi · Tus clientes, en vivo</title>
+<meta name="description" content="Ondi vigila las cámaras, switches, access points y sensores de todos tus clientes sobre la maqueta 3D de cada predio, y documenta cada rack, boca y fibra. Hecho en Uruguay por Unity Tech.">
+<link rel="icon" href="/ondi/icono.svg">
 <link rel="apple-touch-icon" href="/ondi/app/icono-180.png">
+<link rel="canonical" href="https://unitytech.uy/ondi/">
+<meta property="og:title" content="Ondi · Tus clientes, en vivo">
+<meta property="og:description" content="El monitoreo de redes y cámaras para instaladoras, sobre la maqueta 3D de cada predio.">
+<meta property="og:image" content="https://unitytech.uy/ondi/og.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://unitytech.uy/ondi/">
+<meta name="theme-color" content="#14171A">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../familia.css?v=3">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-/* Ondi: cian "señal" sobre grafito frío */
-:root{--acc:#0a7fa3;--acc-ink:#ffffff;--acc-t:#07759a}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--acc:#3fc6ea;--acc-ink:#00151d;--acc-t:#3fc6ea}}
-:root[data-theme="dark"]{--acc:#3fc6ea;--acc-ink:#00151d;--acc-t:#3fc6ea}
-.stage{--acc:#3fc6ea;--acc-ink:#00151d}
-.hero{padding-bottom:0}
-.hero .appicon{width:84px;height:84px;margin:0 auto 24px;border-radius:22.5%;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-.hero .chips{justify-content:center;margin-top:26px}
-.hero .stage{margin-top:clamp(44px,6vw,80px);padding:clamp(28px,5vw,72px) clamp(16px,4vw,64px) 0}
-.hero .stage .devices{margin-bottom:-2px}
-.hero .stage .devices .mac{border-bottom:0;border-radius:18px 18px 0 0}
-.hero .stage .devices .mac img{border-bottom-left-radius:0;border-bottom-right-radius:0}
-.hero .stage .cel.phone{margin:0 auto -14%;width:min(270px,72vw)}
-.hero .stage .cel.phone img{border-bottom-left-radius:0;border-bottom-right-radius:0}
-.twin .stage{padding:clamp(28px,5vw,64px) clamp(16px,4vw,64px) 0}
-.twin .stage .txt{max-width:720px;margin:0 auto clamp(28px,4vw,48px);text-align:center}
-.twin .stage .mac{border-bottom:0;border-radius:18px 18px 0 0;max-width:1120px;margin:0 auto}
-.twin .stage .mac img{border-bottom-left-radius:0;border-bottom-right-radius:0}
-.twin .cel.pic{margin:0 -1px}
-.twin .cta{justify-content:center;margin-top:22px}
-.vs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,4vw,56px)}
-.vs>div{border-top:1px solid var(--line-2);padding-top:20px}
-.vs h3{margin-bottom:16px}
-.vs>div:first-child .list li::before{background:var(--faint);opacity:.6}
-.single{display:flex;justify-content:center}
-@media (max-width:760px){.vs{grid-template-columns:minmax(0,1fr)}}
-.lnav,.gnav{background:rgba(0,0,0,.55)}
-.hero h1{font-size:clamp(46px,min(8vw,13vh),120px);line-height:.94;letter-spacing:-.05em}
-.hero h1 span{display:block;background:linear-gradient(90deg,#9be8ff,#3fc6ea 50%,#0a84ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-main>section{background:#000}main>section.alt{background:#0b0b0d}
+/* Ondi · la red como la ve quien la cableó. Color: los doce hilos de la fibra (TIA-598). Letra: la del frente de los equipos. */
+:root{--et:#F4F5F2;--et2:#E9ECE8;--pap:#fff;--ti:#101317;--ti2:#4E565C;--ti3:#7E878D;--li:rgba(16,19,23,.13);--li2:rgba(16,19,23,.24);--az:#0B5FFF;--az2:#0A4FD6;--ve:#18A957;--am:#F7C600;--ro:#E5383B;--na:#FF7A1A;--aq:#19C6C1;
+  --vidrio:rgba(255,255,255,.82);--sombra:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -28px rgba(16,19,23,.35);
+  --fd:"Barlow Condensed","Arial Narrow",sans-serif;--ft:"Barlow",system-ui,sans-serif;--fm:"IBM Plex Mono",ui-monospace,Menlo,monospace;--ease:cubic-bezier(.2,.7,.2,1);--resorte:cubic-bezier(.32,1.18,.5,1)}
+:root[data-tema=noche]{--et:#14171A;--et2:#1A1E22;--pap:#1E2226;--ti:#fff;--ti2:#A3ACB3;--ti3:#6F7980;--li:rgba(255,255,255,.12);--li2:rgba(255,255,255,.22);--az:#3B7BFF;--az2:#5A90FF;--vidrio:rgba(26,30,34,.78);--sombra:0 1px 0 rgba(255,255,255,.05) inset,0 30px 60px -30px rgba(0,0,0,.8)}
+*{box-sizing:border-box}html{background:var(--et);scroll-behavior:smooth}
+body{margin:0;background:var(--et);color:var(--ti);font:400 18px/1.5 var(--ft);-webkit-font-smoothing:antialiased;transition:background .5s,color .5s}
+a{color:inherit}::selection{background:var(--az);color:#fff}
+:focus-visible{outline:3px solid var(--az);outline-offset:3px}
+.ancho{max-width:1200px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+h1,h2,h3{font-family:var(--fd);font-weight:700;margin:0;letter-spacing:-.005em}
+h2{font-size:clamp(40px,5.6vw,72px);line-height:.95;max-width:15ch}
+h3{font-size:26px;line-height:1.05}
+p{margin:0}.lede{font-size:clamp(18px,1.6vw,21px);color:var(--ti2);max-width:46ch;margin-top:20px}
+.gris{color:var(--ti2)}
+
+/* botones, etiquetas y bocas */
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;font:600 19px/1 var(--fd);letter-spacing:.01em;text-decoration:none;color:#fff;background:var(--az);border:0;border-radius:4px;padding:15px 22px;cursor:pointer;transition:background .2s,transform .3s var(--resorte)}
+.btn:hover{background:var(--az2)}.btn:active{transform:scale(.97)}
+.btn.sec{background:transparent;color:var(--ti);box-shadow:inset 0 0 0 1.5px var(--li2)}.btn.sec:hover{box-shadow:inset 0 0 0 1.5px var(--ti)}
+.btn.chico{font-size:16px;padding:10px 14px}
+.etq{display:inline-flex;align-items:center;font:500 13px/1 var(--fm);color:#101317;background:#fff;padding:7px 10px 7px 16px;border-radius:3px;box-shadow:inset 7px 0 0 var(--c,var(--az)),0 0 0 1px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.14);white-space:nowrap}
+.bocas{display:flex;gap:3px;flex-wrap:wrap}.bocas svg{width:20px;height:17px;display:block}
+.bocas .r .l1{animation:par 1s steps(2) infinite}
+@keyframes par{50%{opacity:.2}}
+
+/* barra de arriba */
+.top{position:fixed;inset:0 0 auto;z-index:20;transition:background .35s,box-shadow .35s}
+.top.sc{background:var(--vidrio);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);box-shadow:0 1px 0 var(--li)}
+.top .ancho{display:flex;align-items:center;gap:22px;height:68px}
+.marca{display:flex;align-items:center;gap:10px;text-decoration:none;font:700 30px/1 var(--fd);letter-spacing:-.02em}
+.marca svg{width:34px;height:34px}
+.marca small{font:500 13px var(--ft);color:var(--ti2);letter-spacing:0;margin-top:6px}
+.nav{display:flex;gap:4px;margin-left:12px}.nav a{font:600 17px var(--fd);text-decoration:none;padding:8px 12px;border-radius:4px;color:var(--ti2)}
+.nav a:hover,.nav a.on{color:var(--ti);background:var(--li)}
+.top .der{margin-left:auto;display:flex;gap:10px;align-items:center}
+.tema{width:42px;height:42px;display:grid;place-items:center;border-radius:4px;border:0;background:transparent;color:var(--ti);box-shadow:inset 0 0 0 1.5px var(--li2);cursor:pointer}
+.tema svg{width:19px;height:19px}
+.entrar{font:600 17px var(--fd);text-decoration:none;padding:8px 6px}
+
+/* ---------- la historia, sobre la maqueta ---------- */
+.cine{position:relative;overflow-x:clip}
+.cine .bg{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;z-index:0;background:var(--et)}
+.cine .bg iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;transition:opacity 1.6s var(--ease)}
+.cine.listo .bg iframe{opacity:1}
+.cine .bg::after{content:"";position:absolute;inset:0;pointer-events:none;transition:opacity .8s;
+  background:linear-gradient(90deg,var(--et) 0%,color-mix(in srgb,var(--et) 78%,transparent) 28%,transparent 58%),linear-gradient(180deg,color-mix(in srgb,var(--et) 55%,transparent) 0%,transparent 16%,transparent 80%,var(--et) 100%)}
+.cine[data-ch="0"] .bg::after{background:linear-gradient(180deg,color-mix(in srgb,var(--et) 40%,transparent) 0%,transparent 22%,transparent 55%,color-mix(in srgb,var(--et) 70%,transparent) 82%,var(--et) 100%),linear-gradient(90deg,color-mix(in srgb,var(--et) 45%,transparent) 0%,transparent 45%)}
+.cine[data-ch="todo"] .bg::after{background:linear-gradient(180deg,color-mix(in srgb,var(--et) 30%,transparent),transparent 30%,color-mix(in srgb,var(--et) 80%,transparent) 64%,var(--et))}
+.chs{position:relative;z-index:1;margin-top:-100vh;margin-top:-100svh}
+.ch{min-height:130vh;min-height:130svh;display:flex;align-items:center;padding:110px 0 96px}
+.ch .ancho{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(24px,6vw,96px);align-items:center}
+.ch .txt{max-width:560px}
+.ch .txt>*,.ch .dev{opacity:0;transform:translateY(26px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.ch.on .txt>*,.ch.on .dev{opacity:1;transform:none}
+.ch.on .txt>:nth-child(2){transition-delay:.08s}.ch.on .txt>:nth-child(3){transition-delay:.16s}.ch.on .dev{transition-delay:.22s}
+.hora{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;color:var(--ti2);font:500 18px var(--fd)}.hora b{font:700 64px/1 var(--fd);color:var(--ti);letter-spacing:-.01em}
+.paso{margin-bottom:16px}
+
+/* tapa */
+.tapa{min-height:100vh;min-height:100svh;position:relative;padding:0}
+.tapa .ancho{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:40px;min-height:100vh;min-height:100svh;padding-top:96px;padding-bottom:max(30vh,230px)}
+.tapa h1{font-size:clamp(110px,17vw,250px);line-height:.74;margin-left:-.035em;letter-spacing:-.035em;text-shadow:0 10px 50px color-mix(in srgb,var(--et) 70%,transparent)}
+.tapa h1 span{display:block;font-size:clamp(34px,4.4vw,60px);line-height:1;letter-spacing:-.005em;margin:26px 0 0 .06em}
+.tapa .lede{color:var(--ti);opacity:.86}
+.tapa .acc{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+#fibra{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transition:opacity 1.4s var(--ease)}
+#fibra.listo{opacity:1}
+#avisoRed{position:fixed;left:50%;bottom:24px;z-index:60;transform:translate(-50%,16px);max-width:min(92vw,520px);padding:12px 16px;border-radius:4px;background:#14171A;color:#fff;font:500 15px/1.35 var(--ft);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+#avisoRed.on{opacity:1;transform:translate(-50%,0)}
+/* aviso que sale de la boca del rack 3D */
+.globo{position:absolute;z-index:3;left:0;top:0;display:flex;align-items:center;gap:10px;pointer-events:none;opacity:0;transform:translate(-100%,-50%);transition:opacity .45s var(--ease);font:500 15px/1.3 var(--ft);color:#fff;white-space:nowrap}
+.globo.on{opacity:1}
+.globo span:last-child{background:rgba(16,19,23,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:6px 10px;border-radius:4px}
+.globo::after{content:"";width:34px;height:1.5px;background:currentColor;opacity:.8;order:3}
+.reloj{position:absolute;z-index:3;right:max(20px,env(safe-area-inset-right));top:84px;font:500 13px var(--fm);color:var(--ti2)}
+
+/* tarjetas de los capítulos */
+.panel{background:var(--vidrio);-webkit-backdrop-filter:blur(20px) saturate(1.3);backdrop-filter:blur(20px) saturate(1.3);border-radius:6px;box-shadow:0 0 0 1px var(--li),var(--sombra);padding:24px;width:min(380px,86vw)}
+.panel h4{font:700 26px/1.05 var(--fd);margin:16px 0 6px}.panel p{font-size:15.5px;color:var(--ti2)}
+.grande{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-top:18px;padding-top:16px;border-top:1px solid var(--li)}
+.grande b{font:700 60px/.9 var(--fd)}.grande b small{font:500 20px var(--fd);color:var(--ti2);margin-left:4px}.grande span{font-size:15px;color:var(--ti2);max-width:12em;text-align:right}
+.etqs{display:flex;flex-wrap:wrap;gap:8px}
+
+/* teléfono */
+.iph{--w:290px;width:var(--w);aspect-ratio:9/19.3;border-radius:calc(var(--w)*.17);padding:calc(var(--w)*.035);background:linear-gradient(145deg,#3a3a3c,#1c1c1e 40%,#2c2c2e);box-shadow:0 0 0 1.5px #48484a,0 50px 90px -30px rgba(0,0,0,.6)}
+.iph .scr{position:relative;height:100%;border-radius:calc(var(--w)*.135);overflow:hidden;background:#000;font:14px/1.35 var(--ft);color:#f5f5f7;display:flex;flex-direction:column}
+.iph .scr::before{content:"";position:absolute;top:10px;left:50%;width:31%;height:27px;margin-left:-15.5%;background:#000;border-radius:20px;z-index:5}
+.sbar{display:flex;justify-content:space-between;padding:14px 26px 6px;font:600 14px var(--ft);position:relative;z-index:4}
+.lock{flex:1;background:radial-gradient(120% 80% at 30% 0%,#6E8DFF 0%,#2347B8 42%,#0B1430 100%);display:flex;flex-direction:column;align-items:center;padding:6px 12px 20px}
+.lock .dia{font:500 15px var(--ft);color:rgba(255,255,255,.85);margin-top:18px}.lock .hr{font:600 80px/1 var(--fd);color:#fff;margin:2px 0 26px}
+.nt{width:100%;background:rgba(255,255,255,.72);color:#101317;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:20px;padding:11px 13px;margin-top:8px;display:flex;gap:10px;opacity:0;transform:translateY(-14px) scale(.97);transition:opacity .6s var(--ease),transform .7s var(--resorte)}
+.nt .ico{width:34px;height:34px;border-radius:8px;flex:none;display:grid;place-items:center;background:#14171A}.nt .ico svg{width:22px;height:22px}.nt .wa{background:#25d366}
+.nt div{min-width:0;flex:1}.nt .h{display:flex;justify-content:space-between;font-size:12px;color:rgba(16,19,23,.55)}
+.nt b{display:block;font-size:14px;margin:1px 0;font-weight:600}.nt span{font-size:13px;color:rgba(16,19,23,.78);display:block}
+.ch.on .nt.n1{opacity:1;transform:none;transition-delay:.9s}.ch.on .nt.n2{opacity:1;transform:none;transition-delay:1.9s}.ch.on .nt.n3{opacity:1;transform:none;transition-delay:2.9s}
+
+/* una alerta, no veinte */
+.arbol{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:7px}
+.arbol li{display:flex;align-items:center;gap:10px;font-size:15px;padding:9px 12px;border-radius:4px;background:var(--li)}
+.arbol li.raiz{background:color-mix(in srgb,var(--ro) 16%,transparent);font-weight:600}
+.arbol li.sub{margin-left:22px;color:var(--ti2);opacity:0;transform:translateX(-8px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.arbol li.sub em{margin-left:auto;font:500 12px var(--fm);font-style:normal;color:var(--ti3)}
+.ch.on .arbol li.sub{opacity:1;transform:none}
+.ch.on .arbol li.sub:nth-child(2){transition-delay:.6s}.ch.on .arbol li.sub:nth-child(3){transition-delay:.8s}.ch.on .arbol li.sub:nth-child(4){transition-delay:1s}.ch.on .arbol li.sub:nth-child(5){transition-delay:1.2s}
+
+/* el ticket */
+.tk ul{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:8px}
+.tk li{display:flex;align-items:center;gap:12px;font-size:15.5px;padding:10px 12px;border-radius:4px;background:var(--li)}
+.tk li small{margin-left:auto;font:500 13px var(--fm);color:var(--ti2)}
+.tk .ck{width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--li2);display:grid;place-items:center;flex:none;transition:background .35s,box-shadow .35s}
+.tk .ck svg{width:13px;height:13px;stroke:#fff;stroke-width:2.6;fill:none;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .4s var(--ease)}
+.ch.on .tk li.y .ck{background:var(--ve);box-shadow:none}.ch.on .tk li.y .ck svg{stroke-dashoffset:0}
+.ch.on .tk li:nth-child(1) .ck,.ch.on .tk li:nth-child(1) .ck svg{transition-delay:.6s}.ch.on .tk li:nth-child(2) .ck,.ch.on .tk li:nth-child(2) .ck svg{transition-delay:1s}.ch.on .tk li:nth-child(3) .ck,.ch.on .tk li:nth-child(3) .ck svg{transition-delay:1.4s}
+
+/* lo que ve la cámara */
+.feed{width:min(420px,86vw);border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px var(--li),var(--sombra);background:var(--pap)}
+.feed .vid{position:relative;aspect-ratio:16/10;background:linear-gradient(180deg,#9BA6AD 0%,#7F8A91 46%,#5E6468 47%,#71777A 100%);overflow:hidden}
+.feed .vid svg{position:absolute;inset:0;width:100%;height:100%}
+.feed .osd{position:absolute;left:12px;right:12px;top:10px;display:flex;justify-content:space-between;font:500 12px var(--fm);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.feed .osd i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ro);margin-right:6px;animation:par 1.2s steps(2) infinite}
+.feed .vid::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 1px,transparent 1px 3px)}
+.feed .cap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px}.feed .cap b{display:block;font:700 21px var(--fd)}.feed .cap small{color:var(--ti2);font-size:14px}
+.feed .camion{animation:anda 9s linear infinite}@keyframes anda{from{transform:translateX(-140px)}to{transform:translateX(560px)}}
+
+/* en vivo */
+.ch.todo .ancho{display:block}.ch.todo .txt{max-width:1000px}
+.cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--li);margin-top:44px;box-shadow:0 0 0 1px var(--li)}
+.cifras>div{background:var(--vidrio);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);padding:24px 24px 26px;border-top:6px solid var(--c)}
+.cifras b{display:block;font:700 clamp(64px,7vw,104px)/.88 var(--fd);margin:8px 0 12px}.cifras b small{font:500 24px var(--fd);color:var(--ti2);margin-left:6px}
+.cifras p{color:var(--ti2);font-size:16px}
+
+/* ---------- secciones ---------- */
+.bloque{padding:clamp(80px,11vw,140px) 0 0}
+.cab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,5vw,72px);align-items:end;margin-bottom:40px}
+.cab .lede{margin-top:0}
+
+/* rack en vivo (red.js) */
+.rackvivo{position:relative;background:var(--pap);box-shadow:0 0 0 1px var(--li),var(--sombra);border-radius:6px;overflow:hidden;
+  --ink:var(--ti);--muted:var(--ti2);--glass-strong:var(--pap);--line:var(--li);--line-strong:var(--li2);--accent:var(--az);--accent-ink:var(--az);--accent-soft:color-mix(in srgb,var(--az) 14%,transparent);--ok:var(--ve);--warn:#C99A00;--crit:var(--ro);--f-ui:var(--ft);--f-mono:var(--fm)}
+.rackvivo .red-x{display:none}
+.rackvivo .red{max-height:none}
+.rackvivo .red-on{width:100%!important}
+.rackvivo .red-body{min-height:520px}
+.rackvivo .red-tt h3{font-family:var(--fd);font-size:28px}
+.pista{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;color:var(--ti2);font-size:16px}
+.pista .btn{margin-left:auto}
+
+/* dos caminos por marca */
+.marcas{width:100%;border-collapse:collapse;font-size:16px}
+.marcas th{font:600 15px var(--fd);text-align:left;color:var(--ti2);padding:0 14px 12px 0;border-bottom:1.5px solid var(--li2)}
+.marcas td{padding:15px 14px 15px 0;border-bottom:1px solid var(--li);vertical-align:top}
+.marcas td:first-child{font:700 21px/1.1 var(--fd);white-space:nowrap}
+.est{display:inline-flex;align-items:center;gap:7px;font:500 12.5px var(--fm);color:var(--ti2);margin-top:5px}
+.est i{width:8px;height:8px;border-radius:50%;background:var(--am)}.est.ok i{background:var(--ve);box-shadow:0 0 0 4px color-mix(in srgb,var(--ve) 25%,transparent);animation:late 2.4s ease-in-out infinite}
+@keyframes late{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--ve) 0%,transparent)}}
+.marcas small{display:block;color:var(--ti2);font-size:14.5px;margin-top:2px}
+
+/* funciones */
+.func{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 40px;list-style:none;margin:0;padding:0}
+.func li{border-top:6px solid var(--c);padding:16px 0 34px}
+.func b{display:block;font:700 23px/1.1 var(--fd);margin-bottom:8px}.func span{color:var(--ti2);font-size:16px}
+.traza{background:var(--pap);box-shadow:0 0 0 1px var(--li);border-radius:6px;padding:24px 24px 18px;margin-top:10px}
+.traza .fila{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.traza b{font:700 26px var(--fd)}.traza svg{display:block;width:100%;height:auto;margin-top:12px}
+.traza .ln{fill:none;stroke:var(--az);stroke-width:2.5;stroke-linejoin:round;stroke-dasharray:3000;stroke-dashoffset:3000;transition:stroke-dashoffset 2.6s var(--ease)}
+.traza.on .ln{stroke-dashoffset:0}
+.traza .ej text{font:500 11px var(--fm);fill:var(--ti3)}.traza .ej line{stroke:var(--li)}
+.traza .evt circle{fill:var(--ro)}.traza .evt text{font:600 13px var(--fd);fill:var(--ti)}
+
+/* planes */
+.planes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.plan{display:flex;flex-direction:column;background:var(--pap);box-shadow:0 0 0 1px var(--li);border-radius:6px;padding:28px;border-top:6px solid var(--c)}
+.plan .nom{display:flex;justify-content:space-between;align-items:center;font:700 26px var(--fd)}
+.plan .pr{font:700 84px/.9 var(--fd);margin:24px 0 6px}.plan .pr small{font:500 18px var(--fd);color:var(--ti2);margin-left:6px}
+.plan .quien{color:var(--ti2);font-size:16px;margin:0 0 20px}
+.plan ul{list-style:none;padding:0;margin:0 0 28px;display:grid;gap:9px;font-size:16px}
+.plan li{display:flex;gap:10px}.plan li::before{content:"";flex:none;width:8px;height:8px;margin-top:9px;border-radius:50%;background:var(--ve)}
+.plan .btn{margin-top:auto;justify-content:center}
+.plan.dest{background:linear-gradient(#3A4148,#24292E);color:#E3E8EC;box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}.plan.dest .quien,.plan.dest .pr small{color:#9AA5AE}
+.medida{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,2fr) auto;gap:clamp(20px,4vw,48px);align-items:start;margin-top:20px;padding:28px;background:var(--pap);box-shadow:0 0 0 1px var(--li);border-radius:6px;border-left:6px solid var(--az)}
+.medida h3{font-size:34px}.medida p{color:var(--ti2);font-size:16px;margin-top:8px}
+.medida ul{list-style:none;margin:0;padding:0;display:grid;gap:14px}.medida b{display:block;font:700 21px var(--fd)}.medida span{color:var(--ti2);font-size:16px}
+@media (max-width:900px){.medida{grid-template-columns:1fr}}
+.nota{color:var(--ti2);font-size:15.5px;margin-top:24px;max-width:60ch}
+
+/* descargas y preguntas */
+.tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.caja{background:var(--pap);box-shadow:0 0 0 1px var(--li);border-radius:6px;padding:26px;display:flex;flex-direction:column;gap:12px}
+.caja p{color:var(--ti2);font-size:16px}.caja .acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+.caja small{color:var(--ti3);font-size:14px}
+.faq{max-width:820px}
+.faq details{border-top:1px solid var(--li2)}.faq details:last-child{border-bottom:1px solid var(--li2)}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 0;font:600 24px/1.15 var(--fd)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font:500 30px/1 var(--ft);color:var(--ti2);transition:transform .4s var(--resorte)}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{color:var(--ti2);margin:-4px 0 24px;max-width:62ch}
+
+/* cierre y pie */
+.cierre{padding:clamp(90px,12vw,150px) 0 clamp(60px,8vw,100px);position:relative;overflow:hidden}
+.cierre h2{font-size:clamp(56px,9vw,128px);max-width:12ch}
+.cierre .acc{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.cierre svg{display:block;width:100%;height:auto;margin-top:clamp(40px,6vw,80px)}
+footer{border-top:1px solid var(--li);padding:36px 0 50px;font-size:15.5px;color:var(--ti2)}
+footer .ancho{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start}
+footer b{display:block;color:var(--ti);font:700 19px var(--fd);margin-bottom:6px}
+footer a{display:block;text-decoration:none;padding:3px 0}footer a:hover{color:var(--ti)}
+footer .uno{flex:1 1 280px;max-width:380px}
+
+/* ---------- celular ---------- */
+@media (max-width:900px){
+  .nav{display:none}.entrar{display:none}
+  .tapa .ancho{grid-template-columns:1fr;align-items:end;padding-bottom:36px}
+  .globo{display:none}
+  .tapa .ancho{padding-bottom:max(26vh,180px)}
+  .ch{min-height:150vh;min-height:150svh;align-items:flex-end;padding:84px 0 56px}
+  .ch .ancho{grid-template-columns:1fr;gap:22px;justify-items:center}
+  .ch .txt{max-width:none;justify-self:stretch}.ch .dev{order:-1}
+  .cine .bg::after,.cine[data-ch] .bg::after{background:linear-gradient(180deg,color-mix(in srgb,var(--et) 45%,transparent) 0%,transparent 25%,color-mix(in srgb,var(--et) 72%,transparent) 60%,var(--et) 100%)}
+  .cine[data-ch="0"] .bg::after{background:linear-gradient(180deg,color-mix(in srgb,var(--et) 30%,transparent) 0%,transparent 30%,color-mix(in srgb,var(--et) 75%,transparent) 70%,var(--et) 100%)}
+  .cifras,.cab,.planes,.tres{grid-template-columns:1fr}.cifras{margin-top:28px}
+  .func{grid-template-columns:1fr 1fr}
+  .marcas thead{display:none}.marcas tr{display:block;border-bottom:1px solid var(--li);padding:12px 0}.marcas td{display:block;border:0;padding:4px 0}
+  .rackvivo .red-body{min-height:0}
+}
+@media (max-width:600px){.marca small{display:none}.top .ancho{gap:12px}.func{grid-template-columns:1fr}.hora b{font-size:52px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}.ch .txt>*,.ch .dev{opacity:1;transform:none}}
 </style>
 </head>
 <body>
-<nav class="gnav" aria-label="Unity Tech"><div class="wrap">
-  <a class="mark" href="../"><i></i>Unity Tech</a>
-  <a href="../olumi/">Olumi</a><a class="on" href="./">Ondi</a>
-  <span class="sp"></span><a href="mailto:hola@unitytech.uy">Contacto</a>
-</div></nav>
-<header class="lnav"><div class="wrap">
-  <a class="prod" href="./" aria-label="Ondi, inicio"><img src="/ondi/icono.svg" width="28" height="28" alt=""><b>ondi</b></a>
-  <nav><a href="#funciones">Funciones</a><a href="#gemelo">Gemelo digital</a><a href="#descargas">Descargas</a><a href="#planes">Planes</a><a class="btn pri sm" href="/ondi/app/">Abrir la demo</a></nav>
+<header class="top" id="top"><div class="ancho">
+  <a class="marca" href="./" aria-label="Ondi, inicio"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="6" fill="#14171A"/><g stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M5 22c9 0 12-10 24-10" stroke="#0B5FFF"/><path d="M5 22c9 0 12-6 24-6" stroke="#FF7A1A"/><path d="M5 22c9 0 12-2 24-2" stroke="#18A957"/><path d="M5 22c9 0 12 2 24 2" stroke="#F7C600"/><path d="M5 22c9 0 12 6 24 6" stroke="#E5383B"/></g></svg>ondi<small>by Unity Tech</small></a>
+  <nav class="nav" aria-label="Secciones"><a href="#cine">En vivo</a><a href="#conexiones">Conexiones</a><a href="#marcas">Marcas</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a></nav>
+  <div class="der"><button class="tema" id="tema" type="button" aria-label="Cambiar a modo día"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg></button><a class="entrar" href="/ondi/app/">Entrar</a><a class="btn chico" href="/ondi/app/">Probar Ondi</a></div>
 </div></header>
 
 <main>
-<section class="hero center"><div class="wrap wide">
-  <img class="appicon in" src="/ondi/icono.svg" width="84" height="84" alt="">
-  <h1 class="in d1">Enterate de la caída<span>antes que tu cliente.</span></h1>
-  <p class="lede in d2">Ondi vigila las cámaras, switches, access points y porteros de todos tus clientes. Si algo se cae, lo ves en la pantalla de la oficina o te llega un WhatsApp, con el ticket ya abierto.</p>
-  <div class="cta center in d3"><a class="btn pri lg" href="/ondi/app/">Abrir la demo</a><a class="more" href="#gemelo">Ver el gemelo digital</a></div>
-  <div class="chips in d4"><span class="chip">UniFi sin instalar nada</span><span class="chip">Multimarca con agente</span><span class="chip">Pantallas, celular y computadora</span></div>
-  <div class="stage in bloom"><div class="vis">
-    <div class="devices">
-      <div class="mac"><div class="bar"><i></i><i></i><i></i></div><img src="/img/ondi/mac-panel.webp" width="1800" height="1125" alt="El panel de Ondi: equipos en línea, caídos y en atención, alertas abiertas y la lista de clientes con su disponibilidad" fetchpriority="high"></div>
-      <div class="phone"><img src="/img/ondi/phone-alertas.webp" width="780" height="1688" alt="Las alertas de Ondi en el celular" loading="lazy"></div>
+<section class="cine" id="cine" data-ch="0" aria-label="Un corte en un parque logístico, contado con Ondi">
+  <div class="bg"><iframe id="maq" src="/ondi/maqueta/?embed=1&amp;cine=1&amp;v=40" title="Maqueta 3D de un parque logístico inventado" tabindex="-1" aria-hidden="true"></iframe></div>
+  <div class="chs">
+
+    <article class="ch tapa" data-t="0">
+      <canvas id="fibra" aria-hidden="true"></canvas>
+      <div class="globo" id="globo" aria-live="polite"><span class="etq" id="evEtq" style="--c:#E5383B">AP-13</span><span id="evTxt">Sin señal, andén 3</span></div><span class="reloj" id="reloj" aria-hidden="true">--:--:--</span>
+      <div class="ancho"><div class="txt">
+        <h1>ondi<span>Tus clientes, en vivo.</span></h1>
+        <p class="lede">Las cámaras, los switches, el Wi-Fi y los sensores de todos tus clientes, sobre la maqueta 3D de cada predio. Si algo se cae, lo sabés antes que ellos.</p>
+        <div class="acc"><a class="btn" href="/ondi/app/">Probar Ondi</a><a class="btn sec" href="mailto:hola@unitytech.uy?subject=Quiero%20una%20demo%20de%20Ondi">Pedir una demostración</a></div>
+      </div>
+      </div>
+    </article>
+
+    <article class="ch" data-t=".16"><div class="ancho"><div class="txt">
+      <h2>El predio de tu cliente, a escala real.</h2>
+      <p class="lede">Cada galpón, cada cámara y cada antena en su lugar, con su estado en vivo. Lo armás con un editor tan simple como un juego, o te lo armamos nosotros a partir del plano.</p>
     </div>
-    <div class="cel phone"><img src="/img/ondi/phone-panel.webp" width="780" height="1688" alt="" loading="lazy"></div>
-  </div></div>
+    <div class="dev"><div class="panel"><div class="etqs"><span class="etq">Galpón N1</span><span class="etq" style="--c:#19C6C1">FO-01</span><span class="etq" style="--c:#18A957">C-07</span><span class="etq" style="--c:#F7C600">Rack N1</span></div>
+      <h4>8 galpones, 123 equipos</h4><p>Fibra, racks, cámaras y Wi-Fi ubicados donde están, cada uno con su etiqueta.</p>
+      <div class="grande"><b>3,2<small>km</small></b><span>de fibra dibujada, con nombre y hilos</span></div></div></div></div></article>
+
+    <article class="ch" data-t=".32" data-ev="caida"><div class="ancho"><div class="txt">
+      <p class="hora"><b>13:28</b>martes</p>
+      <h2>Un access point deja de responder. Lo sabés antes que el cliente.</h2>
+      <p class="lede">Se pone rojo en la maqueta y al técnico de guardia le llega el aviso con el lugar exacto. Sin llamadas.</p>
+    </div>
+    <div class="dev"><div class="iph"><div class="scr"><div class="sbar"><span>13:29</span><span>●●●</span></div>
+      <div class="lock"><div class="dia">martes 10 de noviembre</div><div class="hr">13:29</div>
+        <div class="nt n1"><span class="ico"><svg viewBox="0 0 34 34"><g stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M5 22c9 0 12-10 24-10" stroke="#3B7BFF"/><path d="M5 22c9 0 12-2 24-2" stroke="#18A957"/><path d="M5 22c9 0 12 6 24 6" stroke="#E5383B"/></g></svg></span><div><div class="h"><span>ONDI</span><span>ahora</span></div><b>AP-13 sin señal</b><span>Parque Logístico Norte · andén 3 · hace 1 min</span></div></div>
+        <div class="nt n2"><span class="ico wa"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg></span><div><div class="h"><span>WHATSAPP</span><span>ahora</span></div><b>Ondi, guardia</b><span>El AP del andén 3 no responde. ¿Lo tomás?</span></div></div>
+        <div class="nt n3"><span class="ico"><svg viewBox="0 0 34 34"><g stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M5 22c9 0 12-10 24-10" stroke="#3B7BFF"/><path d="M5 22c9 0 12-2 24-2" stroke="#18A957"/><path d="M5 22c9 0 12 6 24 6" stroke="#E5383B"/></g></svg></span><div><div class="h"><span>ONDI</span><span>ahora</span></div><b>Martín lo tomó</b><span>Ticket T-0143 abierto, sale para el parque</span></div></div>
+      </div></div></div></div></div></article>
+
+    <article class="ch" data-t=".48"><div class="ancho"><div class="txt">
+      <h2>Una alerta, no veinte.</h2>
+      <p class="lede">Si se cae un switch, Ondi avisa una sola vez y marca todo lo que cuelga de él como «sin acceso». Lo sabe porque cada boca está documentada.</p>
+    </div>
+    <div class="dev"><div class="panel"><span class="etq" style="--c:#E5383B">SW-N1</span>
+      <ul class="arbol"><li class="raiz">Switch del galpón N1, sin respuesta</li><li class="sub">AP-13<em>sin acceso</em></li><li class="sub">AP-14<em>sin acceso</em></li><li class="sub">C-07, andén norte<em>sin acceso</em></li><li class="sub">Lector de la oficina<em>sin acceso</em></li></ul>
+      <div class="grande"><b>1</b><span>alerta, por la causa real</span></div></div></div></div></article>
+
+    <article class="ch" data-t=".64" data-ev="van"><div class="ancho"><div class="txt">
+      <h2>El ticket sale solo. Y lo ves llegar.</h2>
+      <p class="lede">La alerta se vuelve ticket en Olumi con un toque, y el furgón de tu empresa aparece en la maqueta entrando al parque. Tu cliente ve lo mismo.</p>
+    </div>
+    <div class="dev"><div class="panel tk"><span class="etq" style="--c:#0B5FFF">T-0143</span><h4>AP-13, andén 3</h4><p>Parque Logístico Norte, galpón N1</p>
+      <ul><li class="y"><span class="ck"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Aviso<small>13:28</small></li><li class="y"><span class="ck"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Martín lo tomó<small>13:29</small></li><li class="y"><span class="ck"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Entró al parque<small>13:47</small></li><li><span class="ck"></span>En el andén<small>13:50</small></li></ul>
+      <div class="grande"><b>22<small>min</small></b><span>del aviso al lugar</span></div></div></div></div></article>
+
+    <article class="ch" data-t=".78" data-ev="ok"><div class="ancho"><div class="txt">
+      <h2>Entrás caminando. Ves lo que ve cada cámara.</h2>
+      <p class="lede">Tu cliente recorre su predio, mira cualquier cámara desde su lugar y pide un cambio apuntando al equipo. Sin planos impresos ni capturas por WhatsApp.</p>
+    </div>
+    <div class="dev"><div class="feed"><div class="vid"><svg viewBox="0 0 420 262" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 122 L420 92 L420 262 L0 262Z" fill="#5E6468"/><path d="M0 122 L420 92" stroke="#c9ccc8" stroke-width="2"/><path d="M60 262 L250 104" stroke="#e6e3dc" stroke-width="3" stroke-dasharray="14 12"/>
+        <rect x="250" y="38" width="170" height="68" fill="#C9CED1"/><g fill="#3B4147"><rect x="262" y="66" width="22" height="34"/><rect x="292" y="66" width="22" height="34"/><rect x="322" y="66" width="22" height="34"/><rect x="352" y="66" width="22" height="34"/><rect x="382" y="66" width="22" height="34"/></g>
+        <g class="camion"><rect x="0" y="150" width="96" height="40" rx="3" fill="#EEF0F1"/><rect x="96" y="160" width="30" height="30" rx="4" fill="#0B5FFF"/><circle cx="20" cy="194" r="8" fill="#22262A"/><circle cx="78" cy="194" r="8" fill="#22262A"/><circle cx="112" cy="194" r="8" fill="#22262A"/></g></svg>
+        <div class="osd"><span><i></i>C-07</span><span id="osdt">13:52:08</span></div></div>
+      <div class="cap"><div><b>Cámara andén norte</b><small>Galpón N1, domo 4 MP, en línea</small></div><span class="etq" style="--c:#18A957">C-07</span></div></div></div></div></article>
+
+    <article class="ch todo" data-t=".92"><div class="ancho"><div class="txt">
+      <h2>Todos tus clientes, en una pantalla.</h2>
+      <p class="lede">En la tele de la sala técnica, una placa por cliente: los que tienen problemas pasan primero. Los que no están en pantalla avisan por WhatsApp, y si nadie responde, al siguiente de la guardia.</p>
+      <div class="cifras">
+        <div style="--c:#18A957"><b>142<small>de 145</small></b><p>equipos en línea en 6 clientes de ejemplo</p></div>
+        <div style="--c:#F7C600"><b>5<small>min</small></b><p>como mucho, del corte al aviso, de día y de noche</p></div>
+        <div style="--c:#0B5FFF"><b>1<small>alerta</small></b><p>por causa, con lo que cuelga marcado</p></div>
+      </div>
+    </div></div></article>
+  </div>
+</section>
+
+<section class="bloque" id="conexiones"><div class="ancho">
+  <div class="cab"><h2>Tocá una boca. Te dice qué hay en la punta.</h2>
+    <p class="lede">Cada rack documentado como es: switch, patchera, cable con su etiqueta y la fibra hilo por hilo hasta el rack principal. Esto no es una imagen: probalo.</p></div>
+  <div class="rackvivo" id="rackvivo"></div>
+  <div class="pista"><span>Ejemplo inventado. Probá tocar la boca 3 de la patchera, o el SFP 1 del switch.</span><button class="btn sec chico" id="editar" type="button">Probar a editarlo</button></div>
 </div></section>
 
-<section id="funciones"><div class="wrap">
-  <h2>Lo que la consola no te muestra.</h2>
-  <p class="sub">La consola de Ubiquiti te dice qué está online. Ondi te dice qué hacer, para todos tus clientes juntos.</p>
-  <ul class="facts">
-    <li><h4>Un monitor para la oficina</h4><p>Elegís qué clientes ve cada pantalla. Los que tienen problemas pasan primero y la tarjeta se pone roja.</p></li>
-    <li><h4>WhatsApp con escalamiento</h4><p>Los clientes fuera de pantalla avisan al técnico de guardia. Si nadie responde en 10 minutos, avisa al siguiente.</p></li>
-    <li><h4>Una alerta, no veinte</h4><p>Si se cae un switch, llega una sola alerta y lo que cuelga de él queda marcado «sin acceso».</p></li>
-    <li><h4>Los equipos donde están</h4><p>Cada cámara, switch y access point ubicado en el plano o en la maqueta 3D del predio, con su estado por zona.</p></li>
-    <li><h4>Qué access points se pisan</h4><p>Marca los cercanos que comparten canal y propone una combinación mejor de 1, 6 y 11.</p></li>
-    <li><h4>Un informe por cliente, cada mes</h4><p>La disponibilidad de sus equipos en una página que justifica el abono.</p></li>
+<section class="bloque" id="marcas"><div class="ancho">
+  <div class="cab"><h2>Dos caminos por marca. Uno no instala nada.</h2>
+    <p class="lede">No en todos lados te dejan poner un equipo en la red del cliente. Por eso cada marca tiene una forma de leerse desde afuera.</p></div>
+  <table class="marcas">
+    <thead><tr><th>Marca</th><th>Sin instalar nada en el cliente</th><th>Con el agente Ondi en su red</th></tr></thead>
+    <tbody id="tmarcas"></tbody>
+  </table>
+</div></section>
+
+<section class="bloque" id="funciones"><div class="ancho">
+  <div class="cab"><h2>Y todo lo que una instaladora necesita.</h2>
+    <div class="traza" id="traza"><div class="fila"><b>Disponibilidad de la semana</b><span class="gris">Galpón N1, cliente de ejemplo</span></div>
+      <svg viewBox="0 0 560 150" id="trazaSvg" aria-label="Gráfico de disponibilidad con tres caídas en la semana"></svg></div></div>
+  <ul class="func">
+    <li style="--c:#0B5FFF"><b>Una pantalla para la oficina</b><span>Elegís qué clientes ve cada tele. Los que tienen problemas pasan primero, con el equipo y hace cuánto.</span></li>
+    <li style="--c:#FF7A1A"><b>WhatsApp con escalamiento</b><span>Avisa al técnico de guardia y, si nadie responde en 10 minutos, al siguiente.</span></li>
+    <li style="--c:#18A957"><b>Informe por cliente, cada mes</b><span>La disponibilidad de sus equipos en una página, para justificar el abono.</span></li>
+    <li style="--c:#8A5A3C"><b>Racks, cables y fibras</b><span>Planilla de cables para Excel e impresión con el frente de cada rack.</span></li>
+    <li style="--c:#8D979F"><b>El acceso del cliente, por persona</b><span>Su gente de sistemas entra con su cuenta: solo ver, pedir cambios o editar su maqueta.</span></li>
+    <li style="--c:#E5383B"><b>Pedidos desde el lugar</b><span>Apuntás al equipo en la maqueta y sale el pedido con la ubicación exacta.</span></li>
   </ul>
 </div></section>
 
-<section class="twin" id="gemelo"><div class="wrap wide">
-  <div class="stage">
-    <div class="txt">
-      <p class="eyebrow"><i></i>Nuevo · en pruebas</p>
-      <h2>Cada cliente, con su gemelo digital.</h2>
-      <p class="sub" style="margin-bottom:0">El predio del cliente en 3D, a escala real sobre la vista aérea, con cada cámara, switch y access point donde está. Si un equipo se cae, el punto se pone rojo y sale el aviso. Y el cliente puede entrar caminando, ver lo que ve cada cámara y pedir un cambio desde el mismo lugar.</p>
-      <div class="cta"><a class="btn" href="mailto:hola@unitytech.uy?subject=Quiero%20el%20gemelo%20digital%20de%20mi%20predio%20en%20Ondi">Pedir el gemelo digital de tu predio</a></div>
-    </div>
-    <div class="vis">
-      <div class="mac"><div class="bar"><i></i><i></i><i></i></div><img src="/img/ondi/maqueta.webp" width="2000" height="1250" alt="Gemelo digital de un parque logístico de ejemplo en Ondi, con los equipos de cada nave y la actividad en vivo" loading="lazy"></div>
-      <div class="cel pic"><img src="/img/ondi/maqueta.webp" width="2000" height="1250" alt="" loading="lazy"></div>
-    </div>
+<section class="bloque" id="planes"><div class="ancho">
+  <div class="cab"><h2>Planes. Por sitio, por mes.</h2><p class="lede">En dólares, por cada predio que monitoreás, con la maqueta, los avisos y el acceso de su gente de sistemas. Valores de lanzamiento, a confirmar.</p></div>
+  <div class="planes">
+    <div class="plan" style="--c:#18A957"><div class="nom">Chico<span class="etq" style="--c:#18A957">hasta 15 equipos</span></div><div class="pr">29<small>US$ al mes</small></div><p class="quien">Un comercio, una oficina, un local.</p>
+      <ul><li>Estado en tiempo real</li><li>Avisos por WhatsApp</li><li>Maqueta del local</li><li>Historial de caídas</li></ul><a class="btn sec" href="/ondi/app/">Empezar</a></div>
+    <div class="plan dest" style="--c:#0B5FFF"><div class="nom">Mediano<span class="etq">de 16 a 40 equipos</span></div><div class="pr">59<small>US$ al mes</small></div><p class="quien">Un edificio, una planta, un depósito.</p>
+      <ul><li>Todo lo de Chico</li><li>Pantalla para la oficina</li><li>Informe mensual</li><li>Racks, cables y fibras</li><li>Mapa de canales Wi-Fi</li></ul><a class="btn" href="/ondi/app/">Probar Ondi</a></div>
+    <div class="plan" style="--c:#F7C600"><div class="nom">Grande<span class="etq" style="--c:#F7C600">más de 40 equipos</span></div><div class="pr">149<small>a 299 US$ al mes</small></div><p class="quien">Parques logísticos, campus, puertos.</p>
+      <ul><li>Todo lo de Mediano</li><li>Acceso del cliente por persona</li><li>Escalamiento de avisos</li><li>Recorrido a pie con avatar</li></ul><a class="btn sec" href="mailto:hola@unitytech.uy?subject=Ondi%20sitio%20grande">Hablemos</a></div>
+  </div>
+  <div class="medida"><div><h3>A medida</h3><p>Cada predio es distinto. Vemos lo que necesita tu cliente y te pasamos un presupuesto.</p></div>
+    <ul><li><b>Maqueta del predio</b><span>Una oficina, un edificio o un parque logístico entero, con sus galpones, interiores y recorridos, y los equipos donde están.</span></li>
+      <li><b>Documentación de red</b><span>Cada rack, switch boca por boca, patcheras y fibras hasta el equipo de la punta.</span></li>
+      <li><b>Personalización</b><span>Los colores y el logo del cliente, sus propios modelos 3D e integraciones con sus sistemas.</span></li></ul>
+    <a class="btn" href="mailto:hola@unitytech.uy?subject=Presupuesto%20a%20medida%20de%20Ondi">Pedir presupuesto</a></div>
+  <p class="nota">Ondi controla que los equipos funcionen y avisa si una puerta quedó abierta. No es un servicio de vigilancia ni reemplaza a una empresa de seguridad.</p>
+</div></section>
+
+<section class="bloque" id="descargas"><div class="ancho">
+  <div class="cab"><h2>En la oficina, en la calle y en la tele.</h2><p class="lede">Todas las versiones abren la misma app y se actualizan solas.</p></div>
+  <div class="tres">
+    <div class="caja"><h3>Navegador</h3><p>Chrome, Safari o Edge, sin instalar nada. También para la tele de la sala técnica.</p><div class="acc"><a class="btn" href="/ondi/app/">Abrir Ondi</a></div></div>
+    <div class="caja"><h3>Windows y Mac</h3><p>Descargá el ZIP y abrí Ondi como una app más.</p><div class="acc"><a class="btn sec" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Windows.zip">Windows</a><a class="btn sec" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Mac.zip">Mac</a></div><small>Mac Intel: <a href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Mac-Intel.zip">esta versión</a>.</small></div>
+    <div class="caja"><h3>iPhone y Android</h3><p>Pronto en las tiendas. Mientras tanto, abrí unitytech.uy/ondi/app y agregala al inicio.</p><div class="acc"><a class="btn sec" href="/ondi/app/">Abrir en el celular</a></div></div>
   </div>
 </div></section>
 
-<section class="alt"><div class="wrap">
-  <div class="story">
-    <div class="txt">
-      <p class="eyebrow"><i></i>Caso real</p>
-      <h2>Un plano que encuentra problemas.</h2>
-      <p class="sub" style="margin-bottom:22px">En una red real de 51 equipos, 9 de 15 access points estaban en el mismo canal de 2,4 GHz. Nadie lo había notado porque todos figuraban «online».</p>
-      <ul class="list"><li>Líneas rojas entre los access points cercanos que se pisan.</li><li>Propuesta de canales que cambia la menor cantidad de equipos.</li><li>Los repuestos y equipos de prueba no generan alertas.</li></ul>
-    </div>
-    <div class="vis"><div class="mac"><div class="bar"><i></i><i></i><i></i></div><img src="/img/ondi/plano.webp" width="1440" height="900" alt="Plano de Ondi con el mapa de canales de 2,4 GHz y los access points que comparten canal" loading="lazy"></div>
-      <div class="cel pic"><img src="/img/ondi/plano.webp" width="1440" height="900" alt="" loading="lazy"></div></div>
-  </div>
-
-  <div class="story flip">
-    <div class="txt">
-      <h2>Una pantalla para la oficina.</h2>
-      <p class="sub" style="margin-bottom:22px">En el televisor de la sala técnica, una tarjeta por cliente. Las que tienen problemas pasan primero y se ponen rojas, con el equipo y hace cuánto. Abajo, la cinta con lo último que pasó.</p>
-      <ul class="list"><li>Cada pantalla muestra los clientes que elijas.</li><li>Se abre con una dirección: <code>unitytech.uy/ondi/app/#pantalla-p1</code>.</li><li>Los que no están en pantalla avisan por WhatsApp.</li></ul>
-    </div>
-    <div class="vis"><div class="mac"><div class="bar"><i></i><i></i><i></i></div><img src="/img/ondi/mac-pantalla.webp" width="1800" height="1125" alt="Modo pantalla de Ondi: una tarjeta por cliente, con los que tienen problemas primero" loading="lazy"></div>
-      <div class="cel pic"><img src="/img/ondi/mac-pantalla.webp" width="1800" height="1125" alt="" loading="lazy" style="object-position:0 0"></div></div>
+<section class="bloque"><div class="ancho"><div class="cab"><h2>Preguntas.</h2><span></span></div>
+  <div class="faq">
+    <details><summary>¿Tengo que instalar algo en cada cliente?</summary><p>No necesariamente. Cada marca tiene un camino que no instala nada: la nube del fabricante, un latido que manda el propio equipo o un chequeo desde afuera. Si el cliente lo permite, el agente Ondi en su red da más detalle. Hoy funcionan las nubes de UniFi y Meraki; el resto está en preparación.</p></details>
+    <details><summary>¿Quién arma la maqueta?</summary><p>La armás con el editor de Ondi, como un juego de construcción: galpones, andenes, racks, cámaras y fibras. O te la armamos nosotros a partir del plano.</p></details>
+    <details><summary>¿Mi cliente ve todo?</summary><p>Ve solo lo suyo y lo que le permitas: solo ver, ver y pedir cambios, o editar su maqueta. Cada persona entra con su cuenta.</p></details>
+    <details><summary>¿Cómo me llegan los avisos?</summary><p>En la pantalla de la oficina y por WhatsApp al técnico de guardia. Si nadie responde en 10 minutos, avisa al siguiente. Cada caída se registra una vez.</p></details>
+    <details><summary>¿Dónde se guardan los datos?</summary><p>En servidores de Supabase en São Paulo. Cada instaladora y cada cliente ven solamente lo suyo. Más detalles en la <a href="/olumi/privacidad.html">política de privacidad</a>.</p></details>
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <div class="vs">
-    <div><h3>Solo con la consola UniFi</h3><ul class="list"><li>Un sitio a la vez</li><li>Alertas por mail o push, sin escalamiento</li><li>Una alerta por cada equipo desconectado</li><li>Los repuestos figuran offline para siempre</li><li>Sin plano ni análisis de canales</li></ul></div>
-    <div><h3>Con Ondi</h3><ul class="list"><li>Todos tus clientes en una pantalla</li><li>WhatsApp al técnico y escalamiento automático</li><li>Una alerta por la causa, no por cada síntoma</li><li>Repuestos marcados, sin falsas alarmas</li><li>Gemelo digital, mapa de canales y revisión de la red</li></ul></div>
-  </div>
-</div></section>
-
-<section class="alt" id="descargas"><div class="wrap">
-  <h2>En la oficina, en la calle y en la tele.</h2>
-  <p class="sub">Todas las versiones abren la misma app y se actualizan solas. Por ahora muestra datos de ejemplo mientras conectamos los primeros clientes.</p>
-  <div class="dl">
-    <article><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z"/></svg></div><b>Navegador</b><p>Chrome, Safari o Edge, sin instalar nada. Para el televisor de la oficina, <code>#pantalla-p1</code> abre directo el modo pantalla.</p><a class="btn pri" href="/ondi/app/">Abrir Ondi</a></article>
-    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 17v3"/></svg></div><b>Windows</b><p>Descargá el ZIP, descomprimilo (por ejemplo en Documentos\Ondi) y abrí <code>Ondi.exe</code>. Windows 10 u 11, 64 bits.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Windows.zip">Descargar ZIP</a><small>Si Windows muestra «protegió tu PC», tocá «Más información» → «Ejecutar de todas formas». En el PC de un televisor, abrila con <code>--pantalla=p1</code>.</small></article>
-    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 19h20"/></svg></div><b>Mac</b><p>Descargá el ZIP, abrilo y hacé doble clic en <code>Instalar Ondi</code>. Queda en Aplicaciones.</p><a class="btn" href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Mac.zip">Descargar ZIP</a><small>Para Mac con chip Apple. Si tu Mac es Intel: <a href="https://github.com/christianbarcossilva-stack/olumi-web/releases/download/ondi-escritorio/Ondi-Mac-Intel.zip">esta versión</a>.</small></article>
-    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M10 4h4"/></svg></div><b>iPhone y iPad</b><p>Pronto en TestFlight. Mientras tanto: abrí <code>unitytech.uy/ondi/app</code> en Safari y tocá Compartir → «Agregar a inicio».</p><span class="soon">Próximamente</span></article>
-    <article><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18.5" r=".8" fill="currentColor"/></svg></div><b>Android</b><p>Pronto en Google Play. Mientras tanto: abrí <code>unitytech.uy/ondi/app</code> en Chrome → menú ⋮ → «Instalar aplicación».</p><span class="soon">Próximamente</span></article>
-  </div>
-  <p class="dlver" id="dlver" data-json="/ondi/app/version.json" data-texto="La web y las apps de escritorio se actualizan solas.">La web y las apps de escritorio abren siempre la última versión: se actualizan solas.</p>
-</div></section>
-
-<section id="planes"><div class="wrap">
-  <div class="center"><h2>Planes.</h2><p class="sub">Precio por cliente monitoreado, por mes. Valores de lanzamiento, a confirmar.</p></div>
-  <div class="plans">
-    <div class="plan"><h3>Básico</h3><div class="price">USD 10<small> / mes</small></div><p class="who">Hasta 15 equipos.</p><ul><li>Avisos por WhatsApp</li><li>Estado en tiempo real</li></ul></div>
-    <div class="plan hl"><span class="badge">Recomendado</span><h3>Pro</h3><div class="price">USD 20<small> / mes</small></div><p class="who">Hasta 40 equipos.</p><ul><li>Todo lo de Básico</li><li>Pantalla para la oficina</li><li>Reporte mensual</li><li>Plano y gemelo digital</li></ul></div>
-    <div class="plan"><h3>Empresa</h3><div class="price">USD 40<small> / mes</small></div><p class="who">Sin límite de equipos.</p><ul><li>Todo lo de Pro</li><li>Portal del cliente</li><li>Escalamiento de avisos</li></ul></div>
-  </div>
-  <p class="note">Ondi hace monitoreo técnico del estado de los equipos. No es un servicio de vigilancia ni de seguridad.</p>
-</div></section>
-
-<section class="alt center"><div class="wrap">
-  <h2>Probala con tus clientes.</h2>
-  <p class="sub">Te conectamos tus sitios UniFi con una clave de solo lectura, sin instalar nada en cada cliente.</p>
-  <div class="cta center"><a class="btn pri lg" href="/ondi/app/">Abrir la demo</a><a class="more" href="mailto:hola@unitytech.uy?subject=Quiero%20probar%20Ondi">Escribinos</a></div>
-</div></section>
+<section class="cierre"><div class="ancho">
+  <h2>Hecho por instaladores. Para instaladores.</h2>
+  <p class="lede">Ondi nació instalando fibra, cámaras y redes en parques logísticos. Lo usamos todos los días antes de ofrecértelo.</p>
+  <div class="acc"><a class="btn" href="/ondi/app/">Probar Ondi</a><a class="btn sec" href="mailto:hola@unitytech.uy?subject=Quiero%20la%20maqueta%20de%20mi%20predio">Pedir la maqueta de un predio</a></div>
+</div><svg id="cinta2" viewBox="0 0 1200 90" preserveAspectRatio="none" aria-hidden="true"></svg></section>
 </main>
 
-<footer class="ffoot"><div class="wrap">
-  <div class="fcols">
-    <div><a class="mark" href="../"><i></i>Unity Tech</a><p>Software hecho en Montevideo por gente que instala fibra, cámaras y redes todos los días.</p></div>
-    <div><b>Ondi</b><a href="/ondi/app/">Abrir la demo</a><a href="#descargas">Descargas</a><a href="#planes">Planes</a></div>
-    <div><b>Apps</b><a href="../olumi/">Olumi</a><a href="./">Ondi</a></div>
-    <div><b>Contacto</b><a href="mailto:hola@unitytech.uy">hola@unitytech.uy</a><a href="https://www.instagram.com/unitytech.uy/" target="_blank" rel="noopener">Instagram</a><a href="https://www.tiktok.com/@unitytech.uy" target="_blank" rel="noopener">TikTok</a></div>
-  </div>
-  <div class="fbase"><span>© 2026 Unity Tech · Montevideo, Uruguay</span><span class="sp"></span><a href="../olumi/privacidad.html">Privacidad</a><a href="../olumi/terminos.html">Términos</a></div>
+<footer><div class="ancho">
+  <div class="uno"><b>Unity Tech</b>Software hecho en Montevideo por gente que instala fibra, cámaras y redes todos los días.</div>
+  <div><b>Ondi</b><a href="/ondi/app/">Entrar</a><a href="#planes">Planes</a><a href="#descargas">Descargas</a></div>
+  <div><b>Apps</b><a href="/olumi/">Olumi</a><a href="./">Ondi</a></div>
+  <div><b>Contacto</b><a href="mailto:hola@unitytech.uy">hola@unitytech.uy</a><a href="https://www.instagram.com/unitytech.uy/" target="_blank" rel="noopener">Instagram</a></div>
+  <div><b>Legal</b><a href="/olumi/privacidad.html">Privacidad</a><a href="/olumi/terminos.html">Términos</a></div>
 </div></footer>
-<script src="../familia.js?v=3" defer></script>
+
+<script src="/ondi/app/red.js?v=4"></script>
+<script>
+(function () {
+'use strict';
+var $ = function (id) { return document.getElementById(id); }, R = document.documentElement;
+var HILOS = ['#0B5FFF', '#FF7A1A', '#18A957', '#8A5A3C', '#8D979F', '#FFFFFF', '#E5383B', '#16181A', '#F7C600', '#7A4FE0', '#F58FB6', '#19C6C1'];
+var reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* día y noche: toda la página y la maqueta juntas; queda guardado */
+var temaMaq = function () { return R.dataset.tema === 'noche' ? 'dark' : 'light'; };
+function pintaTema() { $('tema').setAttribute('aria-label', R.dataset.tema === 'noche' ? 'Cambiar a modo día' : 'Cambiar a modo noche'); var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = R.dataset.tema === 'noche' ? '#14171A' : '#F4F5F2'; enviar({ tema: temaMaq() }); }
+$('tema').addEventListener('click', function () { R.dataset.tema = R.dataset.tema === 'noche' ? 'dia' : 'noche'; try { localStorage.setItem('ondi.web.tema', R.dataset.tema); } catch (e) {} pintaTema(); });
+
+
+/* lo que pasa en el rack de la tapa: una boca que cae y vuelve; el rack 3D la pinta y el aviso sale de esa boca */
+var EVS = [['AP-13', '#E5383B', 'Sin señal, andén 3', 4, 'r'], ['AP-13', '#18A957', 'Volvió: cambiaron el cable C-045', 4, ''], ['C-22', '#F7C600', 'Pierde cuadros, cámara del portón', 13, 'a'], ['C-22', '#18A957', 'Otra vez estable', 13, ''], ['SP-04', '#E5383B', 'Puerta del depósito abierta', 19, 'r'], ['SP-04', '#18A957', 'Puerta cerrada', 19, '']];
+var EV = { i: 0, boca: 4, est: 'r' };
+function siguienteEv() { EV.i = (EV.i + 1) % EVS.length; var e = EVS[EV.i], g = $('globo'); g.classList.remove('on');
+  setTimeout(function () { $('evEtq').textContent = e[0]; $('evEtq').style.setProperty('--c', e[1]); $('evTxt').textContent = e[2]; EV.boca = e[3]; EV.est = e[4]; g.classList.add('on'); }, 450); }
+if (!reducir) setInterval(siguienteEv, 5200);
+function reloj() { var s = new Date().toLocaleTimeString('es-UY', { hour12: false }); if ($('reloj')) $('reloj').textContent = s; if ($('osdt')) $('osdt').textContent = s; }
+reloj(); setInterval(reloj, 1000);
+
+/* la cinta del cierre */
+$('cinta2').innerHTML = HILOS.map(function (c, i) { return '<path fill="none" stroke="' + c + '" stroke-width="6" d="M0 ' + (8 + i * 6.5) + ' C 400 ' + (8 + i * 6.5) + ', 800 ' + (40 + (i - 5.5) * 2) + ', 1200 ' + (40 + (i - 5.5) * 2) + '"/>'; }).join('');
+
+/* la historia: el scroll mueve la cámara de la maqueta */
+var cine = $('cine'), f = $('maq'), chs = [].slice.call(cine.querySelectorAll('.ch')), hecho = {}, ultimo = -1, raf = 0, top = $('top');
+function enviar(m) { try { f.contentWindow.postMessage(m, location.origin); } catch (e) {} }
+f.addEventListener('load', function () { enviar({ tema: temaMaq() }); ultimo = -1; upd(); setTimeout(function () { cine.classList.add('listo'); }, 900); });
+setTimeout(function () { cine.classList.add('listo'); }, 7000);
+function upd() { raf = 0; var vh = innerHeight, mid = vh / 2, c = chs.map(function (e) { var r = e.getBoundingClientRect(); return { e: e, c: r.top + r.height / 2, t: +e.dataset.t }; }), t = 0, on = null;
+  if (mid <= c[0].c) t = c[0].t; else if (mid >= c[c.length - 1].c) t = c[c.length - 1].t;
+  else for (var i = 0; i < c.length - 1; i++) if (mid >= c[i].c && mid < c[i + 1].c) { var u = (mid - c[i].c) / (c[i + 1].c - c[i].c); t = c[i].t + (c[i + 1].t - c[i].t) * u; break; }
+  c.forEach(function (x) { var r = x.e.getBoundingClientRect(), vis = r.top < vh * .62 && r.bottom > vh * .38; x.e.classList.toggle('on', vis); if (vis) on = x.e; });
+  if (on) { cine.dataset.ch = on.classList.contains('tapa') ? '0' : on.classList.contains('todo') ? 'todo' : 'x'; var ev = on.dataset.ev; if (ev && !hecho[ev]) { hecho[ev] = 1; enviar({ cineEv: ev }); } }
+  top.classList.toggle('sc', scrollY > 20);
+  if (Math.abs(t - ultimo) > .0005) { ultimo = t; enviar({ cine: t }); } }
+function ajustar() { var m = document.documentElement.clientWidth <= 900; chs.forEach(function (ch) { var d = ch.querySelector('.dev'); if (!d) return; d.style.zoom = 1; var r = d.getBoundingClientRect(), h = m ? innerHeight * .6 : innerHeight - 170, vw = document.documentElement.clientWidth, w = m ? vw - 40 : vw * .42; d.style.zoom = Math.max(.5, Math.min(1, h / r.height, w / Math.max(r.width, d.scrollWidth))).toFixed(3); }); }
+addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(upd); }, { passive: true }); addEventListener('resize', function () { ajustar(); upd(); });
+if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { enviar({ cinePausa: !e[0].isIntersecting }); }).observe(cine);
+var tabs = [].slice.call(document.querySelectorAll('.nav a'));
+if ('IntersectionObserver' in window) { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) tabs.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id); }); }); }, { rootMargin: '-45% 0px -50% 0px' });
+  tabs.forEach(function (a) { var s = document.querySelector(a.getAttribute('href')); if (s) io.observe(s); }); }
+ajustar(); upd(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustar); setTimeout(upd, 1500); pintaTema();
+
+/* marcas: dos caminos, con su estado real */
+var M = [['UniFi', 'Nube de UniFi, con una clave de solo lectura', 1, 'Consola local y SNMP'], ['Meraki', 'Nube de Meraki, con una clave de solo lectura', 1, 'Avisos de Meraki en el momento'], ['Sonoff', 'Nube de eWeLink: puertas, temperatura, agua, humo', 0, 'Modo LAN o central iHost'],
+  ['TP-Link Omada', 'Nube de Omada', 0, 'Controlador local y SNMP'], ['MikroTik', 'Latido desde el propio equipo, sin abrir puertos', 0, 'API de RouterOS 7'], ['Cisco', 'Túnel desde el firewall del cliente', 0, 'SNMP v2c o v3'],
+  ['Hikvision', 'El grabador manda sus eventos a Ondi', 0, 'ISAPI: canales, discos y grabación'], ['Dahua e Intelbras', 'Chequeo desde afuera', 0, 'API y ONVIF'], ['Cualquier otra', 'Latido o chequeo desde afuera', 0, 'Según el equipo']];
+var est = function (ok) { return '<span class="est' + (ok ? ' ok' : '') + '"><i></i>' + (ok ? 'funcionando' : 'en preparación') + '</span>'; };
+$('tmarcas').innerHTML = M.map(function (m) { return '<tr><td>' + m[0] + '</td><td>' + m[1] + '<br>' + est(m[2]) + '</td><td>' + m[3] + '<br>' + est(0) + '</td></tr>'; }).join('');
+
+/* la traza: una semana de un galpón, dibujada como la medición de una fibra */
+(function () { var W = 560, H = 150, x0 = 34, y0 = 16, y1 = 118, dias = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'], s = '<g class="ej">';
+  [100, 99, 98].forEach(function (v, i) { var y = y0 + i * 40; s += '<line x1="' + x0 + '" x2="' + W + '" y1="' + y + '" y2="' + y + '"/><text x="0" y="' + (y + 4) + '">' + v + '%</text>'; });
+  dias.forEach(function (d, i) { s += '<text x="' + (x0 + 8 + i * (W - x0) / 7) + '" y="' + (H - 6) + '">' + d + '</text>'; }); s += '</g>';
+  var p = 'M' + x0 + ' ' + (y0 + 4), caidas = [[1.6, 44, '13:28 AP-13'], [3.3, 20, ''], [5.1, 70, 'switch N1']], ev = '';
+  for (var i = 0; i <= 140; i++) { var dx = i / 140 * 7, y = y0 + 4 + Math.sin(i * 1.7) * 1.2; caidas.forEach(function (c) { if (Math.abs(dx - c[0]) < .06) y += c[1]; }); p += ' L' + (x0 + dx / 7 * (W - x0)).toFixed(1) + ' ' + y.toFixed(1); }
+  caidas.forEach(function (c) { if (!c[2]) return; var x = x0 + c[0] / 7 * (W - x0); ev += '<g class="evt"><circle cx="' + x + '" cy="' + (y0 + 4 + c[1]) + '" r="4.5"/><text x="' + (x + 9) + '" y="' + (y0 + 8 + c[1]) + '">' + c[2] + '</text></g>'; });
+  $('trazaSvg').innerHTML = s + '<path class="ln" d="' + p + '"/>' + ev;
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (e, o) { if (e[0].isIntersecting) { $('traza').classList.add('on'); o.disconnect(); } }, { threshold: .4 }).observe($('traza')); else $('traza').classList.add('on'); })();
+
+/* el rack que se puede tocar (el mismo módulo que usa la app) */
+if (window.OndiRed) { var mk = function (cap, items) { return { cap: cap, items: items, links: [], ports: {} }; };
+  var CABS = { 'RK-N1': mk(9, [{ iid: 'pp', type: 'pp12', u: 1, name: 'Patchera de fibra' }, { iid: 'sw', type: 'sw24', u: 2, name: 'Switch N1', modelo: 'USW Pro 24 PoE' }, { iid: 'pc', type: 'pc24', u: 3, name: 'Patchera N1' }, { iid: 'org', type: 'org', u: 4 }, { iid: 'sw2', type: 'sw8', u: 5, name: 'Switch cámaras' }, { iid: 'ups', type: 'ups', u: 8 }]),
+    'RK-01': mk(12, [{ iid: 'odf', type: 'pp24', u: 1, name: 'Troncales' }, { iid: 'core', type: 'swc', u: 2, name: 'Core de fibra' }, { iid: 'org', type: 'org', u: 3 }, { iid: 'fw', type: 'fw', u: 4, name: 'Firewall' }, { iid: 'adm', type: 'sw24', u: 5, name: 'Switch oficinas' }, { iid: 'nvr', type: 'nvr', u: 6, name: 'Grabador' }, { iid: 'pdu', type: 'pdu', u: 9 }, { iid: 'ups', type: 'ups', u: 11 }]) };
+  var FIBS = [{ id: 'FO-01', hilos: 12, from: 'RK-01', to: 'RK-N1', tipo: 'os2', con: 'lc-upc', tend: 'Ducto', nombre: 'Troncal norte', db: { 1: 0.31, 2: 0.36 }, m: 315 }];
+  var DEVS = []; for (var i = 1; i <= 12; i++) DEVS.push({ id: i <= 4 ? 'AP-1' + i : 'C-' + ('0' + (i - 4)).slice(-2), nombre: '', lugar: i <= 4 ? 'Andén ' + i : 'Galpón N1', estado: i === 3 ? 'crit' : i === 7 ? 'warn' : 'ok' });
+  var r = CABS['RK-01'], g = CABS['RK-N1'];
+  r.ports.odf = { f1: { fib: ['FO-01', 1] }, f2: { fib: ['FO-01', 2] } }; r.links.push([['odf', 'f1'], ['core', 's1']], [['odf', 'f2'], ['core', 's2']], [['fw', 's1'], ['core', 's16']], [['adm', 's1'], ['core', 's15']], [['nvr', 'p1'], ['adm', 'p24']]);
+  g.ports.pp = { f1: { fib: ['FO-01', 1] }, f2: { fib: ['FO-01', 2] } }; g.links.push([['pp', 'f1'], ['sw', 's1']], [['pp', 'f2'], ['sw', 's2']]); g.ports.pc = {}; g.ports.sw = {};
+  DEVS.forEach(function (d, k) { var n = k + 1, cam = d.id[0] === 'C'; g.ports.pc['p' + n] = { dev: d.id, cab: 'C-' + ('0' + (40 + n)).slice(-3), cat: 'Cat 6', col: cam ? 'azul' : 'gris', m: 22 + n * 5, cert: 'ok', certf: '2026-11-05' }; g.ports.sw['p' + n] = { poe: cam ? 'af' : 'at', vlan: cam ? '20 · CCTV' : '10 · Wi-Fi', desc: cam ? 'Cámaras' : 'Wi-Fi andenes' }; g.links.push([['sw', 'p' + n], ['pc', 'p' + n]]); });
+  g.links.push([['sw2', 'p8'], ['sw', 'p24'], { col: 'amarillo', m: 0.3 }]);
+  var el = $('rackvivo'), editar = false, V = { cid: 'RK-N1', sel: ['pc', 'p3'], tab: 'frente', zoom: null };
+  var H = { cabs: CABS, fibs: FIBS, devs: function () { return DEVS; }, editar: function () { return editar; }, guardar: function () {}, ir: function () {}, cerrar: function () {}, aviso: function (m) { if (!m) return; var t = $('avisoRed'); if (!t) { t = document.createElement('div'); t.id = 'avisoRed'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove('on'); }, 3200); }, largo: function (F) { return F.m || 0; }, cliente: function () { return 'Parque Logístico Norte (ejemplo)'; },
+    titulo: function (cid) { return cid === 'RK-01' ? { t: 'Rack principal RK-01', s: 'Rack de piso 12U, sala técnica' } : { t: 'Rack RK-N1', s: 'Rack de pared 9U, galpón N1' }; }, racks: function () { return [['RK-N1', 'RK-N1, galpón N1'], ['RK-01', 'RK-01, sala técnica']]; } };
+  OndiRed.pintar(el, H, V);
+  $('editar').addEventListener('click', function () { editar = !editar; this.textContent = editar ? 'Volver a solo mirar' : 'Probar a editarlo'; OndiRed.pintar(el, H, V); }); }
+else $('conexiones').hidden = true;
+
+/* la tapa en 3D: un gabinete de pared de 9U, cerrado y con la puerta de vidrio abierta, de costado sobre la maqueta (rack3d.js) */
+import('./rack3d.js?v=1').then(function (R) { return R.montar($('fibra'), { ev: function () { return EV; }, reducir: reducir, globo: $('globo') }); })
+  .then(function () { var g = $('globo'); if (g) setTimeout(function () { g.classList.add('on'); }, 1200); }).catch(function (e) { console.warn(e); });
+})();
+</script>
 </body>
 </html>
