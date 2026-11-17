@@ -23,7 +23,8 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 - Está en vista previa: franja "Vista previa", `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
 
 ## Kliva (vista previa)
-- `kliva/`: demostración de Kliva (control de acceso multimarca: ZKTeco, Hikvision, Dahua e Intelbras en un solo panel).
-- Es la página de la demo con datos inventados (no hay servidor detrás: todo corre en el navegador y se borra al recargar). Se genera con `npm run build:web` en el proyecto de Kliva (`web/dist/index.html`) y se le agrega `noindex`; no editarla a mano.
-- Está en vista previa: `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
+- `kliva/`: la web de Kliva (control de acceso multimarca: ZKTeco, Hikvision, Dahua e Intelbras en un solo panel). Cuenta una semana de trabajo y usa la demostración real como escenario: cada capítulo le pide una escena por mensaje (`demo/?cine=1`).
+- `kliva/demo/`: la demostración, con datos inventados (no hay servidor detrás: todo corre en el navegador y se borra al recargar).
+- Las dos páginas se generan con `npm run build:web` en el proyecto de Kliva (salen en `web/dist/sitio/`); no editarlas a mano. La web se escribe en `web/sitio/index.html` de ese proyecto.
+- Llevan `noindex` y no tienen enlace desde la portada: Kliva todavía no tiene instalaciones con equipos reales. La app con servidor irá en `kliva/app/` y `kliva/beta/` cuando se instale. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
 - `portuno/` redirige a `kliva/` (fue el nombre de los primeros minutos).
