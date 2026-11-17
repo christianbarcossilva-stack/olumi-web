@@ -302,7 +302,10 @@ html.navmini .side .orgsel,html.navmini .side .side-foot,html.navmini .side .sop
 html.navmini .nav button{flex-direction:column;justify-content:center;gap:3px;padding:8px 2px 7px;border-radius:18px;min-height:54px}html.navmini .nav button span{font-size:10px;font-weight:600;line-height:1.1;text-align:center;white-space:normal}html.navmini .navpill{border-radius:18px}
 @media (prefers-reduced-motion:reduce){.navpill{transition:none}}
 /* documentación de conexiones */
-.doc{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}
+.doc{display:grid;grid-template-columns:var(--dw,300px) 14px minmax(0,1fr);gap:0;margin-top:14px;align-items:start}.doc.cerrada .docl{visibility:hidden;overflow:hidden;width:0;padding:0}.doc.cerrada{grid-template-columns:0 14px minmax(0,1fr)}
+.docsplit{position:relative;align-self:stretch;min-height:200px;cursor:col-resize;display:flex;flex-direction:column;align-items:center}.docsplit::before{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;border-radius:2px;background:transparent;transition:background .15s}.docsplit:hover::before,.doc.arrastra .docsplit::before,.docsplit:focus-visible::before{background:var(--accent)}
+.docsplit button{position:sticky;top:42vh;margin-top:120px;z-index:2;width:22px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s}
+.docsplit:hover button,.doc.cerrada .docsplit button,.docsplit button:focus-visible{opacity:1}.docsplit button:hover{color:var(--accent);border-color:var(--accent)}.doc.arrastra{user-select:none;cursor:col-resize}
 .docl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto;padding:2px}
 .docbar{display:flex;gap:8px;align-items:center}.docbar input{flex:1;min-width:0;width:0;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
 .docg{font:600 12px var(--f-body);color:var(--muted);margin:8px 4px 0}
@@ -322,10 +325,10 @@ html.navmini .nav button{flex-direction:column;justify-content:center;gap:3px;pa
 .doce button{border:0;background:none;color:var(--accent-ink,var(--accent));font:600 12.5px var(--f-body);padding:0;cursor:pointer}
 .docd{font:600 13px var(--f-body);margin:14px 0 2px}
 .docback{display:none}.docp .red-eb{display:none}.docp .red{max-height:none}.docp .red-b svg{width:16px;height:16px}
-#docbox.full{position:fixed;inset:0;z-index:1000;background:var(--bg,#0d1116);padding:12px;overflow:hidden}#docbox.full .doc{margin:0;height:100%;grid-template-columns:270px minmax(0,1fr)}
+#docbox.full{position:fixed;inset:0;z-index:1000;background:var(--bg,#0d1116);padding:12px;overflow:hidden}#docbox.full .doc{margin:0;height:100%}
 #docbox.full .docl{max-height:calc(100dvh - 24px);top:0}#docbox.full .docp{min-height:0;height:calc(100dvh - 24px)}#docbox.full .docp .red{height:calc(100dvh - 26px)}
 html.docfull body{overflow:hidden}
-@media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr)}.docl{position:static;max-height:none}.doc.abierto .docl{display:none}.doc:not(.abierto) .docp{display:none}
+@media (max-width:860px){.doc,.doc.cerrada{grid-template-columns:minmax(0,1fr)}.docsplit{display:none}.doc.cerrada .docl{visibility:visible;width:auto;overflow:visible}.docl{position:static;max-height:none}.doc.abierto .docl{display:none}.doc:not(.abierto) .docp{display:none}
   .docback{display:inline-flex;margin-bottom:8px}.docp .red-tabs{flex-wrap:wrap}.docp,.docp .red{min-height:0;height:auto}}
 
 /* integraciones: vidrio con el color de cada marca, plegables */
@@ -1299,7 +1302,7 @@ function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) retur
   if (!D.cid && !D.hist && !D.caja && R.length && innerWidth > 860) D.cid = R[0].id;
   const r = R.find(x => x.id === D.cid);
   if (D.caja && !(D.W.cajas || {})[D.caja]) D.caja = null; if (D.caja) D.cid = null;
-  box.innerHTML = `<div class="doc ${D.cid || D.hist || D.caja ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.caja ? cajaHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
+  const dw = docW(); box.innerHTML = `<div class="doc ${D.cid || D.hist || D.caja ? 'abierto' : ''}${dw ? '' : ' cerrada'}" style="--dw:${dw}px"><div class="docl" id="docl">${docListHTML()}</div><div class="docsplit" role="separator" aria-orientation="vertical" aria-label="Ancho de la lista" tabindex="0" title="Arrastrá para achicar o agrandar la lista"><button data-dk="lista" aria-label="${dw ? 'Esconder la lista' : 'Mostrar la lista'}" title="${dw ? 'Esconder la lista' : 'Mostrar la lista'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${dw ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}"/></svg></button></div><div class="docp">${D.hist ? docHistHTML() : D.caja ? cajaHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
   if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
 function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
 function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
@@ -1316,6 +1319,7 @@ function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) retur
   delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
   D.cid = null; docSave(); docPaint(); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'); if (!b || !S.doc || b.tagName === 'FORM') return; const D = S.doc, k = b.dataset.dk, v = b.dataset.v;
+  if (k === 'lista') { const w = docW(); docW(w ? 0 : (S.docWant || 300)); if (w) S.docWant = w; docPaint(); return; }
   if (k === 'caja') { D.caja = v; D.cid = null; D.hist = false; docPaint(); return; }
   if (k === 'fusa') { const c = D.W.cajas[D.caja]; (c.fus = c.fus || []).push({ a: ['', 1], b: ['', 1] }); docSave(); docPaint(); return; }
   if (k === 'fusx') { const c = D.W.cajas[D.caja]; c.fus.splice(+v, 1); docSave(); docPaint(); return; }
@@ -1433,6 +1437,14 @@ function navPill() { const nav = document.querySelector('.side .nav'), pl = nav 
   if (!b) { pl.style.opacity = 0; return; } const to = [b.offsetTop, b.offsetLeft, b.offsetWidth, b.offsetHeight], de = S.pill || to, quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pon = r => { pl.style.transform = `translate(${r[1]}px,${r[0]}px)`; pl.style.width = r[2] + 'px'; pl.style.height = r[3] + 'px'; };
   pl.style.transition = 'none'; pon(de); pl.style.opacity = 1; void pl.offsetWidth; if (!quieto) pl.style.transition = ''; pon(to); S.pill = to; }
+
+// la lista de racks se achica o se agranda arrastrando el borde (o se esconde del todo con la flechita); se acuerda del ancho
+function docW(w) { if (w != null) { S.docW = w; try { localStorage.setItem('ondi.docw', String(w)); } catch (e) {} return w; } if (S.docW == null) { let v = 300; try { const x = localStorage.getItem('ondi.docw'); if (x != null && x !== '') v = +x; } catch (e) {} S.docW = isNaN(v) ? 300 : v; } return S.docW; }
+document.addEventListener('pointerdown', e => { const sp = e.target.closest && e.target.closest('.docsplit'); if (!sp || e.target.closest('button') || innerWidth <= 860) return; e.preventDefault(); const doc = sp.parentElement, x0 = e.clientX, w0 = docW();
+  doc.classList.add('arrastra'); const mv = ev => { const w = Math.max(0, Math.min(520, w0 + ev.clientX - x0)); doc.style.setProperty('--dw', (w < 140 ? 0 : w) + 'px'); doc.classList.toggle('cerrada', w < 140); };
+  const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); doc.classList.remove('arrastra'); const w = Math.max(0, Math.min(520, w0 + ev.clientX - x0)); docW(w < 140 ? 0 : Math.round(w)); if (w >= 140) S.docWant = Math.round(w); docPaint(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up); });
+document.addEventListener('keydown', e => { if (!e.target.classList || !e.target.classList.contains('docsplit') || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return; e.preventDefault(); const w = docW(); docW(Math.max(0, Math.min(520, (w || 140) + (e.key === 'ArrowRight' ? 20 : -20)))); if (docW() < 140) docW(0); docPaint(); const sp = document.querySelector('.docsplit'); if (sp) sp.focus(); });
 })();
 </script>
 </body>
