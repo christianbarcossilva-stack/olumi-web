@@ -1,5 +1,5 @@
 // Olumi: guarda la app en el equipo para que abra aunque no haya señal. Siempre intenta la red primero.
-const CACHE = 'olumi-app-v35';
+const CACHE = 'olumi-app-v36';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'vendor/supabase.js', 'icono-192.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));
@@ -10,6 +10,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET' || u.origin !== self.location.origin) return;
+  // 1.52c: los modelos 3D y las librerías solo cambian con una versión nueva (y cada versión estrena su caché): se bajan una vez y después se usan del equipo
+  if (/\/(3d|lib)\//.test(u.pathname)) { e.respondWith(caches.open(CACHE).then((c) => c.match(r).then((m) => m || fetch(r).then((res) => { if (res.ok) c.put(r, res.clone()); return res; })))); return; }
   e.respondWith(fetch(r).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(r, copy)).catch(() => {}); }
     return res;
