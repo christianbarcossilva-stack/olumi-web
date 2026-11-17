@@ -265,6 +265,19 @@ export const TIPOS = {
     armar: equipo((g, p, ec) => { caja(g, -0.22, -0.03, -0.22, 0.22, 0.03, 0.22, negro()); for (let i = 0; i < 8; i++) caja(g, -0.18 + i * 0.05, -0.01, 0.22, -0.15 + i * 0.05, 0.02, 0.225, led(ec), false); }) },
   rack: { n: 'Rack o gabinete', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', etiqueta: p => p.nombre, def: { y: 0, alto: 1.2 }, campos: [...EQ_CAMPOS.slice(0, 5), F.alto('Alto (m)', 0.3, 2.4), F.r, EQ_CAMPOS[7]],
     armar: equipo((g, p, ec) => { const h = p.alto || 1.2; caja(g, -0.3, 0, -0.3, 0.3, h, 0.3, negro()); caja(g, -0.25, h - 0.15, 0.3, 0.25, h - 0.1, 0.31, led(ec), false); }) },
+  // gabinete exterior de chapa (tipo IP66, gris claro) sobre dos perfiles galvanizados ranurados que bajan al piso, como el de E1 (foto del 16/11)
+  gabinete: { n: 'Gabinete exterior', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', etiqueta: p => p.nombre, def: { y: 0, ancho: 0.6, alto: 0.8, fondo: 0.3, base: 1.0, rieles: true, color: '#D2D3CE' },
+    campos: [...EQ_CAMPOS.slice(0, 5), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, F.alto('Alto (m)', 0.3, 1.6, 0.05), { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.15, max: 0.6, paso: 0.05 },
+      { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 2.5, paso: 0.05 }, { k: 'rieles', n: 'Perfiles hasta el piso', t: 'bool' }, F.color('Color'), F.r, EQ_CAMPOS[7]],
+    armar: equipo((g, p) => { const a = p.ancho || 0.6, h = p.alto || 0.8, f = p.fondo || 0.3, b = p.base ?? 1, z0 = p.rieles === false ? 0.01 : 0.045, chapa = mat(p.color || '#D2D3CE', { roughness: 0.55, metalness: 0.15 });
+      const galv = mat('#A7ACAE', { roughness: 0.4, metalness: 0.75 }), pieza = mat('#C9CBC6', { roughness: 0.5, metalness: 0.15 }), traba = mat('#202326', { roughness: 0.5 });
+      caja(g, -a / 2, b, z0, a / 2, b + h, z0 + f - 0.025, chapa);                                   // cuerpo
+      caja(g, -a / 2 + 0.006, b + 0.006, z0 + f - 0.025, a / 2 - 0.006, b + h - 0.012, z0 + f, chapa); // puerta, con la luz de arriba
+      caja(g, -a / 2 - 0.008, b + h - 0.004, z0 - 0.004, a / 2 + 0.008, b + h + 0.012, z0 + f + 0.012, pieza); // techito que corta el agua
+      caja(g, -a / 2, b - 0.012, z0, a / 2, b, z0 + f, pieza);                                       // pie con los pasacables
+      for (const yy of [b + 0.13, b + h - 0.15]) { caja(g, -a / 2 + 0.03, yy - 0.03, z0 + f, -a / 2 + 0.065, yy + 0.03, z0 + f + 0.012, traba); caja(g, a / 2 - 0.012, yy - 0.04, z0 + f - 0.03, a / 2 + 0.006, yy + 0.04, z0 + f + 0.004, pieza); } // trabas negras y bisagras
+      if (p.rieles !== false) for (const s of [-1, 1]) { const x = s * a * 0.26; caja(g, x - 0.02, 0, 0, x + 0.02, b + h + 0.06, 0.04, galv);
+        for (let yy = 0.06; yy < b - 0.02; yy += 0.06) caja(g, x - 0.006, yy, 0.04, x + 0.006, yy + 0.03, 0.041, traba, false); } }) },
   nvr: { n: 'Grabador (NVR)', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'nvr', equipo: 'cam', etiqueta: p => p.nombre, def: { y: 1 }, campos: EQ_CAMPOS,
     armar: equipo((g, p, ec) => { caja(g, -0.22, -0.05, -0.18, 0.22, 0.05, 0.18, negro()); caja(g, 0.12, -0.02, 0.18, 0.18, 0.02, 0.185, led(ec), false); }) },
   router: { n: 'Router o firewall', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'router', equipo: 'gw', etiqueta: p => p.nombre, def: { y: 1.2 }, campos: EQ_CAMPOS,
