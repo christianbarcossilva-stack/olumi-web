@@ -688,7 +688,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=50" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=51" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -720,7 +720,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=8' : 'maqueta.html?v=50'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=8' : 'maqueta.html?v=51'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -1188,7 +1188,8 @@ function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D
   const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
-  for (const k of ['bita', 'docidx', 'cajas', 'campo'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  if (data.campoMq) { if (Array.isArray(data.campo)) data.campo = data.campo.map(x => { const m = data.campoMq[x.id]; return m && m.name && m.name !== x.nombre ? { ...x, nombre: m.name } : x; }); delete data.campoMq; } // nombres que se cambiaron en la maqueta
   const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data), campoDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
   S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
   const D = S.doc; if (D && D.site === st.id) { if (D.saving) D.W.bita = data.bita; else S.doc = null; }
@@ -1198,7 +1199,7 @@ function docRacks(W, idx) { W = W || {}; const out = new Map();
   else { const fuera = new Set(W.removed || []); for (const r of ((idx || W.docidx || {}).racks || [])) if (!fuera.has(r.id)) out.set(r.id, { ...r });
     for (const d of (W.devs || [])) if (['gab', 'wr', 'rack'].includes(d.type)) out.set(d.id, { ...(out.get(d.id) || {}), id: d.id, tipo: d.type, nombre: d.name || '', lugar: (d.loc || '').split(' · ')[0], sin: !!d.sinUbicar });
     for (const id of Object.keys(W.cabs || {})) if (!out.has(id)) out.set(id, { id, tipo: /^G/.test(id) ? 'gab' : 'wr', nombre: '', lugar: '' }); }
-  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; if (c && c.nombre) r.nombre = c.nombre; if (c && c.lugar) r.lugar = c.lugar; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
+  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; if (c && c.nombre) r.nombre = c.nombre; if (c && c.lugar) r.lugar = c.lugar; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.dim = c && c.dim; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
   return [...out.values()].sort((a, b) => (a.lugar || '~').localeCompare(b.lugar || '~', 'es') || a.id.localeCompare(b.id, 'es', { numeric: true })); }
 function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.cabs) || {}, CAT = (window.OndiRed && OndiRed.CAT) || {};
   const itN = (c, iid) => { const it = c && c.items.find(x => x.iid === iid); return it ? (it.name || (CAT[it.type] || {}).n || it.type) : 'un equipo'; };
@@ -1237,7 +1238,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=14'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=15'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1254,9 +1255,9 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
     reales: () => (((S.eq[st.id] || {}).list) || []).filter(x => !x.consola).map(x => ({ uid: (x.marca || 'unifi') + ':' + (x.mac || x.id), nombre: x.nombre, modelo: x.modelo, mac: x.mac, ip: x.ip, version: x.version, estado: VIVO.includes(x.estado) ? 'ok' : ['offline', 'caido'].includes(x.estado) ? 'crit' : 'warn' })),
     guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
-    titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? c.cap + 'U' : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
+    titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? (c.dim ? 'Gabinete metálico ' + c.dim.replace('x', ' × ') + ' cm' : c.cap + 'U') : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
     racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
-    campo: () => (W.campo = W.campo || []),
+    campo: () => (W.campo = W.campo || []), modelos: () => (W.modelos = W.modelos || []), modelosEd: true,
     cajas: () => (W.cajas = W.cajas || {}), caja: id => { if (!(W.cajas || {})[id]) return; D.caja = id; D.cid = null; D.hist = false; docPaint(); },
     puntas: () => [...docRacks(W, D.idx).map(r => [r.id, r.id]), ...Object.entries(W.cajas || {}).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0] + (x.nombre ? ' · ' + x.nombre : '')])],
     acciones: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid), full = $('#docbox') && $('#docbox').classList.contains('full');
@@ -1284,7 +1285,7 @@ function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim
   if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo</b>
       <label>Tipo<span class="seg seg-w">${[['gab', 'Gabinete'], ['wr', 'Rack'], ...Object.entries(CAJT).map(([k, v]) => [k, v[0]])].map(([k, t]) => `<button type="button" data-dk="tipo" data-v="${k}" aria-pressed="${D.nuevo.tipo === k}">${t}</button>`).join('')}</span></label>
       ${CAJT[D.nuevo.tipo] ? `<label>Capacidad<select id="docU">${CAJT[D.nuevo.tipo][2].map(u => `<option value="${u}"${u === CAJT[D.nuevo.tipo][3] ? ' selected' : ''}>${u} ${D.nuevo.tipo === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>`
-        : `<label>Tamaño<select id="docU">${(D.nuevo.tipo === 'gab' ? [6, 9, 12] : [6, 9, 12, 24, 42]).map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>`}
+        : D.nuevo.tipo === 'gab' ? `<label>Medida (alto × ancho)<select id="docU">${GABD.map(d => `<option value="${d}"${d === (D.nuevo.dim || '40x30') ? ' selected' : ''}>${d.replace('x', ' × ')} cm</option>`).join('')}</select></label>` : `<label>Tamaño<select id="docU">${[4, 6, 9, 12, 15, 18, 22, 24, 27, 32, 36, 42, 45].map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>`}
       <label>Nombre <input id="docN" maxlength="50" placeholder="Ej.: Gabinete de la portería"></label>
       <label>Lugar <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
       <span class="acts"><button class="btn pri" type="submit">Crear y documentar</button><button class="btn" type="button" data-dk="cancelar">Cancelar</button></span>
@@ -1294,7 +1295,7 @@ function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim
   const listaCajas = CJ.length ? `<div class="docg">Cajas y empalmes</div>` + CJ.map(([id, c]) => { const nf = (D.W.fibs || []).filter(f => f.from === id || f.to === id).length;
     return `<button class="docr" data-dk="caja" data-v="${esc(id)}" aria-current="${D.caja === id && !D.hist}">${CAJI}<b>${esc(id)}${c.nombre ? ' · ' + esc(c.nombre) : ''}</b><span class="u">${(c.fus || []).length}/${c.cap}</span><small>${esc(CAJT[c.t][0])} · ${nf} ${nf === 1 ? 'fibra' : 'fibras'}${c.lugar ? ' · ' + esc(c.lugar) : ''}</small></button>`; }).join('') : '';
   let g = null; for (const r of F) { const lg = r.lugar || 'Sin lugar anotado'; if (lg !== g) { g = lg; h += `<div class="docg">${esc(lg)}</div>`; }
-    h += `<button class="docr" data-dk="rack" data-v="${esc(r.id)}" aria-current="${D.cid === r.id && !D.hist}">${DIC[r.tipo === 'gab' ? 'gab' : 'wr']}<b>${esc(r.id)}${r.nombre ? ' · ' + esc(r.nombre) : ''}</b><span class="u">${r.usoU}/${r.cap}U</span>
+    h += `<button class="docr" data-dk="rack" data-v="${esc(r.id)}" aria-current="${D.cid === r.id && !D.hist}">${DIC[r.tipo === 'gab' ? 'gab' : 'wr']}<b>${esc(r.id)}${r.nombre ? ' · ' + esc(r.nombre) : ''}</b><span class="u">${r.dim ? r.dim.replace('x', '×') : r.usoU + '/' + r.cap + 'U'}</span>
       <span class="docu" aria-hidden="true"><i style="width:${Math.min(100, Math.round(r.usoU / Math.max(1, r.cap) * 100))}%"></i></span><small>${r.links} ${r.links === 1 ? 'patch cord' : 'patch cords'}</small>
       ${r.sin ? `<span class="docsin">Sin ubicar en la maqueta</span>` : ''}</button>`; }
   h += listaCajas; if ((R.length || Object.keys(D.W.cajas || {}).length) && !F.length && !CJ.length) h += `<p class="muted" style="margin:6px 4px">No hay nada con «${esc(D.q)}».</p>`;
@@ -1308,7 +1309,7 @@ function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D
     if (d !== dia) { dia = d; h += `<div class="docd">${esc(d[0].toUpperCase() + d.slice(1))}</div>`; }
     h += `<div class="doce"><time>${t.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false })}</time><div>${esc(e.m)}</div><span>${esc(e.q || '')}${e.r && e.r !== D.cid ? ` · <button data-dk="rack" data-v="${esc(e.r)}">Ver ${esc(e.r)}</button>` : ''}</span></div>`; }
   return h + '</div>'; }
-function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) return; const R = docRacks(D.W, D.idx);
+function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) return; if (window.OndiRed && OndiRed.registrar) OndiRed.registrar(D.W.modelos); const R = docRacks(D.W, D.idx);
   if (D.cid && !D.W.cabs[D.cid] && !R.some(r => r.id === D.cid)) D.cid = null;
   if (!D.cid && !D.hist && !D.caja && R.length && innerWidth > 860) D.cid = R[0].id;
   const r = R.find(x => x.id === D.cid);
@@ -1316,16 +1317,17 @@ function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) retur
   const dw = docW(); box.innerHTML = `<div class="doc ${D.cid || D.hist || D.caja ? 'abierto' : ''}${dw ? '' : ' cerrada'}" style="--dw:${dw}px"><div class="docl" id="docl">${docListHTML()}</div><div class="docsplit" role="separator" aria-orientation="vertical" aria-label="Ancho de la lista" tabindex="0" title="Arrastrá para achicar o agrandar la lista"><button data-dk="lista" aria-label="${dw ? 'Esconder la lista' : 'Mostrar la lista'}" title="${dw ? 'Esconder la lista' : 'Mostrar la lista'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${dw ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}"/></svg></button></div><div class="docp">${D.hist ? docHistHTML() : D.caja ? cajaHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
   if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
 function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
-function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
+const GABD = ['30x25', '40x30', '50x40', '60x40', '70x50', '80x60', '100x60', '100x80'];
+function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = S.doc, st = S.site, W = D.W, gv = D.nuevo.tipo === 'gab' ? (($('#docU') || {}).value || '40x30') : '', [ga, gw] = gv ? gv.split('x').map(Number) : [0, 0], u = gv ? Math.max(4, Math.round((ga - 10) / 4.445)) : +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
   const home = ((D.idx || W.docidx || {}).home) || [0, 0], k = docRacks(W, D.idx).filter(r => r.sin).length * 2.5;
   let id;
   if (docMotor(W)) { if (!W.escena) { toast('Abrí la maqueta una vez para empezar el plano; después creá el rack acá.'); return; }
     const ini = W.escena.inicio || {}; let n = 1; do id = (gab ? 'gab' : 'rac') + (n++).toString(36); while (W.escena.piezas.some(p => p.id === id));
-    W.escena.piezas.push(gab ? { id, t: 'gabinete', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, ancho: u > 9 ? 0.8 : 0.6, alto: u * 0.045 + 0.4, fondo: 0.35, base: 1, rieles: true, color: '#D2D3CE', sinUbicar: true }
+    W.escena.piezas.push(gab ? { id, t: 'gabinete', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, ancho: gw / 100, alto: ga / 100, fondo: ga >= 80 ? 0.3 : ga >= 60 ? 0.25 : 0.2, base: 1, rieles: true, color: '#D2D3CE', sinUbicar: true }
       : { id, t: 'rack', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, alto: Math.min(2.4, u * 0.045 + 0.25), sinUbicar: true }); }
-  else { id = docNid(W, D, gab ? 'G-' : 'RK-'); const sz = u <= 6 ? 'S' : u <= 9 ? 'M' : 'L';
-    W.devs = W.devs || []; W.devs.push(Object.assign({ id, type: gab ? 'gab' : 'wr', status: 'ok', custom: true, cli: 0, hoy: 0, name: nom, loc: lug, x: home[0] + k, z: home[1], y: gab ? 0 : 1.3, sinUbicar: true }, gab ? { kind: 'Gabinete metálico', size: sz } : { kind: `Rack de pared ${u}U`, u })); }
-  W.cabs[id] = { cap: u, items: [], links: [], ports: {} }; D.nuevo = false; D.cid = id; D.hist = false; docSave(); docPaint(); toast((gab ? 'Gabinete ' : 'Rack ') + id + ' creado. Queda sin ubicar en la maqueta hasta que lo arrastres.'); }
+  else { id = docNid(W, D, gab ? 'G-' : 'RK-'); const sz = gab ? (ga <= 40 ? 'S' : ga <= 70 ? 'M' : 'L') : u <= 6 ? 'S' : u <= 9 ? 'M' : 'L';
+    W.devs = W.devs || []; W.devs.push(Object.assign({ id, type: gab ? 'gab' : 'wr', status: 'ok', custom: true, cli: 0, hoy: 0, name: nom, loc: lug, x: home[0] + k, z: home[1], y: gab ? 0 : 1.3, sinUbicar: true }, gab ? { kind: 'Gabinete metálico ' + gv.replace('x', '×') + ' cm', size: sz } : { kind: `Rack de pared ${u}U`, u })); }
+  W.cabs[id] = Object.assign({ cap: u, items: [], links: [], ports: {} }, gv ? { dim: gv } : {}); D.nuevo = false; D.cid = id; D.hist = false; docSave(); docPaint(); toast((gab ? 'Gabinete ' : 'Rack ') + id + ' creado. Queda sin ubicar en la maqueta hasta que lo arrastres.'); }
 function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) return;
   delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
   D.cid = null; docSave(); docPaint(); }
@@ -1350,7 +1352,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'
   else if (k === 'histr') { D.histR = v === '1'; docPaint(); }
   else if (k === 'volver') { D.hist = false; D.cid = null; D.caja = null; docPaint(); }
   else if (k === 'nuevo') { D.nuevo = D.nuevo ? false : { tipo: 'gab', u: 9 }; docList(); const n = $('#docN'); if (n) n.focus(); }
-  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = CAJT[v] ? CAJT[v][3] : v === 'gab' ? 9 : 12; docList(); }
+  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = CAJT[v] ? CAJT[v][3] : v === 'gab' ? 9 : 12; if (v === 'gab') D.nuevo.dim = '40x30'; docList(); }
   else if (k === 'cancelar') { D.nuevo = false; docList(); }
   else if (k === 'ir') docIr(v);
   else if (k === 'borrar') { if (b.dataset.ok !== '1') { const c = D.W.cabs[v] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos anotados: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(v); } });
