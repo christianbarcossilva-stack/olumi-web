@@ -448,7 +448,7 @@ const prof = it => it.prof || PROF0(it);
 const ladoDe = it => it.lado === 't' ? 't' : 'f';
 const caras = it => prof(it) === 'completa' ? ['f', 't'] : [ladoDe(it)];
 const pisa = (a, b, u) => b !== a && b.u < u + CAT[a.type].U && u < b.u + ((CAT[b.type] || { U: 1 }).U) && caras(b).some(x => caras(a).includes(x));
-function entra(c, it, u) { const U = CAT[it.type].U; if (u < 1 || u + U - 1 > c.cap) return false; return !c.items.some(o => pisa(it, o, u)); }
+function entra(c, it, u, yo) { const U = CAT[it.type].U; if (u < 1 || u + U - 1 > c.cap) return false; return !c.items.some(o => o !== yo && pisa(it, o, u)); }
 
 /* ---------- planilla de cables y fibras ---------- */
 function filas(H, cids) { const out = [], devs = mapaDevs(H);
@@ -627,7 +627,7 @@ function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.se
     if (k === 'hilo' && p.fib) p.fib[1] = +v;
     if (k === 'db' && p.fib) { const F = fibDe(H, p.fib[0]); if (F) { F.db = F.db || {}; pon(F.db, p.fib[1], num(v)); } } }
   if (o === 'it' && iid) { const it = itemDe(c, iid); if (!it) return;
-    if (k === 'lado' || k === 'prof') { const t = Object.assign({}, it, { [k]: v }); if (!entra(c, t, it.u)) { const o2 = c.items.find(o => pisa(t, o, it.u)); H.aviso(`No entra: ${o2 ? nomIt(o2) + ' ocupa ' + (k === 'lado' ? 'ese lado' : 'el otro lado') + ' en la U' + o2.u : 'ese lugar está ocupado'}. Movelo a otra U primero.`); return; }
+    if (k === 'lado' || k === 'prof') { const t = Object.assign({}, it, { [k]: v }); if (!entra(c, t, it.u, it)) { const o2 = c.items.find(o => o !== it && pisa(t, o, it.u)); H.aviso(`No entra: ${o2 ? nomIt(o2) + ' ocupa ' + (k === 'lado' ? 'ese lado' : 'el otro lado') + ' en la U' + o2.u : 'ese lugar está ocupado'}. Movelo a otra U primero.`); return; }
       if (k === 'lado') { if (v === 't') it.lado = 't'; else delete it.lado; } else { if (v === PROF0(it)) delete it.prof; else it.prof = v; } return; }
     if (k === 'fus') { if (v === '2') it.fus = 2; else delete it.fus; return; }
     if (k === 'u') { if (entra(c, it, +v)) { it.u = +v; c.items.sort((x, y) => x.u - y.u); } }

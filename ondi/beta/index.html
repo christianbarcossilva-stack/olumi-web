@@ -543,7 +543,10 @@ async function loadCtx() { S.ped = null; S.pedN = 0; S.act = undefined; S.myRol 
   if (S.ctx.kind === 'acc') { const mr = await SB.from('ondi_accesos').select('rol').eq('org_id', orgId()).eq('site_id', S.ctx.site).eq('user_id', S.user.id).maybeSingle(); S.myRol = (mr.data && mr.data.rol) || 'ver'; }
   else if (!S.falta12) loadPed();
   if (S.ctx.kind === 'acc' && S.sites[0]) { S.site = S.sites[0]; S.view = 'site'; }
-  else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last); if (st && location.hash === '#c') { S.site = st; S.view = 'site'; } }
+  else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last), m = /^#c(?:\/([a-z]+))?(?:\/(.+))?$/.exec(location.hash || ''), mv = /^#v\/([a-z]+)(?:\/([a-z]+))?$/.exec(location.hash || '');
+    // al recargar (F5) se vuelve a donde se estaba: cliente, pestaña y rack de la documentación; o la sección del menú
+    if (st && m) { S.site = st; S.view = 'site'; if (m[1]) S.tab = m[1]; if (m[2]) S.docIni = decodeURIComponent(m[2]); }
+    else if (mv && ['clientes', 'docs', 'sim', 'ajustes', 'pedidos', 'ayuda', 'super'].includes(mv[1])) { S.view = mv[1]; if (mv[1] === 'ajustes' && mv[2]) S.atab = mv[2]; } }
   render(); }
 async function loadClaves() { const r = await SB.rpc('ondi_claves', { o: orgId() }); S.claves = r.error ? [] : r.data || []; render(); }
 const claveDe = (sc, k = 'unifi') => (S.claves || []).find(c => c.scope === sc && c.kind === k);
@@ -1238,7 +1241,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=15'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=16'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1247,7 +1250,7 @@ async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { t
   W.cabs = W.cabs || {}; W.fibs = W.fibs || []; D.W = W; return D; }
 function docView() { return `<div id="docbox" data-docsite="${esc(S.site.id)}"><div class="card empty">Abriendo la documentación…</div></div>`; }
 async function mountDoc() { const st = S.site, box = $('#docbox'); if (!box) return;
-  if (!S.doc || S.doc.site !== st.id) { try { S.doc = await docLoad(st); } catch (er) { box.innerHTML = `<div class="card empty"><b>No se pudo abrir la documentación</b><span>${esc(errTxt(er))}</span></div>`; return; } }
+  if (!S.doc || S.doc.site !== st.id) { try { S.doc = await docLoad(st); if (S.docIni) { const v = S.docIni; S.docIni = null; if (v.startsWith('caja:')) S.doc.caja = v.slice(5); else S.doc.cid = v; } } catch (er) { box.innerHTML = `<div class="card empty"><b>No se pudo abrir la documentación</b><span>${esc(errTxt(er))}</span></div>`; return; } }
   if (S.site !== st || !$('#docbox')) return; docPaint(); }
 function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx || {};
   return { cabs: W.cabs, fibs: W.fibs, editar: () => siteEd(), aviso: m => toast(m), cliente: () => (st.data && st.data.parque) || st.name,
@@ -1474,6 +1477,13 @@ document.addEventListener('pointerdown', e => { const sp = e.target.closest && e
   const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); doc.classList.remove('arrastra'); const w = Math.max(0, Math.min(520, w0 + ev.clientX - x0)); docW(w < 140 ? 0 : Math.round(w)); if (w >= 140) S.docWant = Math.round(w); docPaint(); };
   addEventListener('pointermove', mv); addEventListener('pointerup', up); });
 document.addEventListener('keydown', e => { if (!e.target.classList || !e.target.classList.contains('docsplit') || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return; e.preventDefault(); const w = docW(); docW(Math.max(0, Math.min(520, (w || 140) + (e.key === 'ArrowRight' ? 20 : -20)))); if (docW() < 140) docW(0); docPaint(); const sp = document.querySelector('.docsplit'); if (sp) sp.focus(); });
+// la dirección guarda dónde se está parado, para que F5 vuelva al mismo lugar (#c/pestaña/rack o #v/sección)
+function navHash() { if (S.auth || !S.user || /type=recovery|access_token/.test(location.hash)) return; let h = '';
+  if (S.view === 'site' && S.site) { h = '#c/' + S.tab; const D = S.doc; if (S.tab === 'doc' && D && D.site === S.site.id) { if (D.cid) h += '/' + encodeURIComponent(D.cid); else if (D.caja) h += '/' + encodeURIComponent('caja:' + D.caja); } }
+  else if (S.view && S.view !== 'panel') h = '#v/' + S.view + (S.view === 'ajustes' && S.atab ? '/' + S.atab : '');
+  if ((location.hash || '') !== h) try { history.replaceState(null, '', location.pathname + location.search + h); } catch (e) {} }
+render = (o => function () { const r = o.apply(this, arguments); navHash(); return r; })(render);
+docPaint = (o => function () { const r = o.apply(this, arguments); navHash(); return r; })(docPaint);
 })();
 </script>
 </body>
