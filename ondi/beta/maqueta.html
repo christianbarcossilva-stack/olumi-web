@@ -560,7 +560,7 @@ html:not(.blank) .blankonly{display:none!important}
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
 
-<script src="red.js?v=9"></script>
+<script src="red.js?v=11"></script>
 <script>
 (() => {
 'use strict';
@@ -1906,7 +1906,7 @@ function prevBox(a, b) { const g = new Geo(), x0 = Math.min(a[0], b[0]), x1 = Ma
 function prevFib() { const g = new Geo(), F = ED.fib; if (!F) return; const pts = F.hover ? [...F.pts, F.hover] : F.pts;
   if (pts.length > 1) g.strip(pts, 0.6, 0.12, P.acc, 1); pts.forEach(([x, z]) => g.disc(x, z, 0.9, 0.13, P.acc, 1, 10)); showPrev(g); }
 function snapFib(g) { const tol = Math.max(2, cam.zoom * 0.02); let best = null, bd = tol;
-  for (const d of DEV) if (['gab', 'wr', 'rack'].includes(d.type)) { const dd = Math.hypot(d.x - g[0], d.z - g[1]); if (dd < bd * 1.6) { bd = dd / 1.6; best = { p: [d.x, d.z], dev: d.id }; } }
+  for (const d of DEV) if (['gab', 'wr', 'rack', 'ce', 'ro', 'ft', 'cr'].includes(d.type)) { const dd = Math.hypot(d.x - g[0], d.z - g[1]); if (dd < bd * 1.6) { bd = dd / 1.6; best = { p: [d.x, d.z], dev: d.id }; } }
   for (const F of FIBS) for (const p of F.pts) { const dd = Math.hypot(p[0] - g[0], p[1] - g[1]); if (dd < bd) { bd = dd; best = { p: p.slice(), dev: null }; } }
   return best || { p: g, dev: null }; }
 function fibClick(x, y) { const s = snapFib(groundAt(x, y));
@@ -2542,7 +2542,7 @@ const CAM_BRANDS = ['Hikvision', 'Dahua', 'Intelbras', 'UniFi Protect', 'Honeywe
 const AP_MODELS = ['UniFi U7 Pro', 'UniFi U6 Lite', 'UniFi U6 Mesh', 'TP-Link EAP650', 'Cisco Meraki MR36', 'Otro'];
 const RD_KINDS = ['Lector de tarjeta', 'Lector biométrico', 'Teclado con tarjeta', 'Molinete'];
 const LENS = { '2.8': 103, '4': 84, '6': 54, '8': 40, '12': 27 };
-const DEVT = { cam: ['cam', 'C-'], ap: ['ap', 'AP-'], gab: ['gab', 'G-'], wr: ['wr', 'RK-'], rd: ['rd', 'R-'], humo: ['humo', 'SH-'], temp: ['temp', 'ST-'], pir: ['pir', 'SM-'], sir: ['sir', 'SI-'] };
+const DEVT = { ce: ['ce', 'CE-'], ro: ['ro', 'RO-'], ft: ['ft', 'FT-'], cr: ['cr', 'CR-'], cam: ['cam', 'C-'], ap: ['ap', 'AP-'], gab: ['gab', 'G-'], wr: ['wr', 'RK-'], rd: ['rd', 'R-'], humo: ['humo', 'SH-'], temp: ['temp', 'ST-'], pir: ['pir', 'SM-'], sir: ['sir', 'SI-'] };
 const isDevTool = t => !!DEVT[t];
 Object.assign(TOOLS, {
   humo: { n: 'Humo', hint: 'Tocá el techo o una pared adentro del galpón. Entrá caminando o sacale el techo para ver adentro.' },
@@ -3266,6 +3266,7 @@ const PK = {
 const CAT3 = [
   ['Equipos activos', [['dev:cam:bullet', 'Cámara bullet', 'cam', 'camara camaras cctv hikvision dahua'], ['dev:cam:domo', 'Cámara domo', 'cam', 'camara domo'], ['dev:cam:ptz', 'Cámara PTZ', 'cam', 'camara ptz motorizada'], ['dev:cam:fish', 'Cámara fisheye', 'cam', 'camara ojo de pez 360'], ['dev:cam:lpr', 'Cámara de matrículas', 'cam', 'lpr matricula'],
     ['dev:ap', 'Wi-Fi (access point)', 'ap', 'wifi ap unifi antena'], ['dev:wr', 'Rack', 'rack', 'rack switch'], ['dev:gab', 'Gabinete', 'rack', 'gabinete tablero'], ['dev:rd', 'Lector de acceso', 'rd', 'control acceso tarjeta molinete']]],
+  ['Fibra óptica', [['dev:ce', 'Caja de empalme', 'rack', 'fibra empalme mufla caja'], ['dev:ro', 'Roseta óptica', 'rack', 'fibra roseta'], ['dev:ft', 'Caja FTTH', 'rack', 'fibra ftth nap caja'], ['dev:cr', 'Cámara de registro', 'rack', 'registro manhole ducto camara']]],
   ['Sensores y alarmas', [['dev:humo', 'Sensor de humo', 'humo', 'incendio detector'], ['dev:temp', 'Temperatura', 'temp', 'frio humedad'], ['dev:pir', 'Movimiento', 'pir', 'pir alarma'], ['dev:sir', 'Sirena', 'sir', 'alarma estrobo']]],
   ['Construcción', [['nave', 'Galpón', 'nave', 'nave deposito edificio'], ['draw:wall:pared', 'Pared', 'wall', 'muro bloque'], ['draw:wall:div', 'División', 'wall', 'tabique liviano'], ['it:ofi', 'Oficina', 'nave', 'box'], ['it:frio', 'Cámara de frío', 'temp', 'frigorifico'], ['it:mez', 'Entrepiso', 'nave', 'mezzanine'], ['it:zona', 'Zona pintada', 'zone', 'piso area'], ['it:carga', 'Carga de baterías', 'zone', 'cargador']]],
   ['Estanterías', [['it:est', 'Estantería doble', 'shelf', 'rack pallets selectivo'], ['it:est1', 'Estantería simple', 'shelf', 'pared pallets'], ['it:pick', 'Estantería de picking', 'shelf', 'cajas'], ['fill', 'Llenar el lugar libre', 'shelf', 'filas automatico']]],
@@ -5580,6 +5581,19 @@ if (window.OndiRed) { for (const k in OndiRed.CAT) if (!CAT[k]) CAT[k] = OndiRed
 #ubic button b{font-weight:600}#ubic button span{font-size:12px;opacity:.7}#ubic button:hover{border-color:var(--accent)}#ubic button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
 @media (min-width:900px){#ubic{left:332px;bottom:96px}}
 html.ubicando canvas{cursor:crosshair!important}`; document.head.appendChild(css); }
+  // fibra: tipos de caja (nombre, capacidad por defecto); la ficha y los empalmes viven en la documentación (state.cajas)
+  const FIBT = { ce: ['Caja de empalme', 24], ro: ['Roseta óptica', 4], ft: ['Caja FTTH', 16], cr: ['Cámara de registro', 2] };
+  Object.assign(TOOLS, { ce: { n: 'Caja de empalme', hint: 'Tocá donde va la caja de empalme. Después la fibra se engancha a la caja.' }, ro: { n: 'Roseta óptica', hint: 'Tocá donde va la roseta óptica.' }, ft: { n: 'Caja FTTH', hint: 'Tocá donde va la caja FTTH.' }, cr: { n: 'Cámara de registro', hint: 'Tocá el piso donde está la cámara de registro.' } });
+  mkDev = (o => function (tool) { const d = o(tool); if (d && FIBT[tool]) d.kind = FIBT[tool][0]; return d; })(mkDev);
+  devGeo = (o => function (d) { if (!FIBT[d.type]) return o(d); const g = new Geo(), st = d.status === 'crit' ? P.crit : d.status === 'warn' ? P.warn : P.ok;
+    if (d.type === 'cr') { g.box(-0.42, 0, -0.42, 0.42, 0.07, 0.42, '#A3A59F'); g.box(-0.33, 0.07, -0.33, 0.33, 0.09, 0.33, '#4E5357'); g.box(-0.05, 0.09, -0.2, 0.05, 0.1, 0.2, '#3A3E42'); return g; }
+    const h = d.type === 'ce' ? 2.1 : d.type === 'ft' ? 1.6 : 1.2, w = d.type === 'ce' ? [0.24, 0.3, 0.13] : d.type === 'ft' ? [0.16, 0.2, 0.06] : [0.08, 0.11, 0.035], cuerpo = d.type === 'ce' ? '#2B2F33' : '#EEF0F1';
+    g.box(-0.045, 0, -0.045, 0.045, h + w[1] * 2, 0.045, '#8D979F'); g.box(-w[0], h, 0.05, w[0], h + w[1] * 2, 0.05 + w[2] * 2, cuerpo); g.box(-w[0] * 0.6, h + w[1] * 1.55, 0.05 + w[2] * 2, w[0] * 0.6, h + w[1] * 1.7, 0.06 + w[2] * 2, st); return g; })(devGeo);
+  const CAJ = JSON.parse(JSON.stringify((HOST && HOST.state && HOST.state.cajas) || {}));
+  // las cajas creadas en la documentación esperan «para ubicar»; las puestas acá se anotan en la documentación
+  for (const [id, c] of Object.entries(CAJ)) if (FIBT[c.t] && !DEV.some(d => d.id === id)) { const d = { id, type: c.t, kind: FIBT[c.t][0], name: c.nombre || '', loc: c.lugar || '', status: 'ok', custom: true, cli: 0, hoy: 0, x: hm.tx + 5, z: hm.tz + 5, y: 0, sinUbicar: true }; DEV.push(d); devObj(d); }
+  edState = (o => function () { const st = o(); for (const d of DEV) if (FIBT[d.type]) { const c = CAJ[d.id] = CAJ[d.id] || { t: d.type, cap: FIBT[d.type][1], fus: [] }; c.t = d.type; if (d.name) c.nombre = d.name; if (!c.lugar && d.loc) c.lugar = String(d.loc).split(' · ')[0]; }
+    for (const id of Object.keys(CAJ)) if (!DEV.some(d => d.id === id)) delete CAJ[id]; st.cajas = CAJ; return st; })(edState);
   window.__doc = { ubicar, DEV, CABS, sel: () => SEL, ed: () => ED.on, mover: (id, dx) => { const d = DEV.find(x => x.id === id); d.x += dx; devObj(d); markMoved(d); edSave(); } }; }
 /* pisos del galpón: la planta baja y un piso por cada entrepiso. El plano muestra uno a la vez y cada equipo sabe en qué piso está */
 const pisosDe = N => [{ id: '', n: 'Planta baja', y: 0 }].concat(innerOf(N).items.filter(it => it.k === 'mez').sort((a, b) => mzH(a) - mzH(b)).map(m => ({ id: m.id, n: m.name, y: mzH(m) + 0.25, m })));

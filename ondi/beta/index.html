@@ -673,7 +673,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=46" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=47" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -704,7 +704,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=6' : 'maqueta.html?v=46'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=6' : 'maqueta.html?v=47'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -1151,7 +1151,7 @@ boot().catch(e => showAuth('login', errTxt(e)));
 /* ---------- documentación de conexiones (racks, gabinetes, bocas, cables y fibras) ----------
    Los mismos datos y el mismo red.js que la maqueta: lo que se crea acá aparece en la maqueta («sin ubicar» hasta que lo arrastren)
    y lo que se pone en la maqueta aparece acá. Cada cambio, venga de donde venga, queda anotado en el historial (data.bita). */
-const DOCK = { dev: 'equipo conectado', txt: 'otro destino', cab: 'etiqueta', m: 'metros', cat: 'categoría', col: 'color', cert: 'certificación', certf: 'fecha de medición', nota: 'nota', desc: 'descripción', vlan: 'VLAN', poe: 'PoE', vel: 'velocidad', fib: 'fibra', hilo: 'hilo', name: 'nombre', modelo: 'marca y modelo', serie: 'n.º de serie', mac: 'MAC', ip: 'IP', piel: 'color del frente', ext: 'equipo real' };
+const DOCK = { pw: 'equipo enchufado', fu: 'fuente', dev: 'equipo conectado', txt: 'otro destino', cab: 'etiqueta', m: 'metros', cat: 'categoría', col: 'color', cert: 'certificación', certf: 'fecha de medición', nota: 'nota', desc: 'descripción', vlan: 'VLAN', poe: 'PoE', vel: 'velocidad', fib: 'fibra', hilo: 'hilo', name: 'nombre', modelo: 'marca y modelo', serie: 'n.º de serie', mac: 'MAC', ip: 'IP', piel: 'color del frente', ext: 'equipo real' };
 const DOCV = ['dev', 'cab', 'vlan', 'cert', 'name', 'ip', 'cat'];
 const docMotor = d => !!(d && d.motor === 1);
 const docQuien = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || ((S.user && S.user.email) || '').split('@')[0];
@@ -1179,7 +1179,7 @@ function docRacks(W, idx) { W = W || {}; const out = new Map();
   return [...out.values()].sort((a, b) => (a.lugar || '~').localeCompare(b.lugar || '~', 'es') || a.id.localeCompare(b.id, 'es', { numeric: true })); }
 function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.cabs) || {}, CAT = (window.OndiRed && OndiRed.CAT) || {};
   const itN = (c, iid) => { const it = c && c.items.find(x => x.iid === iid); return it ? (it.name || (CAT[it.type] || {}).n || it.type) : 'un equipo'; };
-  const pN = (c, e) => { const it = c && c.items.find(x => x.iid === e[0]), K = it ? CAT[it.type] || {} : {}; return itN(c, e[0]) + ', ' + (e[1][0] === 's' ? 'SFP ' : K.pp || K.fo ? 'boca ' : 'puerto ') + e[1].slice(1); };
+  const pN = (c, e) => { const it = c && c.items.find(x => x.iid === e[0]), K = it ? CAT[it.type] || {} : {}; return itN(c, e[0]) + ', ' + (e[1][0] === 's' ? 'SFP ' : e[1][0] === 't' ? 'toma ' : K.pp || K.fo ? 'boca ' : 'puerto ') + e[1].slice(1); };
   const lkK = l => [l[0].join(':'), l[1].join(':')].sort().join('|');
   for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
     if (!ca) { out.push({ r: id, m: `Creó ${id} (${cb.cap}U)` }); if (!cb.items.length) continue; }
@@ -1214,7 +1214,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=10'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=11'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1312,7 +1312,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'
     c.fus = (c.fus || []).filter(x => !((x.a[0] === a || x.b[0] === a) && (x.a[0] === b || x.b[0] === b))); for (let h = 1; h <= Math.min(Fa.hilos, Fb.hilos); h++) c.fus.push({ a: [a, h], b: [b, h] }); docSave(); docPaint(); toast(`Empalmados ${Math.min(Fa.hilos, Fb.hilos)} hilos: ${a} con ${b}, hilo por hilo`); return; }
   if (k === 'cjfib') { const c = D.W.cajas[D.caja], de = ($('#cj-de') || {}).value, hs = +(($('#cj-h') || {}).value) || 12; let n = 1; while (D.W.fibs.some(f => f.id === 'FO-' + String(n).padStart(2, '0'))) n++; const id = 'FO-' + String(n).padStart(2, '0');
     D.W.fibs.push({ id, from: de || '', to: D.caja, hilos: hs, tipo: 'os2', pts: [] }); docSave(); docPaint(); toast('Fibra ' + id + ' creada hasta ' + D.caja); return; }
-  if (k === 'cjx') { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'Tocá de nuevo para sacarla'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar la caja'; } }, 4000); return; } delete D.W.cajas[D.caja]; D.W.fibs.forEach(f => { if (f.to === D.caja) f.to = ''; if (f.from === D.caja) f.from = ''; }); D.caja = null; docSave(); docPaint(); return; }
+  if (k === 'cjx') { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'Tocá de nuevo para sacarla'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar la caja'; } }, 4000); return; } delete D.W.cajas[D.caja]; D.W.devs = (D.W.devs || []).filter(d => d.id !== D.caja); D.W.fibs.forEach(f => { if (f.to === D.caja) f.to = ''; if (f.from === D.caja) f.from = ''; }); D.caja = null; docSave(); docPaint(); return; }
   if (k === 'rack') { D.caja = null; D.cid = v; D.hist = false; D.V = { tab: 'frente', q: '' }; docPaint(); }
   else if (k === 'hist') { D.hist = !D.hist; docPaint(); }
   else if (k === 'histr') { D.histR = v === '1'; docPaint(); }

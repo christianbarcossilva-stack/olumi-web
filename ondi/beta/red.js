@@ -27,7 +27,7 @@ const CAT = {
   srv: { n: 'Servidor', U: 1, rj: 2, g: 'Equipos' },
   org: { n: 'Organizador de cables', U: 1, g: 'Orden y energía' },
   ups: { n: 'UPS', U: 2, g: 'Orden y energía' },
-  pdu: { n: 'Regleta de energía', U: 1, g: 'Orden y energía' },
+  pdu: { n: 'Regleta de energía', U: 1, g: 'Orden y energía', tom: 8 },
   shelf: { n: 'Bandeja fija', U: 1, g: 'Orden y energía' },
   blank: { n: 'Tapa ciega', U: 1, g: 'Orden y energía' }
 };
@@ -51,7 +51,7 @@ const PPM = [['fk-gl6-24', 'Furukawa', 'Patch panel GigaLan Cat.6 24 bocas', 24,
 for (const [id, marca, modelo, rj, U, cat, fo, con] of PPM) CAT['pp-' + id] = Object.assign({ n: marca + ' ' + modelo, U, g: 'Patcheras', marca, modelo, cat }, rj ? { rj, pp: true } : { fo, con });
 // accesorios de rack de VF Networking (proveedor en Uruguay): se dibujan como su tipo genérico (base)
 for (const [id, n, base, g] of [['vf-pdu9', 'PDU 9 tomas schuko en línea 19"', 'pdu', 'Orden y energía'], ['vf-pdu8u', 'PDU 8 tomas universales 19"', 'pdu', 'Orden y energía'], ['vf-pdu6t', 'PDU 6 tomas schuko con llave térmica 19"', 'pdu', 'Orden y energía']])
-  CAT['ac-' + id] = { n: 'VF Networking ' + n, U: 1, g, marca: 'VF Networking', modelo: n, base };
+  CAT['ac-' + id] = { n: 'VF Networking ' + n, U: 1, g, marca: 'VF Networking', modelo: n, base, tom: +(/(\d+) tomas/.exec(n) || [0, 8])[1] };
 // racks y gabinetes más usados (para «Marca y modelo» del rack: al elegir uno se ajusta el tamaño)
 const RACKS = ['VF Networking piso 42U 600×1000 puerta vidrio', 'VF Networking piso 32U 600×1000 puerta vidrio', 'VF Networking piso 27U 600×1000 puerta vidrio', 'VF Networking piso 27U 800×1000 puertas hiperventiladas', 'VF Networking piso 22U 600×800 puerta vidrio', 'VF Networking piso 22U 600×600 puertas hiperventiladas',
   'VF Networking pared 15U puerta vidrio', 'VF Networking pared 9U fijo 600×600 con PDU 6 tomas', 'VF Networking exterior galvanizado 9U 600×600 IP66', 'VF Networking 4U fijo 12"', 'Furukawa rack de piso 44U', 'Gabinete metálico de pared 6U', 'Gabinete metálico de pared 12U'];
@@ -131,6 +131,8 @@ const puertos = type => { const c = CAT[type] || {}, out = []; for (let i = 1; i
 const itemDe = (c, iid) => c && c.items.find(x => x.iid === iid);
 const esPP = it => !!(it && CAT[it.type] && (CAT[it.type].pp || CAT[it.type].fo));
 const esSW = it => !!(it && CAT[it.type] && (CAT[it.type].rj || CAT[it.type].sfp) && !CAT[it.type].pp && !['nvr', 'srv'].includes(it.type));
+// equipos activos: los que se enchufan a una toma de la regleta
+const ACT = it => { const t = tb(it); return !!(it && !esPP(it) && !['pdu', 'org', 'blank', 'shelf', 'odf'].includes(t)); };
 const tb = it => (it && CAT[it.type] && CAT[it.type].base) || (it && it.type);
 const nomIt = it => it ? (it.name || (CAT[it.type] || {}).n || it.type) : '—';
 const nomP = (it, pid) => (pid[0] === 's' ? 'SFP ' : esPP(it) ? 'boca ' : 'puerto ') + pid.slice(1);
@@ -217,6 +219,10 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
     const plug = l ? pcCol(H, c, l) : (inf.dev || inf.txt) && !esPP(it) ? (COL[inf.col] || COL.azul)[1] : '';
     let tip = nomIt(it) + ' · ' + nomP(it, p.id); if (inf.cab) tip += ' · cable ' + inf.cab; if (d) tip += ' · ' + nomDev(d); else if (inf.txt) tip += ' · ' + inf.txt; if (inf.fib) tip += ' · ' + inf.fib[0] + ' ' + hiloTxt(inf.fib[1]);
     return Object.assign({ id, st, plug, tip, on: !!(V.sel && V.sel[0] === it.iid && V.sel[1] === p.id), hot: hot.has(id), inf }, extra); };
+  // cables eléctricos: de cada toma al costado del equipo enchufado, por detrás (se dibujan antes que los equipos)
+  if (V.pw !== false) for (const it of c.items) { if (tb(it) !== 'pdu') continue; const K = CAT[it.type] || {}, n = K.tom || 8, paso = Math.min(46, 380 / n), y0 = top + (it.u - 1) * UH + (K.U * UH - 3) / 2 + 1;
+    for (let k = 0; k < n; k++) { const q = (c.ports[it.iid] || {})['t' + (k + 1)] || {}, eq = q.pw && itemDe(c, q.pw); if (!eq) continue; const x0 = F0 + 190 + k * paso, y1 = top + (eq.u - 1) * UH + 18, x1 = F1 - 14 - (k % 4) * 6;
+      s += `<path d="M${x0} ${y0} C ${x0} ${(y0 + y1) / 2}, ${x1} ${(y0 + y1) / 2}, ${x1} ${y1}" class="r-pw"/>`; } }
   for (const it of c.items) { const K = CAT[it.type]; if (!K) continue; const y = top + (it.u - 1) * UH, h = K.U * UH - 3, pl = pielDe(it), claro = pl === 'plata', tx = claro ? '#39424a' : '#d5dbe0', tx2 = claro ? '#6b757d' : '#8f9aa3';
     const PS = puertos(it.type), sel = V.sel && V.sel[0] === it.iid && !V.sel[1];
     s += `<g data-it="${it.iid}" class="r-it${sel ? ' on' : ''}"><rect x="${X0}" y="${y + 1.5}" width="${X1 - X0}" height="${h}" rx="2.5" fill="url(#rg-${pl})" class="r-cara"/>`;
@@ -251,7 +257,8 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
     else { s += nombre(F0 + 8, y + (K.U > 1 ? 24 : 22), 20);
       if (tb(it) === 'org') for (let k = 0; k < 6; k++) s += `<path d="M${F0 + 150 + k * 76} ${y + 12}h34a7 7 0 0 1 7 7v14a7 7 0 0 1-7 7h-34" class="r-aro"/>`;
       if (tb(it) === 'ups') s += `<rect x="${F0 + 150}" y="${y + 22}" width="92" height="${h - 44}" rx="3" class="r-lcd"/><text x="${F0 + 196}" y="${y + h / 2 + 4}" class="r-n" fill="#7fd7e6" style="text-anchor:middle">230 V · 100%</text>` + Array.from({ length: 22 }, (_, k) => `<rect x="${F0 + 270 + k * 12}" y="${y + 16}" width="5" height="${h - 32}" rx="2" class="r-rej"/>`).join('');
-      if (tb(it) === 'pdu') s += Array.from({ length: 8 }, (_, k) => `<circle cx="${F0 + 190 + k * 46}" cy="${y + h / 2 + 1}" r="12" class="r-toma"/><circle cx="${F0 + 185 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/><circle cx="${F0 + 195 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/>`).join('') + `<rect x="${F0 + 128}" y="${y + 17}" width="18" height="20" rx="2" fill="#D2474B"/>`;
+      if (tb(it) === 'pdu') { const n = K.tom || 8, paso = Math.min(46, 380 / n); s += Array.from({ length: n }, (_, k) => { const pid = 't' + (k + 1), q = (c.ports[it.iid] || {})[pid] || {}, eq = q.pw && itemDe(c, q.pw), cx = F0 + 190 + k * paso, on = V.sel && V.sel[0] === it.iid && V.sel[1] === pid;
+          return `<g data-rp="${it.iid}:${pid}" class="r-p r-tp${on ? ' on' : ''}${eq ? ' usa' : ''}"><title>Toma ${k + 1}${eq ? ' · ' + esc(nomIt(eq)) : ' · libre'}</title><circle cx="${cx}" cy="${y + h / 2 + 1}" r="12" class="r-toma"/><circle cx="${cx - 5}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/><circle cx="${cx + 5}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/>${eq ? `<circle cx="${cx}" cy="${y + h / 2 + 1}" r="7" fill="#1d1f22" stroke="#E6BE1E" stroke-width="1.6"/>` : ''}</g>`; }).join('') + `<rect x="${F0 + 128}" y="${y + 17}" width="18" height="20" rx="2" fill="#D2474B"/>`; }
       if (tb(it) === 'odf') s += `<rect x="${F0 + 150}" y="${y + 12}" width="${F1 - F0 - 170}" height="${h - 24}" rx="3" class="r-bahia"/><path d="M${F0 + 190} ${y + h / 2}c40-22 80 22 120 0s80-22 120 0 80 22 120 0" class="r-aro" style="stroke:#E6BE1E"/>`;
       if (tb(it) === 'shelf') s += `<rect x="${F0 + 150}" y="${y + h - 16}" width="${F1 - F0 - 170}" height="6" rx="2" class="r-bahia"/>`; }
     s += '</g>'; }
@@ -280,6 +287,13 @@ function pasos(H, V, ch) { const devs = mapaDevs(H);
     return `<li class="q off">${esc(x.txt)}</li>`; }).join('')}</ol>`; }
 
 function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(H);
+  if (V.sel && V.sel[1] && V.sel[1][0] === 't' && tb(itemDe(c, V.sel[0])) === 'pdu') { const [iid, pid] = V.sel, it = itemDe(c, iid), q = pd(c, iid, pid) || {}, eq = q.pw && itemDe(c, q.pw), act = c.items.filter(ACT);
+    const usado = new Map(); for (const [t, x] of Object.entries(c.ports[iid] || {})) if (x.pw && t !== pid) usado.set(x.pw, (usado.get(x.pw) || 0) + 1);
+    let h = `<div class="red-h"><small>${esc(nomIt(it))}</small><b>Toma ${pid.slice(1)}</b></div>`;
+    if (!ed) return h + `<dl class="red-rows">${fila('Enchufado', eq ? esc(nomIt(eq)) + ' · U' + eq.u : 'libre')}${q.fu ? fila('Fuente', esc(q.fu)) : ''}${q.nota ? fila('Nota', esc(q.nota)) : ''}</dl>`;
+    return h + `${campo('Equipo enchufado', sel('pw', 'pw', q.pw, act.map(x => [x.iid, nomIt(x) + ' · U' + x.u + (usado.get(x.iid) ? ' · ya tiene ' + usado.get(x.iid) + ' toma' + (usado.get(x.iid) > 1 ? 's' : '') : '')]), 'Libre'))}
+      <div class="red-g2">${campo('Fuente del equipo', sel('pw', 'fu', q.fu, [['Fuente 1', 'Fuente 1'], ['Fuente 2', 'Fuente 2 (redundante)']], 'Única'))}${campo('Nota', inp('pw', 'nota', q.nota, 'maxlength="80"'))}</div>
+      <p class="red-ayuda">El cable eléctrico se dibuja por detrás de los equipos, de la toma al costado del equipo. En la ficha de cada equipo se ve en qué toma está.</p>`; }
   if (V.sel && V.sel[1]) { const [iid, pid] = V.sel, it = itemDe(c, iid); if (!it) return ''; const p = pd(c, iid, pid), l = lk(c, iid, pid), ch = cadena(H, V.cid, iid, pid), fo = pid[0] === 'f';
     const cable = !fo && (esPP(it) || !l || !esPP(itemDe(c, otro(l, iid, pid)[0])));   // el cable hacia el equipo sale de esta boca
     let h = `<div class="red-h"><small>${esc(nomIt(it))}</small><b>${may(nomP(it, pid))}</b></div><div class="red-sec">Recorrido</div>${ch.length > 1 ? pasos(H, V, ch) : '<p class="red-nada">Libre: todavía no tiene nada conectado.</p>'}`;
@@ -303,7 +317,7 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
       <div class="red-g2">${campo('VLAN', inp('p', 'vlan', p.vlan, 'maxlength="30" placeholder="Ej.: 20 · CCTV"'))}${pid[0] === 'p' ? campo('PoE', sel('p', 'poe', p.poe, Object.entries(POE), 'Sin PoE')) : ''}${campo('Velocidad', sel('p', 'vel', p.vel, VEL.map(x => [x, x]), 'Automática'))}</div>`;
     return h; }
   if (V.sel) { const it = itemDe(c, V.sel[0]); if (!it) return ''; const K = CAT[it.type], PS = puertos(it.type), usados = PS.filter(p => cadena(H, V.cid, it.iid, p.id).length > 1).length, real = it.ext && H.reales ? H.reales().find(x => x.uid === it.ext) : null;
-    let h = `<div class="red-h"><small>Equipo en ${esc(V.cid)}</small><b>${esc(nomIt(it))}</b></div><dl class="red-rows">${fila('Tipo', K.n)}${fila('Posición', 'U' + it.u + (K.U > 1 ? '–' + (it.u + K.U - 1) : ''))}${PS.length ? fila('Puertos usados', usados + ' de ' + PS.length) : ''}
+    let h = `<div class="red-h"><small>Equipo en ${esc(V.cid)}</small><b>${esc(nomIt(it))}</b></div><dl class="red-rows">${fila('Tipo', K.n)}${fila('Posición', 'U' + it.u + (K.U > 1 ? '–' + (it.u + K.U - 1) : ''))}${PS.length ? fila('Puertos usados', usados + ' de ' + PS.length) : ''}${ACT(it) ? fila('Energía', (() => { const L = []; for (const x of c.items) if (tb(x) === 'pdu') for (const [t, q] of Object.entries(c.ports[x.iid] || {})) if (q.pw === it.iid) L.push(`<a href="#" data-r="ver" data-v="${esc(V.cid + '|' + x.iid + '|' + t)}">${esc(nomIt(x))} · toma ${t.slice(1)}</a>`); return L.length ? L.join('<br>') : '<span class="red-mut">sin anotar</span>'; })()) : ''}
       ${real ? fila('Estado', `<span class="red-pill ${real.estado}">${EST[real.estado] || 'sin dato'}</span>`) + (real.ip ? fila('IP', esc(real.ip)) : '') + (real.version ? fila('Firmware', esc(real.version)) : '') : ''}
       ${!ed ? (it.modelo ? fila('Modelo', esc(it.modelo)) : '') + (it.serie ? fila('N.º de serie', esc(it.serie)) : '') + (it.mac ? fila('MAC', `<span class="red-mono">${esc(it.mac)}</span>`) : '') + (it.ip ? fila('IP de gestión', esc(it.ip)) : '') + (it.nota ? fila('Nota', esc(it.nota)) : '') : ''}</dl>`;
     if (!ed) return h; const rs = H.reales ? H.reales() : [];
@@ -442,7 +456,7 @@ function evento(el, e) { const { H, V } = el.__red, t = e.target, c = H.cabs[V.c
     return; }
   if (e.type !== 'click' || V.tab !== 'frente' || V._arr) { V._arr = false; return; }
   if (p) { const [iid, pid] = p.dataset.rp.split(':');
-    if (V.linking && V.sel && V.sel[1] && H.editar()) { const s0 = V.sel; const no = noEntra(c, s0, [iid, pid]); if (no) { H.aviso(no); return; } V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
+    if (V.linking && V.sel && V.sel[1] && H.editar() && pid[0] !== 't' && V.sel[1][0] !== 't') { const s0 = V.sel; const no = noEntra(c, s0, [iid, pid]); if (no) { H.aviso(no); return; } V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
     V.sel = [iid, pid]; return R(); }
   if (it) { V.sel = [it.dataset.it]; V.linking = false; V.mpick = false; return R(); }
   if (t.closest('.red-svg')) { V.sel = null; V.linking = false; R(); } }
@@ -460,12 +474,13 @@ function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.se
   if (o === 'it' && iid) { const it = itemDe(c, iid); if (!it) return;
     if (k === 'u') { if (entra(c, it, +v)) { it.u = +v; c.items.sort((x, y) => x.u - y.u); } }
     else { pon(it, k, v); if (k === 'ext' && v && H.reales) { const x = H.reales().find(r => r.uid === v); if (x) { if (!it.name) it.name = x.nombre; if (!it.mac && x.mac) it.mac = x.mac; if (!it.modelo && x.modelo) it.modelo = x.modelo; if (!it.ip && x.ip) it.ip = x.ip; } } } }
+  if (o === 'pw') { pon(pd(c, iid, pid, true), k, v); return; }
   if (o === 'cab') { pon(c, k, k === 'cap' || k === 'prof' ? num(v) : v); const m = k === 'modelo' && /(\d+)\s*U\b/i.exec(v || ''), mm = k === 'modelo' && /(\d{3,4})\s*[×x]\s*(\d{3,4})/.exec(v || ''); if (m && +m[1] >= c.items.reduce((a, it) => Math.max(a, it.u + ((CAT[it.type] || { U: 1 }).U) - 1), 0)) c.cap = +m[1]; if (mm && !c.prof) c.prof = +mm[2]; return; }
   if (o === 'pt') { const [cid, i2, p2] = String(id).split('|'), cc = H.cabs[cid]; if (cc) pon(pd(cc, i2, p2, true), k, k === 'm' ? num(v) : v); return; }
   if (o === 'F') { const F = fibDe(H, id); if (F) pon(F, k, k === 'hilos' || k === 'm' ? (v === '' ? '' : +String(v).replace(',', '.')) : v); } }
 
 // agarrar la punta de un patch cord y soltarla en otro puerto (o tirar un cable nuevo desde un puerto libre); con mouse o con el dedo
-function arrastrarCable(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar() || V.tab !== 'frente' || e.button > 0) return false;
+function arrastrarCable(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar() || V.tab !== 'frente' || e.button > 0) return false; { const g0 = e.target.closest && e.target.closest('[data-rp]'); if (g0 && g0.dataset.rp.split(':')[1][0] === 't') return false; }
   const p = e.target.closest('[data-rp]'), svg = el.querySelector('.red-svg'); if (!p || !svg || !V._pos) return false;
   const c = H.cabs[V.cid], [iid, pid] = p.dataset.rp.split(':'), l = lk(c, iid, pid), li = l ? c.links.indexOf(l) : -1;
   const fijo = l ? (l[0][0] === iid && l[0][1] === pid ? l[1] : l[0]) : [iid, pid], A = V._pos[fijo.join(':')]; if (!A) return false;
@@ -494,7 +509,8 @@ function arrastrar(el, e) { const { H, V } = el.__red || {}; if (!H || !H.editar
   const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); if (du) { it.u += du; c.items.sort((x, y) => x.u - y.u); V._arr = true; V.sel = [it.iid]; H.guardar(); pintar(el, H, V); setTimeout(() => { V._arr = false; }, 50); } };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); }
 
-function css() { if (document.getElementById('red-css')) return; const s = document.createElement('style'); s.id = 'red-css'; s.textContent = `.red-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;max-height:360px;overflow:auto;padding:2px}.red-gal button{display:grid;gap:3px;justify-items:start;text-align:left;border:1px solid var(--line-strong,#c9cfd4);background:var(--glass-strong,#fff);color:inherit;border-radius:10px;padding:8px;cursor:grab;font:inherit}
+function css() { if (document.getElementById('red-css')) return; const s = document.createElement('style'); s.id = 'red-css'; s.textContent = `.r-pw{fill:none;stroke:#6b737b;stroke-width:3.2;stroke-linecap:round;opacity:.85;pointer-events:none}.r-tp{cursor:pointer}.r-tp.on .r-toma{stroke:#0B5FFF;stroke-width:2.5}.r-tp:hover .r-toma{stroke:#0B5FFF}
+.red-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;max-height:360px;overflow:auto;padding:2px}.red-gal button{display:grid;gap:3px;justify-items:start;text-align:left;border:1px solid var(--line-strong,#c9cfd4);background:var(--glass-strong,#fff);color:inherit;border-radius:10px;padding:8px;cursor:grab;font:inherit}
 .red-gal button:hover{border-color:var(--accent,#0B5FFF);box-shadow:0 6px 16px -10px var(--accent,#0B5FFF)}.red-gal button:active{cursor:grabbing}.red-gal svg{width:100%;height:auto;max-height:46px}.red-gal b{font-size:12.5px;font-weight:600;line-height:1.25}.red-gal span{font-size:11.5px;opacity:.7}
 .red-top{position:relative;z-index:6}.red-more{position:relative}.red-b.ico{padding:0 8px}.red-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:240px;display:grid;padding:6px;border:1px solid var(--line-strong,#c9cfd4);border-radius:12px;background:var(--menu-bg,var(--glass-strong,#fff));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 18px 40px -16px rgba(0,0,0,.45)}
 .red-menu button{display:flex;gap:9px;align-items:center;border:0;background:transparent;color:inherit;text-align:left;padding:9px 10px;border-radius:8px;font:inherit;cursor:pointer}.red-menu button:hover{background:var(--accent-soft,rgba(11,95,255,.1))}.red-menu svg{width:16px;height:16px}
