@@ -65,6 +65,9 @@ CAT['mc-mc1400'] = { n: 'TP-Link TL-MC1400 chasis para 14 conversores', U: 2, rj
 const GABD = ['30x25', '40x30', '50x40', '60x40', '70x50', '80x60', '100x60', '100x80'], gabCap = d => Math.max(4, Math.round(((+String(d).split('x')[0] || 40) - 10) / 4.445)), dimTxt = d => String(d).replace('x', ' × ') + ' cm';
 // lo que define un modelo del catálogo: U, ancho y profundidad (si el nombre los trae, no se pueden cambiar a mano)
 const rkInfo = r => { const u = /(\d+)\s*U\b/i.exec(r || ''), mm = /(\d{3,4})\s*[×x]\s*(\d{3,4})/.exec(r || ''); return { u: u ? +u[1] : 0, ancho: mm ? +mm[1] : 0, prof: mm ? +mm[2] : 0 }; };
+const PUERTAS = [['vidrio', 'Cristal'], ['micro', 'Microperforada'], ['chapa', 'Chapa ciega'], ['no', 'Sin puerta']], PUN = Object.fromEntries(PUERTAS);
+// puerta de adelante (pf) y de atrás (pt): la anotada, o la que dice el nombre del modelo
+const puerta = (c, k) => { if (c[k]) return c[k]; const m = String(rkCat(c) || c.modelo || '').toLowerCase(); if (/hiperventilad|microperf/.test(m) && (k === 'pf' || /puertas/.test(m))) return 'micro'; if (k === 'pf' && /vidrio|cristal/.test(m)) return 'vidrio'; return ''; };
 const rkCat = c => c.cat || (RACKS.includes(c.modelo) ? c.modelo : '');
 const RACKS = ['VF Networking piso 42U 600×1000 puerta vidrio', 'VF Networking piso 32U 600×1000 puerta vidrio', 'VF Networking piso 27U 600×1000 puerta vidrio', 'VF Networking piso 27U 800×1000 puertas hiperventiladas', 'VF Networking piso 22U 600×800 puerta vidrio', 'VF Networking piso 22U 600×600 puertas hiperventiladas',
   'VF Networking pared 15U puerta vidrio', 'VF Networking pared 9U fijo 600×600 con PDU 6 tomas', 'VF Networking exterior galvanizado 9U 600×600 IP66', 'VF Networking 4U fijo 12"', 'Furukawa rack de piso 44U', 'Gabinete metálico de pared 6U', 'Gabinete metálico de pared 12U'];
@@ -119,7 +122,7 @@ function renombrar(el, v) { const { H, V } = el.__red, c = H.cabs[V.cid]; if (!c
 function soltar(el) { const zona = () => el.querySelector('.red-svg'), uDe = (svg, y) => { const c = el.__red.H.cabs[el.__red.V.cid], r = svg.getBoundingClientRect(), k = (30 + c.cap * 56 + 30) / r.height; return Math.max(1, Math.min(c.cap, Math.floor(((y - r.top) * k - 30) / 56) + 1)); };
   let marca = null; const limpia = () => { if (marca) marca.remove(); marca = null; };
   el.addEventListener('dragstart', e => { const b = e.target.closest && e.target.closest('[data-r="addc"]'); if (!b) return; e.dataTransfer.setData('text/x-ondi-comp', b.dataset.v); e.dataTransfer.effectAllowed = 'copy'; el.__arrComp = b.dataset.v; });
-  el.addEventListener('dragover', e => { const svg = zona(); if (!el.__arrComp || !svg || !svg.contains(e.target)) { limpia(); return; } e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; const c = el.__red.H.cabs[el.__red.V.cid], K = CAT[el.__arrComp], u = uDe(svg, e.clientY), ok = entra(c, { type: el.__arrComp }, u);
+  el.addEventListener('dragover', e => { const svg = zona(); if (!el.__arrComp || !svg || !svg.contains(e.target)) { limpia(); return; } e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; const c = el.__red.H.cabs[el.__red.V.cid], K = CAT[el.__arrComp], u = uDe(svg, e.clientY), ok = entra(c, { type: el.__arrComp, lado: el.__red.V.cara }, u);
     if (!marca) { marca = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); marca.setAttribute('class', 'r-dz'); marca.setAttribute('x', 46); marca.setAttribute('width', 608); marca.setAttribute('rx', 3); svg.appendChild(marca); }
     marca.setAttribute('y', 30 + (u - 1) * 56 + 1); marca.setAttribute('height', K.U * 56 - 2); marca.classList.toggle('no', !ok); });
   el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) limpia(); });
@@ -442,8 +445,8 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
           ${campo('Tamaño (U)', fi.u ? fijo(c.cap + 'U') : cajaN('cap', c.cap, 'De 4 a 48', 'red-us') + `<datalist id="red-us">${[4, 6, 9, 12, 15, 18, 20, 22, 24, 27, 32, 36, 42, 45, 48].filter(u => u >= usoMax).map(u => `<option value="${u}">`).join('')}</datalist>`)}
           ${campo('Ancho (mm)', fi.ancho ? fijo(c.ancho + ' mm') : cajaN('ancho', c.ancho, 'Ej.: 600', 'red-an') + '<datalist id="red-an"><option value="550"><option value="600"><option value="800"></datalist>')}
           ${campo('Profundidad (mm)', fi.prof ? fijo(c.prof + ' mm') : cajaN('prof', c.prof, 'Ej.: 1000', 'red-pr') + '<datalist id="red-pr"><option value="450"><option value="600"><option value="800"><option value="1000"><option value="1200"></datalist>')}`; })()}
-      ${campo('Nota', inp('cab', 'nota', c.nota, 'maxlength="120"'))}</div>`
-    : `<dl class="red-rows">${c.lugar ? fila('Lugar', esc(c.lugar)) : ''}${c.modelo ? fila('Modelo', esc(c.modelo)) : ''}${fila('Tamaño', c.dim ? dimTxt(c.dim) : c.cap + 'U' + (c.ancho || c.prof ? ' · ' + (c.ancho || '¿?') + ' × ' + (c.prof || '¿?') + ' mm' : ''))}${c.nota ? fila('Nota', esc(c.nota)) : ''}</dl>`;
+      ${campo('Puerta delantera', sel('cab', 'pf', puerta(c, 'pf'), PUERTAS, 'Sin anotar'))}${campo('Puerta trasera', sel('cab', 'pt', puerta(c, 'pt'), PUERTAS, 'Sin anotar'))}${campo('Nota', inp('cab', 'nota', c.nota, 'maxlength="120"'))}</div>`
+    : `<dl class="red-rows">${c.lugar ? fila('Lugar', esc(c.lugar)) : ''}${c.modelo ? fila('Modelo', esc(c.modelo)) : ''}${fila('Tamaño', c.dim ? dimTxt(c.dim) : c.cap + 'U' + (c.ancho || c.prof ? ' · ' + (c.ancho || '¿?') + ' × ' + (c.prof || '¿?') + ' mm' : ''))}${puerta(c, 'pf') || puerta(c, 'pt') ? fila('Puertas', (PUN[puerta(c, 'pf')] || '¿?') + ' adelante · ' + ((PUN[puerta(c, 'pt')] || '¿?').toLowerCase()) + ' atrás') : ''}${c.nota ? fila('Nota', esc(c.nota)) : ''}</dl>`;
   return `<div class="red-h"><small>Rack ${esc(V.cid)}</small><b>${occ.size} de ${c.cap} U ocupadas</b>${oc.t.size && oc.t.size !== oc.f.size ? `<small>${oc.f.size} adelante · ${oc.t.size} atrás</small>` : ''}</div>${datos}
     <dl class="red-rows">${rj ? fila('Puertos de switch', rjU + ' usados · ' + (rj - rjU) + ' libres') : ''}${fo ? fila('Bocas de fibra', foU + ' usadas · ' + (fo - foU) + ' libres') : ''}${fila('Patch cords', String(c.links.length))}</dl>
     ${caidos.length ? `<div class="red-sec">Sin señal</div><ul class="red-l">${caidos.map(([it, pid, dev]) => `<li><a href="#" data-r="ver" data-v="${esc(V.cid + '|' + it.iid + '|' + pid)}"><i class="crit"></i>${esc(nomDev(devs[dev]) || dev)} · ${esc(nomIt(it))} ${nomP(it, pid)}</a></li>`).join('')}</ul>` : ''}
@@ -621,7 +624,7 @@ function evento(el, e) { const { H, V } = el.__red, t = e.target, c = H.cabs[V.c
     if (V.linking && V.sel && V.sel[1] && H.editar() && pid[0] !== 't' && V.sel[1][0] !== 't') { const s0 = V.sel; const no = noEntra(c, s0, [iid, pid]); if (no) { H.aviso(no); return; } V.linking = false; if (!(s0[0] === iid && s0[1] === pid)) { c.links = c.links.filter(l => l !== lk(c, s0[0], s0[1]) && l !== lk(c, iid, pid)); c.links.push([[s0[0], s0[1]], [iid, pid]]); V.sel = [iid, pid]; H.aviso('Patch cord conectado'); return G(); } }
     V.sel = [iid, pid]; return R(); }
   if (it) { V.sel = [it.dataset.it]; V.linking = false; V.mpick = false; return R(); }
-  if (t.closest('.red-svg')) { V.sel = null; V.linking = false; R(); } }
+  if ((V.sel || V.linking) && (t.closest('.red-svg') || (t.closest('.red-frw') && !t.closest('.red-z, .red-ladop')))) { V.sel = null; V.linking = false; R(); } }
 
 function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.sel || [], num = x => x === '' ? null : +String(x).replace(',', '.');
   const pon = (obj, key, val) => { if (val === '' || val == null || (typeof val === 'number' && isNaN(val))) delete obj[key]; else obj[key] = val; };
