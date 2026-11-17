@@ -1188,8 +1188,8 @@ function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D
   const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
-  for (const k of ['bita', 'docidx', 'cajas'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
-  const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
+  for (const k of ['bita', 'docidx', 'cajas', 'campo'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data), campoDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
   S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
   const D = S.doc; if (D && D.site === st.id) { if (D.saving) D.W.bita = data.bita; else S.doc = null; }
   return data; }
@@ -1237,7 +1237,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=13'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=14'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1256,6 +1256,7 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
     titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? c.cap + 'U' : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
     racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
+    campo: () => (W.campo = W.campo || []),
     cajas: () => (W.cajas = W.cajas || {}), caja: id => { if (!(W.cajas || {})[id]) return; D.caja = id; D.cid = null; D.hist = false; docPaint(); },
     puntas: () => [...docRacks(W, D.idx).map(r => [r.id, r.id]), ...Object.entries(W.cajas || {}).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0] + (x.nombre ? ' · ' + x.nombre : '')])],
     acciones: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid), full = $('#docbox') && $('#docbox').classList.contains('full');
@@ -1444,6 +1445,11 @@ document.addEventListener('change', e => { const t = e.target, D = S.doc; if (!D
   else if (t.dataset.cf) { const [i, lado, j] = t.dataset.cf.split('|'), x = c.fus[+i]; if (!x) return; x[lado][+j] = +j ? +t.value : t.value; if (!+j) x[lado][1] = 1; docSave(); docPaint(); }
   else if (t.dataset.cfx) { const [i, k] = t.dataset.cfx.split('|'), x = c.fus[+i]; if (!x) return; const v = t.value.trim(); if (!v) delete x[k]; else x[k] = k === 'db' ? +v.replace(',', '.') : v; docSave(); } });
 // historial de las cajas
+// historial de los equipos de campo (cámaras, Wi-Fi, control de acceso…): altas, bajas y cambios de nombre o lugar
+function campoDiff(a, b) { const out = [], A = new Map(((a && a.campo) || []).map(x => [x.id, x])), B = new Map(((b && b.campo) || []).map(x => [x.id, x])), nom = x => x.id + (x.nombre ? ' (' + x.nombre + ')' : '');
+  for (const [id, x] of B) { const o = A.get(id); if (!o) out.push({ m: 'Agregó el equipo ' + nom(x) }); else { const ch = []; if ((o.nombre || '') !== (x.nombre || '')) ch.push('nombre ' + (x.nombre || 'sin nombre')); if ((o.lugar || '') !== (x.lugar || '')) ch.push('lugar ' + (x.lugar || 'sin lugar')); if ((o.ip || '') !== (x.ip || '')) ch.push('IP ' + (x.ip || 'sin IP')); if (o.t !== x.t) ch.push('tipo'); if (ch.length) out.push({ m: 'Anotó en ' + id + ': ' + ch.join(', ') }); } }
+  for (const [id, x] of A) if (!B.has(id)) out.push({ m: 'Borró el equipo ' + nom(x) });
+  return out; }
 function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.cajas) || {}, fk = x => x.a.join(':') + '|' + x.b.join(':'), lt = x => `${x.a[0] || '?'} hilo ${x.a[1]} con ${x.b[0] || '?'} hilo ${x.b[1]}`;
   for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
     if (!ca) { out.push({ r: id, m: `Creó ${CAJT[cb.t] ? CAJT[cb.t][0].toLowerCase() : 'la caja'} ${id}` }); continue; } if (!cb) { out.push({ r: id, m: `Sacó la caja ${id}` }); continue; }
