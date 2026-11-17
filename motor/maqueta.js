@@ -290,7 +290,7 @@ export async function abrirMaqueta(o) {
       o.alGuardar && o.alGuardar(s); }, 900); }
 
   // ---------- animación de equipos caídos y medición ----------
-  // recorrer a pie con el avatar, como en la maqueta de Polo Oeste: W A S D o flechas caminan hacia donde mira la cámara, Shift corre, Esc sale
+  // recorrer a pie con el avatar, como en la maqueta de Ondi: W A S D o flechas caminan hacia donde mira la cámara, Shift corre, Esc sale
   const PASEO = { on: false, x: 0, z: 0, y: 0, rumbo: 0, k: {} };
   async function paseo(on) { if (on === PASEO.on) return; PASEO.on = on; motor.caminando = on; const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on); document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); PASEO.joy = { x: 0, y: 0 }; joyKnob();
     if (!on) { if (PASEO.g) mundo.remove(PASEO.g); PASEO.g = PASEO.ob = null; adentro(null); PASEO.y = 0; motor.C.ty = 0; motor.ir(PASEO.cam || { d: 160 }, 0.6); return; }
