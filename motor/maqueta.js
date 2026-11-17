@@ -3,8 +3,8 @@
 //   host.state      lo guardado ({ v:1, motor:1, escena, ext })      host.save(state)   guarda
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
-import { THREE, crearMotor } from './nucleo.js';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=7';
+import { THREE, crearMotor } from './nucleo.js?v=2';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=8';
 import { ve, dominio, DOMINIOS } from './plano.js?v=2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -291,18 +291,31 @@ export async function abrirMaqueta(o) {
 
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar, como en la maqueta de Polo Oeste: W A S D o flechas caminan hacia donde mira la cámara, Shift corre, Esc sale
-  const PASEO = { on: false, x: 0, z: 0, rumbo: 0, k: {} };
+  const PASEO = { on: false, x: 0, z: 0, y: 0, rumbo: 0, k: {} };
   async function paseo(on) { if (on === PASEO.on) return; PASEO.on = on; motor.caminando = on; const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on); document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); PASEO.joy = { x: 0, y: 0 }; joyKnob();
-    if (!on) { if (PASEO.g) mundo.remove(PASEO.g); PASEO.g = PASEO.ob = null; motor.ir(PASEO.cam || { d: 160 }, 0.6); return; }
-    const C = motor.C; PASEO.cam = { tx: C.tx, tz: C.tz, d: C.d, pitch: C.pitch }; obstaculos(); [PASEO.x, PASEO.z] = libre(C.tx, C.tz); PASEO.rumbo = C.yaw + Math.PI; motor.ir({ tx: PASEO.x, tz: PASEO.z, d: 9, pitch: 0.4 }, 0.7);
+    if (!on) { if (PASEO.g) mundo.remove(PASEO.g); PASEO.g = PASEO.ob = null; adentro(null); PASEO.y = 0; motor.C.ty = 0; motor.ir(PASEO.cam || { d: 160 }, 0.6); return; }
+    const C = motor.C; PASEO.cam = { tx: C.tx, tz: C.tz, d: C.d, pitch: C.pitch }; PASEO.y = 0; obstaculos(); [PASEO.x, PASEO.z] = libre(C.tx, C.tz); PASEO.rumbo = C.yaw + Math.PI; motor.ir({ tx: PASEO.x, tz: PASEO.z, d: 9, pitch: 0.4 }, 0.7);
     const g = new THREE.Group(); g.position.set(PASEO.x, 0, PASEO.z); mundo.add(g); PASEO.g = g; await cargarGLB('avatares', 'tec-h-epp', g, null, 'yo-paseo');
     for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); PASEO.ob = ob; } motor.dirty = true; }
   // lo que no se atraviesa: cajas de todo lo que ocupa lugar a la altura del cuerpo (contenedores, paredes, racks, autos); pisos y áreas no
-  function obstaculos() { PASEO.obs = []; for (const g of objs.values()) { const p = g.userData.pieza; if (!g.visible || !p || TIPOS[p.t].forma === 'area' || p.t === 'persona') continue;
-      g.traverse(m => { if (!m.isMesh || m.userData.campo) return; if (m.isInstancedMesh) { m.updateMatrixWorld(); if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); const M = new THREE.Matrix4(); for (let i = 0; i < Math.min(m.count, 4000); i++) { m.getMatrixAt(i, M); const b = m.geometry.boundingBox.clone().applyMatrix4(M.premultiply(m.matrixWorld)); if (b.max.y >= 0.35 && b.min.y <= 1.7 && b.max.x - b.min.x < 60 && b.max.z - b.min.z < 60) PASEO.obs.push(b); } return; } const b = new THREE.Box3().setFromObject(m); if (b.isEmpty() || b.max.y < 0.35 || b.min.y > 1.7) return; if (b.max.x - b.min.x > 400 || b.max.z - b.min.z > 400) return; PASEO.obs.push(b); }); } }
+  function obstaculos() { PASEO.obs = []; PASEO.edif = []; for (const g of objs.values()) { const p = g.userData.pieza; if (!g.visible || !p || TIPOS[p.t].forma === 'area' || p.t === 'persona') continue;
+      if (g.userData.suelos) PASEO.edif.push(g);
+      g.traverse(m => { if (!m.isMesh || m.userData.campo || m.userData.noChoca) return; if (m.isInstancedMesh) { m.updateMatrixWorld(); if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); const M = new THREE.Matrix4(); for (let i = 0; i < Math.min(m.count, 4000); i++) { m.getMatrixAt(i, M); const b = m.geometry.boundingBox.clone().applyMatrix4(M.premultiply(m.matrixWorld)); if (b.max.y >= 0.35 && b.max.x - b.min.x < 60 && b.max.z - b.min.z < 60) PASEO.obs.push(b); } return; } const b = new THREE.Box3().setFromObject(m); if (b.isEmpty() || b.max.y < 0.35) return; if (b.max.x - b.min.x > 400 || b.max.z - b.min.z > 400) return; PASEO.obs.push(b); }); } }
   // arranca donde mira la cámara; si ahí hay algo (un edificio, una pila), busca el lugar libre más cercano dando vueltas
   function libre(x, z) { if (!choca(x, z)) return [x, z]; for (let r = 1.5; r < 120; r += 1.5) for (let a = 0; a < 6.28; a += 0.9 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (!choca(px, pz)) return [px, pz]; } return [x, z]; }
-  const choca = (x, z) => { for (const b of PASEO.obs || []) if (x > b.min.x - 0.3 && x < b.max.x + 0.3 && z > b.min.z - 0.3 && z < b.max.z + 0.3) return true; return false; };
+  const choca = (x, z) => { const y = PASEO.y || 0; for (const b of PASEO.obs || []) if (b.max.y > y + 0.35 && b.min.y < y + 1.7 && x > b.min.x - 0.3 && x < b.max.x + 0.3 && z > b.min.z - 0.3 && z < b.max.z + 0.3) return true; return false; };
+  // pisos que se pisan (edificios por dentro): el más alto que queda a un paso (60 cm) de donde uno está; afuera, el suelo
+  const _pl = new THREE.Vector3();
+  function enEdif(g, x, z) { _pl.set(x, 0, z); g.worldToLocal(_pl); return [_pl.x, _pl.z]; }
+  function alturaEn(x, z, y) { let mejor = 0; for (const g of PASEO.edif || []) { const [lx, lz] = enEdif(g, x, z);
+      for (const S of g.userData.suelos) { if (lx < S.x0 || lx > S.x1 || lz < S.z0 || lz > S.z1) continue; let h;
+        if (S.rampa) h = S.y0 + (S.y1 - S.y0) * Math.max(0, Math.min(1, (lx - S.xa) / (S.xb - S.xa)));
+        else { const H = S.hueco; if (H && lx > H[0] && lx < H[2] && lz > H[1] && lz < H[3]) continue; h = S.y; }
+        if (h <= y + 0.6 && h > mejor) mejor = h; } } return mejor; }
+  // adentro de un edificio: se esconde lo que está arriba del piso donde uno camina (losas, paredes y techo) y la cámara mira desde más arriba
+  function adentro(g, piso) { if (PASEO.dentro && PASEO.dentro !== g) { const p = PASEO.dentro.userData.pieza || {}; PASEO.dentro.traverse(m => { if (m.isMesh && m.userData.nivel != null) m.visible = !(p.corte && m.userData.nivel > 0); }); PASEO.camT = 1; PASEO.camA = { d: 9, pitch: 0.4 }; }
+    if (g && (PASEO.dentro !== g || PASEO.piso !== piso)) { if (PASEO.dentro !== g) { PASEO.camT = 1; PASEO.camA = { d: 8, pitch: 1.0 }; } g.traverse(m => { if (m.isMesh && m.userData.nivel != null) m.visible = m.userData.nivel <= piso; }); motor.dirty = true; }
+    PASEO.dentro = g; PASEO.piso = piso; }
   $('#bpaseo') && $('#bpaseo').addEventListener('click', () => paseo(!PASEO.on));
   document.body.insertAdjacentHTML('beforeend', '<div id="mpaseo" role="status"><span class="tec"><kbd>W A S D</kbd> o flechas para caminar · <kbd>Shift</kbd> corre · arrastrá para mirar</span><button type="button">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div>');
   $('#mpaseo button').onclick = () => paseo(false);
@@ -316,7 +329,10 @@ export async function abrirMaqueta(o) {
   motor.cada.push((dt, t) => { if (!PASEO.on || !PASEO.g) return false; const K = PASEO.k, C = motor.C, J = PASEO.joy || { x: 0, y: 0 }, f = (K.w || K.arrowup ? 1 : 0) - (K.s || K.arrowdown ? 1 : 0) - J.y, l = (K.d || K.arrowright ? 1 : 0) - (K.a || K.arrowleft ? 1 : 0) + J.x;
     const fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw), vx = fx * f - fz * l, vz = fz * f + fx * l, m = Math.hypot(vx, vz), vel = K.shift || Math.hypot(J.x, J.y) > 0.92 ? 3.6 : 1.45;
     if (m > 0) { const nx = PASEO.x + vx / m * vel * dt, nz = PASEO.z + vz / m * vel * dt; if (choca(PASEO.x, PASEO.z) || !choca(nx, nz)) { PASEO.x = nx; PASEO.z = nz; } else if (!choca(nx, PASEO.z)) PASEO.x = nx; else if (!choca(PASEO.x, nz)) PASEO.z = nz; const r = Math.atan2(vx, vz); let d = r - PASEO.rumbo; d = Math.atan2(Math.sin(d), Math.cos(d)); PASEO.rumbo += d * Math.min(1, dt * 10); }
-    PASEO.g.position.set(PASEO.x, 0, PASEO.z); PASEO.g.rotation.y = PASEO.rumbo; C.tx += (PASEO.x - C.tx) * Math.min(1, dt * 8); C.tz += (PASEO.z - C.tz) * Math.min(1, dt * 8);
+    const yo = alturaEn(PASEO.x, PASEO.z, PASEO.y); PASEO.y += (yo - PASEO.y) * Math.min(1, dt * (yo < PASEO.y - 0.6 ? 6 : 14)); if (Math.abs(yo - PASEO.y) < 0.004) PASEO.y = yo;
+    let dg = null, piso = 0; for (const g of PASEO.edif || []) { const [lx, lz] = enEdif(g, PASEO.x, PASEO.z), S = g.userData.suelos[0]; if (lx > S.x0 - 0.2 && lx < S.x1 + 0.2 && lz > S.z0 - 0.2 && lz < S.z1 + 0.2) { dg = g; piso = Math.max(0, Math.floor((PASEO.y + 0.9) / g.userData.altoPiso)); break; } } adentro(dg, piso);
+    if (PASEO.camT > 0) { PASEO.camT -= dt; const k = Math.min(1, dt * 4); C.d += (PASEO.camA.d - C.d) * k; C.pitch += (PASEO.camA.pitch - C.pitch) * k; }
+    PASEO.g.position.set(PASEO.x, PASEO.y, PASEO.z); PASEO.g.rotation.y = PASEO.rumbo; C.tx += (PASEO.x - C.tx) * Math.min(1, dt * 8); C.tz += (PASEO.z - C.tz) * Math.min(1, dt * 8); C.ty = (C.ty || 0) + (PASEO.y - (C.ty || 0)) * Math.min(1, dt * 8);
     if (PASEO.ob) { AVM.avPose(PASEO.ob, m > 0 ? 'walk' : 'idle', dt, { x: PASEO.x, y: PASEO.z, t: t / 1000 }); PASEO.ob.sync(); } return true; });
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
   motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
@@ -332,7 +348,7 @@ export async function abrirMaqueta(o) {
 
   armarTodo();
   const enc = E.inicio || encuadre(); motor.inicio(enc); if (o.intro !== false) { Object.assign(motor.C, { ...enc, d: enc.d * 1.35, yaw: enc.yaw - 0.45, pitch: Math.min(1.2, enc.pitch + 0.2) }); motor.ir(enc, 1.8); }
-  const api = { motor, E, objs, elegir, editar, guardar, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = JSON.stringify(E.piezas); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
+  const api = { motor, E, objs, PASEO, paseo, elegir, editar, guardar, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = JSON.stringify(E.piezas); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
 function normal(e) { e = JSON.parse(JSON.stringify(e || {})); e.v = 1; e.piezas = (e.piezas || []).filter(p => p && p.t && TIPOS[p.t]); let n = 0; const ids = new Set(); for (const p of e.piezas) { if (!p.id) p.id = p.t.slice(0, 3) + 'x' + (n++); if (ids.has(p.id)) { let i = 2; while (ids.has(p.id + '-' + i)) i++; p.id += '-' + i; } ids.add(p.id); } return e; }

@@ -1,7 +1,7 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js';
+import { THREE } from './nucleo.js?v=2';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=4';
 
@@ -184,6 +184,50 @@ export const TIPOS = {
       if (p.ventanas) { const vm = mat(oscuro() ? '#cfeeff' : '#2c3e4f', { roughness: 0.08, metalness: 0.6, emissive: oscuro() ? '#bfe6ff' : '#000000', emissiveIntensity: oscuro() ? 1.4 : 0 });
         for (let f = 0; f < p.pisos; f++) { const y = f * 3.1 + 1.0; caja(g, -w + 0.6, y, d, w - 0.6, y + 1.3, d + 0.04, vm, false); caja(g, -w + 0.6, y, -d - 0.04, w - 0.6, y + 1.3, -d, vm, false); } }
       caja(g, -w - 0.15, H, -d - 0.15, w + 0.15, H + 0.3, d + 0.15, mat(oscuro() ? '#555b61' : '#c9ced2')); return g; } },
+  // edificio de oficinas que se camina por dentro: planta baja y altas, escalera, puerta, ventanales y franjas.
+  // Cada nivel va aparte (userData.nivel) para esconder lo de arriba cuando uno camina adentro; las paredes chocan una por una;
+  // los pisos y la escalera se pisan (userData.suelos, en metros del edificio). Por dentro queda vacío: las habitaciones se arman después.
+  edificio: { n: 'Edificio de oficinas (por dentro)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 36, fondo: 30, pisos: 2, altoPiso: 3.6, color: '#2D3033', franjas: '#F2F3F4', ventanas: true, corte: false },
+    campos: [F.nombre, F.ancho('Largo (m)', 6, 200), F.fondo('Fondo (m)', 6, 120), { k: 'pisos', n: 'Pisos', t: 'num', min: 1, max: 6, paso: 1 }, { k: 'altoPiso', n: 'Alto de cada piso (m)', t: 'num', min: 2.6, max: 6, paso: 0.1 }, F.color('Color de la fachada'), { k: 'franjas', n: 'Color de las franjas', t: 'color' }, { k: 'ventanas', n: 'Ventanales', t: 'bool' }, { k: 'corte', n: 'Ver por dentro (sin techo ni pisos de arriba)', t: 'bool' }, F.r],
+    armar(p) { const g = new THREE.Group(); g.userData.sinAplanar = true; const w = p.ancho / 2, d = p.fondo / 2, hp = p.altoPiso, N = Math.max(1, Math.round(p.pisos)), t = 0.25, os = oscuro();
+      const mFach = mat(os ? mix(p.color, '#000', 0.2) : p.color, { roughness: 0.7 }), mFr = mat(os ? mix(p.franjas, '#000', 0.35) : p.franjas, { roughness: 0.6 }), mIn = mat(os ? '#8d939a' : '#eceeef', { roughness: 0.9 });
+      const mVid = mat(os ? '#9fd3f0' : '#3b5566', { roughness: 0.06, metalness: 0.5, transparent: true, opacity: 0.55, emissive: os ? '#bfe6ff' : '#000000', emissiveIntensity: os ? 0.5 : 0 });
+      const mPiso = mat(os ? '#9aa0a6' : '#d9dcde', { roughness: 0.55 }), mLosa = mat(os ? '#6b7177' : '#bfc4c8', { roughness: 0.8 }), mEsc = mat(os ? '#7d848a' : '#c6cacd', { roughness: 0.7 }), mBar = mat('#454b51', { roughness: 0.4, metalness: 0.5 });
+      const nv = (k, m) => { m.userData.nivel = k; return m; }, sc = m => { m.userData.noChoca = true; return m; };
+      // escalera: va contra la pared de atrás; las de pisos pares suben hacia la izquierda y las impares hacia la derecha (en zigzag), con descanso de 1,5 m
+      const nEsc = Math.ceil(hp / 0.18), hue = 0.28, run = nEsc * hue, an = 1.3, xs1 = w - t - 1.5, xs0 = xs1 - run, suelos = [];
+      const lane = k => { const z0 = -d + t + (k % 2) * (an + 0.1); return [z0, z0 + an]; };
+      suelos.push({ x0: -w + t, z0: -d + t, x1: w - t, z1: d - t, y: 0 });
+      nv(0, caja(g, -w + t, 0, -d + t, w - t, 0.03, d - t, mPiso));
+      for (let k = 0; k < N; k++) { const yb = k * hp, ar = k > 0;
+        // losa del piso k (con el hueco de la escalera que llega desde abajo) y su borde visto desde afuera
+        if (ar) { const [hz0, hz1] = lane(k - 1), Lm = mLosa; nv(k, caja(g, -w + t, yb - 0.3, -d + t, xs0, yb + 0.03, d - t, Lm)); nv(k, caja(g, xs1, yb - 0.3, -d + t, w - t, yb + 0.03, d - t, Lm));
+          nv(k, caja(g, xs0, yb - 0.3, hz1, xs1, yb + 0.03, d - t, Lm)); if (hz0 > -d + t + 0.01) nv(k, caja(g, xs0, yb - 0.3, -d + t, xs1, yb + 0.03, hz0, Lm));
+          suelos.push({ x0: -w + t, z0: -d + t, x1: w - t, z1: d - t, y: yb, hueco: [xs0, hz0, xs1, hz1] });
+          // baranda alrededor del hueco (del lado de la sala y en la punta de abajo de la escalera)
+          nv(k, caja(g, xs0, yb, hz1, xs1, yb + 1.0, hz1 + 0.05, mBar, false)); const xe = (k - 1) % 2 ? xs0 - 0.05 : xs1; nv(k, caja(g, xe, yb, hz0, xe + 0.05, yb + 1.0, hz1, mBar, false)); }
+        // paredes: zócalo de fachada, ventanal y franja clara a la altura de la losa. Al frente de la planta baja va la puerta (2 m)
+        const pared = (x0, z0, x1, z1, eje, conPuerta) => { const tramos = conPuerta ? [[eje === 'x' ? x0 : z0, -1], [1, eje === 'x' ? x1 : z1]] : [[eje === 'x' ? x0 : z0, eje === 'x' ? x1 : z1]];
+          const box = (a, b, y0, y1, m, s2 = true) => nv(k, eje === 'x' ? caja(g, a, y0, z0, b, y1, z1, m, s2) : caja(g, x0, y0, a, x1, y1, b, m, s2));
+          for (const [a, b] of tramos) { if (b - a < 0.05) continue; if (p.ventanas) { box(a, b, yb, yb + 0.9, mFach); box(a, b, yb + 0.9, yb + hp - 0.55, mVid, false); for (let q = a + 1.5; q < b - 0.2; q += 1.5) sc(box(q - 0.05, q + 0.05, yb + 0.9, yb + hp - 0.55, mFach)); } else box(a, b, yb, yb + hp - 0.55, mFach);
+            box(a, b, yb + hp - 0.55, yb + hp, mFr); }
+          if (conPuerta) { box(-1, 1, yb + 2.3, yb + hp - 0.55, mFach); sc(box(-1.08, -1, yb, yb + 2.3, mBar)); sc(box(1, 1.08, yb, yb + 2.3, mBar)); } };
+        pared(-w, d - t, w, d, 'x', k === 0); pared(-w, -d, w, -d + t, 'x', false); pared(-w, -d + t, -w + t, d - t, 'z', false); pared(w - t, -d + t, w, d - t, 'z', false);
+        // cara de adentro de las paredes (clara) para que las salas no queden oscuras
+        sc(nv(k, caja(g, -w + t, yb + 0.03, -d + t, -w + t + 0.02, yb + 0.9, d - t, mIn, false))); sc(nv(k, caja(g, w - t - 0.02, yb + 0.03, -d + t, w - t, yb + 0.9, d - t, mIn, false)));
+        // escalera al piso de arriba (escalones macizos: se pisan, no chocan)
+        if (k < N - 1) { const [z0, z1] = lane(k), sube = k % 2 ? 1 : -1, xa = sube < 0 ? xs1 : xs0, it = [];
+          for (let i = 0; i < nEsc; i++) { const xc = xa + sube * (i + 0.5) * hue, ytop = (i + 1) * hp / nEsc; it.push([xc, yb + ytop / 2, (z0 + z1) / 2, 0, hue, ytop, an]); }
+          const L = lote(g, CAJA, mEsc, it); if (L) { L.userData.noChoca = true; L.userData.nivel = k; }
+          suelos.push({ rampa: true, x0: xs0, x1: xs1, z0, z1, xa, xb: xa + sube * run, y0: yb, y1: yb + hp });
+          // costado de la escalera del lado de la sala (deja entrar por abajo) y tope en la punta alta, a nivel del piso
+          const pie = 1.0; nv(k, sube < 0 ? caja(g, xs0, yb, z1, xs1 - pie, yb + 1.0, z1 + 0.05, mBar, false) : caja(g, xs0 + pie, yb, z1, xs1, yb + 1.0, z1 + 0.05, mBar, false));
+          const xt = sube < 0 ? xs0 - 0.05 : xs1; nv(k, caja(g, xt, yb, z0, xt + 0.05, yb + 2.0, z1, mEsc, false)); } }
+      // techo con pretil y equipos de aire
+      const H = N * hp; nv(N, caja(g, -w, H - 0.3, -d, w, H + 0.05, d, mLosa)); for (const [a, b, c, e] of [[-w, -d, w, -d + 0.2], [-w, d - 0.2, w, d], [-w, -d, -w + 0.2, d], [w - 0.2, -d, w, d]]) nv(N, caja(g, a, H, b, c, H + 0.8, e, mFr));
+      nv(N, caja(g, -w * 0.4, H, -d * 0.3, -w * 0.4 + 3, H + 1.4, -d * 0.3 + 2, mat('#c9ced2', { roughness: 0.5 }))); nv(N, caja(g, w * 0.3, H, -d * 0.2, w * 0.3 + 3, H + 1.4, -d * 0.2 + 2, mat('#c9ced2', { roughness: 0.5 })));
+      if (p.corte) g.traverse(m => { if (m.isMesh && m.userData.nivel > 0) m.visible = false; });
+      g.userData.suelos = suelos; g.userData.altoPiso = hp; g.userData.pisos = N; return g; } },
   alero: { n: 'Alero o techado', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 12, fondo: 14, alto: 4.6, color: '#e9ecee' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 120), F.fondo('Largo (m)', 2, 120), F.alto('Alto libre (m)', 2.2, 15), F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2; caja(g, -w, p.alto, -d, w, p.alto + 0.28, d, mat(p.color, { roughness: 0.5, metalness: 0.2 })); const c = mat('#8c949b', { metalness: 0.5, roughness: 0.4 });
@@ -327,9 +371,9 @@ function aplanar(g) { g.updateMatrixWorld(true); _inv.copy(g.matrixWorld).invert
 
 // ---------- armar una pieza completa en su lugar ----------
 export function armarPieza(p, ctx = {}) { const T = TIPOS[p.t]; if (!T) return null; const q = { ...T.def, ...p };
-  const g = T.armar(q, ctx) || new THREE.Group(); aplanar(g); if (T.forma === 'punto') { g.position.set(q.x || 0, 0, q.z || 0); g.rotation.y = q.r || 0; }
+  const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { g.position.set(q.x || 0, 0, q.z || 0); g.rotation.y = q.r || 0; }
   g.userData.pieza = p; g.userData.tipo = T; g.traverse(o => { o.userData.dueño = g; }); return g; }
 // centro de una pieza (para etiquetas, enfocar y calcular el "lugar")
 export function centro(p) { if (p.pts && p.pts.length) { if (TIPOS[p.t] && TIPOS[p.t].forma === 'area') { const n = p.pts.length; return [p.pts.reduce((a, q) => a + q[0], 0) / n, p.pts.reduce((a, q) => a + q[1], 0) / n]; } const m = p.pts[Math.floor(p.pts.length / 2)]; return [m[0], m[1]]; } return [p.x || 0, p.z || 0]; }
-export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, cartel: (q.altura || 0) + (q.alto || 0) }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
+export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, cartel: (q.altura || 0) + (q.alto || 0) }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
 export { largoDe };
