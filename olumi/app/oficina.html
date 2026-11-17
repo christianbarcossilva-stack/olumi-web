@@ -916,11 +916,12 @@ function overlay(){const PV=WALK.on||CINE.on,SZ=sc*ISO.zoom,FS=PV?13:Math.max(9,
 // ---------- recorrer caminando (como en Ondi) ----------
 const walkui=document.getElementById('walkui'),whint=document.getElementById('whint'),joy=document.getElementById('joy'),bWalk=document.getElementById('b_walk');
 const TOUCH=matchMedia('(pointer:coarse)').matches;
-function solid(x,y,r){// empuja fuera de paredes, vidrios y muebles
+function solid(x,y,r,yo){// empuja fuera de paredes, vidrios y muebles (yo: tu avatar, que además choca con las sillas · 1.52k)
   const segs=OUTW.concat(PART);for(let it=0;it<2;it++){
     for(const [ax,ay,bx,by] of segs){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l2)),px=ax+t*dx,py=ay+t*dy,d=Math.hypot(x-px,y-py);if(d<r){const k=(r-d)/(d||1e-6);x+=(x-px)*k;y+=(y-py)*k}}
     const boxes=OBST.concat(furnBoxes(),(actors.v||[]).filter(([,q])=>q).map(([,q])=>[q.cx-.95,q.cy-1.9,1.9,3.8]));
-    for(const [bx,by,bw,bh] of boxes){const px=Math.max(bx,Math.min(x,bx+bw)),py=Math.max(by,Math.min(y,by+bh)),d=Math.hypot(x-px,y-py);if(d<r){if(d<1e-6){x=x<bx+bw/2?bx-r:bx+bw+r}else{const k=(r-d)/d;x+=(x-px)*k;y+=(y-py)*k}}}}
+    for(const [bx,by,bw,bh] of boxes){const px=Math.max(bx,Math.min(x,bx+bw)),py=Math.max(by,Math.min(y,by+bh)),d=Math.hypot(x-px,y-py);if(d<r){if(d<1e-6){x=x<bx+bw/2?bx-r:bx+bw+r}else{const k=(r-d)/d;x+=(x-px)*k;y+=(y-py)*k}}}
+    if(yo)for(const c of sillas()){const R=r+.26,dx=x-c.x,dy=y-c.y,d=Math.hypot(dx,dy);if(d<R){if(d<1e-6){x=c.x+R}else{x=c.x+dx/d*R;y=c.y+dy/d*R}}}}
   return[Math.max(-1.7,Math.min(W+1.7,x)),Math.max(-1.7,Math.min(29.3,y))]}
 // caminar con suavidad: la vista sigue al mouse sin saltos y el paso arranca y frena de a poco
 function walkStep(dt){const K=WALK.keys;let f=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0)-WALK.joy[1],s=(K.KeyD?1:0)-(K.KeyA?1:0)+WALK.joy[0];
@@ -928,7 +929,7 @@ function walkStep(dt){const K=WALK.keys;let f=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K
   const kl=1-Math.exp(-dt*22);WALK.yaw+=(WALK.ty-WALK.yaw)*kl;WALK.pitch+=(WALK.tp-WALK.pitch)*kl;
   const m=Math.hypot(f,s);if(m>1){f/=m;s/=m}const sp=K.ShiftLeft||K.ShiftRight?3.6:1.8,c=Math.cos(WALK.yaw),n=Math.sin(WALK.yaw);
   const ka=1-Math.exp(-dt*(m>.05?9:12));WALK.vx+=((c*f-n*s)*sp-WALK.vx)*ka;WALK.vy+=((n*f+c*s)*sp-WALK.vy)*ka;const v=Math.hypot(WALK.vx,WALK.vy);
-  WALK.moving=v>.08;if(WALK.moving){WALK.moveAng=Math.atan2(WALK.vy,WALK.vx);[WALK.x,WALK.y]=solid(WALK.x+WALK.vx*dt,WALK.y+WALK.vy*dt,.3);WALK.bob+=dt*v*5}meStep(dt);usoStep()}
+  WALK.moving=v>.08;if(WALK.moving){WALK.moveAng=Math.atan2(WALK.vy,WALK.vx);[WALK.x,WALK.y]=solid(WALK.x+WALK.vx*dt,WALK.y+WALK.vy*dt,.3,1);WALK.bob+=dt*v*5}meStep(dt);usoStep()}
 // la cámara de atrás no se mete adentro de un muro, una camioneta ni un mueble alto: se acerca a tu avatar. Se mide por el camino real de la cámara
 // (con su corrimiento hacia el hombro); se acerca enseguida y vuelve a alejarse despacio, y recién cuando hubo lugar un rato: así no tiembla al caminar pegado a una pared.
 function camLibre(D,dx,dy){const B=furnBoxes().concat((actors.v||[]).filter(([,q])=>q).map(([,q])=>[q.cx-.95,q.cy-1.9,1.9,3.8])),SG=OUTW.concat(PART);
