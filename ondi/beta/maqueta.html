@@ -561,7 +561,7 @@ html:not(.blank) .blankonly{display:none!important}
 <div class="toast glass" id="toast" hidden></div>
 <div class="fallback" id="fallback" hidden>Este navegador no tiene WebGL2 activado, que hace falta para ver la maqueta 3D.</div>
 
-<script src="red.js?v=18"></script>
+<script src="red.js?v=19"></script>
 <script>
 (() => {
 'use strict';
@@ -5658,6 +5658,30 @@ html.ubicando canvas{cursor:crosshair!important}`; document.head.appendChild(css
     for (const id of Object.keys(CAJ)) if (!DEV.some(d => d.id === id)) delete CAJ[id]; st.cajas = CAJ; return st; })(edState);
   addEventListener('keydown', e => { if (e.key === 'Escape' && ED.box) { ED.box = null; clearPrev(); } }, true);
   if (TOOLS.nave) TOOLS.nave.hint = 'Arrastrá de una esquina a la opuesta, o tocá una esquina y después la otra. Sobre un plano, seguí el borde del galpón.';
+  const OTR = new Map(); let OTRL = [];
+  const otrosCss = document.createElement('style'); otrosCss.textContent = `.otro-tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:rgba(14,18,22,.82);color:#fff;font:600 12px/1.2 system-ui,-apple-system,sans-serif;white-space:nowrap;transform:translate(-50%,-100%)}.otro-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:#3DDC84}
+#otros{position:fixed;left:16px;bottom:96px;z-index:30;display:flex;flex-wrap:wrap;gap:6px;max-width:min(420px,calc(100vw - 32px))}#otros[hidden]{display:none}#otros button{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid var(--line,rgba(0,0,0,.12));background:var(--glass-strong,rgba(255,255,255,.92));color:var(--ink,#1B242B);font:600 12.5px/1 system-ui,-apple-system,sans-serif;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}#otros button::before{content:"";width:8px;height:8px;border-radius:50%;background:#3DDC84}#otros button.quieto::before{background:#8D979F}#otros button:focus-visible{outline:2px solid var(--accent,#0E9DB3);outline-offset:2px}`; document.head.appendChild(otrosCss);
+  const otrosBox = document.createElement('div'); otrosBox.id = 'otros'; otrosBox.hidden = true; otrosBox.setAttribute('aria-label', 'Conectados a esta maqueta'); document.body.appendChild(otrosBox);
+  function otrosChip() { otrosBox.hidden = !OTRL.length; otrosBox.innerHTML = OTRL.map(x => { const R = OTR.get(x.id), anda = R && R.o && R.o.on; return `<button data-otro="${escH(x.id)}" class="${anda ? '' : 'quieto'}" title="${anda ? 'Ir hasta ' + escH(x.nombre || '') : escH(x.nombre || '') + ' está mirando la maqueta (no está caminando)'}">${escH(x.nombre || 'Alguien')}</button>`; }).join(''); }
+  otrosBox.addEventListener('click', e => { const b = e.target.closest('[data-otro]'); if (!b) return; const R = OTR.get(b.dataset.otro); if (!R || !R.o || !R.o.on) { toast((b.textContent || 'Esa persona') + ' está mirando la maqueta, no caminando'); return; } enterWalk(null, [R.x + 1.8, R.z + 1.8], [R.x, 1.5, R.z]); });
+  function otroQuitar(id) { const R = OTR.get(id); if (!R) return; if (R.o) R.o.on = false; if (R.L) { R.L.el.remove(); const i = LBL.indexOf(R.L); if (i >= 0) LBL.splice(i, 1); R.L = null; } OTR.delete(id); otrosChip(); }
+  function otroCrear(R) { avBuild(); R.vp = Float32Array.from(AV.bp); R.vn = Float32Array.from(AV.bn); R.o = obj('otro-' + R.id, { geo: AV.o.geo, layer: 'base', pick: false, on: true, dyn: { p: R.vp, n: R.vn } });
+    R.L = addLabel(`<span class="otro-tag">${escH(R.nombre || 'Alguien')}</span>`, () => [R.x, R.y + 2.05, R.z], 'cli', null); otrosChip(); }
+  const PRES = HOST && HOST.presencia;
+  if (PRES && PRES.al) PRES.al(m => { if (m.t === 'lista') { OTRL = m.L || []; const ids = new Set(OTRL.map(x => x.id)); for (const id of [...OTR.keys()]) if (!ids.has(id)) otroQuitar(id); otrosChip(); return; }
+    if (m.t !== 'pos' || !m.id) return; let R = OTR.get(m.id); if (m.fuera) { if (R) otroQuitar(m.id); return; }
+    if (!R) { R = { id: m.id, nombre: m.nombre, x: +m.x || 0, z: +m.z || 0, y: +m.y || 0, h: +m.h || 0, t: 0, ph: 0, amp: 0 }; OTR.set(m.id, R); otroCrear(R); }
+    Object.assign(R, { tx: +m.x || 0, tz: +m.z || 0, ty: +m.y || 0, th: +m.h || 0, sp: +m.sp || 0, visto: Date.now() }); });
+  let presFuera = true;
+  stepWalk = (o => function (dt) { o(dt); if (!PRES) return;
+    if (WALK.on) { presFuera = false; PRES.enviar({ x: +WALK.x.toFixed(2), z: +WALK.z.toFixed(2), y: +(WALK.y - 1.7).toFixed(2), h: +TP.h.toFixed(3), sp: +(TP.sp || 0).toFixed(2) }); } else if (!presFuera) { presFuera = true; PRES.enviar({ fuera: 1 }, true); }
+    const now = Date.now(); // Date y no performance: el aviso puede llegar con el reloj de la página de Ondi
+    for (const R of OTR.values()) { if (!R.o) continue; if (now - R.visto > 15000) { R.o.on = false; continue; } R.o.on = true; const k = Math.min(1, dt * 8);
+      R.x += (R.tx - R.x) * k; R.z += (R.tz - R.z) * k; R.y += (R.ty - R.y) * k; let d = R.th - R.h; d = Math.atan2(Math.sin(d), Math.cos(d)); R.h += d * Math.min(1, dt * 10);
+      R.amp += ((R.sp > 0.3 ? 1 : 0) - R.amp) * Math.min(1, dt * 5); const run = Math.max(0, Math.min(1, (R.sp - 2.2) / 3.5)); R.ph += dt * Math.PI * 2 * Math.min(Math.max(R.sp, 0.6) / (1.5 + 1.6 * run), 1.6); if (R.amp < 0.02) R.ph = 0; R.t += dt;
+      const sp0 = AV.sp, sn0 = AV.sn; AV.sp = R.vp; AV.sn = R.vn; try { avSkin(avPose(R.t, R.ph, R.amp, run)); } finally { AV.sp = sp0; AV.sn = sn0; }
+      R.o.version++; R.o.model = M.trs(R.x, R.y, R.z, R.h, 0); } })(stepWalk);
+  window.__otros = { OTR, get lista() { return OTRL; }, get yo() { return { x: WALK.x, z: WALK.z, yaw: WALK.yaw, on: WALK.on }; } };
   window.__plano = { IA, planoPt, iaCrear, get naves() { return NAVES; }, get roads() { return ED.roads; }, get plano() { return ED.plano; }, tool: t => setTool(t), inicio: () => flyTo(HOME(), 0.01) };
   window.__doc = { ubicar, DEV, CABS, sel: () => SEL, ed: () => ED.on, mover: (id, dx) => { const d = DEV.find(x => x.id === id); d.x += dx; devObj(d); markMoved(d); edSave(); } }; }
 /* pisos del galpón: la planta baja y un piso por cada entrepiso. El plano muestra uno a la vez y cada equipo sabe en qué piso está */
