@@ -44,11 +44,16 @@ const MOD = [
   ['cis-1000-48t', 'Cisco', 'Catalyst C1000-48T-4G-L', 48, 4, 0, 0], ['cis-1000-48p', 'Cisco', 'Catalyst C1000-48P-4G-L', 48, 4, 48, 370], ['cis-350-24p', 'Cisco', 'CBS350-24P-4G', 24, 4, 24, 195],
   ['cis-350-48p', 'Cisco', 'CBS350-48P-4G', 48, 4, 48, 370], ['cis-9200-24p', 'Cisco', 'Catalyst C9200L-24P-4G', 24, 4, 24, 370], ['cis-9200-48p', 'Cisco', 'Catalyst C9200L-48P-4G', 48, 4, 48, 370]];
 for (const [id, marca, modelo, rj, sfp, poe, w, x] of MOD) CAT['sw-' + id] = { n: marca + ' ' + modelo, U: 1, rj, sfp, g: 'Switches de marca', marca, modelo, poe, w, x: !!x };
+// patcheras y distribuidores de fibra de marca (Furukawa): [id, marca, modelo, bocas de cobre, U, categoría, fibras, conector]
+const PPM = [['fk-gl6-24', 'Furukawa', 'Patch panel GigaLan Cat.6 24 bocas', 24, 1, 'Cat 6'], ['fk-gl6-48', 'Furukawa', 'Patch panel GigaLan Cat.6 48 bocas', 48, 2, 'Cat 6'],
+  ['fk-gl6a-24', 'Furukawa', 'Patch panel GigaLan Augmented Cat.6A 24 bocas', 24, 1, 'Cat 6A'], ['fk-sp6-24', 'Furukawa', 'Patch panel Sohoplus Cat.6 24 bocas', 24, 1, 'Cat 6'], ['fk-ml5-24', 'Furukawa', 'Patch panel MultiLan Cat.5e 24 bocas', 24, 1, 'Cat 5e'],
+  ['fk-dio-sc12', 'Furukawa', 'DIO 1U 12 fibras SC', 0, 1, '', 12, 'SC'], ['fk-dio-lc24', 'Furukawa', 'DIO 1U 24 fibras LC', 0, 1, '', 24, 'LC']];
+for (const [id, marca, modelo, rj, U, cat, fo, con] of PPM) CAT['pp-' + id] = Object.assign({ n: marca + ' ' + modelo, U, g: 'Patcheras', marca, modelo, cat }, rj ? { rj, pp: true } : { fo, con });
 const MARCAS = [...new Set(MOD.map(m => m[1]))];
-const modTxt = K => [K.rj ? K.rj + ' puertos' : '', K.sfp ? K.sfp + (K.x ? ' SFP+' : ' SFP') : '', K.poe ? (K.poe === K.rj ? 'todos PoE' : K.poe + ' PoE') + ' · ' + K.w + ' W' : K.rj ? 'sin PoE' : ''].filter(Boolean).join(' · ');
+const modTxt = K => K.pp ? `${K.rj} bocas · ${K.cat}${K.U > 1 ? ' · ' + K.U + 'U' : ''}` : K.fo ? `${K.fo} fibras ${K.con}` : [K.rj ? K.rj + ' puertos' : '', K.sfp ? K.sfp + (K.x ? ' SFP+' : ' SFP') : '', K.poe ? (K.poe === K.rj ? 'todos PoE' : K.poe + ' PoE') + ' · ' + K.w + ' W' : K.rj ? 'sin PoE' : ''].filter(Boolean).join(' · ');
 // buscador: «cisco 24 poe», «48», «usw pro», «simple» (sin PoE), «fibra» (solo SFP)
 function modBusca(q, marca) { const w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  return Object.keys(CAT).filter(k => { const K = CAT[k]; if (!K.marca || (marca && K.marca !== marca)) return false; const t = (K.n + ' ' + K.rj + ' ' + (K.poe ? 'poe' : 'simple') + (K.rj ? '' : ' fibra sfp') + (K.x ? ' 10g sfp+' : '')).toLowerCase(); return w.every(x => t.includes(x)); }); }
+  return Object.keys(CAT).filter(k => { const K = CAT[k]; if (!K.marca || K.pp || K.fo || (marca && K.marca !== marca)) return false; const t = (K.n + ' ' + K.rj + ' ' + (K.poe ? 'poe' : 'simple') + (K.rj ? '' : ' fibra sfp') + (K.x ? ' 10g sfp+' : '')).toLowerCase(); return w.every(x => t.includes(x)); }); }
 function modPick(V, r) { const L = modBusca(V.mq, V.mm);
   return `<div class="red-mp"><input data-r="mq" type="search" placeholder="Buscar: cisco 24 poe, usw 48, tl-sg…" value="${esc(V.mq || '')}" aria-label="Buscar modelo de switch" autocomplete="off">
     <div class="red-mm">${['', ...MARCAS].map(m => `<button data-r="mm" data-v="${esc(m)}" class="${(V.mm || '') === m ? 'on' : ''}">${m || 'Todas'}</button>`).join('')}</div>
