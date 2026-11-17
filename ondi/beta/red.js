@@ -49,6 +49,14 @@ const PPM = [['fk-gl6-24', 'Furukawa', 'Patch panel GigaLan Cat.6 24 bocas', 24,
   ['fk-gl6a-24', 'Furukawa', 'Patch panel GigaLan Augmented Cat.6A 24 bocas', 24, 1, 'Cat 6A'], ['fk-sp6-24', 'Furukawa', 'Patch panel Sohoplus Cat.6 24 bocas', 24, 1, 'Cat 6'], ['fk-ml5-24', 'Furukawa', 'Patch panel MultiLan Cat.5e 24 bocas', 24, 1, 'Cat 5e'],
   ['fk-dio-sc12', 'Furukawa', 'DIO 1U 12 fibras SC', 0, 1, '', 12, 'SC'], ['fk-dio-lc24', 'Furukawa', 'DIO 1U 24 fibras LC', 0, 1, '', 24, 'LC']];
 for (const [id, marca, modelo, rj, U, cat, fo, con] of PPM) CAT['pp-' + id] = Object.assign({ n: marca + ' ' + modelo, U, g: 'Patcheras', marca, modelo, cat }, rj ? { rj, pp: true } : { fo, con });
+// accesorios de rack de VF Networking (proveedor en Uruguay): se dibujan como su tipo genérico (base)
+for (const [id, n, base, g] of [['vf-pdu9', 'PDU 9 tomas schuko en línea 19"', 'pdu', 'Orden y energía'], ['vf-pdu8u', 'PDU 8 tomas universales 19"', 'pdu', 'Orden y energía'], ['vf-pdu6t', 'PDU 6 tomas schuko con llave térmica 19"', 'pdu', 'Orden y energía']])
+  CAT['ac-' + id] = { n: 'VF Networking ' + n, U: 1, g, marca: 'VF Networking', modelo: n, base };
+// racks y gabinetes más usados (para «Marca y modelo» del rack: al elegir uno se ajusta el tamaño)
+const RACKS = ['VF Networking piso 42U 600×1000 puerta vidrio', 'VF Networking piso 32U 600×1000 puerta vidrio', 'VF Networking piso 27U 600×1000 puerta vidrio', 'VF Networking piso 27U 800×1000 puertas hiperventiladas', 'VF Networking piso 22U 600×800 puerta vidrio', 'VF Networking piso 22U 600×600 puertas hiperventiladas',
+  'VF Networking pared 15U puerta vidrio', 'VF Networking pared 9U fijo 600×600 con PDU 6 tomas', 'VF Networking exterior galvanizado 9U 600×600 IP66', 'VF Networking 4U fijo 12"', 'Furukawa rack de piso 44U', 'Gabinete metálico de pared 6U', 'Gabinete metálico de pared 12U'];
+// cajas de fibra para el otro extremo de una fibra (cuando no termina en un rack)
+const CAJAS = ['Caja de empalme', 'Caja FTTH 16 hilos', 'Caja FTTH 4 hilos', 'Caja FTTH 2 hilos', 'Caja FTTH 1 hilo', 'Caja exterior IP65 2 hilos', 'Caja exterior IP65 4 hilos', 'Roseta óptica', 'ODF del proveedor (UTE / Antel)', 'Cámara de registro'];
 const MARCAS = [...new Set(MOD.map(m => m[1]))];
 const modTxt = K => K.pp ? `${K.rj} bocas · ${K.cat}${K.U > 1 ? ' · ' + K.U + 'U' : ''}` : K.fo ? `${K.fo} fibras ${K.con}` : [K.rj ? K.rj + ' puertos' : '', K.sfp ? K.sfp + (K.x ? ' SFP+' : ' SFP') : '', K.poe ? (K.poe === K.rj ? 'todos PoE' : K.poe + ' PoE') + ' · ' + K.w + ' W' : K.rj ? 'sin PoE' : ''].filter(Boolean).join(' · ');
 // buscador: «cisco 24 poe», «48», «usw pro», «simple» (sin PoE), «fibra» (solo SFP)
@@ -60,7 +68,7 @@ function modPick(V, r) { const L = modBusca(V.mq, V.mm);
     <div class="red-mres" data-mr="${r}">${modLista(L, r)}</div></div>`; }
 const modLista = (L, r) => L.length ? `<ul class="red-ml">${L.map(k => `<li><button data-r="${r}" data-v="${k}"><b>${esc(CAT[k].n)}</b><span>${modTxt(CAT[k])}</span></button></li>`).join('')}</ul>` : '<p class="red-nada">No hay modelos con eso. Probá con menos palabras.</p>';
 // miniatura del frente de cada componente (el mismo lenguaje que el dibujo grande)
-function mini(k) { const K = CAT[k] || {}, U = K.U || 1, W = 120, h = 16 * U, fondo = K.marca === 'Ubiquiti' ? '#D5DADE' : K.marca === 'Cisco' ? '#24364D' : (K.pp || K.fo || ['org', 'blank', 'shelf', 'odf', 'pdu'].includes(k)) ? '#1E2226' : '#30363C';
+function mini(k0) { const K = CAT[k0] || {}, k = K.base || k0, U = K.U || 1, W = 120, h = 16 * U, fondo = K.marca === 'Ubiquiti' ? '#D5DADE' : K.marca === 'Cisco' ? '#24364D' : (K.pp || K.fo || ['org', 'blank', 'shelf', 'odf', 'pdu'].includes(k)) ? '#1E2226' : '#30363C';
   let g = `<rect x="1" y="1" width="${W - 2}" height="${h - 2}" rx="2" fill="${fondo}" stroke="rgba(0,0,0,.35)"/>`; const tinta = K.marca === 'Ubiquiti' ? '#5B646C' : '#C9D1D8';
   const fila = (n, y, w, col) => { const paso = Math.min(4.2, 88 / Math.max(1, n)); for (let i = 0; i < n; i++) g += `<rect x="${22 + i * paso}" y="${y}" width="${Math.max(1.6, paso - 1)}" height="${w}" rx=".4" fill="${col}"/>`; };
   if (K.rj) { const n = Math.min(K.rj, 48), a = n > 24 ? Math.ceil(n / 2) : n; fila(a, h / 2 - (n > 24 ? 5 : 2.5), 4, tinta); if (n > 24) fila(n - a, h / 2 + 1, 4, tinta); }
@@ -123,6 +131,7 @@ const puertos = type => { const c = CAT[type] || {}, out = []; for (let i = 1; i
 const itemDe = (c, iid) => c && c.items.find(x => x.iid === iid);
 const esPP = it => !!(it && CAT[it.type] && (CAT[it.type].pp || CAT[it.type].fo));
 const esSW = it => !!(it && CAT[it.type] && (CAT[it.type].rj || CAT[it.type].sfp) && !CAT[it.type].pp && !['nvr', 'srv'].includes(it.type));
+const tb = it => (it && CAT[it.type] && CAT[it.type].base) || (it && it.type);
 const nomIt = it => it ? (it.name || (CAT[it.type] || {}).n || it.type) : '—';
 const nomP = (it, pid) => (pid[0] === 's' ? 'SFP ' : esPP(it) ? 'boca ' : 'puerto ') + pid.slice(1);
 const pd = (c, iid, pid, crear) => { if (crear) { const a = c.ports[iid] = c.ports[iid] || {}; return a[pid] = a[pid] || {}; } return ((c.ports[iid] || {})[pid]) || {}; };
@@ -177,7 +186,7 @@ function alPrincipal(H, cid, iid) { const P = arbol(H), out = []; let k = cid + 
 
 /* ---------- frente del rack ---------- */
 const LED = { crit: '#F0464C', warn: '#F2B01E', ok: '#3DDC84', uso: '#2FAE6A', '': '#2b3035' };
-const pielDe = it => it.piel && PIEL[it.piel] ? it.piel : /usw|unifi|udm|ucg|ubiquiti|u7|u6/i.test((it.modelo || '') + ' ' + (it.name || '')) ? 'plata' : /cisco|catalyst|cbs|forti/i.test((it.modelo || '') + ' ' + (it.name || '')) ? 'azul' : (esPP(it) || ['org', 'blank', 'shelf', 'odf', 'pdu'].includes(it.type)) ? 'negro' : 'grafito';
+const pielDe = it => it.piel && PIEL[it.piel] ? it.piel : /usw|unifi|udm|ucg|ubiquiti|u7|u6/i.test((it.modelo || '') + ' ' + (it.name || '')) ? 'plata' : /cisco|catalyst|cbs|forti/i.test((it.modelo || '') + ' ' + (it.name || '')) ? 'azul' : (esPP(it) || ['org', 'blank', 'shelf', 'odf', 'pdu'].includes(tb(it))) ? 'negro' : 'grafito';
 const gP = (o, extra) => `<g data-rp="${o.id}" class="r-p${o.on ? ' on' : ''}${o.hot ? ' hot' : ''}${o.st === 'crit' ? ' crit' : ''}${extra || ''}"><title>${esc(o.tip)}</title>`;
 function jack(x, y, w, up, o) { const h = 12, d = up ? `M${x} ${y + 2.4}h${(w - 5.6) / 2}v-2.4h5.6v2.4h${(w - 5.6) / 2}v${h - 2.4}h-${w}z` : `M${x} ${y}h${w}v${h - 2.4}h-${(w - 5.6) / 2}v2.4h-5.6v-2.4h-${(w - 5.6) / 2}z`;
   let s = gP(o) + `<rect x="${x - 1.5}" y="${y - 2}" width="${w + 3}" height="${h + 4}" class="r-hit"/><path d="${d}" class="r-jk"/>`;
@@ -220,7 +229,7 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
       PS.forEach((p, k) => { const row = Math.floor(k / 24), col = k % 24, x = F0 + 17 + col * 22 + Math.floor(col / 6) * 2.4, yy = y + row * UH + 19, o = P(it, p), et = o.inf.cab || (o.inf.dev ? o.inf.dev : '');
         s += `<text x="${x + 7.5}" y="${yy - 2.2}" class="r-num" fill="${tx2}">${p.n}</text>` + jack(x, yy, 15, true, o) + `<rect x="${x - 2.5}" y="${yy + 15}" width="20" height="9" rx="1" class="r-etq"/><text x="${x + 7.5}" y="${yy + 21.6}" class="r-et">${esc(corto(et, 7))}</text>`;
         pos[o.id] = [x + 7.5, yy + 6]; }); }
-    else if (K.fo) { const lc = K.con === 'LC', n = K.fo, pares = lc ? n / 2 : n, paso = Math.min(lc ? 40 : 36, (F1 - F0 - 150) / pares), xa = it.type === 'ros' ? F0 + 150 : F0 + 132;
+    else if (K.fo) { const lc = K.con === 'LC', n = K.fo, pares = lc ? n / 2 : n, paso = Math.min(lc ? 40 : 36, (F1 - F0 - 150) / pares), xa = tb(it) === 'ros' ? F0 + 150 : F0 + 132;
       s += nombre(F0 + 8, y + 22, 18);
       for (let a = 0; a < pares; a++) { const x = xa + a * paso, ids = lc ? [PS[a * 2], PS[a * 2 + 1]] : [PS[a]], w = lc ? 27 : 17, f0 = pd(c, it.iid, ids[0].id).fib, F = f0 && fibDe(H, f0[0]), con = (F && F.con) || '';
         const cuerpo = /apc/.test(con) ? '#2E9E5B' : F && /^om[34]/.test(F.tipo || '') ? '#35C2C1' : F && F.tipo === 'om2' ? '#C9B79A' : '#2F6FD6';
@@ -228,9 +237,9 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
         ids.forEach((p, j) => { const o = P(it, p), cx = x + (lc ? 7.5 + j * 12 : w / 2), cy = y + 25.5; o.usado = !!o.inf.fib; o.hilo = o.inf.fib ? hiloCol(o.inf.fib[1])[1] : ''; s += boca(cx, cy, o); pos[o.id] = [cx, cy]; }); } }
     else if (K.rj || K.sfp) { const sw = esSW(it), rj = K.rj || 0, rows = sw && rj >= 16 ? 2 : 1, cols = rj / rows, PA = rj >= 48 ? 15.5 : 17, jw = PA - 3, x0p = sw ? F0 + (rj >= 48 ? 86 : 108) : F1 - 20 - cols * PA;
       s += nombre(F0 + 8, y + 21, rj >= 48 ? 11 : 14) + `<circle cx="${F0 + 10.5}" cy="${y + 42}" r="1.9" fill="#3DDC84"/><text x="${F0 + 15.5}" y="${y + 44}" class="r-num" style="text-anchor:start" fill="${tx2}">PWR</text>`;
-      if (it.type === 'nvr' || it.type === 'srv') { for (let b = 0; b < 4; b++) s += `<rect x="${F0 + 130 + b * 84}" y="${y + 10}" width="76" height="${h - 20}" rx="2" class="r-bahia"/><circle cx="${F0 + 138 + b * 84}" cy="${y + h - 16}" r="1.4" fill="#3DDC84"/>`; }
-      if (it.type === 'gw' || it.type === 'fw') s += `<rect x="${F0 + 96}" y="${y + 14}" width="44" height="24" rx="2.5" class="r-lcd"/><text x="${F0 + 118}" y="${y + 29}" class="r-num" fill="#7fd7e6">${it.type === 'fw' ? 'FW' : 'WAN'}</text>`;
-      let xr = x0p + (it.type === 'gw' || it.type === 'fw' ? 56 : 0), xfin = xr;
+      if (tb(it) === 'nvr' || tb(it) === 'srv') { for (let b = 0; b < 4; b++) s += `<rect x="${F0 + 130 + b * 84}" y="${y + 10}" width="76" height="${h - 20}" rx="2" class="r-bahia"/><circle cx="${F0 + 138 + b * 84}" cy="${y + h - 16}" r="1.4" fill="#3DDC84"/>`; }
+      if (tb(it) === 'gw' || tb(it) === 'fw') s += `<rect x="${F0 + 96}" y="${y + 14}" width="44" height="24" rx="2.5" class="r-lcd"/><text x="${F0 + 118}" y="${y + 29}" class="r-num" fill="#7fd7e6">${tb(it) === 'fw' ? 'FW' : 'WAN'}</text>`;
+      let xr = x0p + (tb(it) === 'gw' || tb(it) === 'fw' ? 56 : 0), xfin = xr;
       PS.filter(p => p.k === 'rj').forEach((p, k) => { const col = rows === 2 ? Math.floor(k / 2) : k, up = rows === 2 ? k % 2 === 0 : true, x = xr + col * PA + (cols >= 12 ? Math.floor(col / 6) * 7 : 0), yy = rows === 2 ? (up ? y + 12 : y + 29) : y + 21, o = P(it, p);
         if (sw) o.poe = o.inf.poe ? 1 : 0;
         s += `<text x="${x + jw / 2}" y="${up ? yy - 2.4 : yy + 18.4}" class="r-num" fill="${tx2}">${p.n}</text>` + jack(x, yy, jw, up, o); pos[o.id] = [x + jw / 2, yy + 6]; xfin = Math.max(xfin, x + jw); });
@@ -240,11 +249,11 @@ function frente(H, V) { const c = H.cabs[V.cid], UH = 56, W = 700, top = 30, HH 
         s += sfp(x, yy, o) + (S.length > 4 ? `<text x="${x + 22}" y="${yy + 7.5}" class="r-num" fill="${tx2}">${p.n}</text>` : ''); pos[o.id] = [x + 8, yy + 5]; });
       if (S.length && S.length <= 4) s += `<text x="${xs + (sr === 2 ? S.length / 2 : S.length) * 10.5 - 2.5}" y="${y + 9.5}" class="r-num" fill="${tx2}">SFP</text>`; }
     else { s += nombre(F0 + 8, y + (K.U > 1 ? 24 : 22), 20);
-      if (it.type === 'org') for (let k = 0; k < 6; k++) s += `<path d="M${F0 + 150 + k * 76} ${y + 12}h34a7 7 0 0 1 7 7v14a7 7 0 0 1-7 7h-34" class="r-aro"/>`;
-      if (it.type === 'ups') s += `<rect x="${F0 + 150}" y="${y + 22}" width="92" height="${h - 44}" rx="3" class="r-lcd"/><text x="${F0 + 196}" y="${y + h / 2 + 4}" class="r-n" fill="#7fd7e6" style="text-anchor:middle">230 V · 100%</text>` + Array.from({ length: 22 }, (_, k) => `<rect x="${F0 + 270 + k * 12}" y="${y + 16}" width="5" height="${h - 32}" rx="2" class="r-rej"/>`).join('');
-      if (it.type === 'pdu') s += Array.from({ length: 8 }, (_, k) => `<circle cx="${F0 + 190 + k * 46}" cy="${y + h / 2 + 1}" r="12" class="r-toma"/><circle cx="${F0 + 185 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/><circle cx="${F0 + 195 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/>`).join('') + `<rect x="${F0 + 128}" y="${y + 17}" width="18" height="20" rx="2" fill="#D2474B"/>`;
-      if (it.type === 'odf') s += `<rect x="${F0 + 150}" y="${y + 12}" width="${F1 - F0 - 170}" height="${h - 24}" rx="3" class="r-bahia"/><path d="M${F0 + 190} ${y + h / 2}c40-22 80 22 120 0s80-22 120 0 80 22 120 0" class="r-aro" style="stroke:#E6BE1E"/>`;
-      if (it.type === 'shelf') s += `<rect x="${F0 + 150}" y="${y + h - 16}" width="${F1 - F0 - 170}" height="6" rx="2" class="r-bahia"/>`; }
+      if (tb(it) === 'org') for (let k = 0; k < 6; k++) s += `<path d="M${F0 + 150 + k * 76} ${y + 12}h34a7 7 0 0 1 7 7v14a7 7 0 0 1-7 7h-34" class="r-aro"/>`;
+      if (tb(it) === 'ups') s += `<rect x="${F0 + 150}" y="${y + 22}" width="92" height="${h - 44}" rx="3" class="r-lcd"/><text x="${F0 + 196}" y="${y + h / 2 + 4}" class="r-n" fill="#7fd7e6" style="text-anchor:middle">230 V · 100%</text>` + Array.from({ length: 22 }, (_, k) => `<rect x="${F0 + 270 + k * 12}" y="${y + 16}" width="5" height="${h - 32}" rx="2" class="r-rej"/>`).join('');
+      if (tb(it) === 'pdu') s += Array.from({ length: 8 }, (_, k) => `<circle cx="${F0 + 190 + k * 46}" cy="${y + h / 2 + 1}" r="12" class="r-toma"/><circle cx="${F0 + 185 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/><circle cx="${F0 + 195 + k * 46}" cy="${y + h / 2 + 1}" r="1.8" fill="#0d0f11"/>`).join('') + `<rect x="${F0 + 128}" y="${y + 17}" width="18" height="20" rx="2" fill="#D2474B"/>`;
+      if (tb(it) === 'odf') s += `<rect x="${F0 + 150}" y="${y + 12}" width="${F1 - F0 - 170}" height="${h - 24}" rx="3" class="r-bahia"/><path d="M${F0 + 190} ${y + h / 2}c40-22 80 22 120 0s80-22 120 0 80 22 120 0" class="r-aro" style="stroke:#E6BE1E"/>`;
+      if (tb(it) === 'shelf') s += `<rect x="${F0 + 150}" y="${y + h - 16}" width="${F1 - F0 - 170}" height="6" rx="2" class="r-bahia"/>`; }
     s += '</g>'; }
   c.links.forEach((l, li) => { const a = pos[l[0].join(':')], b = pos[l[1].join(':')]; if (!a || !b) return; const on = hot.has(l[0].join(':')) && hot.has(l[1].join(':')), d = curva(a, b);
     s += `<path d="${d}" class="r-pc0${on ? ' on' : ''}" data-li="${li}"/><path d="${d}" class="r-pc${on ? ' on' : ''}" data-li="${li}" stroke="${pcCol(H, c, l)}"/>`; });
@@ -304,7 +313,7 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
       <div class="red-g2">${campo('Marca y modelo', inp('it', 'modelo', it.modelo, 'maxlength="60" placeholder="Ej.: USW Pro 24 PoE"'))}${campo('N.º de serie', inp('it', 'serie', it.serie, 'maxlength="40"'))}
       ${campo('MAC', inp('it', 'mac', it.mac, 'maxlength="17" placeholder="aa:bb:cc:dd:ee:ff"'))}${campo('IP de gestión', inp('it', 'ip', it.ip, 'maxlength="40" placeholder="Ej.: 10.0.10.2"'))}
       ${campo('Color del frente', sel('it', 'piel', it.piel, Object.entries(PIEL), 'Automático'))}${campo('Posición', `<span class="red-stp"><button class="red-b" data-r="up" title="Subir">↑</button><select data-r="set" data-o="it" data-k="u">${Array.from({ length: c.cap }, (_, i) => i + 1).filter(u => entra(c, it, u)).map(u => opt(u, 'U' + u + (K.U > 1 ? '–' + (u + K.U - 1) : ''), it.u)).join('')}</select><button class="red-b" data-r="dn" title="Bajar">↓</button></span>`)}</div>
-      ${rs.length && (esSW(it) || it.type === 'nvr') ? campo('Equipo real', sel('it', 'ext', it.ext, rs.map(x => [x.uid, x.nombre + (x.modelo ? ' · ' + x.modelo : '')]), 'Sin enlazar')) : ''}
+      ${rs.length && (esSW(it) || tb(it) === 'nvr') ? campo('Equipo real', sel('it', 'ext', it.ext, rs.map(x => [x.uid, x.nombre + (x.modelo ? ' · ' + x.modelo : '')]), 'Sin enlazar')) : ''}
       ${campo('Nota', inp('it', 'nota', it.nota, 'maxlength="120"'))}<p class="red-ayuda">También podés arrastrarlo arriba o abajo en el dibujo.</p><div class="red-g"><button class="red-b pel" data-r="rm">Quitar del rack</button></div>`; }
   // nada elegido: resumen del rack
   const occ = new Set(); c.items.forEach(it => { for (let k = 0; k < (CAT[it.type] || { U: 1 }).U; k++) occ.add(it.u + k); });
@@ -314,7 +323,7 @@ function lado(H, V) { const c = H.cabs[V.cid], ed = H.editar(), devs = mapaDevs(
   const grupos = {}; for (const k in CAT) if (!CAT[k].marca) (grupos[CAT[k].g] = grupos[CAT[k].g] || []).push(k);
   const usoMax = c.items.reduce((m, it) => Math.max(m, it.u + ((CAT[it.type] || { U: 1 }).U) - 1), 0);
   const datos = ed ? `<div class="red-sec">Datos del rack</div><div class="red-g2">${campo('Nombre', inp('cab', 'nombre', c.nombre, 'maxlength="50" placeholder="Ej.: Rack principal"'))}${campo('Lugar', inp('cab', 'lugar', c.lugar, 'maxlength="50" placeholder="Ej.: Sala técnica, planta baja"'))}
-      ${campo('Marca y modelo', inp('cab', 'modelo', c.modelo, 'maxlength="60" placeholder="Ej.: Rittal, Furukawa 42U"'))}${campo('Tamaño', sel('cab', 'cap', c.cap, [6, 9, 12, 15, 18, 20, 24, 27, 32, 36, 42, 45, 48].filter(u => u >= usoMax || u === c.cap).map(u => [u, u + 'U'])))}
+      ${campo('Marca y modelo', inp('cab', 'modelo', c.modelo, 'maxlength="70" list="red-rk" placeholder="Elegí o escribí: VF 27U, Furukawa 44U…"') + `<datalist id="red-rk">${RACKS.map(r => `<option value="${esc(r)}">`).join('')}</datalist>`)}${campo('Tamaño', sel('cab', 'cap', c.cap, [6, 9, 12, 15, 18, 20, 24, 27, 32, 36, 42, 45, 48].filter(u => u >= usoMax || u === c.cap).map(u => [u, u + 'U'])))}
       ${campo('Profundidad (mm)', inp('cab', 'prof', c.prof, 'inputmode="numeric" maxlength="4" placeholder="Ej.: 600"'))}${campo('Nota', inp('cab', 'nota', c.nota, 'maxlength="120"'))}</div>`
     : (c.lugar || c.modelo || c.nota ? `<dl class="red-rows">${c.lugar ? fila('Lugar', esc(c.lugar)) : ''}${c.modelo ? fila('Marca y modelo', esc(c.modelo)) : ''}${c.nota ? fila('Nota', esc(c.nota)) : ''}</dl>` : '');
   return `<div class="red-h"><small>Rack ${esc(V.cid)}</small><b>${occ.size} de ${c.cap} U ocupadas</b></div>${datos}
@@ -356,9 +365,10 @@ function planilla(H, V, modo) { const ed = H.editar(), cids = V.todos ? Object.k
   return out.join('') || `<p class="red-nada">${modo === 'pp' ? 'No hay patcheras' : 'No hay switches'} ${V.todos ? 'en ningún rack' : 'en este rack'}. Agregalas en el frente.</p>`; }
 function tablaFibras(H, V, imp) { const L = fibsDe(H, V), ed = H.editar() && !imp, racks = H.racks ? H.racks() : Object.keys(H.cabs).map(k => [k, k]);
   const nueva = ed ? `<div class="red-g red-fnew"><button class="red-b pri" data-r="nfib">Nueva fibra desde ${esc(V.cid)}</button><span class="red-ayuda">Después asignás cada hilo a una boca de la patchera tocándola en el frente.</span></div>` : '';
-  const punta = (F, k, kt) => `${campo(k === 'from' ? 'Desde' : 'Hasta', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${k}">${opt('', 'Otro lugar', F[k])}${racks.map(([r, t]) => opt(r, t, F[k])).join('')}</select>`)}${F[k] ? '' : campo(k === 'from' ? 'Lugar de origen' : 'Lugar de destino', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${kt}" value="${esc(F[kt] || '')}" maxlength="60" placeholder="Ej.: cámara del portón, ODF de la UTE">`)}`;
-  if (!L.length) return nueva + '<p class="red-nada">Este rack no tiene fibras. Creala acá o dibujala en la maqueta, y después asigná cada hilo a una boca de la patchera.</p>';
-  return nueva + L.map(F => { const hs = hilos(H, F), m = (H.largo ? H.largo(F) : 0) || F.m || 0, usados = hs.filter(x => x.e.length).length, lado = e => e ? `${esc(e.cid)} · ${esc(nomIt(e.it))} · ${nomP(e.it, e.pid)}` : '<span class="red-mut">—</span>';
+  const punta = (F, k, kt) => `${campo(k === 'from' ? 'Desde' : 'Hasta', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${k}">${opt('', 'Otro lugar', F[k])}${racks.map(([r, t]) => opt(r, t, F[k])).join('')}</select>`)}${F[k] ? '' : campo(k === 'from' ? 'Lugar de origen' : 'Lugar de destino', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="${kt}" value="${esc(F[kt] || '')}" maxlength="60" list="red-cajas" placeholder="Ej.: caja de empalme del portón">`)}`;
+  const cajasL = `<datalist id="red-cajas">${CAJAS.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
+  if (!L.length) return nueva + cajasL + '<p class="red-nada">Este rack no tiene fibras. Creala acá o dibujala en la maqueta, y después asigná cada hilo a una boca de la patchera.</p>';
+  return nueva + cajasL + L.map(F => { const hs = hilos(H, F), m = (H.largo ? H.largo(F) : 0) || F.m || 0, usados = hs.filter(x => x.e.length).length, lado = e => e ? `${esc(e.cid)} · ${esc(nomIt(e.it))} · ${nomP(e.it, e.pid)}` : '<span class="red-mut">—</span>';
     return `<section class="red-fib"><header><b>${imp ? esc(F.id) : `<a href="#" data-r="ir" data-v="${esc(F.id)}">${esc(F.id)}</a>`}${F.nombre ? ' · ' + esc(F.nombre) : ''}</b><span>${esc(F.from || F.fromTxt || '?')} → ${esc(F.to || F.toTxt || '?')} · ${F.hilos} hilos · ${usados} en uso${m ? ' · ' + m + ' m' : ''}${F.tipo ? ' · ' + FTIPO[F.tipo][0] : ''}${F.con ? ' · ' + FCON[F.con] : ''}${F.tend ? ' · ' + esc(F.tend) : ''}</span></header>
       ${ed ? `<div class="red-g4">${punta(F, 'from', 'fromTxt')}${punta(F, 'to', 'toTxt')}${campo('Hilos', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="hilos">${[2, 4, 6, 8, 12, 24, 48, 72, 96, 144].map(n => opt(n, n + ' hilos', F.hilos)).join('')}</select>`)}${campo('Largo (m)', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="m" value="${F.m != null ? String(F.m).replace('.', ',') : ''}" inputmode="decimal" maxlength="7" placeholder="${H.largo && H.largo(F) ? 'Medido en la maqueta: ' + H.largo(F) : 'Ej.: 180'}">`)}${campo('Nombre', `<input data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="nombre" value="${esc(F.nombre || '')}" maxlength="40" placeholder="Ej.: Troncal norte">`)}${campo('Tipo', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tipo">${opt('', 'Sin anotar', F.tipo)}${Object.entries(FTIPO).map(([k, v]) => opt(k, v[0], F.tipo)).join('')}</select>`)}${campo('Conector', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="con">${opt('', 'Sin anotar', F.con)}${Object.entries(FCON).map(([k, v]) => opt(k, v, F.con)).join('')}</select>`)}${campo('Tendido', `<select data-r="set" data-o="F" data-id="${esc(F.id)}" data-k="tend">${opt('', 'Sin anotar', F.tend)}${FTEND.map(x => opt(x, x, F.tend)).join('')}</select>`)}</div>` : ''}
       <div class="red-tw"><table class="red-t"><thead><tr><th>Hilo</th><th>Color</th><th>En ${esc(F.from || F.fromTxt || 'una punta')}</th><th>En ${esc(F.to || F.toTxt || 'la otra punta')}</th><th class="n">dB</th><th>Estado</th></tr></thead><tbody>${hs.map(x => { const a = x.e.find(e => e.cid === F.from) || (x.e[0] && x.e[0].cid !== F.to ? x.e[0] : null), b = x.e.find(e => e !== a) || null, db = F.db && F.db[x.h];
@@ -450,7 +460,7 @@ function aplicar(H, V, o, k, v, id) { const c = H.cabs[V.cid], [iid, pid] = V.se
   if (o === 'it' && iid) { const it = itemDe(c, iid); if (!it) return;
     if (k === 'u') { if (entra(c, it, +v)) { it.u = +v; c.items.sort((x, y) => x.u - y.u); } }
     else { pon(it, k, v); if (k === 'ext' && v && H.reales) { const x = H.reales().find(r => r.uid === v); if (x) { if (!it.name) it.name = x.nombre; if (!it.mac && x.mac) it.mac = x.mac; if (!it.modelo && x.modelo) it.modelo = x.modelo; if (!it.ip && x.ip) it.ip = x.ip; } } } }
-  if (o === 'cab') { pon(c, k, k === 'cap' || k === 'prof' ? num(v) : v); return; }
+  if (o === 'cab') { pon(c, k, k === 'cap' || k === 'prof' ? num(v) : v); const m = k === 'modelo' && /(\d+)\s*U\b/i.exec(v || ''), mm = k === 'modelo' && /(\d{3,4})\s*[×x]\s*(\d{3,4})/.exec(v || ''); if (m && +m[1] >= c.items.reduce((a, it) => Math.max(a, it.u + ((CAT[it.type] || { U: 1 }).U) - 1), 0)) c.cap = +m[1]; if (mm && !c.prof) c.prof = +mm[2]; return; }
   if (o === 'pt') { const [cid, i2, p2] = String(id).split('|'), cc = H.cabs[cid]; if (cc) pon(pd(cc, i2, p2, true), k, k === 'm' ? num(v) : v); return; }
   if (o === 'F') { const F = fibDe(H, id); if (F) pon(F, k, k === 'hilos' || k === 'm' ? (v === '' ? '' : +String(v).replace(',', '.')) : v); } }
 
