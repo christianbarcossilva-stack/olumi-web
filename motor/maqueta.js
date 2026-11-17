@@ -4,7 +4,7 @@
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js?v=2';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=8';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=9';
 import { ve, dominio, DOMINIOS } from './plano.js?v=2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

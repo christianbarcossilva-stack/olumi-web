@@ -101,18 +101,20 @@ const F = {
   color: (n = 'Color') => ({ k: 'color', n, t: 'color' })
 };
 export const MARCAS = [['hikvision', 'Hikvision'], ['dahua', 'Dahua'], ['unifi', 'Ubiquiti UniFi'], ['meraki', 'Cisco Meraki'], ['tplink', 'TP-Link'], ['mikrotik', 'MikroTik'], ['cisco', 'Cisco'], ['intelbras', 'Intelbras'], ['honeywell', 'Honeywell'], ['sonoff', 'Sonoff'], ['otra', 'Otra']];
-const EQ_CAMPOS = [F.nombre, { k: 'marca', n: 'Marca', t: 'sel', ops: MARCAS }, { k: 'modelo', n: 'Modelo', t: 'txt' }, { k: 'ip', n: 'IP', t: 'txt' }, { k: 'mac', n: 'MAC', t: 'txt' }, { k: 'y', n: 'Altura (m)', t: 'num', min: 0, max: 40, paso: 0.1 }, F.r, { k: 'notas', n: 'Notas', t: 'area' }];
+// montaje: en columna (con poste desde el piso), en pared o en el techo (sin poste). piso = altura del piso donde está (planta alta de un edificio)
+const MONT = { k: 'montaje', n: 'Montaje', t: 'sel', ops: [['poste', 'En columna o poste'], ['pared', 'En pared'], ['techo', 'En el techo']] }, BASE = { k: 'piso', n: 'Altura del piso (m)', t: 'num', min: 0, max: 40, paso: 0.1 };
+const EQ_CAMPOS = [F.nombre, { k: 'marca', n: 'Marca', t: 'sel', ops: MARCAS }, { k: 'modelo', n: 'Modelo', t: 'txt' }, { k: 'ip', n: 'IP', t: 'txt' }, { k: 'mac', n: 'MAC', t: 'txt' }, { k: 'y', n: 'Altura (m)', t: 'num', min: 0, max: 40, paso: 0.1 }, F.r, { k: 'notas', n: 'Notas', t: 'area' }, MONT, BASE];
 
 // ---------- equipos de red y seguridad (Ondi): se dibujan chicos y con un aro del color de su estado ----------
 function equipo(dibujo) { return (p, ctx) => { const g = new THREE.Group(), y = p.y ?? 3, est = (ctx.estado && ctx.estado(p)) || 'off', ec = COL.estado[est];
   const cuerpo = new THREE.Group(); cuerpo.position.y = y; g.add(cuerpo); dibujo(cuerpo, p, ec);
-  if (y > 0.6) { const palo = cil(g, 0, 0, 0, 0.04, y - 0.1, mat('#9aa3ab', { metalness: 0.4, roughness: 0.5 })); palo.castShadow = false; }
-  const aro = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.0, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ec, transparent: true, opacity: 0.9, depthWrite: false })); aro.position.y = 0.09; aro.renderOrder = 2; g.add(aro);
+  const b0 = +p.piso || 0; if (y - b0 > 0.6 && (p.montaje || 'poste') === 'poste') { const palo = cil(g, 0, b0, 0, 0.04, y - b0 - 0.1, mat('#9aa3ab', { metalness: 0.4, roughness: 0.5 })); palo.castShadow = false; }
+  const aro = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.0, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ec, transparent: true, opacity: 0.9, depthWrite: false })); aro.position.y = b0 + 0.09; aro.renderOrder = 2; g.add(aro);
   g.userData.estado = est; g.userData.aro = aro; return g; }; }
 const blanco = () => mat('#f2f4f5', { roughness: 0.45 }), negro = () => mat('#1d2125', { roughness: 0.4, metalness: 0.3 }), led = c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.4 });
 function campoVision(g, p, ec) { const al = p.alcance ?? 25, ap = (p.apertura ?? 90) * Math.PI / 180; if (!al) return;
   const geo = new THREE.CircleGeometry(al, 32, Math.PI / 2 - ap / 2, ap).rotateX(-Math.PI / 2); const k = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: ec, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide }));
-  k.position.y = 0.07 - (g.position.y || 0); k.rotation.y = Math.PI; k.renderOrder = 1; k.userData.campo = true; g.add(k); }
+  k.position.y = (+p.piso || 0) + 0.07 - (g.position.y || 0); k.rotation.y = Math.PI; k.renderOrder = 1; k.userData.campo = true; g.add(k); }
 
 // ---------- tipos ----------
 export const TIPOS = {
@@ -194,6 +196,7 @@ export const TIPOS = {
       const mVid = mat(os ? '#9fd3f0' : '#3b5566', { roughness: 0.06, metalness: 0.5, transparent: true, opacity: 0.55, emissive: os ? '#bfe6ff' : '#000000', emissiveIntensity: os ? 0.5 : 0 });
       const mPiso = mat(os ? '#9aa0a6' : '#d9dcde', { roughness: 0.55 }), mLosa = mat(os ? '#6b7177' : '#bfc4c8', { roughness: 0.8 }), mEsc = mat(os ? '#7d848a' : '#c6cacd', { roughness: 0.7 }), mBar = mat('#454b51', { roughness: 0.4, metalness: 0.5 });
       const nv = (k, m) => { m.userData.nivel = k; return m; }, sc = m => { m.userData.noChoca = true; return m; };
+      if (p.plano && p.plano.muros) return armarPlano(g, p, { mFach, mFr, mIn, mVid, mPiso, mLosa, mEsc, mBar }, nv, sc);
       // escalera: va contra la pared de atrás; las de pisos pares suben hacia la izquierda y las impares hacia la derecha (en zigzag), con descanso de 1,5 m
       const nEsc = Math.ceil(hp / 0.18), hue = 0.28, run = nEsc * hue, an = 1.3, xs1 = w - t - 1.5, xs0 = xs1 - run, suelos = [];
       const lane = k => { const z0 = -d + t + (k % 2) * (an + 0.1); return [z0, z0 + an]; };
@@ -306,7 +309,7 @@ export const TIPOS = {
 
   // equipos (Ondi). y = altura de montaje; uid = vínculo con el equipo real de la app (UniFi, Meraki o cargado a mano)
   camara: { n: 'Cámara', g: 'Equipos', forma: 'punto', capa: 'equipos', equipo: 'cam', ondi: 'camara', etiqueta: p => p.nombre, def: { y: 6, alcance: 25, apertura: 90 },
-    campos: [...EQ_CAMPOS.slice(0, 7), { k: 'alcance', n: 'Alcance (m)', t: 'num', min: 0, max: 200, paso: 1 }, { k: 'apertura', n: 'Apertura (°)', t: 'num', min: 10, max: 360, paso: 5 }, EQ_CAMPOS[7]],
+    campos: [...EQ_CAMPOS.slice(0, 7), MONT, BASE, { k: 'alcance', n: 'Alcance (m)', t: 'num', min: 0, max: 200, paso: 1 }, { k: 'apertura', n: 'Apertura (°)', t: 'num', min: 10, max: 360, paso: 5 }, EQ_CAMPOS[7]],
     armar: equipo((g, p, ec) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.62, 16).rotateZ(Math.PI / 2), blanco()); b.position.z = 0.2; b.rotation.y = Math.PI / 2; g.add(sombra(b)); caja(g, -0.2, 0.12, -0.25, 0.2, 0.22, 0.32, blanco());
       const l = new THREE.Mesh(BOLA, led(ec)); l.scale.setScalar(0.07); l.position.set(0, 0.06, 0.52); g.add(l); campoVision(g, p, ec); }) },
   ap: { n: 'Wi-Fi (punto de acceso)', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'ap', equipo: 'ap', etiqueta: p => p.nombre, def: { y: 8 }, campos: EQ_CAMPOS,
@@ -359,6 +362,55 @@ function offset(pts, d) { return pts.map((c, i) => { const a = pts[Math.max(0, i
 function cintaVertical(pts, alto, y) { const v = [], ix = []; for (let i = 0; i < pts.length; i++) { v.push(pts[i][0], y - alto / 2, pts[i][1], pts[i][0], y + alto / 2, pts[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals(); return geo; }
 const mix = (a, b, k) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString();
+
+// ---------- edificio armado desde un plano: paredes de cada piso con puertas y ventanas, escalera en U, losas con su hueco ----------
+// p.plano = { muros: [[piso, tipo, u0, v0, u1, v1, [[desde, hasta, 'p'|'v'|'pc'], ...]]], esc: { v0, meseta, llegada, uA: [a, b], uB: [a, b] } }
+// u = a lo ancho del plano (0 a fondo), v = a lo largo (0 a ancho), en metros desde la esquina de arriba a la izquierda del plano.
+// Tipos: e fachada (zócalo oscuro, franja clara en la losa, ventanas sueltas), c cortina de vidrio, i tabique, g tabique vidriado, m tabique móvil.
+// Huecos: tramo a lo largo de la pared (en u si es horizontal en el plano, en v si es vertical; en una diagonal, de 0 a 1): p puerta, v ventana, pc puerta cerrada.
+function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.altoPiso, N = Math.max(1, Math.round(p.pisos)), P = p.plano, os = oscuro(), suelos = [];
+  const X = v => v - L / 2, Z = u => u - W / 2, mPta = mat(os ? '#6b4e36' : '#8a6448', { roughness: 0.6 }), mMov = mat(os ? '#9aa1a8' : '#dfe2e4', { roughness: 0.8 });
+  const mVidI = mat(os ? '#a9c7d6' : '#d6e8f1', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false }), mMarco = mat('#2a2e33', { roughness: 0.5, metalness: 0.3 }), mFachI = mat(os ? '#7f868c' : '#e7e9ea', { roughness: 0.9 });
+  nv(0, caja(g, -L / 2, 0, -W / 2, L / 2, 0.03, W / 2, M.mPiso)); suelos.push({ x0: -L / 2, z0: -W / 2, x1: L / 2, z1: W / 2, y: 0 });
+  const E = P.esc, hue = E ? [X(E.v0), Z(Math.min(E.uA[0], E.uB[0])), X(E.llegada[0]), Z(Math.max(E.uA[1], E.uB[1]))] : null;
+  // losas de los pisos de arriba (con el hueco de la escalera) y franja clara del canto
+  for (let k = 1; k <= N; k++) { const yb = k * hp, top = k === N, H = !top && hue ? hue : null, rects = H ? [[-L / 2, -W / 2, H[0], W / 2], [H[2], -W / 2, L / 2, W / 2], [H[0], -W / 2, H[2], H[1]], [H[0], H[3], H[2], W / 2]] : [[-L / 2, -W / 2, L / 2, W / 2]];
+    for (const [a, b, c, d] of rects) if (c - a > 0.01 && d - b > 0.01) nv(k, caja(g, a, yb - 0.3, b, c, yb + (top ? 0.05 : 0.03), d, M.mLosa));
+    if (!top) suelos.push({ x0: -L / 2, z0: -W / 2, x1: L / 2, z1: W / 2, y: yb, hueco: H }); }
+  // paredes
+  for (const [k, t, u0, v0, u1, v1, hs] of P.muros) { if (k >= N) continue; const yb = k * hp, x0 = X(v0), z0 = Z(u0), x1 = X(v1), z1 = Z(u1), len = Math.hypot(x1 - x0, z1 - z0); if (len < 0.05) continue;
+    const ext = t === 'e' || t === 'c', gro = ext ? 0.25 : t === 'm' ? 0.06 : 0.12, alto = hp - (ext ? 0 : 0.3), dx = (x1 - x0) / len, dz = (z1 - z0) / len, ang = Math.atan2(-dz, dx);
+    const diag = Math.abs(u1 - u0) > 0.05 && Math.abs(v1 - v0) > 0.05, a0 = diag ? 0 : Math.abs(u1 - u0) > 0.05 ? Math.min(u0, u1) : Math.min(v0, v1), escH = diag ? len : 1, inv = !diag && (Math.abs(u1 - u0) > 0.05 ? u1 < u0 : v1 < v0);
+    const H = (hs || []).map(([a, b, q]) => { let s0 = (a - a0) * escH, s1 = (b - a0) * escH; if (inv) [s0, s1] = [len - s1, len - s0]; return [Math.max(0, s0), Math.min(len, s1), q]; }).sort((m, n) => m[0] - n[0]);
+    // un tramo de pared de s0 a s1 (metros a lo largo), de y0 a y1
+    const seg = (s0, s1, y0, y1, m, choca = true) => { if (s1 - s0 < 0.01 || y1 - y0 < 0.01) return; const cx = x0 + dx * (s0 + s1) / 2, cz = z0 + dz * (s0 + s1) / 2, k2 = new THREE.Mesh(CAJA, m);
+      k2.scale.set(s1 - s0, y1 - y0, gro); k2.position.set(cx, yb + (y0 + y1) / 2, cz); k2.rotation.y = ang; k2.castShadow = k2.receiveShadow = true; nv(k, k2); if (!choca) k2.userData.noChoca = true; g.add(k2); return k2; };
+    const lleno = (s0, s1) => { // pared sin huecos en ese tramo, según el tipo
+      if (t === 'c') { seg(s0, s1, 0, 0.12, mMarco); seg(s0, s1, 0.12, alto - 0.5, M.mVid); seg(s0, s1, alto - 0.5, alto, M.mFr); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.03, q + 0.03, 0.12, alto - 0.5, mMarco, false); }
+      else if (t === 'e') { seg(s0, s1, 0, alto - 0.55, M.mFach); seg(s0, s1, alto - 0.55, alto, M.mFr); }
+      else if (t === 'g') { seg(s0, s1, 0, 0.9, mFachI); seg(s0, s1, 0.9, alto, mVidI); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.025, q + 0.025, 0.9, alto, mMarco, false); }
+      else seg(s0, s1, 0, alto, t === 'm' ? mMov : mFachI); };
+    let s = 0; for (const [h0, h1, q] of H) { lleno(s, h0); s = Math.max(s, h1);
+      if (q === 'v') { const vb = t === 'e' ? 0.9 : 0.12; seg(h0, h1, 0, vb, t === 'e' ? M.mFach : mMarco); seg(h0, h1, vb, alto - (t === 'e' ? 0.55 : 0.5), M.mVid); seg(h0, h1, alto - (t === 'e' ? 0.55 : 0.5), alto, t === 'e' || t === 'c' ? M.mFr : mFachI);
+        seg(h0 - 0.05, h0 + 0.05, vb, alto - 0.55, mMarco, false); seg(h1 - 0.05, h1 + 0.05, vb, alto - 0.55, mMarco, false); seg((h0 + h1) / 2 - 0.03, (h0 + h1) / 2 + 0.03, vb, alto - 0.55, mMarco, false); }
+      else { const dintel = Math.min(2.2, alto - 0.3); seg(h0, h1, dintel, alto, ext ? (t === 'c' ? M.mFr : M.mFach) : t === 'g' ? mVidI : mFachI); if (ext) seg(h0, h1, alto - 0.55, alto, M.mFr);
+        seg(h0 - 0.04, h0 + 0.04, 0, dintel, mMarco, false); seg(h1 - 0.04, h1 + 0.04, 0, dintel, mMarco, false); if (q === 'pc') seg(h0 + 0.04, h1 - 0.04, 0, dintel, mPta); } }
+    lleno(s, len); }
+  // escalera en U: primer tramo por el carril A desde la llegada hasta la meseta, meseta a media altura, segundo tramo por el carril B hasta el piso de arriba
+  if (E) for (let k = 0; k < N - 1; k++) { const yb = k * hp, ym = yb + hp / 2, xm0 = X(E.meseta[0]), xm1 = X(E.meseta[1]), xl = X(E.llegada[0]), [a0, a1] = E.uA.map(Z), [b0, b1] = E.uB.map(Z), run = xl - xm1, n = Math.max(6, Math.round(hp / 2 / 0.17)), tr = run / n;
+    const it = []; for (let i = 0; i < n; i++) { const yt = (i + 1) * hp / 2 / n; it.push([xl - (i + 0.5) * tr, yb + yt / 2, (a0 + a1) / 2, 0, tr, yt, a1 - a0]); it.push([xm1 + (i + 0.5) * tr, ym + yt / 2 - hp / 4, (b0 + b1) / 2, 0, tr, yt + hp / 2, b1 - b0]); }
+    const Lt = lote(g, CAJA, M.mEsc, it); if (Lt) { Lt.userData.noChoca = true; Lt.userData.nivel = k; }
+    sc(nv(k, caja(g, xm0, ym - 0.2, Math.min(a0, b0), xm1, ym, Math.max(a1, b1), M.mEsc)));
+    suelos.push({ rampa: true, x0: xm1, x1: xl, z0: a0, z1: a1, xa: xl, xb: xm1, y0: yb, y1: ym }, { x0: xm0, x1: xm1, z0: Math.min(a0, b0), z1: Math.max(a1, b1), y: ym }, { rampa: true, x0: xm1, x1: xl, z0: b0, z1: b1, xa: xm1, xb: xl, y0: ym, y1: yb + hp });
+    // baranda del piso de arriba alrededor del hueco: del lado del pasillo, sobre el carril A en la llegada, y entre carriles
+    const ya = yb + hp, uP = Math.min(a0, b0); nv(k + 1, caja(g, xm0, ya, uP - 0.06, xl, ya + 1.0, uP, M.mBar, false)); nv(k + 1, caja(g, xl - 0.05, ya, a0, xl, ya + 1.0, a1, M.mBar, false));
+    nv(k + 1, caja(g, xm1, ya, Math.min(a1, b0), xl, ya + 1.0, Math.max(a1, b0), M.mBar, false));
+    nv(k, caja(g, xm1, yb, Math.min(a1, b0), xl, yb + hp / 2 + 1.0, Math.max(a1, b0), M.mEsc, false)); }
+  // techo: pretil oscuro y turbina de ventilación
+  const Ht = N * hp; for (const [a, b, c, d] of [[-L / 2, -W / 2, L / 2, -W / 2 + 0.2], [-L / 2, W / 2 - 0.2, L / 2, W / 2], [-L / 2, -W / 2, -L / 2 + 0.2, W / 2], [L / 2 - 0.2, -W / 2, L / 2, W / 2]]) { nv(N, caja(g, a, Ht - 0.6, b, c, Ht + 0.05, d, M.mFr)); nv(N, caja(g, a, Ht + 0.05, b, c, Ht + 0.9, d, M.mFach)); }
+  nv(N, cil(g, L / 2 - 2, Ht, -W / 2 + 1.5, 0.08, 0.7, mat('#9aa0a6', { metalness: 0.6, roughness: 0.4 }))); nv(N, cil(g, L / 2 - 2, Ht + 0.7, -W / 2 + 1.5, 0.28, 0.4, mat('#b9bec3', { metalness: 0.7, roughness: 0.35 }), BOLA));
+  if (p.corte) g.traverse(m => { if (m.isMesh && m.userData.nivel > 0) m.visible = false; });
+  g.userData.suelos = suelos; g.userData.altoPiso = hp; g.userData.pisos = N; return g; }
 
 // ---------- juntar en un solo dibujo las partes de una pieza que comparten material (menos llamadas a la placa de video) ----------
 const _inv = new THREE.Matrix4(), _mm = new THREE.Matrix4();
