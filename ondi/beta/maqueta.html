@@ -282,6 +282,7 @@ html.editing .kpiwrap{display:none}
 html.cabopen .panel,html.cabopen .camview,html.cabopen .kpiwrap{visibility:hidden}
 html.inapp .role{display:none!important}
 html:not(.blank) .blankonly{display:none!important}
+.planopanel .ppia{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line,rgba(0,0,0,.1))}.planopanel .ppialist{display:grid;gap:4px;max-height:220px;overflow:auto}.planopanel .ppck{display:flex;gap:8px;align-items:center;font-size:13px}.planopanel .ppia-err{color:#D2474B}.planopanel .ppia-on{animation:ppia 1.2s ease-in-out infinite alternate}@keyframes ppia{to{opacity:.45}}@media (prefers-reduced-motion:reduce){.planopanel .ppia-on{animation:none}}
 .planopanel{position:fixed;top:calc(var(--gt) + 190px);left:var(--gl);width:min(340px,calc(100vw - 32px));padding:12px 14px;z-index:13;display:grid;gap:10px;max-height:calc(100vh - 260px);overflow:auto}
 .planopanel .pph{display:flex;justify-content:space-between;align-items:center}
 .planopanel .x{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
@@ -638,6 +639,8 @@ class Geo {
     for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = P(i, j), b = P(i, j + 1), d = P(i + 1, j), e2 = P(i + 1, j + 1);
       const k = 0.9 + 0.1 * (i / rings), cc = mulc(c, k);
       if (i > 0) this.tri(a, b, e2, cc, 0, ctr); if (i < rings - 1) this.tri(a, e2, d, cc, 0, ctr); } }
+  photoR(cx, cz, w, h, r, y, col) { const c = Math.cos(r), s = Math.sin(r), q = (u, v) => { const dx = (u - 0.5) * w, dz = (v - 0.5) * h; this.uv = [u, v]; this.v([cx + dx * c - dz * s, y, cz + dx * s + dz * c], [0, 1, 0], col, 0.62); };
+    q(0, 0); q(0, 1); q(1, 1); q(0, 0); q(1, 1); q(1, 0); this.uv = null; }
   photo(x0, z0, x1, z1, y, col) { const q = (x, z, u, v) => { this.uv = [u, v]; this.v([x, y, z], [0, 1, 0], col, 0.62); };
     q(x0, z0, 0, 0); q(x0, z1, 0, 1); q(x1, z1, 1, 1); q(x0, z0, 0, 0); q(x1, z1, 1, 1); q(x1, z0, 1, 0); this.uv = null; }
   fan(pts, y, col, e = 0) { const c = C(col); for (let i = 1; i < pts.length - 1; i++) { this.v([pts[0][0], y, pts[0][1]], [0, 1, 0], c, e); this.v([pts[i][0], y, pts[i][1]], [0, 1, 0], c, e); this.v([pts[i + 1][0], y, pts[i + 1][1]], [0, 1, 0], c, e); } }
@@ -1928,21 +1931,22 @@ function rebuildNave(N) { const keep = { id: N.id, code: N.code, name: N.name, r
 
 // punteros en modo edición: devuelven true si el editor usó el evento
 function edDown(e) { if (ED.on && canEdit() && ED.tool === 'sel' && gzDown(e)) return true; if (!ED.on || e.button !== 0 || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false; const t = ED.tool;
-  if (t === 'nave') { ED.box = { a: groundAt(e.clientX, e.clientY) }; return true; }
+  if (t === 'nave') { const g = groundAt(e.clientX, e.clientY); if (ED.box && ED.box.clic) { const B = ED.box; ED.box = null; clearPrev(); ED.naveOk = true; newNave(B.a, g); return true; } ED.box = { a: g, x: e.clientX, y: e.clientY }; return true; }
   if (t === 'sel') { const id = pick3(e.clientX, e.clientY), IR = innerRef(id); if (IR && IR.k === 'it') { select(id, false); itemDrag(IR, e.clientX, e.clientY, true); return true; }
     const pr = id && PROPS.find(x => x.id === id); if (pr) { select(id, false); ED.drag = { d: pr, x: e.clientX, y: e.clientY, moved: false, before: snapD(pr), prop: true }; return true; } const d = id && DEV.find(x => x.id === id); if (d) { ED.drag = { d, x: e.clientX, y: e.clientY, moved: false, before: snapD(d) }; return true; } }
   return false; }
 function edMove(e) { if (!ED.on) return false; if (GZD.drag) return gzMove(e); if (ITDRAG) { itemDrag(ITDRAG.R, e.clientX, e.clientY); return true; }
   if (ED.drag && ED.drag.prop) { const D = ED.drag; if (!D.moved && Math.hypot(e.clientX - D.x, e.clientY - D.y) < 5) return true; D.moved = true; placeProp(D.d, e.clientX, e.clientY); propObj(D.d); return true; }
   if (!ED.drag && !ED.box) { ghostMove(e); if (!ptrs.size) { const hv = gzPick(e.clientX, e.clientY); if (hv !== GZD.hover) { GZD.hover = hv; gzBuild(true); } canvas.classList.toggle('gzhot', !!hv); } }
-  if (ED.box) { ED.box.b = groundAt(e.clientX, e.clientY); showPrev(prevBox(ED.box.a, ED.box.b)); return true; }
+  if (ED.box) { ED.box.b = groundAt(e.clientX, e.clientY); showPrev(prevBox(ED.box.a, ED.box.b)); const A = ED.box.a, Bq = ED.box.b; $('#ehint').textContent = `${Math.round(Math.abs(Bq[0] - A[0]))} × ${Math.round(Math.abs(Bq[1] - A[1]))} m · ${ED.box.clic ? 'tocá' : 'soltá en'} la esquina opuesta (Esc cancela)`; return true; }
   if (ED.drag) { const D = ED.drag; if (!D.moved && Math.hypot(e.clientX - D.x, e.clientY - D.y) < 5) return true; D.moved = true; smartPlace(D.d, e.clientX, e.clientY); if (D.d.custom || D.d.mount === 'ceiling') D.d.loc = locFor(D.d); devObj(D.d); devTag(D.d); if (SEL === D.d.id) updGizmo(); return true; }
   if (ED.tool === 'fib' && ED.fib) { ED.fib.hover = snapFib(groundAt(e.clientX, e.clientY)).p; prevFib(); }
   if (ED.tool === 'calle' && ED.road) { ED.road.hover = snapRoad(groundAt(e.clientX, e.clientY)); prevRoad(); }
   return false; }
 function edUp(e, wasDrag) { if (!ED.on) return false; if (GZD.drag) return gzUp(); if (ITDRAG) return itemDragEnd();
   if (ED.drag && ED.drag.prop) { const D = ED.drag; ED.drag = null; if (D.moved) { edSave(); recChange(D.d, D.before, D.d.id + ' movido'); } select(D.d.id, false); return true; }
-  if (ED.box) { const B = ED.box; ED.box = null; clearPrev(); if (B.b) newNave(B.a, B.b); return true; }
+  if (ED.naveOk) { ED.naveOk = false; return true; }
+  if (ED.box) { const B = ED.box; if (!B.clic && (!B.b || Math.hypot(e.clientX - B.x, e.clientY - B.y) < 8)) { B.clic = true; B.b = null; $('#ehint').textContent = 'Ahora tocá la esquina opuesta del galpón (Esc cancela).'; return true; } ED.box = null; clearPrev(); if (B.b) newNave(B.a, B.b); return true; }
   if (ED.drag) { const D = ED.drag; ED.drag = null; if (D.moved) { markMoved(D.d); edSave(); recChange(D.d, D.before, D.d.id + ' movido'); select(D.d.id, false); toast(D.d.id + ' movido'); } else select(D.d.id); return true; }
   if (wasDrag) return false;
   const t = ED.tool; if (t === 'fib') { fibClick(e.clientX, e.clientY); return true; }
@@ -2452,7 +2456,7 @@ function buildBaseBlank() { const g = new Geo(), gg = new Geo(), dk = isDark();
   for (let v = -500; v <= 500; v += 10) { const big = v % 100 === 0, col = big ? P.site : P.walk, w = big ? 0.35 : 0.12;
     gg.strip([[v, -500], [v, 500]], w, 0.004, col); gg.strip([[-500, v], [500, v]], w, 0.004, col); }
   const pl = ED.plano;
-  if (pl && PHOTO.img) { const ph = new Geo(); ph.photo(pl.cx - pl.w / 2, pl.cz - pl.h / 2, pl.cx + pl.w / 2, pl.cz + pl.h / 2, 0.01, dk ? [0.62, 0.64, 0.68] : [1, 1, 1]); obj('photo', { geo: ph, layer: 'photo', tex: true, noShadow: true }); }
+  if (pl && PHOTO.img) { const ph = new Geo(); if (pl.rot) ph.photoR(pl.cx, pl.cz, pl.w, pl.h, pl.rot * Math.PI / 180, 0.01, dk ? [0.62, 0.64, 0.68] : [1, 1, 1]); else ph.photo(pl.cx - pl.w / 2, pl.cz - pl.h / 2, pl.cx + pl.w / 2, pl.cz + pl.h / 2, 0.01, dk ? [0.62, 0.64, 0.68] : [1, 1, 1]); obj('photo', { geo: ph, layer: 'photo', tex: true, noShadow: true }); }
   else { const o = OBJID.get('photo'); if (o) o.on = false; }
   for (const R of ED.roads) { if (R.pts.length < 2) continue; g.strip(R.pts, R.w, 0.03, P.road); R.pts.forEach(([x, z]) => g.disc(x, z, R.w / 2, 0.031, P.road, 0, 18));
     if (R.w >= 8) for (let i = 0; i < R.pts.length - 1; i++) { const [ax, az] = R.pts[i], [bx, bz] = R.pts[i + 1], L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
@@ -2491,7 +2495,34 @@ function scaleClick(x, y) { const p = groundAt(x, y); ED.scale = ED.scale || [];
 function applyScale(real) { const S = ED.scale, pl = ED.plano; if (!S || S.length < 2 || !pl || !(real > 0)) return; const d = Math.hypot(S[1][0] - S[0][0], S[1][1] - S[0][1]); if (d < 0.1) return;
   const k = real / d, mid = [(S[0][0] + S[1][0]) / 2, (S[0][1] + S[1][1]) / 2];
   pl.w = +(pl.w * k).toFixed(2); pl.h = +(pl.h * k).toFixed(2); pl.cx = +(mid[0] + (pl.cx - mid[0]) * k).toFixed(2); pl.cz = +(mid[1] + (pl.cz - mid[1]) * k).toFixed(2);
-  ED.scale = null; clearPrev(); rebuildBlank(); edSave(); setTool('sel'); renderPlano(); toast(`Escala lista: el plano mide ${Math.round(pl.w)} × ${Math.round(pl.h)} m`); flyTo(HOME(), 1); }
+  pl.esc = 1; ED.scale = null; clearPrev(); rebuildBlank(); edSave(); setTool('sel'); renderPlano(); toast(`Escala lista: el plano mide ${Math.round(pl.w)} × ${Math.round(pl.h)} m`); flyTo(HOME(), 1); }
+// lectura del plano con IA: propone galpones y calles; la instaladora marca cuáles crear
+const IA = { st: '', err: '', r: null, sel: {} };
+function planoPt(p) { const pl = ED.plano, r = (pl.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), dx = (p[0] - 0.5) * pl.w, dz = (p[1] - 0.5) * pl.h; return [pl.cx + dx * c - dz * s, pl.cz + dx * s + dz * c]; }
+function iaCaja(g) { const P = g.esquinas.map(planoPt), xs = P.map(p => p[0]), zs = P.map(p => p[1]); return { x0: Math.round(Math.min(...xs) * 2) / 2, x1: Math.round(Math.max(...xs) * 2) / 2, z0: Math.round(Math.min(...zs) * 2) / 2, z1: Math.round(Math.max(...zs) * 2) / 2 }; }
+function iaHTML(pl) { if (!(HOST && HOST.leerPlano)) return ''; const R = IA.r; let h = `<div class="ppia"><b>Leer el plano con IA</b><p class="ehelp">Busca galpones, oficinas y calles en el plano y te los propone. Revisás y creás los que estén bien.</p>`;
+  if (IA.st === 'leyendo') h += '<p class="ehelp ppia-on">Leyendo el plano… puede tardar medio minuto.</p>'; else h += `<div class="cact gbtns"><button class="btn${R ? '' : ' pri'}" data-pp="ia">${R ? 'Leer de nuevo' : 'Leer el plano'}</button>${R ? '<button class="btn" data-pp="iano">Descartar</button>' : ''}</div>`;
+  if (IA.err) h += `<p class="ehelp ppia-err">${escH(IA.err)}</p>`;
+  if (R) { const giro = -(R.giro || 0);
+    if (Math.abs(R.giro || 0) >= 1 && Math.abs((pl.rot || 0) - giro) > 0.4) h += `<button class="btn" data-pp="iagiro">Enderezar el plano (${giro > 0 ? '+' : ''}${giro}°)</button>`;
+    if (R.medida && !pl.esc) h += `<button class="btn" data-pp="iaesc">Usar la medida del plano: ${String(R.medida.metros).replace('.', ',')} m</button>`;
+    const n = R.galpones.length + R.calles.length;
+    h += n ? `<div class="ppialist">${R.galpones.map((g, i) => { const b = iaCaja(g); return `<label class="ppck"><input type="checkbox" data-pia="g${i}" ${IA.sel['g' + i] !== false ? 'checked' : ''}><span>${escH(g.nombre || ({ oficina: 'Oficina', porteria: 'Portería' })[g.tipo] || 'Galpón')} · ${Math.round(b.x1 - b.x0)} × ${Math.round(b.z1 - b.z0)} m</span></label>`; }).join('')}${R.calles.map((c, i) => `<label class="ppck"><input type="checkbox" data-pia="c${i}" ${IA.sel['c' + i] !== false ? 'checked' : ''}><span>${escH(c.nombre || 'Calle')} · calle</span></label>`).join('')}</div>
+      <div class="cact"><button class="btn pri" data-pp="iacrear">Crear los marcados</button></div>` : '<p class="ehelp">No encontró galpones ni calles en este plano.</p>';
+    if (R.nota) h += `<p class="ehelp">${escH(R.nota)}</p>`; }
+  return h + '</div>'; }
+function iaPrev() { if (!IA.r || !ED.plano) return; const g = new Geo();
+  IA.r.galpones.forEach((q, i) => { if (IA.sel['g' + i] === false) return; const b = iaCaja(q); g.box(b.x0, 0, b.z0, b.x1, 6, b.z1, P.acc, { e: 0.35, ao: 1 }); });
+  IA.r.calles.forEach((c, i) => { if (IA.sel['c' + i] === false) return; g.strip(c.puntos.map(planoPt), c.ancho || 9, 0.14, P.acc, 0.5); }); showPrev(g); }
+function iaCrear() { const R = IA.r; if (!R) return; let ng = 0, nc = 0;
+  R.galpones.forEach((q, i) => { if (IA.sel['g' + i] === false) return; const b = iaCaja(q); if (b.x1 - b.x0 < 3 || b.z1 - b.z0 < 3) return; let k = 1; while (NAVES.some(N => N.id === 'n' + k)) k++;
+    const N = { id: 'n' + k, code: 'G' + k, name: q.nombre || ({ oficina: 'Oficina', porteria: 'Portería' })[q.tipo] || 'Galpón ' + k, rubro: 'Del plano', x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1, h: q.alto || (q.tipo === 'galpon' ? 12 : 4), face: (b.x1 - b.x0) >= (b.z1 - b.z0) ? 'S' : 'E', custom: true };
+    prepNave(N); NAVES.push(N); buildNave(N); chipFor(N); ng++; });
+  R.calles.forEach((c, i) => { if (IA.sel['c' + i] === false) return; const w = [6, 9, 12, 18].reduce((a, b) => Math.abs(b - (c.ancho || 9)) < Math.abs(a - (c.ancho || 9)) ? b : a);
+    ED.roads.push({ id: nextId('CL-', ED.roads.map(r => r.id)), name: c.nombre || 'Calle ' + (ED.roads.length + 1), w, pts: c.puntos.map(planoPt).map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]) }); nc++; });
+  IA.r = null; IA.sel = {}; clearPrev(); rebuildBlank(); edSave(); renderPlano(); log('info', `Del plano: ${ng} ${ng === 1 ? 'edificio' : 'edificios'} y ${nc} ${nc === 1 ? 'calle' : 'calles'}`); toast(`Listo: ${ng} ${ng === 1 ? 'edificio' : 'edificios'} y ${nc} ${nc === 1 ? 'calle' : 'calles'}. Revisalos y ajustá alturas y portones en cada uno.`); }
+function planoImg() { if (/^data:image\/(jpeg|png|webp);base64,/.test(PHOTO.src)) return PHOTO.src; const im = PHOTO.img; if (!im) return ''; const k = Math.min(1, 2048 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+  c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.85); }
 function renderPlano() { const el = $('#planopanel'); if (!el) return; el.hidden = !(ED.on && (ED.tool === 'calle' || (BLANK && (ED.tool === 'plano' || ED.tool === 'escala'))));
   { const cat = document.getElementById('e3cat'), r = cat && !el.hidden && !cat.hidden && cat.getClientRects().length ? cat.getBoundingClientRect() : null, ok = r && r.width && r.right + 12 + 340 <= innerWidth - 12;
     const eb = document.getElementById('editbar'), hb = eb && !eb.hidden && eb.getClientRects().length ? eb.getBoundingClientRect() : null, t0 = ok ? Math.max(r.top, hb && hb.left < r.right + 12 + 340 && hb.right > r.right + 12 ? hb.bottom + 10 : 0) : 0;
@@ -2505,10 +2536,25 @@ function renderPlano() { const el = $('#planopanel'); if (!el) return; el.hidden
     if (ED.tool === 'escala') h += S.length < 2 ? `<p class="ehelp">Tocá ${S.length ? 'el segundo punto' : 'el primer punto'} de una medida que conozcas (por ejemplo, el largo de un galpón).</p>`
       : `<label class="ef"><span>Metros entre los dos puntos</span><input type="number" min="1" step="0.5" data-pp="real" placeholder="Ej.: 120"></label><div class="cact"><button class="btn pri" data-pp="apply">Aplicar escala</button></div>`;
     else h += `<div class="cact gbtns"><button class="btn pri" data-pp="escala">Marcar la escala</button><label class="btn">Cambiar<input type="file" accept="image/*" data-pp="file" hidden></label><button class="btn danger" data-pp="quitar">Quitar</button></div>
-      <p class="ehelp">Marcá la escala antes de dibujar: tocás dos puntos y escribís la distancia real.</p>`; }
+      <p class="ehelp">Marcá la escala antes de dibujar: tocás dos puntos y escribís la distancia real.</p>
+      <label class="ef"><span>Girar el plano · <output id="pprotv">${(pl.rot || 0)}°</output></span><input type="range" min="-180" max="180" step="0.5" value="${pl.rot || 0}" data-pp="rot" aria-label="Girar el plano"></label>
+      <div class="cact gbtns"><button class="btn" data-pp="rot90" data-v="-90" aria-label="Girar 90 grados a la izquierda">↺ 90°</button><button class="btn" data-pp="rot90" data-v="90" aria-label="Girar 90 grados a la derecha">↻ 90°</button><button class="btn" data-pp="rot0">Sin giro</button></div>
+      <p class="ehelp">Si los galpones del plano están torcidos, girá el plano hasta que queden derechos: así los marcás justos. Para marcar un galpón: «Galpón» en el catálogo, tocá una esquina y después la opuesta.</p>${iaHTML(pl)}`; }
   if (ED.roads.length) h += `<div class="pproads"><b>Calles</b>${ED.roads.map(R => `<div class="pprow"><input value="${escH(R.name)}" data-pr="${R.id}" aria-label="Nombre de la calle"><select data-prw="${R.id}">${[6, 9, 12, 18].map(w => `<option value="${w}" ${R.w === w ? 'selected' : ''}>${w} m</option>`).join('')}</select><button class="x" data-prd="${R.id}" aria-label="Borrar ${escH(R.name)}">×</button></div>`).join('')}</div>`;
-  el.innerHTML = h; }
+  el.innerHTML = h; if (IA.r && !el.hidden && ED.tool === 'plano') iaPrev(); }
 function initBlankUI() { const el = $('#planopanel'); if (!el) return;
+  el.addEventListener('click', e => { const b = e.target.closest('[data-pp]'); if (!b) return; const a = b.dataset.pp, pl = ED.plano;
+    if (a === 'rot90' && pl) { let r = (pl.rot || 0) + +b.dataset.v; r = ((r + 540) % 360) - 180; pl.rot = r; rebuildBlank(); edSave(); renderPlano(); }
+    if (a === 'rot0' && pl) { pl.rot = 0; rebuildBlank(); edSave(); renderPlano(); }
+    if (a === 'iagiro' && pl && IA.r) { pl.rot = -(IA.r.giro || 0); rebuildBlank(); edSave(); renderPlano(); }
+    if (a === 'iaesc' && pl && IA.r && IA.r.medida) { ED.scale = [planoPt(IA.r.medida.desde), planoPt(IA.r.medida.hasta)]; applyScale(IA.r.medida.metros); setTool('plano'); }
+    if (a === 'iano') { IA.r = null; IA.err = ''; IA.sel = {}; clearPrev(); renderPlano(); }
+    if (a === 'iacrear') iaCrear();
+    if (a === 'ia' && HOST && HOST.leerPlano && IA.st !== 'leyendo') { const img = planoImg(); if (!img) return; IA.st = 'leyendo'; IA.err = ''; renderPlano();
+      Promise.resolve(HOST.leerPlano(img)).then(r => { IA.st = ''; if (!r || r.error) { IA.err = (r && r.error) || 'No se pudo leer el plano.'; IA.r = null; } else { IA.r = { galpones: r.galpones || [], calles: r.calles || [], giro: r.giro || 0, medida: r.medida || null, nota: r.nota || '' }; IA.sel = {}; } renderPlano(); })
+        .catch(er => { IA.st = ''; IA.err = 'No se pudo leer el plano: ' + (er && er.message || er); renderPlano(); }); } });
+  el.addEventListener('input', e => { const t = e.target; if (t.dataset.pp === 'rot' && ED.plano) { ED.plano.rot = +t.value; const o = el.querySelector('#pprotv'); if (o) o.textContent = t.value + '°'; rebuildBlank(); if (IA.r) iaPrev(); } });
+  el.addEventListener('change', e => { const t = e.target; if (t.dataset.pp === 'rot') { edSave(); renderPlano(); } if (t.dataset.pia) { IA.sel[t.dataset.pia] = t.checked; iaPrev(); } });
   el.addEventListener('click', e => { const b = e.target.closest('[data-pp],[data-prd]'); if (!b) return; const a = b.dataset.pp;
     if (b.dataset.prd) { const i = ED.roads.findIndex(r => r.id === b.dataset.prd); if (i >= 0) { ED.roads.splice(i, 1); rebuildBlank(); edSave(); renderPlano(); } return; }
     if (a === 'close') setTool('sel');
@@ -5597,6 +5643,9 @@ html.ubicando canvas{cursor:crosshair!important}`; document.head.appendChild(css
   for (const [id, c] of Object.entries(CAJ)) if (FIBT[c.t] && !DEV.some(d => d.id === id)) { const d = { id, type: c.t, kind: FIBT[c.t][0], name: c.nombre || '', loc: c.lugar || '', status: 'ok', custom: true, cli: 0, hoy: 0, x: hm.tx + 5, z: hm.tz + 5, y: 0, sinUbicar: true }; DEV.push(d); devObj(d); }
   edState = (o => function () { const st = o(); for (const d of DEV) if (FIBT[d.type]) { const c = CAJ[d.id] = CAJ[d.id] || { t: d.type, cap: FIBT[d.type][1], fus: [] }; c.t = d.type; if (d.name) c.nombre = d.name; if (!c.lugar && d.loc) c.lugar = String(d.loc).split(' · ')[0]; }
     for (const id of Object.keys(CAJ)) if (!DEV.some(d => d.id === id)) delete CAJ[id]; st.cajas = CAJ; return st; })(edState);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && ED.box) { ED.box = null; clearPrev(); } }, true);
+  if (TOOLS.nave) TOOLS.nave.hint = 'Arrastrá de una esquina a la opuesta, o tocá una esquina y después la otra. Sobre un plano, seguí el borde del galpón.';
+  window.__plano = { IA, planoPt, iaCrear, get naves() { return NAVES; }, get roads() { return ED.roads; }, get plano() { return ED.plano; }, tool: t => setTool(t), inicio: () => flyTo(HOME(), 0.01) };
   window.__doc = { ubicar, DEV, CABS, sel: () => SEL, ed: () => ED.on, mover: (id, dx) => { const d = DEV.find(x => x.id === id); d.x += dx; devObj(d); markMoved(d); edSave(); } }; }
 /* pisos del galpón: la planta baja y un piso por cada entrepiso. El plano muestra uno a la vez y cada equipo sabe en qué piso está */
 const pisosDe = N => [{ id: '', n: 'Planta baja', y: 0 }].concat(innerOf(N).items.filter(it => it.k === 'mez').sort((a, b) => mzH(a) - mzH(b)).map(m => ({ id: m.id, n: m.name, y: mzH(m) + 0.25, m })));

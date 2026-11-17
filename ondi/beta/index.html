@@ -688,7 +688,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=48" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=49" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -709,7 +709,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
   let data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; data = docBase(st, data);
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
   MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
-    plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url),
+    plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url), leerPlano: siteEd() ? img => leerPlano(st, img) : null,
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
     equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
       return { at: E.at, errs: E.errs.map(x => BR[x.k].n + ': ' + x.m), list: [
@@ -720,13 +720,20 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=8' : 'maqueta.html?v=48'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=8' : 'maqueta.html?v=49'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
+// leer el plano con IA (función ondi-plano-ia): devuelve galpones y calles propuestos; la maqueta los muestra y se eligen
+async function leerPlano(st, img) { try { const r = await SB.functions.invoke('ondi-plano-ia', { body: { org: st.org_id, imagen: img } });
+    if (!r.error) return r.data || { error: 'La IA no devolvió nada.' }; const ctx = r.error.context; let m = '';
+    if (ctx && typeof ctx.json === 'function') { try { m = ((await ctx.json()) || {}).error || ''; } catch (e) {} }
+    if (!m && (/not found|404|Failed to send/i.test(String(r.error.message || r.error)) || (ctx && ctx.status === 404))) m = 'La lectura con IA todavía no está publicada en el servidor.';
+    return { error: m || 'No se pudo leer el plano: ' + (r.error.message || r.error) }; }
+  catch (e) { return { error: 'No se pudo leer el plano: ' + errTxt(e) }; } }
 async function savePlano(st, url) { if (!siteEd()) return; MAQ.plano = url; setSave('Guardando el plano…');
   const r = url ? await SB.from('ondi_planos').upsert({ org_id: st.org_id, site_id: st.id, data: url }, { onConflict: 'org_id,site_id' }) : await SB.from('ondi_planos').delete().eq('org_id', st.org_id).eq('site_id', st.id);
   setSave(r.error ? 'No se pudo guardar el plano: ' + errTxt(r.error) : url ? 'Plano guardado' : 'Plano quitado'); }
