@@ -307,7 +307,10 @@ select option{background:var(--solid);color:var(--ink)}
 .doce time{color:var(--muted);font:500 12.5px var(--f-mono,ui-monospace);padding-top:2px}.doce span{color:var(--muted);font-size:12.5px;grid-column:2}
 .doce button{border:0;background:none;color:var(--accent-ink,var(--accent));font:600 12.5px var(--f-body);padding:0;cursor:pointer}
 .docd{font:600 13px var(--f-body);margin:14px 0 2px}
-.docback{display:none}
+.docback{display:none}.docp .red-eb{display:none}.docp .red{max-height:none}.docp .red-b svg{width:16px;height:16px}
+#docbox.full{position:fixed;inset:0;z-index:1000;background:var(--bg,#0d1116);padding:12px;overflow:hidden}#docbox.full .doc{margin:0;height:100%;grid-template-columns:270px minmax(0,1fr)}
+#docbox.full .docl{max-height:calc(100dvh - 24px);top:0}#docbox.full .docp{min-height:0;height:calc(100dvh - 24px)}#docbox.full .docp .red{height:calc(100dvh - 26px)}
+html.docfull body{overflow:hidden}
 @media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr)}.docl{position:static;max-height:none}.doc.abierto .docl{display:none}.doc:not(.abierto) .docp{display:none}
   .docback{display:inline-flex;margin-bottom:8px}.docp .red-tabs{flex-wrap:wrap}.docp,.docp .red{min-height:0;height:auto}}
 
@@ -656,7 +659,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=42" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=43" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -687,7 +690,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=6' : 'maqueta.html?v=42'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=6' : 'maqueta.html?v=43'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -1153,7 +1156,7 @@ function docRacks(W, idx) { W = W || {}; const out = new Map();
   else { const fuera = new Set(W.removed || []); for (const r of ((idx || W.docidx || {}).racks || [])) if (!fuera.has(r.id)) out.set(r.id, { ...r });
     for (const d of (W.devs || [])) if (['gab', 'wr', 'rack'].includes(d.type)) out.set(d.id, { ...(out.get(d.id) || {}), id: d.id, tipo: d.type, nombre: d.name || '', lugar: (d.loc || '').split(' · ')[0], sin: !!d.sinUbicar });
     for (const id of Object.keys(W.cabs || {})) if (!out.has(id)) out.set(id, { id, tipo: /^G/.test(id) ? 'gab' : 'wr', nombre: '', lugar: '' }); }
-  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
+  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; if (c && c.nombre) r.nombre = c.nombre; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
   return [...out.values()].sort((a, b) => (a.lugar || '~').localeCompare(b.lugar || '~', 'es') || a.id.localeCompare(b.id, 'es', { numeric: true })); }
 function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.cabs) || {}, CAT = (window.OndiRed && OndiRed.CAT) || {};
   const itN = (c, iid) => { const it = c && c.items.find(x => x.iid === iid); return it ? (it.name || (CAT[it.type] || {}).n || it.type) : 'un equipo'; };
@@ -1164,6 +1167,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     if (!cb) { out.push({ r: id, m: `Sacó ${id}` }); continue; }
     const c0 = ca || { cap: cb.cap, items: [], links: [], ports: {} };
     if (ca && ca.cap !== cb.cap) out.push({ r: id, m: `Cambió ${id} a ${cb.cap}U` });
+    if (ca && (ca.nombre || '') !== (cb.nombre || '')) out.push({ r: id, m: cb.nombre ? `Le puso de nombre «${cb.nombre}» a ${id}` : `Le sacó el nombre a ${id}` });
     const ia = new Map(c0.items.map(x => [x.iid, x])), ib = new Map(cb.items.map(x => [x.iid, x]));
     for (const [k, x] of ib) { const y = ia.get(k); if (!y) { out.push({ r: id, m: `Puso ${itN(cb, k)} en la U${x.u} de ${id}` }); continue; }
       if (y.type !== x.type) out.push({ r: id, m: `Cambió ${(CAT[y.type] || {}).n || y.type} por ${(CAT[x.type] || {}).n || x.type} en la U${x.u} de ${id}` });
@@ -1190,7 +1194,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=5'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=6'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1208,12 +1212,23 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
     guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
     titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? c.cap + 'U' : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
-    racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]) }; }
+    racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
+    acciones: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid), full = $('#docbox') && $('#docbox').classList.contains('full');
+      return `<button class="red-b docback" data-r="acc" data-v="volver">${DIC.back}<span>Racks</span></button><button class="red-b" data-r="acc" data-v="full" title="${full ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}">${full ? DIC.chico : DIC.grande}<span>${full ? 'Salir' : 'Pantalla completa'}</span></button>`
+        + (r && r.sin ? `<button class="red-b pri" data-r="acc" data-v="ir">Ubicar en la maqueta</button>` : `<button class="red-b" data-r="acc" data-v="ir">Ver en la maqueta</button>`) + (siteEd() ? `<button class="red-b" data-r="acc" data-v="borrar">Sacar</button>` : ''); },
+    accion: (v, b) => { if (v === 'volver') { D.cid = null; docPaint(); } else if (v === 'ir') docIr(D.cid); else if (v === 'full') docFull(); else if (v === 'borrar') { if (b.dataset.ok !== '1') { const c = W.cabs[D.cid] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(D.cid); } } }; }
+// pantalla completa: la documentación ocupa toda la pantalla (sin el menú de la app); Esc vuelve
+function docFull(on) { const box = $('#docbox'); if (!box) return; on = on == null ? !box.classList.contains('full') : on; box.classList.toggle('full', on); document.documentElement.classList.toggle('docfull', on);
+  try { if (on && !document.fullscreenElement && box.requestFullscreen) box.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} docPaint(); }
+document.addEventListener('fullscreenchange', () => { const box = $('#docbox'); if (!document.fullscreenElement && box && box.classList.contains('full')) docFull(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#docbox') && $('#docbox').classList.contains('full') && !document.fullscreenElement && !e.target.closest('input,textarea,select')) docFull(false); });
 function docSave() { const D = S.doc, st = S.site; if (!D || !siteEd()) return; D.saving = true; try { queueSave(st, docCl(D.W)); } finally { D.saving = false; } docList(); }
 function docIr(id) { S.maqIr = id; S.tab = 'maqueta'; render(); }
 const DIC = { gab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M17 10v4"/></svg>',
   wr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>',
   hist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  grande: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  chico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' };
 function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim().toLowerCase(), F = R.filter(r => !q || [r.id, r.nombre, r.lugar].join(' ').toLowerCase().includes(q)), ed = siteEd();
   const lugares = [...new Set(R.map(r => r.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
@@ -1246,8 +1261,7 @@ function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) retur
   if (D.cid && !D.W.cabs[D.cid] && !R.some(r => r.id === D.cid)) D.cid = null;
   if (!D.cid && !D.hist && R.length && innerWidth > 860) D.cid = R[0].id;
   const r = R.find(x => x.id === D.cid);
-  box.innerHTML = `<div class="doc ${D.cid || D.hist ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.cid ? `<div class="doch" style="padding:12px 14px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn sm docback" data-dk="volver">${DIC.back}Racks</button>
-      <span class="grow"></span>${r && r.sin ? `<button class="btn sm pri" data-dk="ir" data-v="${esc(D.cid)}">Ubicar en la maqueta</button>` : `<button class="btn sm" data-dk="ir" data-v="${esc(D.cid)}">Ver en la maqueta</button>`}${siteEd() ? `<button class="btn sm" data-dk="borrar" data-v="${esc(D.cid)}">Sacar</button>` : ''}</div><div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
+  box.innerHTML = `<div class="doc ${D.cid || D.hist ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
   if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
 function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
 function docCrear() { const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
