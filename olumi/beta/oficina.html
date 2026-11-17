@@ -1510,11 +1510,13 @@ const AVV={
         mujer:['#6e2e37','#2f3d55','#3d5a4a','#55473e','#7a5a8a','#2b2b30'],
         tecnico:['#3c6db0','#24334f','#56595f','#b4561f','#2f5d43'],
         polo:['#d9d9dc','#FF7A1A','#203150','#3c3c42','#7a2030'],
+        lisa:['#e9e6df','#7a2e33','#2f3d55','#3d5a4a','#b9a78c','#a8483a'],   // remera de mujer sin logo (remera_lisa.py), con jean
+        remera:['#e9e6df','#2b2d33','#3d5d8f','#6e7f5a','#8a2f3a','#c9b48a'],   // remeras (17/11: más ropa distinta)
         sueter:['#7a2e33','#2f3d55','#b9a78c','#3d5a4a','#5a4a3e','#8a8f98','#a8483a']},   // suéter tejido (mujer con pantalón, 15/11)
   // técnicos con equipo de seguridad: casco (null = el blanco del modelo), chaleco (null = el amarillo del modelo) y pantalón; sin esto
   // dos técnicos juntos parecían mellizos (el chaleco y el casco tapan casi toda la ropa)
   // en la textura de «camisa y jean» (male_casualsuit01) el jean es la columna del medio: se tiñe solo la camisa
-  MASCARA:{casual:'(vMapUv.x<.34&&vMapUv.y>.30)||(vMapUv.x>.72&&vMapUv.y>.20)'},
+  MASCARA:{casual:'(vMapUv.x<.34&&vMapUv.y>.30)||(vMapUv.x>.72&&vMapUv.y>.20)',lisa:'vMapUv.y<.44||(vMapUv.x>.72&&vMapUv.y>.55&&vMapUv.y<.83)'},
   CASCO:[null,'#2f6fd6','#f2c200','#ff7a1a'],CHALECO:[null,'#ff6a00'],PANTALON:['#2b2f38','#3a3f4a','#4a4234','#1f2a3d'],
   BOTAS:['#2a2523','#4a3527','#1d1d20','#6a5444']};   // las botas del modelo son blancas: negras o marrones, cada una la suya
 function avvMedia(tex){try{const im=tex&&tex.image;if(!im)return .2;const c=document.createElement('canvas');c.width=c.height=12;const g=c.getContext('2d',{willReadFrequently:true});
@@ -1538,7 +1540,7 @@ function avVaria(o,p,md){try{const id=String(p.id||p.name||p.n||'x'),h=hsh(id+'�
     const si=SKIN.indexOf(L.skin),pi=si>=0&&(eleg('skin')||!APP)?si:h%2,piel=AVV.PIEL[pi],pelo=L.hair&&/^#[0-9a-f]{6}$/i.test(L.hair)?L.hair:AVV.PELO[(h>>>4)%AVV.PELO.length];
     const ropa=k=>eleg('top')&&L.top&&k!=='tecnico'?L.top:AVV.ROPA[k][(h>>>8)%AVV.ROPA[k].length],hecho=new Map();
     o.g.traverse(x=>{if(!x.isMesh||!x.material||Array.isArray(x.material))return;const n=(x.material.name||'')+' '+(x.name||'');
-      let tipo=/body/i.test(n)?'piel':/short|ponytail|hair|pelo|bob|braid|bun/i.test(n)?'pelo':/elegantsuit/i.test(n)?'mujer':/casualsuit/i.test(n)?'casual':/worksuit/i.test(n)?'tecnico':/polo/i.test(n)?'polo':
+      let tipo=/body/i.test(n)?'piel':/short|ponytail|hair|pelo|bob|braid|bun|afro|long0/i.test(n)?'pelo':/elegantsuit/i.test(n)?'mujer':/\.lisa/i.test(n)?'lisa':/(?<!fe)male_casualsuit01/i.test(n)?'casual':/casualsuit/i.test(n)?'':/t-?shirt/i.test(n)?'remera':/worksuit/i.test(n)?'tecnico':/polo/i.test(n)?'polo':
         /casco/i.test(n)?'casco':/chaleco/i.test(n)?'chaleco':/pants/i.test(n)?'pantalon':/sweater/i.test(n)?'sueter':/boot/i.test(n)?'botas':'';
       const epp=tipo==='casco'?AVV.CASCO[(h>>>12)%AVV.CASCO.length]:tipo==='chaleco'?AVV.CHALECO[(h>>>14)%AVV.CHALECO.length]:tipo==='pantalon'?AVV.PANTALON[(h>>>16)%AVV.PANTALON.length]:tipo==='botas'?AVV.BOTAS[(h>>>18)%AVV.BOTAS.length]:undefined;
       if(!tipo||epp===null)return;let m=hecho.get(x.material);if(!m){m=x.material.clone();hecho.set(x.material,m)}x.material=m;

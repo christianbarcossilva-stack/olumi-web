@@ -62,3 +62,11 @@ Christian: «quiero que aprendas a hacer esto, porque los clientes nos pueden pe
 5. Lámina contra la referencia (pedido de Christian: comparar cada hora): `blender -b x.blend --python vueltas.py -- lamina.png 700 20 [tinte=parte:#hex,…]` saca frente, tres cuartos, costado y espalda con fondo gris de estudio.
 
 **Lo que falta para la calidad que pide Christian:** el cuerpo y la cara de origen. MakeHuman y Rocketbox se ven viejos («parecen de los 90», «hacés chinos»). La entrada tiene que venir de un generador con IA a partir de imágenes nuestras (no de Google, por derechos) o de fotos del equipo con su permiso. Rocketbox bajado en la Mac: `Descargas/Unity Tech/3D/Olumi3D/rocketbox/` (5 personas).
+
+## Variedad 17/11 (Christian: «con ropa variada, para que no sean todos iguales las caras ni la ropa»)
+- 6 fichas nuevas: `of-h5` (joven, chomba y cargo), `of-h6` (más grande, camisa a rayas y jean), `of-h7` (afrouruguayo, remera y pantalón de vestir), `of-m5` (remera y jean), `of-m6` (remera, pantalón de lana y botas, rodete), `of-m7` (afrouruguaya, blusa a rayas y pollera). Catálogo versión 10: 12 personas.
+- Sin rasgos asiáticos (Christian 15/11: «me hacés chinos, somos de Uruguay»).
+- Texturas más chicas para los nuevos: `glb_liviano.py crudo.glb final.glb 1024 512 512 512` (cara a 1024, ropa y pelo a 512): ~1,7 MB cada uno.
+- `remera_lisa.py crudo.glb lisa.glb` (antes de glb_liviano): la remera de `female_casualsuit01` trae el logo de MakeHuman y vivos naranjas; queda gris claro con la trama de la tela y la oficina la tiñe por persona (`AVV.ROPA.lisa`, máscara `vMapUv.y<.44` + mangas). El relieve del logo se aplana en el mapa normal.
+- `female_casualsuit02` es remera con logo y short: no va en la oficina.
+- `afro01` y `cortu_short_messy_hair` se ven de bloques o de púas: no se usan.
