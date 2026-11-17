@@ -4,7 +4,7 @@
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
 import { THREE, crearMotor } from './nucleo.js';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=6';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo } from './piezas.js?v=7';
 import { ve, dominio, DOMINIOS } from './plano.js?v=2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -82,13 +82,17 @@ export async function abrirMaqueta(o) {
   if (host && host.equipos) { leerEquipos(true); setInterval(() => leerEquipos(true), 60000); }
 
   // ---------- modelos del catálogo de Olumi (personas y vehículos) ----------
-  const GLB = {}; let cat = null, loader = null;
-  async function cargarGLB(tipo, id, g, color) { try { if (!loader) { const { GLTFLoader } = await import('three/addons/GLTFLoader.js'); loader = new GLTFLoader(); }
+  const GLB = {}, PERS = new Set(); let cat = null, loader = null, AVM = null, avAcc = 0;
+  async function cargarGLB(tipo, id, g, color, pid) { try { if (!loader) { const { GLTFLoader } = await import('three/addons/GLTFLoader.js'); loader = new GLTFLoader(); }
       cat = cat || await (await fetch(o.catalogo + 'catalogo.json')).json(); const it = (cat[tipo] || []).find(x => x.id === id); if (!it) return;
       GLB[id] = GLB[id] || new Promise((ok, no) => loader.load(o.catalogo + it.archivo, x => ok(x.scene), undefined, no)); const base = await GLB[id];
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
-      if (tipo === 'avatares') { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); }
-      g.clear(); g.add(m); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
+      let pon = m;
+      // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=1'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+        if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; AVM.avPose(ob, 'idle', 0.016, { x: 0, y: 0, t: ob.semilla }); ob.sync(); ob.dueño = g; PERS.add(ob); }
+        else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
+      g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
 
   // ---------- armar la escena ----------
   function rehacer(p) { const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); }
@@ -285,6 +289,9 @@ export async function abrirMaqueta(o) {
       o.alGuardar && o.alGuardar(s); }, 900); }
 
   // ---------- animación de equipos caídos y medición ----------
+  // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
+  motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
+    for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla }); ob.sync(); } return true; });
   motor.cada.push((dt, t) => { let x = false; for (const p of E.piezas) { const g = objs.get(p.id); if (g && g.userData.estado === 'crit' && g.userData.aro) { g.userData.aro.material.opacity = 0.45 + 0.45 * Math.sin(t * 0.008); x = true; } } return x; });
   if (/[?&]medir=1/.test(location.search)) { const s = $('#mstats'); s.hidden = false; setInterval(() => { const m = motor.stats; s.textContent = `${m.fps} c/s · ${m.ms} ms · ${m.dibujos} dibujos · ${Math.round(m.triangulos / 1000)} mil triángulos`; }, 700); }
   addEventListener('message', e => { const d = e.data || {}; if (d.tema) motor.ponerTema(d.tema === 'dark' || d.tema === 'oscuro' ? 'oscuro' : 'claro'); });
