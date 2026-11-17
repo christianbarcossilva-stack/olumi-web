@@ -5503,6 +5503,15 @@ pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 8)
   add('EDI-MB', 'edif', 408, 657, { w: 9, d: 7, h: 3.6, pisos: 0, name: 'Sala de motobombas' });
   if (!DEV.some(d => /motobombas/i.test(d.loc || ''))) { const [x, z] = px(401.5, 651); DEV.push({ id: nextId('C-', DEV.map(d => d.id)), type: 'cam', kind: 'Bullet 4 MP con IR', mount: 'pole', ph: 5, x, y: 0, z, yaw: -0.5, name: 'Cámara motobombas', loc: 'Sala de motobombas · atrás de E1', status: 'ok', custom: true }); }
   if (!ED.roads.some(r => r.muro)) ED.roads.push({ id: nextId('CL-', ED.roads.map(r => r.id)), name: 'Muro medianero', w: 0.3, kind: 'alambrado', muro: true, nolbl: 1, pts: pxs([[143, 733.5], [214, 733.5], [214, 906]]) }); })(pzSeed);
+pzSeed = (o => function () { const s0 = ED.seed || 0; o(); if (BLANK || s0 >= 9) return; ED.seed = 9;
+  const cs = PROPS.find(q => q.id === 'CS-01'), bz = PROPS.find(q => q.id === 'BZ-01'); if (!cs || !bz || Math.hypot(cs.x + 350, cs.z - 148.8) > 4) return;
+  const w2 = (cs.w || 8.5) / 2, d2 = (cs.d || 3.4) / 2;
+  const dSeg = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1))); return Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz); };
+  const pisa = r => { for (let i = 0; i <= 8; i++) for (let j = 0; j <= 4; j++) { const x = cs.x - w2 + 2 * w2 * i / 8, z = cs.z - d2 + 2 * d2 * j / 4; for (let k = 0; k + 1 < r.pts.length; k++) if (dSeg(x, z, r.pts[k], r.pts[k + 1]) < r.w / 2) return true; } return false; };
+  const ac = ED.roads.find(r => r.name === 'Acceso' && !r.kind), ca = ED.roads.find(r => r.name === 'Carril de la balanza' && !r.kind); let n = 0;
+  if (ac && pisa(ac)) { const zs = cs.z + d2 + 0.6 + 4.75; ac.w = 9.5; ac.pts = [ac.pts[0], [-427, ac.pts[0][1] + 0.5], [-367, zs], [cs.x + 10, zs], [cs.x + 32, zs - 6], [cs.x + 41, zs - 18], ac.pts[ac.pts.length - 1]]; n++; }
+  if (ca && pisa(ca)) { ca.w = 8; const xe = ca.pts[ca.pts.length - 1][0]; ca.pts = [[ca.pts[0][0], bz.z], [xe, bz.z], [cs.x + 36, bz.z + 1.5]]; /* sale y se junta con el acceso antes de la rotonda */ n++; }
+  if (n) log('info', 'La calle de acceso ya no pasa por arriba de la casilla de la balanza'); })(pzSeed);
 
 /* ---------- gráficos v25 (2): luz de los focos de noche y control de calidad automático ----------
    De noche, cada foco y cada andén dejan un charco de luz cálida en el piso y en lo que tienen cerca (un mapa de luz visto desde arriba, que se rehace cuando se mueve un foco).
