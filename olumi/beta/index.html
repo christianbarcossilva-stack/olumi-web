@@ -872,10 +872,64 @@ html.d2[data-paleta] select:not([multiple]){-webkit-appearance:none;appearance:n
 .jac.on{color:var(--accent-ink,var(--accent))}
 .jac.on .ic{color:var(--accent)}
 /* fin 1.52h */
+/* 1.52i */
+.panel.idioma .seg.idsel{display:grid;grid-template-columns:repeat(3,1fr);height:auto;gap:2px;border-radius:24px;width:100%}
+.panel.idioma .seg.idsel button{min-width:0;justify-content:center;text-align:center;border-radius:20px}
+@media (min-width:900px){.panel.idioma .seg.idsel{grid-template-columns:repeat(6,1fr);border-radius:999px}.panel.idioma .seg.idsel button{border-radius:999px}}
+/* fin 1.52i */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
 </style>
+<script>/* === 1.52i · idiomas === */
+// 1.52i · Idiomas (Christian 16/11 23:10: «inglés, portugués, francés, alguno asiático y de la India»).
+// La app está escrita en español; esta capa traduce lo que se ve (textos, botones, avisos, títulos y textos de ayuda) con un
+// diccionario por idioma (i18n/<idioma>.json, se baja una sola vez y queda guardado). Los datos de cada empresa (clientes, notas, nombres)
+// no se tocan. Fechas y números salen en el formato del idioma elegido.
+// Idioma: el que se elija en Ajustes → Apariencia; si no, el del teléfono; si no hay diccionario para ese idioma, español.
+var OLUMI_IDIOMAS=[['es','Español'],['en','English'],['pt','Português'],['fr','Français'],['zh','中文'],['hi','हिन्दी']];
+(()=>{
+  const LOC={es:'es-UY',en:'en-US',pt:'pt-BR',fr:'fr-FR',zh:'zh-CN',hi:'hi-IN'};
+  const elegido=()=>{try{const v=localStorage.getItem('olumi.idioma');if(v)return v}catch(_){}const n=(navigator.language||'es').slice(0,2).toLowerCase();return LOC[n]?n:'es'};
+  let L=elegido(),DIC=null,PAT=null;window.olumiIdioma=()=>L;
+  document.documentElement.lang=L;
+  // fechas y números en el formato del idioma (la app los pide en es-UY)
+  if(L!=='es'){const loc=LOC[L],fix=a=>(a==='es-UY'||a==='es'||a===undefined)?loc:a;
+    const d1=Date.prototype.toLocaleDateString,d2=Date.prototype.toLocaleString,d3=Date.prototype.toLocaleTimeString,n1=Number.prototype.toLocaleString;
+    Date.prototype.toLocaleDateString=function(a,b){return d1.call(this,fix(a),b)};Date.prototype.toLocaleString=function(a,b){return d2.call(this,fix(a),b)};
+    Date.prototype.toLocaleTimeString=function(a,b){return d3.call(this,fix(a),b)};Number.prototype.toLocaleString=function(a,b){return n1.call(this,fix(a),b)};
+    for(const k of ['NumberFormat','DateTimeFormat']){const O=Intl[k];const F=function(a,b){return new O(fix(a),b)};F.prototype=O.prototype;F.supportedLocalesOf=O.supportedLocalesOf.bind(O);Intl[k]=F}}
+  const norm=s=>s.replace(/\s+/g,' ').trim();
+  function traduce(s){if(!DIC)return null;const k=norm(s);if(!k||k.length>400)return null;let t=DIC[k];if(t!=null)return t;
+    // con números adentro: «6 abiertos» → «{n} abiertos»
+    if(/\d/.test(k)){const nums=[];const m=k.replace(/\d+(?:[.,]\d+)*/g,x=>{nums.push(x);return'{n}'});const t2=DIC[m];if(t2!=null){let i=0;return t2.replace(/\{n\}/g,()=>nums[i++]??'').replace(/\{([1-9])\}/g,(_,q)=>nums[q-1]??'')}}
+    // partes separadas por « · »
+    if(k.includes(' · ')){const ps=k.split(' · ');let alguna=false;const out=ps.map(p=>{const x=traduce(p);if(x!=null){alguna=true;return x}return p});if(alguna)return out.join(' · ')}
+    if(PAT)for(const [re,rep] of PAT){if(re.test(k))return k.replace(re,rep)}
+    return null}
+  const ATR=['placeholder','title','aria-label'];
+  const NO=new Set(['SCRIPT','STYLE','TEXTAREA','CODE','PRE']);
+  function nodo(n){
+    if(n.nodeType===3){const p=n.parentElement;if(!p||NO.has(p.tagName)||p.closest('[data-noi18n],[contenteditable="true"],.rte'))return;const v=n.nodeValue;if(!v||!/[A-Za-zÁÉÍÓÚáéíóúñÑ¿¡]/.test(v))return;
+      if(n.__i18n===v)return;const t=traduce(v);if(t!=null){const lead=v.match(/^\s*/)[0],tail=v.match(/\s*$/)[0];const nv=lead+t+tail;n.__i18n=nv;n.nodeValue=nv}return}
+    if(n.nodeType!==1||NO.has(n.tagName)||n.closest&&n.closest('[data-noi18n]'))return;
+    for(const a of ATR){const v=n.getAttribute&&n.getAttribute(a);if(v&&n['__i18n'+a]!==v){const t=traduce(v);if(t!=null){n['__i18n'+a]=t;n.setAttribute(a,t)}}}
+    if(n.tagName==='INPUT'&&(n.type==='button'||n.type==='submit')&&n.value){const t=traduce(n.value);if(t!=null)n.value=t}
+    const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);let x;while((x=w.nextNode())){if(x.nodeType===3)nodo(x);else for(const a of ATR){const v=x.getAttribute(a);if(v&&x['__i18n'+a]!==v){const t=traduce(v);if(t!=null){x['__i18n'+a]=t;x.setAttribute(a,t)}}}}}
+  let cola=new Set(),prog=0;const pasar=()=>{prog=0;const l=[...cola];cola.clear();l.forEach(nodo)};
+  const obs=new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData')cola.add(m.target);else m.addedNodes.forEach(x=>cola.add(x))}pasar()});
+  async function cargar(){if(L==='es')return;let txt=null;const K='olumi.i18n.'+L;
+    try{const r=await fetch('i18n/'+L+'.json',{cache:'no-cache'});if(r.ok){txt=await r.text();try{localStorage.setItem(K,txt)}catch(_){}}}catch(_){}
+    if(!txt)try{txt=localStorage.getItem(K)}catch(_){}
+    if(!txt)return;try{const j=JSON.parse(txt);DIC=j.t||j;PAT=(j.p||[]).map(([a,b])=>[new RegExp(a),b])}catch(e){return}
+    nodo(document.body);obs.observe(document.body,{childList:true,subtree:true,characterData:true})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',cargar);else cargar();
+  window.olumiCambiarIdioma=k=>{try{localStorage.setItem('olumi.idioma',k)}catch(_){}location.reload()};
+  // panel propio en Ajustes → Apariencia: título en el idioma actual y cada idioma con su propio nombre (así lo encuentra quien no lee español)
+  window.olumiIdiomaSel=()=>{const T={es:['Idioma','La app se muestra en este idioma en este dispositivo. Tus datos no se traducen.'],en:['Language','The app is shown in this language on this device. Your data is not translated.'],pt:['Idioma','O app aparece neste idioma neste aparelho. Seus dados não são traduzidos.'],fr:['Langue','L\'app s\'affiche dans cette langue sur cet appareil. Vos données ne sont pas traduites.'],zh:['语言','此设备上的应用将以该语言显示。你的数据不会被翻译。'],hi:['भाषा','इस डिवाइस पर ऐप इस भाषा में दिखता है। आपका डेटा अनुवादित नहीं होता।']}[L]||['Idioma',''];
+    return `<div class="panel ap idioma" data-noi18n><h3>${T[0]}</h3><div class="seg idsel" role="group" aria-label="${T[0]}">${OLUMI_IDIOMAS.map(([k,n])=>`<button type="button" aria-pressed="${k===L}" class="${k===L?'on':''}" lang="${k}" onclick="olumiCambiarIdioma('${k}')">${n}</button>`).join('')}</div><p class="hint" style="margin:6px 0 0">${T[1]}</p></div>`};
+})();
+/* === fin 1.52i === */</script>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
 <title>Olumi</title>
@@ -9694,7 +9748,7 @@ function apHtml(){const g=k=>{try{return localStorage.getItem(k)||''}catch(e){re
   const SW=[['','De la empresa'],['#ffc93c','Ámbar'],['#ff9f0a','Naranja'],['#ff453a','Rojo'],['#ff375f','Rosa'],['#bf5af2','Violeta'],['#5e5ce6','Índigo'],['#0a84ff','Azul'],['#64d2ff','Celeste'],['#30d158','Verde'],['#8e8e93','Grafito']];
   const FO=[['auto','Del diseño'],['liso','Liso'],['maqueta','Tu oficina'],...(im.logo?[['logo','Logo de la empresa']]:[]),...(im.empresa?[['empresa','Foto de la empresa']]:[]),...(g('olumi.fondo.foto')?[['foto','Tu foto']]:[])];
   return`<div class="vhead" id="ap" style="margin-top:34px"><div><h1>Apariencia</h1><p class="sub">Cómo ves Olumi en este dispositivo. No cambia nada para los demás.</p></div></div>
-  <div class="panel ap"><h3>Día y noche</h3>${themeSeg()}<p class="hint" style="margin:6px 0 0">Automático: claro de 7 a 19 h y oscuro el resto del día.</p>
+  ${typeof olumiIdiomaSel==='function'?olumiIdiomaSel():''}<div class="panel ap"><h3>Día y noche</h3>${themeSeg()}<p class="hint" style="margin:6px 0 0">Automático: claro de 7 a 19 h y oscuro el resto del día.</p>
   <h3>Color</h3><div class="apc">${SW.map(([c,n])=>`<button type="button" class="${c?'':'emp'}" style="${c?'background:'+c:''}" data-ap="acento:${c}" aria-pressed="${ac===c}" aria-label="${n}" title="${n}"></button>`).join('')}</div>
   <h3>Fondo</h3><div class="apf">${FO.map(([k,n])=>`<button type="button" data-ap="fondo:${k}" aria-pressed="${fo===k}">${n}</button>`).join('')}<label>Subir una foto…<input type="file" accept="image/png,image/jpeg,image/webp" data-ap-foto></label></div>
   ${apTrHtml()}</div>`}
