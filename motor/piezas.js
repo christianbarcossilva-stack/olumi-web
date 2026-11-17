@@ -3,7 +3,7 @@
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
 import { THREE } from './nucleo.js';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { suelo as texSuelo, METROS, chapa, frente, matTex } from './texturas.js?v=3';
+import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=4';
 
 // ---------- materiales y formas compartidas ----------
 const MATS = new Map();
@@ -31,10 +31,16 @@ function cajaT(g, x0, y0, z0, x1, y1, z1, m, paso = 1, s = true) { const sx = Ma
   // caras en orden: +x, -x, +y, -y, +z, -z (4 vértices cada una): u y v a lo ancho y alto de cada cara
   const dim = [[sz, sy], [sz, sy], [sx, sz], [sx, sz], [sx, sy], [sx, sy]]; for (let f = 0; f < 6; f++) for (let i = 0; i < 4; i++) { const j = f * 4 + i; uv.setXY(j, uv.getX(j) * dim[f][0] / paso, uv.getY(j) * dim[f][1] / paso); }
   const k = new THREE.Mesh(geo, m); k.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); g.add(sombra(k, s)); return k; }
+// sombra de contacto: una mancha oscura y suave debajo de cada pila, más marcada donde se juntan (la luz no entra entre contenedores)
+let TEX_PIE = null;
+function sombraPie(pos, sx, sz) { if (!TEX_PIE) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.shadowColor = '#000'; x.shadowBlur = 14; x.shadowOffsetX = 400; x.fillStyle = '#000'; x.fillRect(24 - 400, 24, 80, 80); TEX_PIE = new THREE.CanvasTexture(c); }
+  const m = new THREE.MeshBasicMaterial({ color: 0x000000, map: TEX_PIE, transparent: true, opacity: oscuro() ? 0.3 : 0.38, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -8, fog: true });
+  const k = new THREE.InstancedMesh(PIE_GEO, m, pos.length), M4 = new THREE.Matrix4(); pos.forEach(([x, z], i) => k.setMatrixAt(i, M4.makeScale(sx, 1, sz).setPosition(x, 0.07, z))); k.renderOrder = 1; k.userData.noPick = true; k.raycast = () => {}; return k; }
+const PIE_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 // material de suelo con textura (pedregullo, tierra, hormigón, asfalto, pasto, monte); uv en metros
 const TINTE = { pasto2: '#d3dccb' }, SUELO_TEX = { tierra: 'tierra', ripio: 'pedregullo', hormigon: 'hormigon', asfalto: 'asfalto', pasto: 'pasto', pasto2: 'pasto', monte: 'monte' };
 export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala;
-  return matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97 }, o)); }
+  return matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: macroDe(t) }, o)); }
 // superficie plana con la forma de un polígono (x, z)
 function area(g, pts, y, m) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); const geo = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
   const k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); return k; }
@@ -222,13 +228,13 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'naviera', n: 'Naviera', t: 'txt' }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 600, paso: 0.5 }, { k: 'ancho', n: 'Ancho (contenedores)', t: 'num', min: 1, max: 20, paso: 1 }, { k: 'orient', n: 'Contenedores', t: 'sel', ops: [['largo', 'A lo largo de la fila'], ['trans', 'Atravesados (uno al lado del otro)']] }, { k: 'bloque', n: 'Bloques de (0 = seguido)', t: 'num', min: 0, max: 30, paso: 1 }, { k: 'alto', n: 'Alto máximo (contenedores)', t: 'num', min: 1, max: 9, paso: 1 },
       { k: 'pies', n: 'Contenedores de', t: 'sel', ops: [[40, '40 pies'], [20, '20 pies']] }, { k: 'carga', n: 'Tipo', t: 'sel', ops: [['seco', 'Secos'], ['reefer', 'Refrigerados (reefer)']] }, { k: 'color', n: 'Color de la naviera', t: 'color' },
       { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'mezcla', n: 'Otras navieras mezcladas (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'semilla', n: 'Variante', t: 'num', min: 0, max: 999, paso: 1 }, F.r],
-    armar(p) { const g = new THREE.Group(), L = +p.pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = tr ? L + 0.34 : 2.74, ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], celdas = [];
+    armar(p) { const g = new THREE.Group(), L = +p.pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = tr ? L + 0.34 : 2.74, ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], celdas = [], som = [];
       const x0 = -ns * pitch / 2, z0 = -(nr - 1) * paso / 2, H = 2.59, occ = (p.ocupacion ?? 75) / 100;
       const blq = p.bloque | 0; for (let s = 0; s < ns; s++) for (let r = 0; r < nr; r++) { if (blq && s % (blq + 1) === blq) continue; const borde = tr && nr <= 2 ? R() < 0.25 : r === 0 || r === nr - 1, lleno = R() < Math.min(1, occ * (borde ? 0.9 : 1.15)); if (!lleno) continue;
-        const h = Math.max(1, Math.min(p.alto, Math.round((borde ? 0.45 : 0.62) * p.alto + (R() - 0.35) * p.alto * 0.7 * occ + occ * 1.2)));
+        const h = Math.max(1, Math.min(p.alto, Math.round((borde ? 0.45 : 0.62) * p.alto + (R() - 0.35) * p.alto * 0.7 * occ + occ * 1.2))); som.push([x0 + (s + 0.5) * pitch, z0 + r * paso]);
         for (let t = 0; t < h; t++) { let c = rf ? (R() < 0.5 ? '#e9edf0' : '#dfe4e8') : R() * 100 < (p.mezcla ?? 12) ? MEZCLA[Math.floor(R() * MEZCLA.length)] : p.color; _c.set(c).offsetHSL(0, rf ? 0 : -0.04 - R() * 0.1, (R() - 0.5) * 0.08);
           its.push([x0 + (s + 0.5) * pitch, t * H + H / 2, z0 + r * paso, tr ? Math.PI / 2 : 0, L * 0.985, H * 0.985, 2.44 * 0.985, '#' + _c.getHexString()]); celdas.push([s, r, t]); } }
-      const im = lote(g, CONT, matsCont(+p.pies === 20 ? 22 : 44, rf), its); if (im) im.userData.celdas = celdas;
+      const im = lote(g, CONT, matsCont(+p.pies === 20 ? 22 : 44, rf), its); if (im) im.userData.celdas = celdas; if (som.length) g.add(sombraPie(som, tr ? 3.3 : L + 1.3, tr ? L + 1.3 : 3.3));
       if (oscuro()) { const a = acento(), X = -x0 + 0.6, Z = -z0 + (tr ? L / 2 + 0.6 : 2); for (const [u0, v0, u1, v1] of [[-X, -Z, X, -Z], [-X, Z, X, Z], [-X, -Z, -X, Z], [X, -Z, X, Z]]) { const k = new THREE.Mesh(CAJA, neon(a)); k.position.set((u0 + u1) / 2, 0.16, (v0 + v1) / 2); k.scale.set(Math.abs(u1 - u0) + 0.3, 0.08, Math.abs(v1 - v0) + 0.22); g.add(k);
           const b = new THREE.Mesh(CAJA, neon(a, 0.16)); b.position.copy(k.position); b.scale.set(Math.abs(u1 - u0) + 1.6, 0.04, Math.abs(v1 - v0) + 1.6); b.renderOrder = 2; g.add(b); } }
       g.userData.cuenta = its.length; return g; } },

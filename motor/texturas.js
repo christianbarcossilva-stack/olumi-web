@@ -10,18 +10,18 @@ function rnd(s) { let x = s * 9301 + 49297; return () => (x = (x * 16807) % 2147
 
 // suelo: color base, granos claros y oscuros, manchas grandes y suaves (charcos secos, huellas)
 const SUELOS = {
-  pedregullo: { base: '#b4b2ac', granos: 30000, g: 14, tam: [0.6, 1.8], manchas: 40, mv: 8 },
+  pedregullo: { base: '#a8a399', granos: 30000, g: 11, tam: [0.6, 1.8], manchas: 40, mv: 8 },
   tierra:     { base: '#c2bba9', granos: 22000, g: 11, tam: [0.6, 1.6], manchas: 40, mv: 8 },
   hormigon:   { base: '#c9ccca', granos: 9000,  g: 8,  tam: [0.5, 1.2], manchas: 24, mv: 6, juntas: 4 },
   asfalto:    { base: '#6d7277', granos: 30000, g: 10, tam: [0.5, 1.3], manchas: 24, mv: 6 },
-  pasto:      { base: '#93ad7c', granos: 34000, g: 10, tam: [0.8, 2], manchas: 50, mv: 7, verde: true },
-  monte:      { base: '#6f8a5e', granos: 26000, g: 10, tam: [0.8, 2.2], manchas: 40, mv: 8, verde: true }
+  pasto:      { base: '#88a46e', granos: 34000, g: 10, tam: [0.8, 2], manchas: 0, mv: 7, verde: true },
+  monte:      { base: '#6f8a5e', granos: 26000, g: 10, tam: [0.8, 2.2], manchas: 0, mv: 8, verde: true }
 };
 export function suelo(k) { const key = 'suelo:' + k; if (CACHE.has(key)) return CACHE.get(key); const S = SUELOS[k] || SUELOS.tierra, N = 512, [cv, x] = lienzo(N), R = rnd(k.length * 131 + N);
   x.fillStyle = S.base; x.fillRect(0, 0, N, N); const b = new THREE.Color(S.base), c = new THREE.Color();
   // manchas grandes: se dibujan también corridas un lienzo para que la repetición no muestre costuras
-  for (let i = 0; i < S.manchas; i++) { const px = R() * N, py = R() * N, r = 20 + R() * 90, d = (R() - 0.5) * S.mv / 100; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.03 : 0, 0, d);
-    for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { const gr = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); gr.addColorStop(0, `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},.35)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); } }
+  for (let i = 0; i < S.manchas; i++) { const px = R() * N, py = R() * N, r = S.verde ? 30 + R() * 140 : 20 + R() * 90, d = (R() - 0.5) * S.mv / 100; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.03 : 0, 0, d);
+    for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { const gr = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); gr.addColorStop(0, `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${S.verde ? 0.16 : 0.35})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); } }
   for (let i = 0; i < S.granos; i++) { const v = (R() - 0.5) * S.g; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.05 : (R() - 0.5) * 0.01, S.verde ? (R() - 0.5) * 0.1 : 0, v / 100); x.fillStyle = '#' + c.getHexString();
     const t = S.tam[0] + R() * (S.tam[1] - S.tam[0]); x.fillRect(R() * N, R() * N, t, t); }
   if (S.juntas) { x.strokeStyle = 'rgba(70,72,72,.35)'; x.lineWidth = 1.2; for (let i = 0; i <= S.juntas; i++) { const p = i * N / S.juntas; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, N); x.moveTo(0, p); x.lineTo(N, p); x.stroke(); } }
@@ -49,6 +49,13 @@ export function frente(reefer) { const key = 'frente:' + !!reefer; if (CACHE.has
 
 // materiales con textura repetida en metros (cada combinación una sola vez)
 const MATS = new Map();
+const MACRO = { pasto: 0.2, monte: 0.2, pedregullo: 0.1, tierra: 0.12, asfalto: 0.06, hormigon: 0.05 };
+function macro(m, amp) { m.onBeforeCompile = sh => {
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMW;').replace('#include <project_vertex>', '#include <project_vertex>\nvMW = (modelMatrix * vec4(transformed, 1.0)).xz;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vMW;\nfloat mh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat mn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(mh(i), mh(i + vec2(1.0, 0.0)), f.x), mix(mh(i + vec2(0.0, 1.0)), mh(i + vec2(1.0, 1.0)), f.x), f.y); }')
+    .replace('#include <map_fragment>', '#include <map_fragment>\n{ float n = smoothstep(0.22, 0.78, mn(vMW / 140.0) * 0.5 + mn(vMW / 37.0) * 0.32 + mn(vMW / 9.0) * 0.18); diffuseColor.rgb *= (' + (1 - amp).toFixed(3) + ' + n * ' + (2 * amp).toFixed(3) + ') * mix(vec3(1.05, 1.0, 0.88), vec3(0.97, 1.0, 1.03), n); }'); };
+  m.customProgramCacheKey = () => 'macro' + amp; return m; }
 export function matTex(t, color, rep = [1, 1], o = {}) { const k = t.uuid + color + rep.join(',') + JSON.stringify(o, (n, v) => v && v.isTexture ? v.uuid : v); let m = MATS.get(k); if (m) return m;
   const r = t.clone(); r.needsUpdate = true; r.repeat.set(rep[0], rep[1]); if (o.bumpMap === t) o = { ...o, bumpMap: r };
-  m = new THREE.MeshStandardMaterial(Object.assign({ map: r, color, roughness: 0.92, metalness: 0 }, o)); MATS.set(k, m); return m; }
+  const { macro: mc, ...oo } = o; m = new THREE.MeshStandardMaterial(Object.assign({ map: r, color, roughness: 0.92, metalness: 0 }, oo)); if (mc) macro(m, mc); MATS.set(k, m); return m; }
+export const macroDe = k => MACRO[k] || 0;
