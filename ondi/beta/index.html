@@ -286,6 +286,30 @@ body{background:radial-gradient(1100px 760px at 100% 100%,var(--glow1),transpare
 .modal{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .modal > div{background:color-mix(in srgb,var(--solid) 82%,transparent)}
 select option{background:var(--solid);color:var(--ink)}
+
+/* documentación de conexiones */
+.doc{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}
+.docl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto;padding:2px}
+.docbar{display:flex;gap:8px;align-items:center}.docbar input{flex:1;min-width:0;width:0;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.docg{font:600 12px var(--f-body);color:var(--muted);margin:8px 4px 0}
+.docr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit}
+.docr:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.docr[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.docr svg{width:18px;height:18px;color:var(--muted)}.docr b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.docr small{grid-column:2/4;color:var(--muted);font-size:12.5px}.docr .u{font:500 12px var(--f-mono,ui-monospace);color:var(--muted)}
+.docu{grid-column:2/4;height:4px;border-radius:2px;background:var(--sunken);overflow:hidden}.docu i{display:block;height:100%;background:var(--accent)}
+.docsin{grid-column:2/4;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--warn,#b7791f)}
+.docp{--glass-strong:var(--surface);--line-strong:color-mix(in srgb,var(--ink) 18%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);--ok-soft:color-mix(in srgb,var(--ok,#1f9d55) 14%,transparent);--crit-soft:color-mix(in srgb,var(--crit,#d2474b) 14%,transparent);--f-ui:var(--f-body);min-height:calc(100vh - 250px);border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden;min-width:0}
+.docp .red{height:calc(100vh - 250px);min-height:540px}.docp .red-tools select,.docp .red-x{display:none}.docp .red input,.docp .red select{color:var(--ink)}
+.docn{display:grid;gap:12px;padding:14px;border:1px solid var(--accent);border-radius:10px;background:var(--surface)}
+.docn label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.docn input,.docn select{font:inherit}
+.doch{padding:18px 20px;display:grid;gap:4px}.doch h2{margin:0 0 8px}
+.doce{display:grid;grid-template-columns:52px minmax(0,1fr);gap:2px 12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.doce time{color:var(--muted);font:500 12.5px var(--f-mono,ui-monospace);padding-top:2px}.doce span{color:var(--muted);font-size:12.5px;grid-column:2}
+.doce button{border:0;background:none;color:var(--accent-ink,var(--accent));font:600 12.5px var(--f-body);padding:0;cursor:pointer}
+.docd{font:600 13px var(--f-body);margin:14px 0 2px}
+.docback{display:none}
+@media (max-width:860px){.doc{grid-template-columns:minmax(0,1fr)}.docl{position:static;max-height:none}.doc.abierto .docl{display:none}.doc:not(.abierto) .docp{display:none}
+  .docback{display:inline-flex;margin-bottom:8px}.docp .red-tabs{flex-wrap:wrap}.docp,.docp .red{min-height:0;height:auto}}
 </style>
 </head>
 <body>
@@ -479,6 +503,8 @@ function render() {
   const who = staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
   const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
+  if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
+  S.docRe = false;
   if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
   $('#root').innerHTML = `<div class="app"><aside class="side">${logo()}
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
@@ -487,6 +513,7 @@ function render() {
     <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
+  if (S.view === 'site' && S.tab === 'doc' && S.site && staff() && !S.falta) mountDoc();
   if (S.view === 'sim' && S.sim && staff() && !S.falta) mountSim();
   if (S.modal === 'newsite') { const f = $('#ns_name'); if (f) f.focus(); }
 }
@@ -599,12 +626,12 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=40" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=41" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
-function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
+function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
   return `<div class="wrap wide"><div id="sitehead">${siteHead()}</div><div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${n}</button>`).join('')}</div>
-    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
+    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'doc' && staff() ? docView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
 
 /* maqueta */
 let MAQ = null, maqT = null;
@@ -616,7 +643,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     base === 'polo' ? Promise.resolve({ data: null }) : SB.from('ondi_planos').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle()]);
   if (S.site !== st || !$('#maqbox')) return;
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
-  const data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null;
+  let data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; data = docBase(st, data);
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
   MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
     plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url),
@@ -626,13 +653,14 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...E.list.map(d => ({ uid: (d.marca || 'unifi') + ':' + (d.mac || d.id), marca: d.marca || 'unifi', nombre: d.nombre, modelo: d.modelo, linea: d.linea, ip: d.ip, mac: d.mac, estado: d.estado, version: d.version, consola: d.consola, actualizar: d.actualizar })),
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     crearEquipo: siteEd() ? async row => { const r = await SB.from('ondi_equipos').insert({ org_id: st.org_id, site_id: st.id, ...row }).select().single(); if (r.error) throw r.error; (S.man[st.id] = S.man[st.id] || []).push(r.data); delete S.eq[st.id]; return r.data; } : null,
+    ir: S.maqIr || null, indice: idx => docIndice(st, idx),
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
-  S.startPlano = false; window.__ondiMaqueta = MAQ;
+  S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=5' : 'maqueta.html?v=40'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=5' : 'maqueta.html?v=41'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
-function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
+function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
@@ -1052,6 +1080,152 @@ document.addEventListener('input', e => { if (e.target.id === 'sq') { S.sq = e.t
 
 if (SB) SB.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') showAuth('setpass'); if (ev === 'SIGNED_OUT' && !S.auth) location.reload(); });
 boot().catch(e => showAuth('login', errTxt(e)));
+
+/* ---------- documentación de conexiones (racks, gabinetes, bocas, cables y fibras) ----------
+   Los mismos datos y el mismo red.js que la maqueta: lo que se crea acá aparece en la maqueta («sin ubicar» hasta que lo arrastren)
+   y lo que se pone en la maqueta aparece acá. Cada cambio, venga de donde venga, queda anotado en el historial (data.bita). */
+const DOCK = { dev: 'equipo conectado', txt: 'otro destino', cab: 'etiqueta', m: 'metros', cat: 'categoría', col: 'color', cert: 'certificación', certf: 'fecha de medición', nota: 'nota', desc: 'descripción', vlan: 'VLAN', poe: 'PoE', vel: 'velocidad', fib: 'fibra', hilo: 'hilo', name: 'nombre', modelo: 'marca y modelo', serie: 'n.º de serie', mac: 'MAC', ip: 'IP', piel: 'color del frente', ext: 'equipo real' };
+const DOCV = ['dev', 'cab', 'vlan', 'cert', 'name', 'ip', 'cat'];
+const docMotor = d => !!(d && d.motor === 1);
+const docQuien = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || ((S.user && S.user.email) || '').split('@')[0];
+const docCl = o => o == null ? o : JSON.parse(JSON.stringify(o));
+S.docPrev = {}; S.docT = {}; S.docIdx = {};
+// la maqueta abre con lo último guardado en esta sesión si es más nuevo que lo que trajo la base
+function docBase(st, data) { const L = S.docPrev[st.id]; if (L && S.docT[st.id] && Date.now() - S.docT[st.id] < 120000) return docCl(L); S.docPrev[st.id] = docCl(data); return data; }
+// la maqueta avisa sus racks y equipos (nombre y lugar); se guarda solo si cambió
+function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D.site === st.id) D.idx = idx;
+  const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
+// lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
+function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
+  for (const k of ['bita', 'docidx'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  const nuevos = docDiff(prev, data); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
+  S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
+  const D = S.doc; if (D && D.site === st.id) { if (D.saving) D.W.bita = data.bita; else S.doc = null; }
+  return data; }
+function docRacks(W, idx) { W = W || {}; const out = new Map();
+  if (docMotor(W)) for (const p of ((W.escena || {}).piezas || [])) { if (p.t === 'rack' || p.t === 'gabinete') out.set(p.id, { id: p.id, tipo: p.t === 'gabinete' ? 'gab' : 'wr', nombre: p.nombre || '', lugar: p.lugar || '', sin: !!p.sinUbicar }); }
+  else { const fuera = new Set(W.removed || []); for (const r of ((idx || W.docidx || {}).racks || [])) if (!fuera.has(r.id)) out.set(r.id, { ...r });
+    for (const d of (W.devs || [])) if (['gab', 'wr', 'rack'].includes(d.type)) out.set(d.id, { ...(out.get(d.id) || {}), id: d.id, tipo: d.type, nombre: d.name || '', lugar: (d.loc || '').split(' · ')[0], sin: !!d.sinUbicar });
+    for (const id of Object.keys(W.cabs || {})) if (!out.has(id)) out.set(id, { id, tipo: /^G/.test(id) ? 'gab' : 'wr', nombre: '', lugar: '' }); }
+  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
+  return [...out.values()].sort((a, b) => (a.lugar || '~').localeCompare(b.lugar || '~', 'es') || a.id.localeCompare(b.id, 'es', { numeric: true })); }
+function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.cabs) || {}, CAT = (window.OndiRed && OndiRed.CAT) || {};
+  const itN = (c, iid) => { const it = c && c.items.find(x => x.iid === iid); return it ? (it.name || (CAT[it.type] || {}).n || it.type) : 'un equipo'; };
+  const pN = (c, e) => { const it = c && c.items.find(x => x.iid === e[0]), K = it ? CAT[it.type] || {} : {}; return itN(c, e[0]) + ', ' + (e[1][0] === 's' ? 'SFP ' : K.pp || K.fo ? 'boca ' : 'puerto ') + e[1].slice(1); };
+  const lkK = l => [l[0].join(':'), l[1].join(':')].sort().join('|');
+  for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
+    if (!ca) { out.push({ r: id, m: `Creó ${id} (${cb.cap}U)` }); if (!cb.items.length) continue; }
+    if (!cb) { out.push({ r: id, m: `Sacó ${id}` }); continue; }
+    const c0 = ca || { cap: cb.cap, items: [], links: [], ports: {} };
+    if (ca && ca.cap !== cb.cap) out.push({ r: id, m: `Cambió ${id} a ${cb.cap}U` });
+    const ia = new Map(c0.items.map(x => [x.iid, x])), ib = new Map(cb.items.map(x => [x.iid, x]));
+    for (const [k, x] of ib) { const y = ia.get(k); if (!y) { out.push({ r: id, m: `Puso ${itN(cb, k)} en la U${x.u} de ${id}` }); continue; }
+      if (y.u !== x.u) out.push({ r: id, m: `Movió ${itN(cb, k)} de la U${y.u} a la U${x.u} en ${id}` });
+      const ch = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter(f => !['u', 'iid', 'type'].includes(f) && JSON.stringify(x[f]) !== JSON.stringify(y[f]));
+      if (ch.length) out.push({ r: id, m: `Anotó en ${itN(cb, k)} de ${id}: ` + ch.map(f => (DOCK[f] || f) + (DOCV.includes(f) && x[f] ? ' ' + String(x[f]).slice(0, 30) : '')).join(', ') }); }
+    for (const [k] of ia) if (!ib.has(k)) out.push({ r: id, m: `Sacó ${itN(c0, k)} de ${id}` });
+    const la = new Map(c0.links.map(l => [lkK(l), l])), lb = new Map(cb.links.map(l => [lkK(l), l]));
+    for (const [k, l] of lb) { const o = la.get(k); if (!o) out.push({ r: id, m: `Conectó ${pN(cb, l[0])} con ${pN(cb, l[1])} en ${id}` }); else if (JSON.stringify(o[2] || {}) !== JSON.stringify(l[2] || {})) out.push({ r: id, m: `Anotó el patch cord de ${pN(cb, l[0])} en ${id}: ` + Object.keys({ ...(o[2] || {}), ...(l[2] || {}) }).map(f => DOCK[f] || f).join(', ') }); }
+    for (const [k, l] of la) if (!lb.has(k)) out.push({ r: id, m: `Desconectó ${pN(c0, l[0])} de ${pN(c0, l[1])} en ${id}` });
+    const pa = c0.ports || {}, pb = cb.ports || {};
+    for (const iid of new Set([...Object.keys(pa), ...Object.keys(pb)])) for (const pid of new Set([...Object.keys(pa[iid] || {}), ...Object.keys(pb[iid] || {})])) {
+      const x = (pb[iid] || {})[pid] || {}, y = (pa[iid] || {})[pid] || {}; if (JSON.stringify(x) === JSON.stringify(y)) continue;
+      const ch = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter(f => JSON.stringify(x[f]) !== JSON.stringify(y[f]));
+      out.push({ r: id, m: `Anotó en ${pN(cb, [iid, pid])} de ${id}: ` + ch.map(f => (DOCK[f] || f) + (DOCV.includes(f) && x[f] ? ' ' + String(x[f]).slice(0, 30) : x[f] == null ? ' (borrado)' : '')).join(', ') }); } }
+  const fa = new Map(((a && a.fibs) || []).map(f => [f.id, f])), fb = new Map(((b && b.fibs) || []).map(f => [f.id, f]));
+  for (const [k, f] of fb) { const o = fa.get(k); if (!o) out.push({ m: `Agregó la fibra ${k}` + (f.to ? ' hacia ' + f.to : '') }); else if (JSON.stringify(o) !== JSON.stringify(f)) out.push({ m: JSON.stringify(o.pts) !== JSON.stringify(f.pts) ? `Cambió el recorrido de la fibra ${k}` : `Anotó en la fibra ${k}` }); }
+  for (const k of fa.keys()) if (!fb.has(k)) out.push({ m: `Sacó la fibra ${k}` });
+  const sinA = new Set(((a && a.devs) || []).filter(d => d.sinUbicar).map(d => d.id));
+  for (const d of ((b && b.devs) || [])) if (sinA.has(d.id) && !d.sinUbicar) out.push({ r: d.id, m: `Ubicó ${d.id} en la maqueta` });
+  if (docMotor(b)) { const pz = W => new Map(((W && W.escena && W.escena.piezas) || []).filter(p => p.t === 'rack' || p.t === 'gabinete').map(p => [p.id, p])), qa = pz(a), qb = pz(b);
+    for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
+    for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
+  return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=4'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
+  await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
+  if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
+  const base = (st.data && st.data.base) || 'vacia';
+  if (!W) W = base === 'motor' ? { v: 1, motor: 1, escena: null, ext: [] } : { v: 1, rev: 4, devs: [], moved: {}, removed: [], naves: [], fibs: [], cabs: {}, inner: {}, meta: {}, roads: [], props: [], labels: [] };
+  W.cabs = W.cabs || {}; W.fibs = W.fibs || []; D.W = W; return D; }
+function docView() { return `<div id="docbox" data-docsite="${esc(S.site.id)}"><div class="card empty">Abriendo la documentación…</div></div>`; }
+async function mountDoc() { const st = S.site, box = $('#docbox'); if (!box) return;
+  if (!S.doc || S.doc.site !== st.id) { try { S.doc = await docLoad(st); } catch (er) { box.innerHTML = `<div class="card empty"><b>No se pudo abrir la documentación</b><span>${esc(errTxt(er))}</span></div>`; return; } }
+  if (S.site !== st || !$('#docbox')) return; docPaint(); }
+function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx || {};
+  return { cabs: W.cabs, fibs: W.fibs, editar: () => siteEd(), aviso: m => toast(m), cliente: () => (st.data && st.data.parque) || st.name,
+    devs: () => docMotor(W) ? (((W.escena || {}).piezas) || []).filter(p => ['camara', 'wifi', 'sensor', 'grabador', 'router', 'switch', 'ups'].includes(p.t)).map(p => ({ id: p.id, nombre: p.nombre || '', lugar: '', estado: 'ok' })) : (idx.devs || []).map(d => ({ ...d, estado: 'ok' })),
+    reales: () => (((S.eq[st.id] || {}).list) || []).filter(x => !x.consola).map(x => ({ uid: (x.marca || 'unifi') + ':' + (x.mac || x.id), nombre: x.nombre, modelo: x.modelo, mac: x.mac, ip: x.ip, version: x.version, estado: VIVO.includes(x.estado) ? 'ok' : ['offline', 'caido'].includes(x.estado) ? 'crit' : 'warn' })),
+    guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
+    largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
+    titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? c.cap + 'U' : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
+    racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]) }; }
+function docSave() { const D = S.doc, st = S.site; if (!D || !siteEd()) return; D.saving = true; try { queueSave(st, docCl(D.W)); } finally { D.saving = false; } docList(); }
+function docIr(id) { S.maqIr = id; S.tab = 'maqueta'; render(); }
+const DIC = { gab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M17 10v4"/></svg>',
+  wr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>',
+  hist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' };
+function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim().toLowerCase(), F = R.filter(r => !q || [r.id, r.nombre, r.lugar].join(' ').toLowerCase().includes(q)), ed = siteEd();
+  const lugares = [...new Set(R.map(r => r.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  let h = `<div class="docbar"><input id="docq" type="search" placeholder="Buscar rack o lugar" value="${esc(D.q)}" aria-label="Buscar rack o lugar">${ed ? `<button class="btn sm pri" data-dk="nuevo" aria-label="Nuevo rack o gabinete">${IC.plus}Nuevo</button>` : ''}</div>
+    <button class="btn sm" data-dk="hist" aria-pressed="${D.hist}">${DIC.hist}Historial${(D.W.bita || []).length ? ' · ' + (D.W.bita || []).length : ''}</button>`;
+  if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo rack o gabinete</b>
+      <label>Tipo<span class="seg"><button type="button" data-dk="tipo" data-v="gab" aria-pressed="${D.nuevo.tipo === 'gab'}">Gabinete</button><button type="button" data-dk="tipo" data-v="wr" aria-pressed="${D.nuevo.tipo === 'wr'}">Rack</button></span></label>
+      <label>Tamaño<select id="docU">${(D.nuevo.tipo === 'gab' ? [6, 9, 12] : [6, 9, 12, 24, 42]).map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>
+      <label>Nombre <input id="docN" maxlength="50" placeholder="Ej.: Gabinete de la portería"></label>
+      <label>Lugar <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+      <span class="acts"><button class="btn pri" type="submit">Crear y documentar</button><button class="btn" type="button" data-dk="cancelar">Cancelar</button></span>
+      <small class="muted">Aparece en la maqueta como «sin ubicar»: con el lápiz lo arrastrás a su lugar.</small></form>`;
+  if (!R.length && !D.nuevo) h += `<div class="card empty" style="padding:24px 14px"><b>Todavía no hay racks</b><span>${ed ? 'Creá el primero con «Nuevo», o ponelo en la maqueta con el lápiz: aparece acá solo.' : 'La instaladora todavía no documentó racks.'}</span></div>`;
+  let g = null; for (const r of F) { const lg = r.lugar || 'Sin lugar anotado'; if (lg !== g) { g = lg; h += `<div class="docg">${esc(lg)}</div>`; }
+    h += `<button class="docr" data-dk="rack" data-v="${esc(r.id)}" aria-current="${D.cid === r.id && !D.hist}">${DIC[r.tipo === 'gab' ? 'gab' : 'wr']}<b>${esc(r.id)}${r.nombre ? ' · ' + esc(r.nombre) : ''}</b><span class="u">${r.usoU}/${r.cap}U</span>
+      <span class="docu" aria-hidden="true"><i style="width:${Math.min(100, Math.round(r.usoU / Math.max(1, r.cap) * 100))}%"></i></span><small>${r.links} ${r.links === 1 ? 'patch cord' : 'patch cords'}</small>
+      ${r.sin ? `<span class="docsin">Sin ubicar en la maqueta</span>` : ''}</button>`; }
+  if (R.length && !F.length) h += `<p class="muted" style="margin:6px 4px">No hay racks con «${esc(D.q)}».</p>`;
+  return h; }
+function docList() { const l = $('#docl'); if (l) l.innerHTML = docListHTML(); }
+function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D.cid ? all.filter(e => e.r === D.cid) : all;
+  let h = `<div class="doch"><button class="btn sm docback" data-dk="volver">${DIC.back}Racks</button><h2>Historial</h2><p class="muted" style="margin:0">Todo lo que se cambia en la documentación o en la maqueta queda anotado: quién, cuándo y qué.</p>
+    ${D.cid ? `<span class="seg" style="margin-top:8px"><button data-dk="histr" data-v="0" aria-pressed="${!D.histR}">Todo</button><button data-dk="histr" data-v="1" aria-pressed="${D.histR}">Solo ${esc(D.cid)}</button></span>` : ''}`;
+  if (!L.length) h += `<p class="muted">Todavía no hay cambios anotados${D.histR ? ' en ' + esc(D.cid) : ''}.</p>`;
+  let dia = ''; for (const e of L.slice(0, 300)) { const t = new Date(e.t), d = t.toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (d !== dia) { dia = d; h += `<div class="docd">${esc(d[0].toUpperCase() + d.slice(1))}</div>`; }
+    h += `<div class="doce"><time>${t.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false })}</time><div>${esc(e.m)}</div><span>${esc(e.q || '')}${e.r && e.r !== D.cid ? ` · <button data-dk="rack" data-v="${esc(e.r)}">Ver ${esc(e.r)}</button>` : ''}</span></div>`; }
+  return h + '</div>'; }
+function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) return; const R = docRacks(D.W, D.idx);
+  if (D.cid && !D.W.cabs[D.cid] && !R.some(r => r.id === D.cid)) D.cid = null;
+  if (!D.cid && !D.hist && R.length && innerWidth > 860) D.cid = R[0].id;
+  const r = R.find(x => x.id === D.cid);
+  box.innerHTML = `<div class="doc ${D.cid || D.hist ? 'abierto' : ''}"><div class="docl" id="docl">${docListHTML()}</div><div class="docp">${D.hist ? docHistHTML() : D.cid ? `<div class="doch" style="padding:12px 14px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn sm docback" data-dk="volver">${DIC.back}Racks</button>
+      <span class="grow"></span>${r && r.sin ? `<button class="btn sm pri" data-dk="ir" data-v="${esc(D.cid)}">Ubicar en la maqueta</button>` : `<button class="btn sm" data-dk="ir" data-v="${esc(D.cid)}">Ver en la maqueta</button>`}${siteEd() ? `<button class="btn sm" data-dk="borrar" data-v="${esc(D.cid)}">Sacar</button>` : ''}</div><div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
+  if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
+function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
+function docCrear() { const D = S.doc, st = S.site, W = D.W, u = +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
+  const home = ((D.idx || W.docidx || {}).home) || [0, 0], k = docRacks(W, D.idx).filter(r => r.sin).length * 2.5;
+  let id;
+  if (docMotor(W)) { if (!W.escena) { toast('Abrí la maqueta una vez para empezar el plano; después creá el rack acá.'); return; }
+    const ini = W.escena.inicio || {}; let n = 1; do id = (gab ? 'gab' : 'rac') + (n++).toString(36); while (W.escena.piezas.some(p => p.id === id));
+    W.escena.piezas.push(gab ? { id, t: 'gabinete', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, ancho: u > 9 ? 0.8 : 0.6, alto: u * 0.045 + 0.4, fondo: 0.35, base: 1, rieles: true, color: '#D2D3CE', sinUbicar: true }
+      : { id, t: 'rack', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, alto: Math.min(2.4, u * 0.045 + 0.25), sinUbicar: true }); }
+  else { id = docNid(W, D, gab ? 'G-' : 'RK-'); const sz = u <= 6 ? 'S' : u <= 9 ? 'M' : 'L';
+    W.devs = W.devs || []; W.devs.push(Object.assign({ id, type: gab ? 'gab' : 'wr', status: 'ok', custom: true, cli: 0, hoy: 0, name: nom, loc: lug, x: home[0] + k, z: home[1], y: gab ? 0 : 1.3, sinUbicar: true }, gab ? { kind: 'Gabinete metálico', size: sz } : { kind: `Rack de pared ${u}U`, u })); }
+  W.cabs[id] = { cap: u, items: [], links: [], ports: {} }; D.nuevo = false; D.cid = id; D.hist = false; docSave(); docPaint(); toast((gab ? 'Gabinete ' : 'Rack ') + id + ' creado. Queda sin ubicar en la maqueta hasta que lo arrastres.'); }
+function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) return;
+  delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
+  D.cid = null; docSave(); docPaint(); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'); if (!b || !S.doc || b.tagName === 'FORM') return; const D = S.doc, k = b.dataset.dk, v = b.dataset.v;
+  if (k === 'rack') { D.cid = v; D.hist = false; D.V = { tab: 'frente', q: '' }; docPaint(); }
+  else if (k === 'hist') { D.hist = !D.hist; docPaint(); }
+  else if (k === 'histr') { D.histR = v === '1'; docPaint(); }
+  else if (k === 'volver') { D.hist = false; D.cid = null; docPaint(); }
+  else if (k === 'nuevo') { D.nuevo = D.nuevo ? false : { tipo: 'gab', u: 9 }; docList(); const n = $('#docN'); if (n) n.focus(); }
+  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = v === 'gab' ? 9 : 12; docList(); }
+  else if (k === 'cancelar') { D.nuevo = false; docList(); }
+  else if (k === 'ir') docIr(v);
+  else if (k === 'borrar') { if (b.dataset.ok !== '1') { const c = D.W.cabs[v] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos anotados: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(v); } });
+document.addEventListener('submit', e => { if (e.target.matches('form[data-dk="crear"]')) { e.preventDefault(); docCrear(); } });
+document.addEventListener('input', e => { if (e.target.id === 'docq' && S.doc) { S.doc.q = e.target.value; const pos = e.target.selectionStart; docList(); const n = $('#docq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } });
 })();
 </script>
 </body>
