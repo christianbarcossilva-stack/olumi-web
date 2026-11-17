@@ -2493,6 +2493,9 @@ function applyScale(real) { const S = ED.scale, pl = ED.plano; if (!S || S.lengt
   pl.w = +(pl.w * k).toFixed(2); pl.h = +(pl.h * k).toFixed(2); pl.cx = +(mid[0] + (pl.cx - mid[0]) * k).toFixed(2); pl.cz = +(mid[1] + (pl.cz - mid[1]) * k).toFixed(2);
   ED.scale = null; clearPrev(); rebuildBlank(); edSave(); setTool('sel'); renderPlano(); toast(`Escala lista: el plano mide ${Math.round(pl.w)} × ${Math.round(pl.h)} m`); flyTo(HOME(), 1); }
 function renderPlano() { const el = $('#planopanel'); if (!el) return; el.hidden = !(ED.on && (ED.tool === 'calle' || (BLANK && (ED.tool === 'plano' || ED.tool === 'escala'))));
+  { const cat = document.getElementById('e3cat'), r = cat && !el.hidden && !cat.hidden && cat.getClientRects().length ? cat.getBoundingClientRect() : null, ok = r && r.width && r.right + 12 + 340 <= innerWidth - 12;
+    const eb = document.getElementById('editbar'), hb = eb && !eb.hidden && eb.getClientRects().length ? eb.getBoundingClientRect() : null, t0 = ok ? Math.max(r.top, hb && hb.left < r.right + 12 + 340 && hb.right > r.right + 12 ? hb.bottom + 10 : 0) : 0;
+    el.style.left = ok ? (r.right + 12) + 'px' : ''; el.style.top = ok ? t0 + 'px' : ''; el.style.zIndex = r && !ok ? 60 : ''; }
   if (el.hidden) return; const pl = ED.plano;
   let h = '<div class="pph"><b>Base de la maqueta</b><button class="x" data-pp="close" aria-label="Cerrar">×</button></div>';
   if (ED.tool === 'calle') h += `<p class="ehelp">Tocá el recorrido de la calle punto por punto. Se une sola a las otras calles.</p><label class="ef"><span>Ancho</span><select data-pp="roadw">${[6, 9, 12, 18].map(w => `<option value="${w}" ${ED.roadW === w ? 'selected' : ''}>${w} m${w === 6 ? ' · interna' : w === 9 ? ' · calle' : w === 12 ? ' · avenida' : ' · ruta'}</option>`).join('')}</select></label>`;
@@ -5534,7 +5537,7 @@ buildAll(); makeLabels(); ENV = env(); resize(); setRole(ROLE); initBlankUI(); i
 if (BLANK) { const nt = document.querySelector('.note'); if (nt) nt.textContent = DEMO ? 'Simulación: un cliente inventado para mostrar Ondi. Nada de lo que ves es real y lo que cambies no se guarda.' : 'Escala real en metros. Subí un plano o una foto como base y dibujá los galpones, las calles y los equipos encima.';
   const fl = document.querySelector('.lay[data-l="foto"]'); if (fl) [...fl.childNodes].forEach(n => { if (n.nodeType === 3 && /Foto/.test(n.textContent)) n.textContent = n.textContent.replace(/Foto aérea/, 'Plano de base'); });
   fl && fl.querySelectorAll('span').forEach(sp => { if (/Foto aérea/.test(sp.textContent)) sp.textContent = 'Plano de base'; });
-  if (HOST && HOST.start === 'plano' && canEdit() && !PHOTO.src) setTimeout(() => { setEdit(true); setTool('plano'); }, 600); }
+  if (HOST && HOST.start === 'plano' && canEdit()) setTimeout(() => { setEdit(true); setTool('plano'); }, 600); }
 if (BLANK) { const sp = $('#parkN') && $('#parkN').nextElementSibling; if (sp) sp.textContent = NAVES.length ? NAVES.length + (NAVES.length === 1 ? ' galpón' : ' galpones') : 'Maqueta en blanco'; }
 if (PHOTO.src) { if (BLANK) setPlanoImg(PHOTO.src, true); else { const im = new Image(); im.onload = () => { PHOTO.img = im; try { main.setTex(im); if (camR) camR.setTex(im); } catch (e) { console.warn(e); } applyLayers(); }; im.src = PHOTO.src; } }
 const mins = m => new Date(Date.now() - m * 60000);
