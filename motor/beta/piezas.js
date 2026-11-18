@@ -39,8 +39,14 @@ function sombraPie(pos, sx, sz) { if (!TEX_PIE) { const c = document.createEleme
 const PIE_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 // material de suelo con textura (pedregullo, tierra, hormigón, asfalto, pasto, monte); uv en metros
 const TINTE = { pasto2: '#d3dccb' }, SUELO_TEX = { tierra: 'tierra', ripio: 'pedregullo', hormigon: 'hormigon', asfalto: 'asfalto', pasto: 'pasto', pasto2: 'pasto', monte: 'monte' };
-export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala;
-  return matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: macroDe(t) }, o)); }
+// asfalto y hormigón parejos: la textura trae manchas que, repetidas en una playa o una ruta larga, se ven como lunares. Se mezcla con su
+// color promedio (el nivel más chico de la textura) y queda el grano fino sin el dibujo que se repite.
+const CALMOS = new Map();
+function calmo(base, k = 0.4) { const key = base.uuid + '|' + k; let m = CALMOS.get(key); if (m) return m; m = base.clone();
+  m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#ifdef USE_MAP\n{ vec4 fino = texture2D( map, vMapUv ); vec4 prom = texture2D( map, vMapUv, 12.0 ); fino.rgb = mix( prom.rgb, fino.rgb, ' + k.toFixed(2) + ' ); diffuseColor *= fino; }\n#endif'); };
+  m.customProgramCacheKey = () => 'calmo' + k; CALMOS.set(key, m); return m; }
+export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto';
+  const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return parejo ? calmo(b, 0.42) : b; }
 // superficie plana con la forma de un polígono (x, z)
 function area(g, pts, y, m) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); const geo = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
   const k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); return k; }
@@ -222,7 +228,7 @@ export const TIPOS = {
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['continua', 'Continua'], ['no', 'Sin línea']] }],
     armar(p) { const g = new THREE.Group(), y = 0.05, c = { asfalto: oscuro() ? '#2b3036' : '#7d838a', ruta: oscuro() ? '#272c31' : '#73797f', hormigon: suelo('hormigon'), tierra: suelo('ripio') }[p.tipo] || '#7d838a';
       const tq = { asfalto: 'asfalto', ruta: 'asfalto', hormigon: 'hormigon', tierra: 'pedregullo' }[p.tipo] || 'asfalto', mt = METROS[tq], po = { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -4 };
-      const mc = matTex(texSuelo(tq), oscuro() ? '#55595c' : (p.tipo === 'ruta' ? '#e4e6e8' : '#ffffff'), [p.ancho / mt, 1 / mt], po);
+      const mc0 = matTex(texSuelo(tq), oscuro() ? '#55595c' : (p.tipo === 'ruta' ? '#e4e6e8' : '#ffffff'), [p.ancho / mt, 1 / mt], po), mc = tq === 'pedregullo' ? mc0 : calmo(mc0, 0.38);
       g.add(sombra(new THREE.Mesh(cinta(p.pts, p.ancho, y), mc), false, true));
       const blanca = oscuro() ? new THREE.MeshBasicMaterial({ color: '#cfe9ff', toneMapped: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -6 }) : mat('#f4f6f7', { roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -6 });
       if (p.linea !== 'no' && p.tipo !== 'tierra') { if (p.linea === 'continua') g.add(new THREE.Mesh(cinta(p.pts, 0.15, y + 0.005), blanca)); else for (const [x, z, d] of aLoLargo(p.pts, 9)) { const k = new THREE.Mesh(CAJA, blanca); k.scale.set(0.15, 0.01, 4.2); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } }
@@ -254,9 +260,11 @@ export const TIPOS = {
     armar(p) { const g = new THREE.Group(); arbolado(g, [[0, 0, p.tipo, p.alto]]); return g; } },
 
   // construcciones
-  galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2 },
-    campos: [F.nombre, F.ancho('Largo (m)', 3, 600), F.fondo('Fondo (m)', 3, 300), F.alto('Alto (m)', 2.5, 30, 0.5), F.color('Color de paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'portones', n: 'Portones al frente', t: 'num', min: 0, max: 60, paso: 1 }, { k: 'abierto', n: 'Frente abierto (tinglado)', t: 'bool' }, F.r],
-    armar(p) { const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2, h = p.alto, ch = chapa(16, 'galpon'), pa = matTex(ch, oscuro() ? mix(p.color, '#000', 0.5) : p.color, [1, 1], { bumpMap: ch, bumpScale: 0.8, roughness: 0.6, metalness: 0.2 }), zo = mat(oscuro() ? '#4c5257' : '#aeb3b8'), e = 0.25;
+  galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2, estilo: 'chapa', andenes: 6, anexo: '', cubierta: 'claraboyas', desde: 1, placa: '#1F4D3A' },
+    campos: [F.nombre, F.ancho('Largo (m)', 3, 600), F.fondo('Fondo (m)', 3, 300), F.alto('Alto (m)', 2.5, 30, 0.5), F.color('Color de paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['chapa', 'Galpón de chapa'], ['logistico', 'Nave con andenes']] }, { k: 'portones', n: 'Portones al frente (chapa)', t: 'num', min: 0, max: 60, paso: 1 }, { k: 'abierto', n: 'Frente abierto (tinglado)', t: 'bool' },
+      { k: 'andenes', n: 'Andenes (nave)', t: 'num', min: 0, max: 80, paso: 1 }, { k: 'desde', n: 'Primer número de andén', t: 'num', min: 0, max: 999, paso: 1 }, { k: 'placa', n: 'Color de las chapas de número', t: 'color' },
+      { k: 'libre', n: 'Sin inquilino (no recibe camiones)', t: 'bool' }, { k: 'anexo', n: 'Oficina al frente (nave)', t: 'sel', ops: [['', 'Sin oficina'], ['izq', 'A la izquierda'], ['der', 'A la derecha']] }, { k: 'cubierta', n: 'Techo (nave)', t: 'sel', ops: [['lisa', 'Liso'], ['claraboyas', 'Con claraboyas'], ['solar', 'Con paneles solares']] }, F.r],
+    armar(p) { if (p.estilo === 'logistico') return naveLog(p); const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2, h = p.alto, ch = chapa(16, 'galpon'), pa = matTex(ch, oscuro() ? mix(p.color, '#000', 0.5) : p.color, [1, 1], { bumpMap: ch, bumpScale: 0.8, roughness: 0.6, metalness: 0.2 }), zo = mat(oscuro() ? '#4c5257' : '#aeb3b8'), e = 0.25;
       cajaT(g, -w, 0, -d, w, h, -d + e, pa, 4); cajaT(g, -w, 0, -d, -w + e, h, d, pa, 4); cajaT(g, w - e, 0, -d, w, h, d, pa, 4);
       if (p.abierto) { const n = Math.max(2, Math.round(p.ancho / 8)); for (let i = 0; i <= n; i++) caja(g, -w + i * (p.ancho - 0.4) / n, 0, d - 0.4, -w + i * (p.ancho - 0.4) / n + 0.4, h, d, pa); }
       else { cajaT(g, -w, 0, d - e, w, h, d, pa, 4); const n = p.portones | 0; for (let i = 0; i < n; i++) { const x = -w + (i + 0.5) * p.ancho / n, pw = Math.min(4.2, p.ancho / n * 0.7); caja(g, x - pw / 2, 0, d, x + pw / 2, Math.min(h - 1, 4.8), d + 0.06, mat(oscuro() ? '#5f666c' : '#d7dbde', { roughness: 0.5 })); } }
@@ -335,6 +343,24 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'radio', n: 'Radio (m)', t: 'num', min: 0.5, max: 60, paso: 0.5 }, F.alto('Alto (m)', 1, 60, 0.5), F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), m = mat(oscuro() ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.5, metalness: 0.35 }), cono = Math.max(0.4, p.radio * 0.22); malla(g, CIL24, m, 0, p.alto / 2, 0, p.radio * 2, p.alto, p.radio * 2);
       const t = new THREE.Mesh(new THREE.ConeGeometry(p.radio * 1.02, cono, 24), m); t.position.y = p.alto + cono / 2; g.add(sombra(t)); for (const y of [p.alto * 0.33, p.alto * 0.66]) malla(g, CIL24, mat('#9aa3ab', { roughness: 0.5, metalness: 0.5 }), 0, y, 0, p.radio * 2.03, 0.12, p.radio * 2.03, false); return g; } },
+  // cinta transportadora, rampa y escalera de exterior (las tres suben hacia +x)
+  cinta: { n: 'Cinta transportadora', g: 'Logística', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { largo: 40, alto: 8, ancho: 1.4 },
+    campos: [F.nombre, { k: 'largo', n: 'Largo (m)', t: 'num', min: 4, max: 400, paso: 1 }, F.alto('Altura de la punta (m)', 1, 40, 0.5), F.ancho('Ancho (m)', 0.6, 4), F.r],
+    armar(p) { const g = new THREE.Group(), L = p.largo, h = Math.max(1, p.alto), a = Math.atan2(h - 1, L), os = oscuro(), k = new THREE.Mesh(CAJA, mat(os ? '#3a444d' : '#59636C', { roughness: 0.6, metalness: 0.3 })); k.scale.set(Math.hypot(L, h - 1), 0.5, p.ancho); k.position.set(0, (1 + h) / 2, 0); k.rotation.z = a; g.add(sombra(k));
+      const go = new THREE.Mesh(CAJA, mat('#1e2226', { roughness: 0.9 })); go.scale.set(Math.hypot(L, h - 1) - 0.4, 0.08, p.ancho - 0.3); go.position.set(0, (1 + h) / 2 + 0.27, 0); go.rotation.z = a; g.add(sombra(go, false));
+      const po = mat(os ? '#83909A' : '#B6BFC7', { metalness: 0.4, roughness: 0.5 }); for (let x = -L / 2 + 2; x < L / 2; x += 10) { const yy = 1 + (h - 1) * (x + L / 2) / L - 0.25; for (const z of [-p.ancho / 2 + 0.2, p.ancho / 2 - 0.2]) caja(g, x - 0.14, 0, z - 0.12, x + 0.14, yy, z + 0.12, po); } return g; } },
+  rampa: { n: 'Rampa', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 4.2, largo: 10, alto: 1.2 },
+    campos: [F.nombre, F.ancho('Ancho (m)', 1, 30), { k: 'largo', n: 'Largo (m)', t: 'num', min: 1, max: 80, paso: 0.5 }, F.alto('Altura (m)', 0.2, 8, 0.1), F.r],
+    armar(p) { const g = new THREE.Group(), L = p.largo / 2, sh = new THREE.Shape(); sh.moveTo(-L, 0); sh.lineTo(L, 0); sh.lineTo(L, p.alto); sh.closePath(); const geo = new THREE.ExtrudeGeometry(sh, { depth: p.ancho, bevelEnabled: false }); geo.translate(0, 0, -p.ancho / 2);
+      const k = new THREE.Mesh(geo, mat(oscuro() ? '#4a5258' : '#c2c8cd', { roughness: 0.95 })); k.userData.noChoca = true; g.add(sombra(k)); const am = mat('#F2C230'); for (const z of [-p.ancho / 2, p.ancho / 2 - 0.12]) { const b = new THREE.Mesh(CAJA, am); b.scale.set(Math.hypot(p.largo, p.alto), 0.1, 0.12); b.position.set(0, p.alto / 2 + 0.06, z + 0.06); b.rotation.z = Math.atan2(p.alto, p.largo); b.userData.noChoca = true; g.add(sombra(b, false)); } g.userData.segs = []; return g; } },
+  escalera: { n: 'Escalera de exterior', g: 'Construcción', forma: 'punto', capa: 'base', def: { alto: 3.6, ancho: 1.1 },
+    campos: [F.nombre, F.alto('Altura (m)', 0.5, 20, 0.1), F.ancho('Ancho (m)', 0.7, 4), F.r],
+    armar(p) { const g = new THREE.Group(), h = p.alto, w = p.ancho / 2, run = h * 1.55, n = Math.max(2, Math.round(h / 0.18)), rs = h / n, tr = run / n, ac = mat(oscuro() ? '#7c868e' : '#A9B3BA', { metalness: 0.5, roughness: 0.5 }), na = mat('#E8641E', { roughness: 0.6 }), ang = Math.atan2(h, run), lar = Math.hypot(h, run);
+      for (let i = 0; i < n; i++) { const x = -run / 2 + i * tr; caja(g, x, (i + 1) * rs - 0.04, -w + 0.04, x + tr + 0.02, (i + 1) * rs, w - 0.04, ac, false); }
+      for (const z of [-w, w]) { const v = new THREE.Mesh(CAJA, ac); v.scale.set(lar, 0.22, 0.06); v.position.set(0, h / 2 - 0.05, z); v.rotation.z = ang; g.add(sombra(v)); const b = new THREE.Mesh(CAJA, na); b.scale.set(lar, 0.05, 0.05); b.position.set(0, h / 2 + 0.95, z); b.rotation.z = ang; g.add(sombra(b, false));
+        for (let i = 0; i <= n; i += Math.max(1, Math.round(n / 5))) { const x = -run / 2 + i * tr, y = i * rs; caja(g, x - 0.025, y, z - 0.025, x + 0.025, y + 1.0, z + 0.025, na, false); } }
+      caja(g, run / 2, h - 0.06, -w, run / 2 + 1.2, h, w, ac, false); caja(g, run / 2 + 0.9, 0, -w, run / 2 + 1.0, h - 0.06, -w + 0.1, ac); caja(g, run / 2 + 0.9, 0, w - 0.1, run / 2 + 1.0, h - 0.06, w, ac); g.traverse(m => { m.userData.noChoca = true; }); g.userData.segs = []; return g; } },
+
   alero: { n: 'Alero o techado', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 12, fondo: 14, alto: 4.6, color: '#e9ecee' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 120), F.fondo('Largo (m)', 2, 120), F.alto('Alto libre (m)', 2.2, 15), F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2; caja(g, -w, p.alto, -d, w, p.alto + 0.28, d, mat(p.color, { roughness: 0.5, metalness: 0.2 })); const c = mat('#8c949b', { metalness: 0.5, roughness: 0.4 });
@@ -532,6 +558,49 @@ function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.al
   g.updateMatrixWorld(true); g.traverse(m => { if (!m.isMesh || m.isInstancedMesh || m.userData.noChoca) return; const b = new THREE.Box3().setFromObject(m); if (b.isEmpty() || b.max.y < 0.35) return; m.userData.noChoca = true;
     const ex = b.max.x - b.min.x, ez = b.max.z - b.min.z, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2; const nv2 = m.userData.nivel || 0; duros.push(ex >= ez ? [b.min.x + ez / 2, cz, b.max.x - ez / 2, cz, ez / 2, b.min.y, b.max.y, nv2] : [cx, b.min.z + ex / 2, cx, b.max.z - ex / 2, ex / 2, b.min.y, b.max.y, nv2]); });
   g.userData.segs = duros; g.userData.suelos = suelos; g.userData.altoPiso = hp; g.userData.pisos = N; return g; }
+
+// ---------- nave logística: el galpón de un parque, con el frente hacia +z. Andenes numerados (portón, marco, visera y defensas), portones a nivel,
+// oficina de dos plantas en una punta, pretil, banda oscura arriba y techo liso, con claraboyas o con paneles. Las medidas son las de la maqueta de Ondi.
+// p.andenesEn = [[metros desde la punta izquierda, número]] fija cada andén; si no viene, se reparten p.andenes a lo largo. p.nivelEn = portones a nivel.
+// p.cajas = [[u0, u1, v0, v1, y0, y1, color]] agrega volúmenes propios del lugar (un alero, un anexo) en metros del frente: u a lo largo, v hacia afuera.
+const NAVE = { claro: { zocalo: '#D2D9DF', pretil: '#DAE1E6', banda: '#2B333B', porton: '#AAB5BF', liston: '#96A1AB', marco: '#59636C', goma: '#2E343A', vidrio: '#B4CEDC', clara: '#D3E6EE', panel: '#3D5466', aire: '#C6CED5' },
+  oscuro: { zocalo: '#45515C', pretil: '#64717D', banda: '#20282F', porton: '#76838E', liston: '#67737D', marco: '#2E3841', goma: '#1c2125', vidrio: '#E2BC6E', clara: '#4A7486', panel: '#2A4459', aire: '#6A7682' } };
+const SIETE = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgecd', 7: 'abc', 8: 'abcdefg', 9: 'abfgcd' };
+export function andenesDe(p) { const L = p.ancho; if (Array.isArray(p.andenesEn)) return p.andenesEn.filter(q => q[0] > 2 && q[0] < L - 2); const n = Math.max(0, p.andenes | 0); if (!n) return [];
+  const a = p.anexo === 'izq' ? 15 : 3, b = L - (p.anexo === 'der' ? 15 : 3), paso = Math.min(6.5, (b - a) / n), ini = (a + b) / 2 - paso * (n - 1) / 2, d0 = p.desde ?? 1; if (paso < 4) return andenesDe({ ...p, andenes: Math.floor((b - a) / 4) });
+  return Array.from({ length: n }, (_, i) => [ini + i * paso, d0 + i]); }
+function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.oscuro : NAVE.claro, L = p.ancho, w = L / 2, d = p.fondo / 2, h = p.alto, e = 0.25, ch = chapa(16, 'galpon');
+  const pa = matTex(ch, os ? mix(p.color, '#000', 0.5) : p.color, [1, 1], { bumpMap: ch, bumpScale: 0.6, roughness: 0.62, metalness: 0.18 }), liso = mat(os ? mix(p.color, '#000', 0.5) : p.color, { roughness: 0.7 }), M = (k, o) => mat(K[k], o);
+  const fr = (u0, u1, v0, v1, y0, y1, m, s = true) => caja(g, -w + u0, y0, d + v0, -w + u1, y1, d + v1, m, s);
+  cajaT(g, -w, 0, -d, w, h, -d + e, pa, 4); cajaT(g, -w, 0, -d, -w + e, h, d, pa, 4); cajaT(g, w - e, 0, -d, w, h, d, pa, 4); cajaT(g, -w, 0, d - e, w, h, d, pa, 4);
+  for (const [x0, z0, x1, z1] of [[-w, -d, w, -d + e], [-w, d - e, w, d], [-w, -d, -w + e, d], [w - e, -d, w, d]]) caja(g, x0 - 0.08, 0, z0 - 0.08, x1 + 0.08, 1.1, z1 + 0.08, M('zocalo'));
+  const t = caja(g, -w + e, h - 0.15, -d + e, w - e, h, d - e, mat(os ? mix(p.techo, '#000', 0.55) : p.techo, { roughness: 0.75 })); t.userData.techo = true;
+  for (const [x0, z0, x1, z1] of [[-w - 0.05, -d - 0.05, w + 0.05, -d + 0.45], [-w - 0.05, d - 0.45, w + 0.05, d + 0.05], [-w - 0.05, -d + 0.45, -w + 0.45, d - 0.45], [w - 0.45, -d + 0.45, w + 0.05, d - 0.45]]) caja(g, x0, h, z0, x1, h + 0.8, z1, M('pretil'));
+  const ax = p.anexo === 'izq' ? [-0.2, 12] : p.anexo === 'der' ? [L - 12, L + 0.2] : null; if (p.banda !== false && h > 7) fr(p.anexo === 'izq' ? 12 : 0, p.anexo === 'der' ? L - 12 : L, 0, 0.12, h - 2.4, h - 0.6, M('banda'), false);
+  // techo: claraboyas a lo largo del lado mayor, o paneles solares; y los equipos de aire
+  const arriba = [], cub = p.cubierta || 'lisa';
+  if (cub === 'claraboyas') { if (L >= p.fondo) for (let z = -d + 6; z < d - 4; z += 9) arriba.push([0, h + 0.14, z + 0.6, 0, L - 10, 0.26, 1.2, K.clara]); else for (let x = -w + 6; x < w - 4; x += 9) arriba.push([x + 0.6, h + 0.14, 0, 0, 1.2, 0.26, p.fondo - 10, K.clara]); }
+  if (cub === 'solar') { const S = p.solarEn || [3, L - 3, 3, p.fondo - 3]; for (let x = S[0]; x < S[1] - 7; x += 7.4) for (let z = S[2]; z < S[3] - 5; z += 5.4) arriba.push([-w + x + 3.5, h + 0.5, -d + z + 2.5, 0, 7, 0.3, 5, K.panel]); }
+  for (let i = 0, na = p.aires ?? (L > 30 ? 4 : 0); i < na; i++) arriba.push([-w + L * (0.2 + i * 0.2), h + 0.85, 0, 0, 3.4, 1.5, 2.8, K.aire]);
+  const lt = lote(g, CAJA, mat('#ffffff', { roughness: 0.5, metalness: 0.2 }), arriba); if (lt) lt.userData.techo = true;
+  // oficina al frente: dos plantas con ventanas corridas
+  if (ax) { const ha = Math.min(8.6, h - 0.4), [u0, u1] = ax; fr(u0, u1, -9, 2.6, 0, ha, liso); fr(u0 - 0.1, u1 + 0.1, -9.1, 2.7, ha, ha + 0.5, M('pretil'));
+    const vi = mat(K.vidrio, os ? { emissive: K.vidrio, emissiveIntensity: 0.55, roughness: 0.3 } : { roughness: 0.12, metalness: 0.5 }); for (const y of [1.4, 5]) { if (y + 2.4 > ha - 0.2) break; fr(u0 + 0.6, u1 - 0.6, 2.6, 2.64, y, y + 2.4, vi, false); const xl = p.anexo === 'izq' ? u0 - 0.04 : u1; fr(xl, xl + 0.04, -8.4, 2.0, y, y + 2.4, vi, false); } }
+  // andenes: marco, portón con listones, visera, defensas de goma y la chapa con el número
+  const placa = mat(p.placa || '#1F4D3A', { roughness: 0.6 }), bl = mat('#ffffff', os ? { emissive: '#ffffff', emissiveIntensity: 0.35 } : {}), am = mat('#F2C230');
+  const num = (n, uc, y0 = 5.95) => { const txt = String(n), W = 0.22, H = 0.36, T = 0.05, yb = y0 + 0.07; fr(uc - 0.24 - txt.length * 0.17, uc + 0.24 + txt.length * 0.17, 0.32, 0.37, y0, y0 + 0.5, placa, false);
+    [...txt].forEach((c, i) => { const x = uc + (i - (txt.length - 1) / 2) * 0.34, q = (a, b, y, yy) => fr(x + a, x + b, 0.37, 0.385, yb + y, yb + yy, bl, false);
+      for (const k of SIETE[c] || '') { if (k === 'a') q(-W / 2, W / 2, H - T, H); if (k === 'd') q(-W / 2, W / 2, 0, T); if (k === 'g') q(-W / 2, W / 2, H / 2 - T / 2, H / 2 + T / 2); if (k === 'b') q(W / 2 - T, W / 2, H / 2, H); if (k === 'c') q(W / 2 - T, W / 2, 0, H / 2); if (k === 'f') q(-W / 2, -W / 2 + T, H / 2, H); if (k === 'e') q(-W / 2, -W / 2 + T, 0, H / 2); } }); };
+  const AN = andenesDe(p); g.userData.andenes = AN.map(([u, n]) => ({ x: -w + u, z: d, n }));
+  for (const [u, n] of AN) { fr(u - 1.9, u + 1.9, 0, 0.32, 0.9, 5.2, M('marco')); fr(u - 1.6, u + 1.6, 0, 0.4, 1.2, 4.9, M('porton'), false); for (let y = 1.7; y < 4.8; y += 0.7) fr(u - 1.6, u + 1.6, 0, 0.43, y, y + 0.06, M('liston'), false);
+    if (h > 6.2) fr(u - 2.1, u + 2.1, 0, 1.6, 5.4, 5.7, M('pretil')); fr(u - 1.5, u - 1.1, 0, 0.6, 0.9, 1.5, M('goma'), false); fr(u + 1.1, u + 1.5, 0, 0.6, 0.9, 1.5, M('goma'), false); if (n != null && n !== '' && h > 6.8) num(n, u); }
+  for (const [u, n] of p.nivelEn || []) { fr(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, M('marco')); fr(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, mat('#16191C'), false); if (n != null) num(n, u); for (const s of [-1, 1]) fr(u + s * 2.75 - 0.16, u + s * 2.75 + 0.16, 0.5, 0.82, 0, 1.15, am); }
+  for (const c of p.cajas || []) { if (c[7] != null) num(c[7], (c[0] + c[1]) / 2, c[4]); else fr(c[0], c[1], c[2], c[3], c[4], c[5], mat(os && c[6] && /^#[EF]/i.test(c[6]) ? mix(c[6], '#000', 0.5) : c[6] || p.color, { roughness: 0.7 })); }
+  if (os) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false); AN.forEach(([u], i) => { if (i % 2 === 0) { brillo(g, -w + u, 6.4, d + 0.6, 3.2, '#ffe2b0', 0.7); pozo(g, -w + u, d + 6, 7, '#ffcf8a', 0.22); } }); }
+  // lo que no se atraviesa a pie: las cuatro paredes, la oficina y los volúmenes propios
+  const sg = [[-w, -d, w, -d, e, 0, h], [-w, d, w, d, e, 0, h], [-w, -d, -w, d, e, 0, h], [w, -d, w, d, e, 0, h]]; if (ax) sg.push([-w + ax[0] + 5.8, d - 3.2, -w + ax[1] - 5.8, d - 3.2, 5.8, 0, 8.6]);
+  for (const c of p.cajas || []) if (c[7] == null && c[4] < 1.6 && c[5] > 0.5) { const eu = Math.abs(c[1] - c[0]), ev = Math.abs(c[3] - c[2]), um = (c[0] + c[1]) / 2, vm = (c[2] + c[3]) / 2; sg.push(eu >= ev ? [-w + Math.min(c[0], c[1]) + ev / 2, d + vm, -w + Math.max(c[0], c[1]) - ev / 2, d + vm, ev / 2, c[4], c[5]] : [-w + um, d + Math.min(c[2], c[3]) + eu / 2, -w + um, d + Math.max(c[2], c[3]) - eu / 2, eu / 2, c[4], c[5]]); }
+  g.userData.segs = sg; return g; }
 
 // ---------- juntar en un solo dibujo las partes de una pieza que comparten material (menos llamadas a la placa de video) ----------
 const _inv = new THREE.Matrix4(), _mm = new THREE.Matrix4();
