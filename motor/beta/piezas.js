@@ -391,7 +391,7 @@ export const TIPOS = {
       const nEsc = Math.ceil(hp / 0.18), hue = 0.28, run = nEsc * hue, an = 1.3, xs1 = w - t - 1.5, xs0 = xs1 - run, suelos = [];
       const lane = k => { const z0 = -d + t + (k % 2) * (an + 0.1); return [z0, z0 + an]; };
       suelos.push({ x0: -w + t, z0: -d + t, x1: w - t, z1: d - t, y: 0 });
-      nv(0, caja(g, -w + t, 0, -d + t, w - t, 0.03, d - t, mPiso));
+      nv(0, caja(g, -w + t, 0, -d + t, w - t, 0.07, d - t, mat('#' + mPiso.color.getHexString(), { roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })));
       for (let k = 0; k < N; k++) { const yb = k * hp, ar = k > 0;
         // losa del piso k (con el hueco de la escalera que llega desde abajo) y su borde visto desde afuera
         if (ar) { const [hz0, hz1] = lane(k - 1), Lm = mLosa; nv(k, caja(g, -w + t, yb - 0.3, -d + t, xs0, yb + 0.03, d - t, Lm)); nv(k, caja(g, xs1, yb - 0.3, -d + t, w - t, yb + 0.03, d - t, Lm));
@@ -625,11 +625,14 @@ const mix = (a, b, k) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), k).ge
 function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.altoPiso, N = Math.max(1, Math.round(p.pisos)), P = p.plano, os = oscuro(), suelos = [], duros = [];
   const X = v => v - L / 2, Z = u => u - W / 2, mPta = mat(os ? '#6b4e36' : '#8a6448', { roughness: 0.6 }), mMov = mat(os ? '#9aa1a8' : '#dfe2e4', { roughness: 0.8 });
   const mVidI = mat(os ? '#a9c7d6' : '#d6e8f1', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false }), mMarco = mat('#2a2e33', { roughness: 0.5, metalness: 0.3 }), mFachI = mat(os ? '#7f868c' : '#e7e9ea', { roughness: 0.9 });
-  nv(0, caja(g, -L / 2, 0, -W / 2, L / 2, 0.03, W / 2, M.mPiso)); suelos.push({ x0: -L / 2, z0: -W / 2, x1: L / 2, z1: W / 2, y: 0 });
+  // el piso de planta baja queda arriba del terreno (hormigón y asfalto van a 3 o 4 cm): si no, adentro se ve el terreno de afuera
+  const mPB = mat('#' + M.mPiso.color.getHexString(), { roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  nv(0, caja(g, -L / 2, 0, -W / 2, L / 2, 0.07, W / 2, mPB)); suelos.push({ x0: -L / 2, z0: -W / 2, x1: L / 2, z1: W / 2, y: 0.07 });
   const E = P.esc, hue = E ? [X(E.v0), Z(Math.min(E.uA[0], E.uB[0])), X(E.llegada[0]), Z(Math.max(E.uA[1], E.uB[1]))] : null;
   // losas de los pisos de arriba (con el hueco de la escalera) y franja clara del canto
   for (let k = 1; k <= N; k++) { const yb = k * hp, top = k === N, H = !top && hue ? hue : null, rects = H ? [[-L / 2, -W / 2, H[0], W / 2], [H[2], -W / 2, L / 2, W / 2], [H[0], -W / 2, H[2], H[1]], [H[0], H[3], H[2], W / 2]] : [[-L / 2, -W / 2, L / 2, W / 2]];
-    for (const [a, b, c, d] of rects) if (c - a > 0.01 && d - b > 0.01) nv(k, caja(g, a, yb - 0.3, b, c, yb + (top ? 0.05 : 0.03), d, M.mLosa));
+    const sal = v => Math.abs(Math.abs(v) - L / 2) < 0.001 || Math.abs(Math.abs(v) - W / 2) < 0.001 ? v + Math.sign(v) * 0.04 : v; // los bordes de afuera sobresalen 4 cm: la franja de la losa no queda en el mismo plano que la pared
+    for (const [a, b, c, d] of rects) if (c - a > 0.01 && d - b > 0.01) nv(k, caja(g, sal(a), yb - 0.3, sal(b), sal(c), yb + (top ? 0.05 : 0.03), sal(d), M.mLosa));
     if (!top) suelos.push({ x0: -L / 2, z0: -W / 2, x1: L / 2, z1: W / 2, y: yb, hueco: H }); }
   // paredes
   for (const [k, t, u0, v0, u1, v1, hs] of P.muros) { if (k >= N) continue; const yb = k * hp, x0 = X(v0), z0 = Z(u0), x1 = X(v1), z1 = Z(u1), len = Math.hypot(x1 - x0, z1 - z0); if (len < 0.05) continue;
@@ -637,19 +640,23 @@ function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.al
     const diag = Math.abs(u1 - u0) > 0.05 && Math.abs(v1 - v0) > 0.05, a0 = diag ? 0 : Math.abs(u1 - u0) > 0.05 ? Math.min(u0, u1) : Math.min(v0, v1), escH = diag ? len : 1, inv = !diag && (Math.abs(u1 - u0) > 0.05 ? u1 < u0 : v1 < v0);
     const H = (hs || []).map(([a, b, q]) => { let s0 = (a - a0) * escH, s1 = (b - a0) * escH; if (inv) [s0, s1] = [len - s1, len - s0]; return [Math.max(0, s0), Math.min(len, s1), q]; }).sort((m, n) => m[0] - n[0]);
     // un tramo de pared de s0 a s1 (metros a lo largo), de y0 a y1
-    const seg = (s0, s1, y0, y1, m, choca = true) => { if (s1 - s0 < 0.01 || y1 - y0 < 0.01) return; const cx = x0 + dx * (s0 + s1) / 2, cz = z0 + dz * (s0 + s1) / 2, k2 = new THREE.Mesh(CAJA, m);
-      k2.scale.set(s1 - s0, y1 - y0, gro); k2.position.set(cx, yb + (y0 + y1) / 2, cz); k2.rotation.y = ang; k2.castShadow = k2.receiveShadow = true; nv(k, k2); k2.userData.noChoca = true; g.add(k2);
+    // la pared de fachada va en dos capas: el color de afuera por fuera y revoque claro por dentro (si no, adentro las paredes se ven oscuras).
+    // mas = cuánto más gruesa que la pared va la parte (marcos y parantes): así no quedan en el mismo plano que la pared y no titilan.
+    const nx = -dz, nz = dx, mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, afuera = Math.hypot(mx + nx * 0.3, mz + nz * 0.3) >= Math.hypot(mx - nx * 0.3, mz - nz * 0.3) ? 1 : -1;
+    const parte = (s0, s1, y0, y1, m, gr, corr) => { const k2 = new THREE.Mesh(CAJA, m); k2.scale.set(s1 - s0, y1 - y0, gr); k2.position.set(x0 + dx * (s0 + s1) / 2 + nx * corr, yb + (y0 + y1) / 2, z0 + dz * (s0 + s1) / 2 + nz * corr); k2.rotation.y = ang; k2.castShadow = k2.receiveShadow = true; nv(k, k2); k2.userData.noChoca = true; g.add(k2); return k2; };
+    const seg = (s0, s1, y0, y1, m, choca = true, mas = 0) => { if (s1 - s0 < 0.01 || y1 - y0 < 0.01) return; let k2;
+      if (t === 'e' && !mas && (m === M.mFach || m === M.mFr)) { k2 = parte(s0, s1, y0, y1, m, 0.15, afuera * 0.05); parte(s0, s1, y0, y1, mFachI, 0.1, -afuera * 0.075); } else k2 = parte(s0, s1, y0, y1, m, gro + mas, 0);
       if (choca && y1 - y0 > 0.3) duros.push([x0 + dx * s0, z0 + dz * s0, x0 + dx * s1, z0 + dz * s1, gro / 2, yb + y0, yb + y1, k]); return k2; };
     const lleno = (s0, s1) => { // pared sin huecos en ese tramo, según el tipo
-      if (t === 'c') { seg(s0, s1, 0, 0.12, mMarco); seg(s0, s1, 0.12, alto - 0.5, M.mVid); seg(s0, s1, alto - 0.5, alto, M.mFr); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.03, q + 0.03, 0.12, alto - 0.5, mMarco, false); }
+      if (t === 'c') { seg(s0, s1, 0, 0.12, mMarco); seg(s0, s1, 0.12, alto - 0.5, M.mVid); seg(s0, s1, alto - 0.5, alto, M.mFr); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.03, q + 0.03, 0.12, alto - 0.5, mMarco, false, 0.03); }
       else if (t === 'e') { seg(s0, s1, 0, alto - 0.55, M.mFach); seg(s0, s1, alto - 0.55, alto, M.mFr); }
-      else if (t === 'g') { seg(s0, s1, 0, 0.9, mFachI); seg(s0, s1, 0.9, alto, mVidI); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.025, q + 0.025, 0.9, alto, mMarco, false); }
+      else if (t === 'g') { seg(s0, s1, 0, 0.9, mFachI); seg(s0, s1, 0.9, alto, mVidI); for (let q = s0 + 1.2; q < s1 - 0.1; q += 1.2) seg(q - 0.025, q + 0.025, 0.9, alto, mMarco, false, 0.03); }
       else seg(s0, s1, 0, alto, t === 'm' ? mMov : mFachI); };
     let s = 0; for (const [h0, h1, q] of H) { lleno(s, h0); s = Math.max(s, h1);
       if (q === 'v') { const vb = t === 'e' ? 0.9 : 0.12; seg(h0, h1, 0, vb, t === 'e' ? M.mFach : mMarco); seg(h0, h1, vb, alto - (t === 'e' ? 0.55 : 0.5), M.mVid); seg(h0, h1, alto - (t === 'e' ? 0.55 : 0.5), alto, t === 'e' || t === 'c' ? M.mFr : mFachI);
-        seg(h0 - 0.05, h0 + 0.05, vb, alto - 0.55, mMarco, false); seg(h1 - 0.05, h1 + 0.05, vb, alto - 0.55, mMarco, false); seg((h0 + h1) / 2 - 0.03, (h0 + h1) / 2 + 0.03, vb, alto - 0.55, mMarco, false); }
-      else { const dintel = Math.min(2.2, alto - 0.3); seg(h0, h1, dintel, alto, ext ? (t === 'c' ? M.mFr : M.mFach) : t === 'g' ? mVidI : mFachI); if (ext) seg(h0, h1, alto - 0.55, alto, M.mFr);
-        seg(h0 - 0.04, h0 + 0.04, 0, dintel, mMarco, false); seg(h1 - 0.04, h1 + 0.04, 0, dintel, mMarco, false); if (q === 'pc') seg(h0 + 0.04, h1 - 0.04, 0, dintel, mPta); } }
+        seg(h0 - 0.05, h0 + 0.05, vb, alto - 0.55, mMarco, false, 0.03); seg(h1 - 0.05, h1 + 0.05, vb, alto - 0.55, mMarco, false, 0.03); seg((h0 + h1) / 2 - 0.03, (h0 + h1) / 2 + 0.03, vb, alto - 0.55, mMarco, false, 0.03); }
+      else { const dintel = Math.min(2.2, alto - 0.3); seg(h0, h1, dintel, ext ? alto - 0.55 : alto, ext ? (t === 'c' ? M.mFr : M.mFach) : t === 'g' ? mVidI : mFachI); if (ext) seg(h0, h1, alto - 0.55, alto, M.mFr); // el dintel llega hasta la franja de arriba, sin pisarse con ella
+        seg(h0 - 0.04, h0 + 0.04, 0, dintel, mMarco, false, 0.03); seg(h1 - 0.04, h1 + 0.04, 0, dintel, mMarco, false, 0.03); if (q === 'pc') seg(h0 + 0.04, h1 - 0.04, 0, dintel, mPta); } }
     lleno(s, len); }
   // escalera en U: primer tramo por el carril A desde la llegada hasta la meseta, meseta a media altura, segundo tramo por el carril B hasta el piso de arriba
   if (E) for (let k = 0; k < N - 1; k++) { const yb = k * hp, ym = yb + hp / 2, xm0 = X(E.meseta[0]), xm1 = X(E.meseta[1]), xl = X(E.llegada[0]), [a0, a1] = E.uA.map(Z), [b0, b1] = E.uB.map(Z), run = xl - xm1, n = Math.max(6, Math.round(hp / 2 / 0.17)), tr = run / n;
