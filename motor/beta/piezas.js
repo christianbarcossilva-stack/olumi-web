@@ -440,6 +440,20 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'radio', n: 'Radio (m)', t: 'num', min: 0.5, max: 60, paso: 0.5 }, F.alto('Alto (m)', 1, 60, 0.5), F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), m = mat(oscuro() ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.5, metalness: 0.35 }), cono = Math.max(0.4, p.radio * 0.22); malla(g, CIL24, m, 0, p.alto / 2, 0, p.radio * 2, p.alto, p.radio * 2);
       const t = new THREE.Mesh(new THREE.ConeGeometry(p.radio * 1.02, cono, 24), m); t.position.y = p.alto + cono / 2; g.add(sombra(t)); for (const y of [p.alto * 0.33, p.alto * 0.66]) malla(g, CIL24, mat('#9aa3ab', { roughness: 0.5, metalness: 0.5 }), 0, y, 0, p.radio * 2.03, 0.12, p.radio * 2.03, false); return g; } },
+  // estacionamiento con autos: playa de asfalto con los lugares pintados y autos estacionados (todos en un solo dibujo). Cada lugar mide 2,6 × 5,2 m.
+  estacionamiento: { n: 'Estacionamiento con autos', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { columnas: 8, filas: 1, ocupacion: 70 },
+    campos: [F.nombre, { k: 'columnas', n: 'Lugares por fila', t: 'num', min: 1, max: 80, paso: 1 }, { k: 'filas', n: 'Filas', t: 'num', min: 1, max: 12, paso: 1 }, { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), C = Math.max(1, p.columnas | 0), R = Math.max(1, p.filas | 0), w = C * 2.6 / 2, d = R * 5.2 / 2, po = { polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -6 };
+      const piso = new THREE.Mesh(new THREE.PlaneGeometry(C * 2.6 + 1, R * 5.2 + 1).rotateX(-Math.PI / 2), calmo(matTex(texSuelo('asfalto'), os ? '#55595c' : '#ffffff', [(C * 2.6 + 1) / METROS.asfalto, (R * 5.2 + 1) / METROS.asfalto], { roughness: 0.94, ...po }), 0.38)); piso.position.y = 0.045; piso.receiveShadow = true; piso.userData.noChoca = true; g.add(piso);
+      const lin = []; for (let r = 0; r < R; r++) for (let c = 0; c <= C; c++) lin.push([-w + c * 2.6, 0.052, -d + r * 5.2 + 2.6, 0, 0.1, 0.012, 4.9]); const ll = lote(g, CAJA, mat(os ? '#9fb2c2' : '#f2f4f5', { roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -9, polygonOffsetUnits: -8 }), lin, false); if (ll) ll.userData.noChoca = true;
+      // autos: carrocería, cabina vidriada y ruedas; el color y cuáles lugares están ocupados salen del nombre de la pieza (siempre igual)
+      let sm = 7; for (const ch of String(p.id || 'e')) sm = (sm * 31 + ch.charCodeAt(0)) % 2147483647; const az = () => { sm = (sm * 16807 + 11) % 2147483647; return (sm & 0xffff) / 0xffff; };
+      const COL = os ? ['#6f7a84', '#8b949c', '#3b4249', '#22262a', '#5a2f2c', '#27405f', '#77808a'] : ['#f1f3f4', '#c9ced3', '#8e969d', '#2b2f33', '#a8322b', '#2f5f9e', '#e9e4d6', '#5c6670'], it = [], vd = os ? '#1b2a36' : '#2b3a47', ru = '#17191c';
+      for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { if (az() * 100 >= p.ocupacion) continue; const x = -w + c * 2.6 + 1.3 + (az() - 0.5) * 0.25, z = -d + r * 5.2 + 2.6 + (az() - 0.5) * 0.5, col = COL[Math.floor(az() * COL.length)], f = az() < 0.5 ? 1 : -1, alto = az() < 0.3;
+        it.push([x, alto ? 0.66 : 0.58, z, 0, 1.78, alto ? 0.78 : 0.6, alto ? 4.5 : 4.25, col], [x, alto ? 1.32 : 1.1, z - f * 0.3, 0, 1.52, alto ? 0.56 : 0.46, alto ? 2.6 : 1.95, vd], [x, alto ? 1.62 : 1.345, z - f * 0.3, 0, 1.4, 0.05, alto ? 2.3 : 1.6, col]);
+        for (const sx of [-0.82, 0.82]) for (const sz of [-1.35, 1.35]) it.push([x + sx, 0.32, z + sz, 0, 0.24, 0.64, 0.64, ru]); }
+      lote(g, CAJA, mat('#ffffff', { roughness: 0.45, metalness: 0.35 }), it); return g; } },
+
   // cinta transportadora, rampa y escalera de exterior (las tres suben hacia +x)
   cinta: { n: 'Cinta transportadora', g: 'Logística', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { largo: 40, alto: 8, ancho: 1.4 },
     campos: [F.nombre, { k: 'largo', n: 'Largo (m)', t: 'num', min: 4, max: 400, paso: 1 }, F.alto('Altura de la punta (m)', 1, 40, 0.5), F.ancho('Ancho (m)', 0.6, 4), F.r],
