@@ -713,6 +713,10 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
   const AN = andenesDe(p); g.userData.andenes = AN.map(([u, n]) => ({ x: -w + u, z: d, n }));
   for (const [u, n] of AN) { fr(u - 1.9, u + 1.9, 0, 0.32, 0.9, 5.2, M('marco')); fr(u - 1.6, u + 1.6, 0, 0.4, 1.2, 4.9, M('porton'), false); for (let y = 1.7; y < 4.8; y += 0.7) fr(u - 1.6, u + 1.6, 0, 0.43, y, y + 0.06, M('liston'), false);
     if (h > 6.2) fr(u - 2.1, u + 2.1, 0, 1.6, 5.4, 5.7, M('pretil')); fr(u - 1.5, u - 1.1, 0, 0.6, 0.9, 1.5, M('goma'), false); fr(u + 1.1, u + 1.5, 0, 0.6, 0.9, 1.5, M('goma'), false); if (n != null && n !== '' && h > 6.8) num(n, u); }
+  // pintura del piso: una calle por andén (líneas amarillas de 16 m) y la franja rayada al pie de los portones
+  if (AN.length) { const pin = mat(os ? '#b89a3a' : '#E5C35A', { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -9, polygonOffsetUnits: -8 }), us = AN.map(q => q[0]), it = [];
+    us.forEach((u, i) => { it.push([-w + u - 2.5, 0.05, d + 8.2, 0, 0.16, 0.012, 15.6]); if (i === us.length - 1 || us[i + 1] - u > 6.5) it.push([-w + u + 2.5, 0.05, d + 8.2, 0, 0.16, 0.012, 15.6]); it.push([-w + u, 0.05, d + 0.9, 0, 3.4, 0.012, 0.16]); });
+    const lp = lote(g, CAJA, pin, it, false); if (lp) lp.userData.noChoca = true; }
   for (const [u, n] of p.nivelEn || []) { fr(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, M('marco')); fr(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, mat('#16191C'), false); if (n != null) num(n, u); for (const s of [-1, 1]) fr(u + s * 2.75 - 0.16, u + s * 2.75 + 0.16, 0.5, 0.82, 0, 1.15, am); }
   for (const c of p.cajas || []) { if (c[7] != null) num(c[7], (c[0] + c[1]) / 2, c[4]); else fr(c[0], c[1], c[2], c[3], c[4], c[5], mat(os && c[6] && /^#[EF]/i.test(c[6]) ? mix(c[6], '#000', 0.5) : c[6] || p.color, { roughness: 0.7 })); }
   if (os) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false); AN.forEach(([u], i) => { if (i % 2 === 0) { brillo(g, -w + u, 6.4, d + 0.6, 3.2, '#ffe2b0', 0.7); pozo(g, -w + u, d + 6, 7, '#ffcf8a', 0.22); } }); }
