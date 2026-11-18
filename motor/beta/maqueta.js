@@ -12,12 +12,12 @@
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 import { THREE, crearMotor } from './nucleo.js?v=10';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=23';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=24';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=13';
+import { construir } from './construir.js?v=14';
 import { recorrer } from './recorrer.js?v=8';
-import { transito } from './transito.js?v=12';
+import { transito } from './transito.js?v=13';
 import { extras } from './extras.js?v=3';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

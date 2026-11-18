@@ -6,6 +6,21 @@ import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
 import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=5';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
+// ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
+// { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
+const MUEB = { data: null, prom: null, geo: new Map(), mat: null };
+const MUEB_URL = new URL('../../olumi/beta/3d/muebles.json', import.meta.url).href;
+export const MUEBLES = [['desk', 'Escritorio'], ['deskCorner', 'Escritorio en L'], ['chairDesk', 'Silla de escritorio'], ['computerScreen', 'Monitor'], ['laptop', 'Notebook'], ['table', 'Mesa'], ['tableCross', 'Mesa de reunión'], ['tableRound', 'Mesa redonda'], ['chair', 'Silla'], ['chairModernCushion', 'Silla moderna'], ['loungeSofa', 'Sofá'], ['loungeChair', 'Sillón'], ['tableCoffee', 'Mesa ratona'], ['bookcaseOpen', 'Estantería'], ['bookcaseClosedWide', 'Archivo ancho'], ['sideTableDrawers', 'Cajonera'], ['pottedPlant', 'Planta grande'], ['televisionModern', 'Televisor'], ['kitchenCabinet', 'Bajo mesada'], ['kitchenSink', 'Pileta de cocina'], ['kitchenFridge', 'Heladera'], ['kitchenCoffeeMachine', 'Cafetera'], ['kitchenBar', 'Barra'], ['stoolBar', 'Banqueta alta'], ['toiletSquare', 'Inodoro'], ['bathroomSinkSquare', 'Lavatorio'], ['trashcan', 'Papelera'], ['cardboardBoxClosed', 'Caja de cartón'], ['rugRectangle', 'Alfombra'], ['lampSquareFloor', 'Lámpara de pie']];
+function mueblesCargar() { if (!MUEB.prom) MUEB.prom = fetch(MUEB_URL).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { MUEB.data = j.m;
+    const pal = j.pal.map(c => new THREE.Color().setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace)); MUEB.pal = pal; MUEB.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }); return j; });
+  return MUEB.prom; }
+const b64 = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
+function muebleGeo(k) { if (MUEB.geo.has(k)) return MUEB.geo.get(k);
+  const pr = mueblesCargar().then(() => { const m = MUEB.data[k]; if (!m) return null; const P = b64(m.p, Int16Array), Q = b64(m.q, Int8Array), K = b64(m.k, Uint8Array), n = K.length;
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { pos[i * 3] = P[i * 3] / 1000; pos[i * 3 + 1] = P[i * 3 + 1] / 1000; pos[i * 3 + 2] = P[i * 3 + 2] / 1000; nor[i * 3] = Q[i * 3] / 127; nor[i * 3 + 1] = Q[i * 3 + 1] / 127; nor[i * 3 + 2] = Q[i * 3 + 2] / 127; const c = MUEB.pal[K[i]] || MUEB.pal[0]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeBoundingSphere(); return g; });
+  MUEB.geo.set(k, pr); return pr; }
 // ---------- materiales y formas compartidas ----------
 const MATS = new Map();
 export function mat(c, o = {}) { const k = c + JSON.stringify(o); let m = MATS.get(k); if (!m) { m = new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.85, metalness: 0 }, o)); MATS.set(k, m); } return m; }
@@ -548,7 +563,7 @@ export const TIPOS = {
     armar(p, ctx) { const g = new THREE.Group(), c = mat(p.color || '#c9ced2', { roughness: 0.35, metalness: 0.4 }); caja(g, -2.2, 0.35, -0.9, 2.2, 1.1, 0.9, c); caja(g, -1.2, 1.1, -0.82, 1.0, 1.6, 0.82, mat('#2c3e4f', { roughness: 0.1, metalness: 0.6 }));
       ctx && ctx.glb && ctx.glb('vehiculos', p.modelo, g, p.color); return g; } },
   persona: { n: 'Persona', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', def: { modelo: 'tec-h-epp' },
-    campos: [F.nombre, { k: 'modelo', n: 'Cómo es', t: 'sel', ops: [['tec-h-epp', 'Técnico con casco y chaleco'], ['tec-h', 'Técnico'], ['of-h', 'Oficina (hombre)'], ['of-h2', 'Oficina (hombre con suéter)'], ['of-m', 'Oficina (mujer)'], ['of-m2', 'Oficina (mujer con suéter)']] }, F.r],
+    campos: [F.nombre, { k: 'modelo', n: 'Cómo es', t: 'sel', ops: [['tec-h-epp', 'Técnico con casco y chaleco'], ['tec-h', 'Técnico'], ['of-h', 'Oficina (hombre)'], ['of-h2', 'Oficina (hombre con suéter)'], ['of-m', 'Oficina (mujer)'], ['of-m2', 'Oficina (mujer con suéter)'], ['of-h5', 'Oficina (hombre, chomba y cargo)'], ['of-h6', 'Oficina (hombre, camisa a rayas)'], ['of-h7', 'Oficina (hombre, remera y pantalón de vestir)'], ['of-m5', 'Oficina (mujer, remera y jean)'], ['of-m6', 'Oficina (mujer, remera y botas)'], ['of-m7', 'Oficina (mujer, blusa y pollera)']] }, F.r],
     armar(p, ctx) { const g = new THREE.Group(); cil(g, 0, 0, 0, 0.22, 1.45, mat('#3b5b7a')); const k = new THREE.Mesh(BOLA, mat('#e0b493')); k.scale.setScalar(0.26); k.position.y = 1.62; g.add(sombra(k)); ctx && ctx.glb && ctx.glb('avatares', p.modelo, g, null, p.id); return g; } },
 
   // equipos (Ondi). y = altura de montaje; uid = vínculo con el equipo real de la app (UniFi, Meraki o cargado a mano)
@@ -616,8 +631,17 @@ export const TIPOS = {
       { k: 'lector', n: 'Lector', t: 'sel', ops: [['afuera', 'De un lado'], ['ambos', 'De los dos lados']] }, F.r, { k: 'notas', n: 'Notas', t: 'area' }],
     variantes: ACCESOS.map(([clase, n]) => ({ n, o: { clase } })),
     armar: armarAcceso },
+
+  // muebles (18/11, para la oficina de Olumi y las oficinas de Ondi): el Furniture Kit de Kenney (CC0), el mismo archivo que usa la oficina de Olumi
+  mueble: { n: 'Mueble', g: 'Muebles', forma: 'punto', capa: 'base', etiqueta: () => '', def: { modelo: 'desk' },
+    campos: [{ k: 'modelo', n: 'Qué es', t: 'sel', ops: MUEBLES }, { k: 'y', n: 'Altura sobre el piso (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r],
+    variantes: MUEBLES.map(([modelo, n]) => ({ n, o: { modelo } })),
+    armar(p, ctx) { const g = new THREE.Group(); g.userData.sinAplanar = true; const b = (MUEB.data && MUEB.data[p.modelo] && MUEB.data[p.modelo].b) || [0.8, 0.8, 0.6];
+      const caja0 = new THREE.Mesh(CAJA, mat('#c9ced2', { transparent: true, opacity: 0.35 })); caja0.scale.set(b[0], b[1], b[2]); caja0.position.y = b[1] / 2 + (p.y || 0); g.add(caja0);
+      muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
+      return g; } },
 };
-export const GRUPOS = ['Terreno', 'Construcción', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
+export const GRUPOS = ['Terreno', 'Construcción', 'Muebles', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
 
 // árboles: tronco + copa, todos los de una pieza en dos o tres dibujos
 function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], R = azar(lista.length * 31 + 7);
