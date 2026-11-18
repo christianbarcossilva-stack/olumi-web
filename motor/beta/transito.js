@@ -2,8 +2,8 @@
 // Sale solo de lo que hay armado: las calles son la red y los andenes de las naves son los destinos. Es movimiento de ejemplo
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos en una sola llamada (cajas instanciadas), así no pesa aunque haya muchos.
-import { THREE } from './nucleo.js?v=10';
-import { andenesDe } from './piezas.js?v=24';
+import { THREE } from './nucleo.js?v=11';
+import { andenesDe } from './piezas.js?v=25';
 
 const PARTES = [ // centro (x, y, z), tamaño (x, y, z) y de qué color va: 0 oscuro, 1 caja, 2 cabina, 3 vidrio, 4 puertas, 5 faro, 6 luz de atrás, 7 metal
   [0, 1.2, 0, 12.4, 0.3, 2.3, 0], [0, 2.74, 0, 12.3, 2.78, 2.5, 1], [-4.2, 1.0, 0, 3.0, 0.12, 2.5, 0], [7.75, 1.95, 0, 2.7, 2.9, 2.45, 2],
@@ -84,15 +84,25 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   let avisado = ''; function avisar() { const porNave = new Map(); for (const a of T.andenes) { const o = porNave.get(a.p.id) || porNave.set(a.p.id, [0, 0]).get(a.p.id); o[1]++; if (a.cam && a.cam.estado === 'anden') o[0]++; }
     const f = JSON.stringify([...porNave]) + T.on; if (f === avisado) return; avisado = f; if (M.subtitulo) for (const [id, [oc, tot]] of porNave) M.subtitulo(id, T.on && tot ? `${oc}/${tot} andenes` : ''); }
 
+  // ¿hay otro camión en el camino? Mira un pasillo del ancho del camión hacia donde se mueve (adelante, o atrás si retrocede).
+  // Solo frenan los que van en el mismo sentido o los que están maniobrando: los que vienen de frente pasan por su carril.
+  function tapado(c, tr) { const fx = Math.cos(c.h), fz = -Math.sin(c.h), at = !!tr.atras;
+    for (const o of T.camiones) { if (o === c || (o.estado !== 'va' && o.estado !== 'sale')) continue; if (Math.abs(o.x - c.x) > 60 || Math.abs(o.z - c.z) > 60) continue;
+      const ox = Math.cos(o.h), oz = -Math.sin(o.h), man = !!(o.cola[0] && o.cola[0].atras); if (!man && fx * ox + fz * oz < 0.2) continue;
+      // si los dos se ven, pasa primero el que maniobra y, si no, el que está más adelante en su camino
+      for (const k of [0, 8, 16]) { const rx = o.x + ox * k - c.x, rz = o.z + oz * k - c.z, f = rx * fx + rz * fz, l = Math.abs(-rx * fz + rz * fx); if (l > 2.9) continue;
+        if (at ? (f < -0.5 && f > -9) : (f > 17 && f < 26)) return true; } }
+    return false; }
   function paso(dt) { if (!T.on || !T.andenes.length || document.hidden) return false; dt = Math.min(dt, 0.1); let movio = false;
     T.prox -= dt; const andando = T.camiones.filter(c => c.estado === 'va' || c.estado === 'sale').length;
     if (T.prox <= 0) { T.prox = rnd(3.5, 8); const libres = (T.con || []).filter(a => !a.cam); if (libres.length && andando < Math.min(9, 2 + Math.ceil(T.andenes.length / 12))) { const a = de(libres), ent = T.entradas.filter(n => n.c === a.nodo.c), ini = ent.length ? de(ent) : null, ruta = ini && camino(ini, a.nodo);
-        if (ruta && ruta.length > 1) { const c = nuevoCamion(); if (c) { c.x = ruta[0].x; c.z = ruta[0].z; c.h = Math.atan2(-(ruta[1].z - ruta[0].z), ruta[1].x - ruta[0].x); pintar(c); entrar(c, a, ruta); } } } }
+        if (ruta && ruta.length > 1 && T.camiones.some(q => q.estado !== 'anden' && Math.hypot(q.x - ruta[0].x, q.z - ruta[0].z) < 34)) T.prox = 1.5; else if (ruta && ruta.length > 1) { const c = nuevoCamion(); if (c) { c.x = ruta[0].x; c.z = ruta[0].z; c.h = Math.atan2(-(ruta[1].z - ruta[0].z), ruta[1].x - ruta[0].x); pintar(c); entrar(c, a, ruta); } } } }
     for (const c of T.camiones.slice()) {
       if (c.estado === 'anden') { c.t -= dt; if (c.t <= 0) salir(c); continue; }
       if (c.estado === 'chau') { c.t -= dt * 1.5; c.esc = Math.max(0, c.t); ubicar(c); movio = true; if (c.t <= 0) sacar(c); continue; }
       const tr = c.cola[0]; if (!tr) { if (c.estado === 'va') { c.estado = 'anden'; c.t = rnd(45, 200); c.x = c.anden.x; c.z = c.anden.z; c.h = c.anden.h; c.lado = 0; ubicar(c); avisar(); } else { c.estado = 'chau'; c.t = 1; } movio = true; continue; }
       if (c.esc < 1) c.esc = Math.min(1, c.esc + dt * 1.5);
+      if (tapado(c, tr) && (c.esp = (c.esp || 0) + dt) < 25) continue; c.esp = 0;
       // velocidad: más despacio en las curvas y al llegar al final del tramo
       const queda = tr.largo - c.s, vmax = tr.atras ? tr.v : (tr.carril ? 6 : tr.v), v = Math.max(0.9, Math.min(vmax, queda * 0.6 + 0.9) * (c.gira > 0.25 ? 0.55 : 1)); c.s += v * dt;
       if (c.s >= tr.largo) { c.cola.shift(); c.s = 0; if (c.estado === 'sale' && !c.cola.length) { c.estado = 'chau'; c.t = 1; } if (c.cola[0] && c.estado === 'sale' && c.anden) { if (c.anden.cam === c) c.anden.cam = null; avisar(); } continue; }

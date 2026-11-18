@@ -1,7 +1,7 @@
 // Motor común · materiales propios (beta). Acá va lo que hace que la maqueta se vea nuestra y no «de cajas»:
 // chapa con el perfil de verdad (trapezoidal o acanalada), con relieve que agarra la luz, tornillos, solapes entre chapas y el reflejo del cielo.
 // Todo se dibuja en el momento (sin fotos de terceros) y cada combinación se arma una sola vez.
-import { THREE } from './nucleo.js?v=10';
+import { THREE } from './nucleo.js?v=11';
 
 const TEX = new Map(), MATS = new Map();
 const azar = s => () => { s = (s * 16807 + 11) % 2147483647; return (s & 0xffff) / 0xffff; };

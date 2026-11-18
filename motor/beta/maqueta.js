@@ -11,13 +11,13 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
-import { THREE, crearMotor } from './nucleo.js?v=10';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=24';
+import { THREE, crearMotor } from './nucleo.js?v=11';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=25';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=14';
-import { recorrer } from './recorrer.js?v=8';
-import { transito } from './transito.js?v=13';
+import { construir } from './construir.js?v=15';
+import { recorrer } from './recorrer.js?v=9';
+import { transito } from './transito.js?v=14';
 import { extras } from './extras.js?v=3';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -92,7 +92,7 @@ export async function abrirMaqueta(o) {
     EQ.porUid = new Map(EQ.lista.map(d => [d.uid, d]));
     for (const p of E.piezas) if (p.uid && TIPOS[p.t] && TIPOS[p.t].equipo) { const d = EQ.porUid.get(p.uid), g = objs.get(p.id); if (d && d.nombre && p.nombre !== d.nombre) p.nombre = d.nombre; if (g && g.userData.estado !== ESTADO(d && d.estado)) rehacer(p); }
     if (!$('#meq').hidden) listaEquipos(); if (SEL) info(); }
-  const ctx = { paredes: 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p) };
+  const ctx = { paredes: 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, modelo: o.catalogo ? modeloBase : null, piezas: () => E.piezas, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p) };
   if (host && host.equipos) { leerEquipos(true); setInterval(() => leerEquipos(true), 60000); }
 
   // ---------- puertas con control de acceso (Kliva): estado en vivo y movimiento ----------
@@ -127,6 +127,9 @@ export async function abrirMaqueta(o) {
 
   // ---------- modelos del catálogo de Olumi (personas y vehículos) ----------
   const GLB = {}, PERS = new Set(); let cat = null, loader = null, AVM = null, avAcc = 0;
+  // el modelo tal cual viene del catálogo (sin copiar): lo usan los estacionamientos para dibujar muchos autos iguales de una vez
+  async function modeloBase(tipo, id) { if (!loader) { const { GLTFLoader } = await import('three/addons/GLTFLoader.js'); loader = new GLTFLoader(); } cat = cat || await (await fetch(o.catalogo + 'catalogo.json')).json(); const it = (cat[tipo] || []).find(x => x.id === id); if (!it) return null;
+    GLB[id] = GLB[id] || new Promise((ok, no) => loader.load(o.catalogo + it.archivo, x => ok(x.scene), undefined, no)); return { escena: await GLB[id], it }; }
   async function cargarGLB(tipo, id, g, color, pid) { try { if (!loader) { const { GLTFLoader } = await import('three/addons/GLTFLoader.js'); loader = new GLTFLoader(); }
       cat = cat || await (await fetch(o.catalogo + 'catalogo.json')).json(); const it = (cat[tipo] || []).find(x => x.id === id); if (!it) return;
       GLB[id] = GLB[id] || new Promise((ok, no) => loader.load(o.catalogo + it.archivo, x => ok(x.scene), undefined, no)); const base = await GLB[id];
@@ -139,7 +142,9 @@ export async function abrirMaqueta(o) {
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
 
   // ---------- armar la escena ----------
-  function rehacer(p) { const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); if (g.userData.anima) { POSE.delete(p.id); mover(p); } motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); }
+  function rehacer(p) { const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); if (g.userData.anima) { POSE.delete(p.id); mover(p); } motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); if (!rehVec && /^(calle|rotonda|terreno|estacionamiento|galpon|edificio|modulo|recinto)$/.test(p.t)) vecinos(); }
+  // cordones, veredas, esquinas y matas de pasto dependen de lo que tienen al lado: un rato después de un cambio se rehacen calles y pastos
+  let rehVec = false, tVec = 0; function vecinos() { clearTimeout(tVec); tVec = setTimeout(() => { rehVec = true; try { for (const q of E.piezas) if (objs.has(q.id) && (q.t === 'calle' || (q.t === 'terreno' && /pasto|monte/.test(q.mat || '')))) rehacer(q); } finally { rehVec = false; } }, 900); }
   // cada app muestra su parte del plano; lo que no muestra queda guardado tal cual para la app que lo usa
   const veo = p => ve(app, p);
   function ocultas() { const c = {}; for (const p of E.piezas) if (!veo(p)) c[dominio(p)] = (c[dominio(p)] || 0) + 1; const t = Object.entries(c).map(([k, n]) => `${n} de ${DOMINIOS[k]}`).join(' y '), el = $('#mocultos'); if (!el) return;

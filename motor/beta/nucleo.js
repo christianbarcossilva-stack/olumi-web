@@ -6,13 +6,13 @@ export { THREE };
 
 // día: sol de tarde con sombras marcadas y cielo con bruma; noche: azul profundo con estrellas (el brillo lo ponen las piezas)
 const TEMAS = {
-  claro: { alto: 0x5f9ee0, cielo: 0xd9e6ef, niebla: 0xd6e2eb, sol: 0xffeccf, solI: 3.6, hemiA: 0xbcd6f0, hemiB: 0x6f675a, hemiI: 0.5, env: 0.7, exp: 0.84, umbral: 1.5, brillo: 0.22, borde: 0.35, noche: 0, cerca: 700, lejos: 4200 },
-  oscuro: { alto: 0x02060c, cielo: 0x0a1824, niebla: 0x08131d, sol: 0x9fb8ff, solI: 0.55, hemiA: 0x4a6c96, hemiB: 0x0b0f15, hemiI: 0.7, env: 0.2, exp: 1.18, umbral: 0.5, brillo: 0.85, borde: 0.75, noche: 1, cerca: 500, lejos: 2600 }
+  claro: { ao: 0.9, sat: 1.1, bal: [1.035, 1.0, 0.955], alto: 0x5f9ee0, cielo: 0xd9e6ef, niebla: 0xd6e2eb, sol: 0xffe7c2, solI: 3.6, hemiA: 0xbcd6f0, hemiB: 0x84745f, hemiI: 0.5, env: 0.7, exp: 0.84, umbral: 1.5, brillo: 0.22, borde: 0.35, noche: 0, cerca: 700, lejos: 4200 },
+  oscuro: { ao: 0.75, sat: 1.05, bal: [1, 1, 1], alto: 0x02060c, cielo: 0x0a1824, niebla: 0x08131d, sol: 0x9fb8ff, solI: 0.55, hemiA: 0x4a6c96, hemiB: 0x0b0f15, hemiI: 0.7, env: 0.2, exp: 1.18, umbral: 0.5, brillo: 0.85, borde: 0.75, noche: 1, cerca: 500, lejos: 2600 }
 };
 // horas del día: cuatro momentos. Mañana y mediodía usan las piezas de día; hora azul y noche, las de noche (luces prendidas).
 // sold = desde dónde viene el sol o la luna (x, y, z): baja en la mañana y al atardecer, así las sombras se alargan.
 const HORAS = {
-  manana: { ...TEMAS.claro, base: 'claro', n: 'Mañana', sold: [1.5, 0.8, 0.9], alto: 0x6c9fd8, cielo: 0xf3dfc8, niebla: 0xe9dccb, sol: 0xffd3a0, solI: 3.1, hemiA: 0xc7d6ea, hemiB: 0x7a6f60, env: 0.66, exp: 0.86, borde: 0.4 },
+  manana: { ...TEMAS.claro, bal: [1.06, 1.0, 0.92], base: 'claro', n: 'Mañana', sold: [1.5, 0.8, 0.9], alto: 0x6c9fd8, cielo: 0xf3dfc8, niebla: 0xe9dccb, sol: 0xffd3a0, solI: 3.1, hemiA: 0xc7d6ea, hemiB: 0x7a6f60, env: 0.66, exp: 0.86, borde: 0.4 },
   dia: { ...TEMAS.claro, base: 'claro', n: 'Mediodía', sold: [-1.1, 2.2, 1.4] },
   azul: { ...TEMAS.oscuro, base: 'oscuro', n: 'Hora azul', sold: [-1.7, 0.55, 0.7], alto: 0x16264f, cielo: 0x9a6f9c, niebla: 0x4a4468, sol: 0x9fb0ff, solI: 0.95, hemiA: 0x6e84c8, hemiB: 0x191c2a, hemiI: 1.05, env: 0.3, exp: 1.12, umbral: 0.55, brillo: 0.8, borde: 0.7, noche: 0.3, cerca: 600, lejos: 3200 },
   noche: { ...TEMAS.oscuro, base: 'oscuro', n: 'Noche', sold: [-1.1, 2.2, 1.4] } };
@@ -38,8 +38,26 @@ const CIELO_FS = `uniform vec3 alto, hor, solC; uniform vec3 solD; uniform float
 const P_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 const P_BRILLO = 'uniform sampler2D t; uniform float umbral; varying vec2 vUv; void main(){ vec3 c = min(texture2D(t, vUv).rgb, vec3(14.0)); float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c * smoothstep(umbral, umbral + 0.7, l), 1.0); }';
 const P_BLUR = 'uniform sampler2D t; uniform vec2 d; varying vec2 vUv; void main(){ vec3 c = texture2D(t, vUv).rgb * 0.227027; c += (texture2D(t, vUv + d * 1.3846).rgb + texture2D(t, vUv - d * 1.3846).rgb) * 0.316216; c += (texture2D(t, vUv + d * 3.2308).rgb + texture2D(t, vUv - d * 3.2308).rgb) * 0.07027; gl_FragColor = vec4(c, 1.0); }';
-const P_FINAL = `uniform sampler2D t, b1, b2, b3; uniform float fuerza, borde; varying vec2 vUv;
-  void main(){ vec3 c = texture2D(t, vUv).rgb + (texture2D(b1, vUv).rgb * 0.55 + texture2D(b2, vUv).rgb * 0.8 + texture2D(b3, vUv).rgb * 1.0) * fuerza; vec2 q = vUv - 0.5; c *= 1.0 - borde * dot(q, q);
+// sombra de contacto (oclusión ambiental propia): mira la profundidad alrededor de cada punto y oscurece rincones, pies de muebles y encuentros de pared y piso.
+// Es lo que saca el aspecto «de plástico»: las cosas quedan apoyadas y con volumen. El radio crece con la distancia, así se nota de cerca y de lejos.
+const P_AO = `uniform sampler2D tD; uniform mat4 pInv; uniform float p11, asp; uniform vec2 px; varying vec2 vUv;
+  vec3 pos(vec2 uv){ float d = texture2D(tD, uv).x; vec4 v = pInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
+  void main(){ float d0 = texture2D(tD, vUv).x; if (d0 >= 0.999999) { gl_FragColor = vec4(1.0, 9000.0, 0.0, 1.0); return; }
+    vec3 p = pos(vUv), pl = pos(vUv - vec2(px.x, 0.0)), pr = pos(vUv + vec2(px.x, 0.0)), pd = pos(vUv - vec2(0.0, px.y)), pu = pos(vUv + vec2(0.0, px.y));
+    vec3 dx = abs(pl.z - p.z) < abs(pr.z - p.z) ? p - pl : pr - p, dy = abs(pd.z - p.z) < abs(pu.z - p.z) ? p - pd : pu - p, n = normalize(cross(dx, dy));
+    float z = -p.z, radio = clamp(z * 0.035, 0.2, 7.0), ruv = radio * p11 / z * 0.5, ang = (mod(floor(gl_FragCoord.x), 4.0) * 5.0 + mod(floor(gl_FragCoord.y), 4.0) * 3.0 + mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) * 8.0) / 16.0 * 6.2832, s = 0.0;
+    for (int i = 0; i < 12; i++) { float f = sqrt((float(i) + 0.5) / 12.0), a = ang + float(i) * 2.39996; vec3 v = pos(vUv + vec2(cos(a) / asp, sin(a)) * f * ruv) - p; float l = length(v) + 0.0001;
+      s += max(0.0, dot(n, v) / l - 0.16) * smoothstep(radio * 1.7, radio * 0.35, l); }
+    gl_FragColor = vec4(clamp(1.0 - s / 12.0 * 3.3, 0.0, 1.0), z, 0.0, 1.0); }`;
+const P_AOB = `uniform sampler2D t; uniform vec2 d; varying vec2 vUv;
+  void main(){ vec2 c = texture2D(t, vUv).rg; float s = 0.0, w = 0.0;
+    for (int i = 0; i < 4; i++) { vec2 q = texture2D(t, vUv + d * (float(i) - 1.5)).rg; float k = step(abs(q.g - c.g), 0.05 * c.g + 0.06) + 0.0001; s += q.r * k; w += k; }
+    gl_FragColor = vec4(s / w, c.g, 0.0, 1.0); }`;
+const P_FINAL = `uniform sampler2D t, b1, b2, b3, ao; uniform float fuerza, borde, aoF, sat; uniform vec3 bal; varying vec2 vUv;
+  void main(){ vec3 c = texture2D(t, vUv).rgb; float o = texture2D(ao, vUv).r; c *= mix(vec3(1.0), mix(vec3(0.2, 0.17, 0.17), vec3(1.0), o), aoF);
+    c += (texture2D(b1, vUv).rgb * 0.55 + texture2D(b2, vUv).rgb * 0.8 + texture2D(b3, vUv).rgb * 1.0) * fuerza;
+    // color: balance (más cálido de día) y un poco más de saturación; los bordes apenas más oscuros
+    c *= bal; c = max(mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, sat), 0.0); vec2 q = vUv - 0.5; c *= 1.0 - borde * dot(q, q);
     gl_FragColor = vec4(c, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -47,13 +65,17 @@ const P_FINAL = `uniform sampler2D t, b1, b2, b3; uniform float fuerza, borde; v
 function crearPost(renderer) { let ok = false; try { ok = renderer.capabilities.isWebGL2 && (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float')); } catch (e) {} if (!ok) return null;
   const esc = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); quad.frustumCulled = false; esc.add(quad);
   const M = (fs, u, tono) => new THREE.ShaderMaterial({ vertexShader: P_VS, fragmentShader: fs, uniforms: u, depthTest: false, depthWrite: false, toneMapped: !!tono });
-  const mBr = M(P_BRILLO, { t: { value: null }, umbral: { value: 1 } }), mBl = M(P_BLUR, { t: { value: null }, d: { value: new THREE.Vector2() } }), mFi = M(P_FINAL, { t: { value: null }, b1: { value: null }, b2: { value: null }, b3: { value: null }, fuerza: { value: 0.5 }, borde: { value: 0.5 } }, true);
-  const tam = new THREE.Vector2(); let W = 0, H = 0, rE = null, niv = [];
+  const mBr = M(P_BRILLO, { t: { value: null }, umbral: { value: 1 } }), mBl = M(P_BLUR, { t: { value: null }, d: { value: new THREE.Vector2() } }), mFi = M(P_FINAL, { t: { value: null }, b1: { value: null }, b2: { value: null }, b3: { value: null }, ao: { value: null }, fuerza: { value: 0.5 }, borde: { value: 0.5 }, aoF: { value: 0 }, sat: { value: 1 }, bal: { value: new THREE.Vector3(1, 1, 1) } }, true),
+    mAO = M(P_AO, { tD: { value: null }, pInv: { value: new THREE.Matrix4() }, p11: { value: 1 }, asp: { value: 1 }, px: { value: new THREE.Vector2() } }), mAB = M(P_AOB, { t: { value: null }, d: { value: new THREE.Vector2() } });
+  const tam = new THREE.Vector2(); let W = 0, H = 0, rE = null, niv = [], aoA = null, aoB = null;
   const rt = (w, h, o) => new THREE.WebGLRenderTarget(Math.max(2, w), Math.max(2, h), Object.assign({ type: THREE.HalfFloatType, depthBuffer: false }, o));
   const pasa = (m, dst) => { quad.material = m; renderer.setRenderTarget(dst); renderer.render(esc, cam); };
-  return { umbral: 1, fuerza: 0.5, borde: 0.5,
-    dibujar(scene, camara) { renderer.getDrawingBufferSize(tam); if (tam.x !== W || tam.y !== H) { W = tam.x; H = tam.y; if (rE) rE.dispose(); niv.forEach(n => { n[0].dispose(); n[1].dispose(); }); rE = rt(W, H, { depthBuffer: true, samples: 4 }); niv = [2, 4, 8].map(k => [rt(W / k | 0, H / k | 0), rt(W / k | 0, H / k | 0)]); }
+  return { umbral: 1, fuerza: 0.5, borde: 0.5, ao: 0.85, sat: 1.06, bal: [1, 1, 1],
+    dibujar(scene, camara) { renderer.getDrawingBufferSize(tam); if (tam.x !== W || tam.y !== H) { W = tam.x; H = tam.y; if (rE) rE.dispose(); niv.forEach(n => { n[0].dispose(); n[1].dispose(); }); if (aoA) { aoA.dispose(); aoB.dispose(); } rE = rt(W, H, { depthBuffer: true, samples: 4, depthTexture: new THREE.DepthTexture(W, H) }); aoA = rt(W / 2 | 0, H / 2 | 0); aoB = rt(W / 2 | 0, H / 2 | 0); niv = [2, 4, 8].map(k => [rt(W / k | 0, H / k | 0), rt(W / k | 0, H / k | 0)]); }
       const antes = renderer.getRenderTarget(); renderer.setRenderTarget(rE); renderer.render(scene, camara);
+      if (this.ao > 0.01) { const u = mAO.uniforms; u.tD.value = rE.depthTexture; u.pInv.value.copy(camara.projectionMatrixInverse); u.p11.value = camara.projectionMatrix.elements[5]; u.asp.value = W / H; u.px.value.set(1 / W, 1 / H); pasa(mAO, aoA);
+        mAB.uniforms.t.value = aoA.texture; mAB.uniforms.d.value.set(1 / aoA.width, 0); pasa(mAB, aoB); mAB.uniforms.t.value = aoB.texture; mAB.uniforms.d.value.set(0, 1 / aoA.height); pasa(mAB, aoA); }
+      mFi.uniforms.ao.value = aoA.texture; mFi.uniforms.aoF.value = this.ao > 0.01 ? this.ao : 0; mFi.uniforms.sat.value = this.sat; mFi.uniforms.bal.value.set(this.bal[0], this.bal[1], this.bal[2]);
       let src = rE.texture; mBr.uniforms.umbral.value = this.umbral;
       niv.forEach(([a, b], i) => { if (i === 0) { mBr.uniforms.t.value = src; pasa(mBr, a); } else { mBl.uniforms.t.value = src; mBl.uniforms.d.value.set(0, 0); pasa(mBl, a); }
         for (let v = 0; v < 2; v++) { mBl.uniforms.t.value = a.texture; mBl.uniforms.d.value.set(1 / a.width, 0); pasa(mBl, b); mBl.uniforms.t.value = b.texture; mBl.uniforms.d.value.set(0, 1 / a.height); pasa(mBl, a); } src = a.texture; });
@@ -100,7 +122,7 @@ export function crearMotor(canvas, o = {}) {
   motor.ponerHora = h => { if (!HORAS[h]) return; motor.hora = h; motor.ponerTema(HORAS[h].base, HORAS[h].base === motor.tema); };
   motor.ponerTema = (t, soloLuz) => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; if (!HORAS[motor.hora] || HORAS[motor.hora].base !== t) motor.hora = t === 'oscuro' ? 'noche' : 'dia'; const T = conClima(HORAS[motor.hora], motor.clima); motor.espesa = T.espesa || null; SD.set(T.sold[0], T.sold[1], T.sold[2]).normalize(); cieloU.solD.value.copy(SD); scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
     cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol).multiplyScalar(T.disco ?? 1); cieloU.noche.value = T.noche;
-    sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp; if (post) { post.umbral = T.umbral; post.fuerza = T.brillo; post.borde = T.borde; }
+    sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp; if (post) { post.umbral = T.umbral; post.fuerza = T.brillo; post.borde = T.borde; post.ao = T.ao ?? 0.85; post.sat = T.sat ?? 1.06; post.bal = T.bal || [1, 1, 1]; }
     // de día el reflejo de chapas y vidrios es el del cielo de la maqueta (no el de una sala de estudio); de noche queda el reflejo tenue de antes
     if (t === 'claro') { const uu = THREE.UniformsUtils.clone(cieloU); uu.alto.value.lerp(uu.hor.value, 0.72); /* cielo más pálido para alumbrar: si no, las sombras quedan azules */ const s = new THREE.Scene(), c2 = new THREE.Mesh(cielo.geometry, new THREE.ShaderMaterial({ uniforms: uu, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false })), ps = new THREE.Mesh(new THREE.CircleGeometry(90, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xa9a59b })); c2.scale.setScalar(60); c2.renderOrder = -10; ps.position.y = -2; s.add(c2, ps); if (envCielo) envCielo.dispose(); envCielo = pmrem.fromScene(s, 0.035, 0.1, 400).texture; scene.environment = envCielo; ps.geometry.dispose(); ps.material.dispose(); c2.material.dispose(); } else scene.environment = envSala;
     document.documentElement.dataset.tema = t; motor.dirty = true; if (!soloLuz) motor.alTema.forEach(f => f(t)); };
