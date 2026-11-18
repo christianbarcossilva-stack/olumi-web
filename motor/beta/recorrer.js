@@ -2,6 +2,9 @@
 // Caminar: W A S D o flechas (← → giran), Shift corre, clic en el piso camina hasta ahí (busca el camino por las puertas).
 // Mirar: arrastrar, o dos dedos de costado en el trackpad. Rueda o pellizco: acerca la cámara; del todo cerca se ve por los ojos (V).
 // E o clic sobre un equipo: abre su ficha. Esc sale. En el celular: palanca a la izquierda y arrastrar para mirar.
+// V cambia la vista: tercera persona (para andar lejos), por los ojos (para armar de cerca) y vuelo (la cámara se suelta del muñeco:
+// W A S D la llevan, E o Espacio suben, Q baja, Shift apura; al salir del vuelo el muñeco baja donde quedó la cámara).
+// Se puede editar mientras se recorre: el toque pone o elige, arrastrar mira.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
 import { THREE } from './nucleo.js?v=4';
 
@@ -45,9 +48,9 @@ export function recorrer(M) {
         if (h <= y + 0.6 && h > mejor) mejor = h; } } return mejor; }
   // adentro de un edificio se esconde lo que está arriba del piso donde uno camina (losas, paredes y techo); por los ojos se ve todo, como en la realidad
   function niveles(g, hasta) { const p = g.userData.pieza || {}; g.traverse(m => { if (m.isMesh && m.userData.nivel != null) m.visible = hasta == null ? !(p.corte && m.userData.nivel > 0) : m.userData.nivel <= hasta; }); motor.dirty = true; }
-  function adentro(g, piso) { const ver = g && !R.ojos ? piso : null;
+  function adentro(g, piso) { const ver = g && !R.ojos && !R.vuelo ? piso : null;
     if (R.dentro && R.dentro !== g) { niveles(R.dentro, null); if (R.afuera) { R.dist = R.afuera.d; R.incl = { a: R.afuera.pitch, t: 0.9 }; R.afuera = null; } }
-    if (g && R.dentro !== g && !R.ojos) { R.afuera = { d: R.dist, pitch: C.pitch }; R.dist = Math.min(R.dist, 8); R.incl = { a: Math.max(C.pitch, 0.95), t: 0.9 }; }
+    if (g && R.dentro !== g && !R.ojos && !R.vuelo) { R.afuera = { d: R.dist, pitch: C.pitch }; R.dist = Math.min(R.dist, 8); R.incl = { a: Math.max(C.pitch, 0.95), t: 0.9 }; }
     if (g && (R.dentro !== g || R.piso !== piso || R.verN !== ver)) niveles(g, ver);
     R.dentro = g; R.piso = piso; R.verN = ver; }
 
@@ -75,26 +78,32 @@ export function recorrer(M) {
   // ---------- entrar y salir ----------
   async function paseo(on, donde) { if (on === R.on) { if (on && donde) irA(donde[0], donde[1]); return; } R.on = on; motor.caminando = on; const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on);
     document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); R.joy = { x: 0, y: 0 }; R.k = {}; R.ruta = null; marca.visible = false; joyKnob();
-    if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; adentro(null); R.afuera = null; R.y = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
+    if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; R.vuelo = false; adentro(null); R.afuera = null; R.y = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
     R.antes = { cam: { tx: C.tx, tz: C.tz, d: Math.max(30, C.d), pitch: Math.max(0.3, C.pitch) }, lim: { min: C.min, max: C.max, pmin: C.pmin } }; Object.assign(C, { min: 0.05, max: 60, pmin: 0.06 });
-    R.y = 0; R.vx = R.vz = 0; R.ojos = false; R.dist = 7; obstaculos(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
+    R.y = 0; R.vx = R.vz = 0; R.ojos = false; R.vuelo = false; R.dist = 7; obstaculos(); vistaTxt(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
     const g = new THREE.Group(); g.position.set(R.x, 0, R.z); mundo.add(g); R.g = g; ayuda(true); R.ob = await M.avatar(g); motor.dirty = true; }
   // por los ojos (V): la cámara va a la cabeza y el muñeco no se dibuja
   function ojos(on) { if (!R.on) return; if (on && !R.ojos) R.tercera = Math.max(2.5, R.dist); R.dist = on ? 0.05 : R.tercera || 7; }
+  // vuelo: la cámara se suelta del muñeco y vuela sin chocar; al salir, el muñeco baja donde quedó
+  function vuelo(on) { if (!R.on || on === !!R.vuelo) return; R.vuelo = on; if (on) { if (!R.ojos) R.tercera = Math.max(2.5, R.dist); R.fx = R.x; R.fz = R.z; R.fy = R.y + 1.62; R.ruta = null; marca.visible = false; C.pmin = -1.2; }
+    else { [R.x, R.z] = libre(R.fx, R.fz); R.y = alturaEn(R.x, R.z, Math.max(0, R.fy - 1.6)); R.vx = R.vz = 0; R.dist = R.tercera || 7; C.pmin = 0.06; if (C.pitch < 0.2) C.pitch = 0.36; R.viaje = 0; R.puesta = null; } vistaTxt(); motor.dirty = true; }
+  // V pasa de tercera persona a los ojos, de los ojos al vuelo y vuelve
+  function vista() { if (R.vuelo) vuelo(false); else if (R.ojos || R.dist < 0.9) { vuelo(true); } else ojos(true); vistaTxt(); }
+  function vistaTxt() { const b = $('#mpojos'); if (!b) return; const n = R.vuelo ? 'Vuelo' : R.dist < 0.9 ? 'Ojos' : '3.ª persona'; b.querySelector('span').textContent = n; b.setAttribute('aria-pressed', n !== '3.ª persona'); b.title = `Vista: ${n}. Cambiar (V)`; }
 
   // ---------- teclas, palanca y ayuda ----------
-  document.body.insertAdjacentHTML('beforeend', `<div id="mpaseo" role="status"><span class="tec"><kbd>W A S D</kbd> caminar <i></i> <kbd>Shift</kbd> correr <i></i> <b>clic</b> ir ahí <i></i> <b>arrastrar</b> mirar <i></i> <kbd>V</kbd> ojos</span><button type="button" id="mpojos" aria-label="Ver por los ojos" title="Ver por los ojos (V)">${M.svg('ojo', 16)}</button><button type="button" id="mpsalir">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div><div id="musar" class="vidrio" hidden></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div id="mpaseo" role="status"><span class="tec"><kbd>W A S D</kbd> caminar <i></i> <kbd>Shift</kbd> correr <i></i> <b>clic</b> ir ahí <i></i> <b>arrastrar</b> mirar <i></i> <kbd>V</kbd> vista</span><button type="button" id="mpojos" aria-label="Cambiar la vista" title="Vista (V)">${M.svg('ojo', 16)}<span>3.ª persona</span></button><button type="button" id="mpsalir">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div><div id="musar" class="vidrio" hidden></div>`);
   let ayT; function ayuda(ver) { const el = $('#mpaseo'); el.classList.toggle('corta', !ver); clearTimeout(ayT); if (ver) ayT = setTimeout(() => el.classList.add('corta'), 9000); }
-  $('#mpsalir').onclick = () => paseo(false); $('#mpojos').onclick = () => ojos(!R.ojos); $('#mpaseo').addEventListener('pointerenter', () => ayuda(true));
+  $('#mpsalir').onclick = () => paseo(false); $('#mpojos').onclick = vista; $('#mpaseo').addEventListener('pointerenter', () => ayuda(true));
   const joy = $('#mjoy'); function joyKnob() { const j = R.joy || { x: 0, y: 0 }; joy.firstChild.style.transform = `translate(${j.x * 36}px,${j.y * 36}px)`; }
   const mueveJoy = e => { if (R.jp !== e.pointerId) return; const r = joy.getBoundingClientRect(); let x = (e.clientX - r.left - r.width / 2) / 40, y = (e.clientY - r.top - r.height / 2) / 40; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } R.joy = { x, y }; R.ruta = null; marca.visible = false; joyKnob(); };
   joy.addEventListener('pointerdown', e => { joy.setPointerCapture(e.pointerId); R.jp = e.pointerId; mueveJoy(e); e.stopPropagation(); }); joy.addEventListener('pointermove', mueveJoy);
   const sueltaJoy = () => { R.jp = null; R.joy = { x: 0, y: 0 }; joyKnob(); }; joy.addEventListener('pointerup', sueltaJoy); joy.addEventListener('pointercancel', sueltaJoy);
-  const TECLAS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
+  const TECLAS = ['w', 'a', 's', 'd', 'q', 'e', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
   addEventListener('keydown', e => { if (!R.on || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase();
-    if (k === 'escape') { e.stopImmediatePropagation(); paseo(false); return; }
-    if (k === 'v') { ojos(!R.ojos); return; } if (k === 'e' && R.cerca) { e.stopImmediatePropagation(); M.elegir(R.cerca); return; }
-    if (TECLAS.includes(k)) { R.k[k] = 1; if (k !== 'shift') { R.ruta = null; marca.visible = false; } if (k.startsWith('arrow')) e.preventDefault(); } }, true);
+    if (k === 'escape') { if (motor.editando) return; e.stopImmediatePropagation(); if (R.vuelo) vuelo(false); else paseo(false); return; }   // editando, Esc primero cierra lo del editor
+    if (k === 'v') { vista(); return; } if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); return; }
+    if (TECLAS.includes(k)) { R.k[k] = 1; if (k !== 'shift') { R.ruta = null; marca.visible = false; } if (k.startsWith('arrow') || k === ' ') e.preventDefault(); } }, true);
   addEventListener('keyup', e => { R.k[e.key.toLowerCase()] = 0; }); addEventListener('blur', () => { R.k = {}; });
 
   // ---------- cada cuadro ----------
@@ -103,6 +112,9 @@ export function recorrer(M) {
     // la rueda, el pellizco o los dedos cambian la distancia de la cámara: eso pasa a ser lo que se quiere
     if (R.viaje > 0) R.viaje -= dt; else if (R.puesta != null && Math.abs(C.d - R.puesta) > 1e-4) R.dist = Math.min(C.max, Math.max(C.min, C.d));
     const giro = (K.arrowleft ? 1 : 0) - (K.arrowright ? 1 : 0); if (giro) C.yaw += giro * dt * 1.9;
+    if (R.vuelo) { const f = (K.w || K.arrowup ? 1 : 0) - (K.s || K.arrowdown ? 1 : 0) - J.y, l = (K.d ? 1 : 0) - (K.a ? 1 : 0) + J.x, sube = (K.e || K[' '] ? 1 : 0) - (K.q ? 1 : 0), v = (K.shift ? 26 : 9) * Math.max(0.5, Math.min(4, R.fy / 6)), fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw);
+      R.fx += (fx * f - fz * l) * v * dt; R.fz += (fz * f + fx * l) * v * dt; R.fy = Math.min(400, Math.max(0.5, R.fy + sube * v * 0.7 * dt)); C.tx = R.fx; C.tz = R.fz; C.ty = R.fy; C.d = 0.05; R.puesta = C.d;
+      R.g.visible = true; R.g.position.set(R.x, R.y, R.z); adentro(null); if (R.ob) { M.AVM().avPose(R.ob, 'idle', dt, { x: R.x, y: R.z, t: t / 1000 }); R.ob.sync(); } return true; }
     let f = (K.w || K.arrowup ? 1 : 0) - (K.s || K.arrowdown ? 1 : 0) - J.y, l = (K.d ? 1 : 0) - (K.a ? 1 : 0) + J.x, corre = K.shift || Math.hypot(J.x, J.y) > 0.92, tx = 0, tz = 0;
     if (f || l) { const fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw), m = Math.max(1, Math.hypot(f, l)); tx = (fx * f - fz * l) / m; tz = (fz * f + fx * l) / m; }
     else if (R.ruta && R.ruta.length) { const [px, pz] = R.ruta[0], d = Math.hypot(px - R.x, pz - R.z); if (d < 0.25) { R.ruta.shift(); if (!R.ruta.length) { R.ruta = null; marca.visible = false; } } else { tx = (px - R.x) / d; tz = (pz - R.z) / d; let resto = d; for (let i = 1; i < R.ruta.length; i++) resto += Math.hypot(R.ruta[i][0] - R.ruta[i - 1][0], R.ruta[i][1] - R.ruta[i - 1][1]); corre = resto > 14; if (resto < 1.2) { tx *= 0.6; tz *= 0.6; } } }
@@ -113,7 +125,7 @@ export function recorrer(M) {
       const r = Math.atan2(R.vx, R.vz); let d = r - R.rumbo; d = Math.atan2(Math.sin(d), Math.cos(d)); R.rumbo += d * Math.min(1, dt * 10); } else R.vx = R.vz = 0;
     const yo = alturaEn(R.x, R.z, R.y); R.y += (yo - R.y) * Math.min(1, dt * (yo < R.y - 0.6 ? 6 : 14)); if (Math.abs(yo - R.y) < 0.004) R.y = yo;
     let dg = null, piso = 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, R.x, R.z), S = g.userData.suelos[0]; if (lx > S.x0 - 0.2 && lx < S.x1 + 0.2 && lz > S.z0 - 0.2 && lz < S.z1 + 0.2) { dg = g; piso = Math.max(0, Math.floor((R.y + 0.9) / g.userData.altoPiso)); break; } }
-    const eraOjos = R.ojos; R.ojos = R.dist < 0.9; if (R.ojos !== eraOjos) { C.pmin = R.ojos ? -1.2 : 0.06; if (!R.ojos && C.pitch < 0.06) C.pitch = 0.2; const b = $('#mpojos'); if (b) b.setAttribute('aria-pressed', R.ojos); }
+    const eraOjos = R.ojos; R.ojos = R.dist < 0.9; if (R.ojos !== eraOjos) { C.pmin = R.ojos ? -1.2 : 0.06; if (!R.ojos && C.pitch < 0.06) C.pitch = 0.2; vistaTxt(); }
     adentro(dg, piso); if (R.incl) { R.incl.t -= dt; if (!R.ojos) C.pitch += (R.incl.a - C.pitch) * Math.min(1, dt * 5); if (R.incl.t <= 0) R.incl = null; }
     // cámara: sigue al muñeco a la altura del pecho (o de los ojos) y se acerca si hay algo en el medio
     const alt = R.y + (R.ojos ? 1.62 : 1.35), kk = Math.min(1, dt * 9); C.tx += (R.x - C.tx) * kk; C.tz += (R.z - C.tz) * kk; C.ty = (C.ty || 0) + (alt - (C.ty || 0)) * kk;
@@ -126,4 +138,4 @@ export function recorrer(M) {
     if (t - tCerca > 220) { tCerca = t; let mejor = null, md = 2.2; for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t].equipo) continue; const d = Math.hypot((p.x || 0) - R.x, (p.z || 0) - R.z); if (d < md && Math.abs((+p.piso || 0) - R.y) < 2) { md = d; mejor = p; } }
       if (mejor !== R.cerca) { R.cerca = mejor; const el = $('#musar'); el.hidden = !mejor || motor.tactil; if (mejor) el.innerHTML = `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}`; } }
     return true; });
-  return { R, paseo, irA, ojos, obstaculos, choca }; }
+  return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca }; }

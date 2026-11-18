@@ -11,7 +11,7 @@ import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig
 import { ve, dominio, DOMINIOS } from '../plano.js?v=2';
 import { svg } from './iconos.js?v=1';
 import { construir } from './construir.js?v=2';
-import { recorrer } from './recorrer.js?v=1';
+import { recorrer } from './recorrer.js?v=2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['base', 'Construcciones y caminos'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['equipos', 'Equipos'], ['campos', 'Campo de las cámaras'], ['etiquetas', 'Nombres'], ['techos', 'Techos']];
@@ -197,9 +197,9 @@ export async function abrirMaqueta(o) {
   // lo que se guarda y se deshace nunca lleva lo que todavía se está ubicando (piezas y aberturas marcadas con _p)
   const limpio = () => JSON.stringify(E.piezas.filter(p => !p._p), (k, v) => k === '_col' ? undefined : k === 'huecos' && Array.isArray(v) ? v.filter(h => !h._p) : v);
   const undo = [], redo = []; let foto = limpio();
-  function cambio(guardarYa = true, escribiendo) { const ahora = limpio(); if (ahora === foto) return; if (!escribiendo || !undo.length || undo[undo.length - 1].t < Date.now() - 1500) undo.push({ s: foto, t: Date.now() }); if (undo.length > 80) undo.shift(); redo.length = 0; foto = ahora; if (guardarYa) guardar(); }
+  function cambio(guardarYa = true, escribiendo) { const ahora = limpio(); if (ahora === foto) return; if (!escribiendo || !undo.length || undo[undo.length - 1].t < Date.now() - 1500) undo.push({ s: foto, t: Date.now() }); if (undo.length > 80) undo.shift(); redo.length = 0; foto = ahora; if (guardarYa) guardar(); if (RC.R.on) { clearTimeout(cambio.t); cambio.t = setTimeout(() => RC.R.on && RC.obstaculos(), 250); } }
   function volver(de, a) { if (!de.length) { toast(de === undo ? 'No hay nada para deshacer' : 'No hay nada para rehacer'); return; } CON.cancelar(); cancelar(true); a.push({ s: foto, t: 0 }); foto = de.pop().s; E.piezas = JSON.parse(foto); SEL = SEL && E.piezas.find(p => p.id === SEL.id) || null; armarTodo(); CON.alElegir(SEL); marcar(); info(); guardar(); }
-  function editar(on) { if (!puede) return; if (on && RC.R.on) RC.paseo(false); ED.on = on; motor.editando = on; document.documentElement.classList.toggle('editando', on); $('#mtool').hidden = !on; $('#bedit').setAttribute('aria-pressed', on); $('#bedit').querySelector('span').textContent = on ? 'Listo' : 'Editar';
+  function editar(on) { if (!puede) return; ED.on = on; motor.editando = on; document.documentElement.classList.toggle('editando', on); $('#mtool').hidden = !on; $('#bedit').setAttribute('aria-pressed', on); $('#bedit').querySelector('span').textContent = on ? 'Listo' : 'Editar';
     grilla.visible = on && ED.grilla; if (!on) { CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); CON.marcar(); marcar(); info(); motor.dirty = true; }
   if (puede) $('#bedit').onclick = () => editar(!ED.on);
   const PISTA = { mano: '<b>Mano</b>: arrastrá el piso para moverte. Tocá algo para elegirlo y arrastralo para correrlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
@@ -284,11 +284,11 @@ export async function abrirMaqueta(o) {
     m.innerHTML = items.map((it, i) => it === '-' ? '<hr>' : `<button role="menuitem" data-i="${i}" class="${it.peligro ? 'peligro' : ''}">${svg(it.ic, 16)}<span>${it.n}</span>${it.k ? `<kbd>${it.k}</kbd>` : ''}</button>`).join(''); m._it = items; m.hidden = false;
     const w = m.offsetWidth, h = m.offsetHeight; m.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px'; m.style.top = Math.max(8, Math.min(innerHeight - h - 8, arriba ? y - h : y)) + 'px'; }
   $('#mmenu').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const it = $('#mmenu')._it[+b.dataset.i]; menu(null); it.f(); });
-  motor.alMenu = e => { if (RC.R.on || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e), p = motor.enPiso(e.clientX, e.clientY), T = h && TIPOS[h.p.t], its = [];
+  motor.alMenu = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e), p = motor.enPiso(e.clientX, e.clientY), T = h && TIPOS[h.p.t], its = [];
     if (h) { elegir(h.p); its.push({ n: 'Enfocar', ic: 'enfocar', f: () => elegir(h.p, true) }); if (T.protegido && host && host.abrirDoc) its.push({ n: 'Abrir documentación', ic: 'doc', f: () => host.abrirDoc(h.p) });
       if (ED.on) its.push({ n: 'Propiedades', ic: 'ajustes', f: () => { UI.abierta = true; info(); } }, { n: 'Duplicar', ic: 'duplicar', k: 'Ctrl D', f: duplicar }, { n: 'Girar 90°', ic: 'girar', k: 'R', f: () => girarSel(Math.PI / 2) }, '-', { n: 'Sacar', ic: T.protegido ? 'candado' : 'borrar', k: 'Supr', peligro: true, f: () => sacar(h.p) }); }
     else if (ED.on) { its.push({ n: 'Catálogo', ic: 'catalogo', k: 'Tab', f: () => catalogo(true) }); if (copia) its.push({ n: 'Pegar', ic: 'duplicar', k: 'Ctrl V', f: pegarCopia }); }
-    if (p) its.push(...(its.length ? ['-'] : []), { n: 'Recorrer desde acá', ic: 'caminar', f: () => { if (ED.on) editar(false); RC.paseo(true, [p.x, p.z]); } });
+    if (p) its.push(...(its.length ? ['-'] : []), { n: 'Recorrer desde acá', ic: 'caminar', f: () => RC.paseo(true, [p.x, p.z]) });
     if (!h) its.push({ n: 'Vista general', ic: 'vista', f: () => motor.vista() }); menu(its, e.clientX, e.clientY); };
 
   // equipos del cliente (Ondi): los que todavía no están en la maqueta se ubican con un toque
@@ -371,7 +371,7 @@ export async function abrirMaqueta(o) {
     if (h && CON.tocar(h)) return; CON.sub = null; elegir(!h || (h.p.t === 'terreno' && SEL && SEL !== h.p) ? null : h.p); }
   motor.alTocar = e => { if (ED.on) { toqueEd(e); return; } const h = hallar(e); if (RC.R.on) { if (h && TIPOS[h.p.t].equipo) { elegir(h.p); return; } const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; } elegir(h ? h.p : null); };
   // doble clic: mirando, acerca a lo que se toca (o vuela a ese lugar del piso) y abre la documentación de un rack; editando, saca un punto de una línea
-  motor.alDoble = e => { if (RC.R.on || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
+  motor.alDoble = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
     if (ED.on) { const mh = SEL && SEL.pts && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0], i = mh && mh.object.userData.vertice; if (i != null) { if (SEL.pts.length <= (TIPOS[SEL.t].forma === 'area' ? 3 : 2)) { toast('No se puede sacar: quedaría sin forma'); return; } SEL.pts.splice(i, 1); CON.quitado(SEL, i); rehacer(SEL); CON.marcar(); cambio(); return; } }
     if (h && TIPOS[h.p.t].protegido && host && host.abrirDoc) { host.abrirDoc(h.p); return; } if (ED.on) return;
     if (h && TIPOS[h.p.t].forma === 'punto') { elegir(h.p, true); return; } const p = motor.enPiso(e.clientX, e.clientY); if (p) motor.ir({ tx: p.x, tz: p.z, d: Math.max(motor.C.min * 3, motor.C.d * 0.55) }, 0.6); };
@@ -386,7 +386,7 @@ export async function abrirMaqueta(o) {
   addEventListener('keydown', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) { if (e.key === 'Escape') e.target.blur(); return; } const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (k === 'escape') { if (!$('#mmenu').hidden) { menu(null); return; } if (!$('#mcat').hidden) { $('#mcat').hidden = true; return; } if (!$('#meq').hidden) { $('#meq').hidden = true; return; } if (CON.cancelar()) return; if (ED.colocar || ED.linea) { cancelar(); return; }
       if (CON.sub) { CON.sub = null; info(); return; } if (SEL) { elegir(null); return; } if (ED.on) { editar(false); return; } if (document.documentElement.classList.contains('mfull')) pantalla(false); return; }
-    if (RC.R.on) return;
+    if (RC.R.on && ['w', 'a', 's', 'd', 'q', 'e', 'v', ' '].includes(k)) return;   // recorriendo, esas teclas son del muñeco
     if (k === 'f' && !mod && puede) { editar(!ED.on); return; }
     if (k === 'p' && !mod) { paredes({ alta: 'corte', corte: 'baja', baja: 'alta' }[ctx.paredes]); return; }
     if (!ED.on) return;
@@ -412,10 +412,10 @@ export async function abrirMaqueta(o) {
       o.alGuardar && o.alGuardar(s); }, 900); }
 
   // ---------- animación de equipos caídos y medición ----------
-  // recorrer a pie con el avatar (recorrer.js). Recorrer y editar no van juntos: al entrar a uno se sale del otro.
+  // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
   const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, AVM: () => AVM,
     avatar: async g => { await cargarGLB('avatares', 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
-  $('#bpaseo').addEventListener('click', () => { if (ED.on) editar(false); elegir(null); RC.paseo(!RC.R.on); });
+  $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); RC.paseo(!RC.R.on); });
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
   motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
     for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla }); ob.sync(); } return true; });
