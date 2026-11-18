@@ -267,7 +267,7 @@ export async function abrirMaqueta(o) {
   let copia = null; function pegarCopia() { if (!copia) return; const c = JSON.parse(copia); delete c.id; delete c.uid; delete c.doc; if (c.pts) { c.id = nuevoId(c.t); c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4]); E.piezas.push(c); rehacer(c); elegir(c); cambio(); } else empezar(c); }
   function girarSel(giro) { const p = ED.colocar ? ED.colocar.p || (ED.colocar.tpl.r = (ED.colocar.tpl.r || 0) + giro, null) : SEL; if (!p) return;
     if (p.pts) { if (ED.colocar || ED.linea) return; CON.girar(p, giro); CON.marcar(); marcar(); cambio(); return; }
-    const antes = p.r || 0; p.r = Math.round((antes + giro) / (Math.PI / 4)) * Math.PI / 4; const g = objs.get(p.id); if (g) g.rotation.y = p.r; if (ED.colocar) ED.colocar.tpl.r = p.r; else { rotarCon(p, p.r - antes); marcar(); cambio(); info(); } motor.dirty = true; }
+    const antes = p.r || 0, con = ED.colocar ? [] : CON.contenido(p); p.r = Math.round((antes + giro) / (Math.PI / 4)) * Math.PI / 4; const g = objs.get(p.id); if (g) g.rotation.y = p.r; if (ED.colocar) ED.colocar.tpl.r = p.r; else { rotarCon(p, p.r - antes, con); marcar(); cambio(); info(); } motor.dirty = true; }
   // al girar un edificio o un galpón, los equipos que tiene puestos giran con él
   function rotarCon(p, dg, lista) { if (!dg) return; const c = Math.cos(dg), s = Math.sin(dg); for (const q of lista || CON.contenido(p)) { const dx = (q.x || 0) - (p.x || 0), dz = (q.z || 0) - (p.z || 0); q.x = Math.round(((p.x || 0) + dx * c + dz * s) * 100) / 100; q.z = Math.round(((p.z || 0) - dx * s + dz * c) * 100) / 100; q.r = (q.r || 0) + dg; rehacer(q); } }
   // importar piezas de un archivo .json (una escena entera, una lista de piezas o una sola): caen juntas donde se está mirando y con identificadores nuevos si hacen falta
@@ -351,7 +351,7 @@ export async function abrirMaqueta(o) {
     let mx = pegar(dx, e.altKey), mz = pegar(dz, e.altKey);
     if (D.p.pts) { D.p.pts = D.orig.map(q => [Math.round((q[0] + mx) * 1000) / 1000, Math.round((q[1] + mz) * 1000) / 1000]); rehacer(D.p); }
     else { D.p.x = pegar(D.orig[0] + dx, e.altKey); D.p.z = pegar(D.orig[1] + dz, e.altKey); mx = D.p.x - D.orig[0]; mz = D.p.z - D.orig[1]; const g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z); cajaDe(g, caja.box).expandByScalar(0.15); motor.dirty = true; }
-    for (const { q, o } of D.con) { if (q.pts) { q.pts = o.map(k => [k[0] + mx, k[1] + mz]); rehacer(q); } else { q.x = o[0] + mx; q.z = o[1] + mz; const g = objs.get(q.id); if (g) g.position.set(q.x, 0, q.z); } } };
+    for (const { q, o } of D.con) { if (q.pts) { q.pts = o.map(k => [Math.round((k[0] + mx) * 100) / 100, Math.round((k[1] + mz) * 100) / 100]); rehacer(q); } else { q.x = Math.round((o[0] + mx) * 100) / 100; q.z = Math.round((o[1] + mz) * 100) / 100; const g = objs.get(q.id); if (g) g.position.set(q.x, 0, q.z); } } };
   motor.soltar = (e, gesto) => { canvas.classList.remove('lleva'); manijas.visible = true; if (!gesto && CON.soltar(e)) return; const D = ED.drag; ED.drag = null; if (gesto || !D) return; if (D.p && !D.p.pts) { const g = objs.get(D.p.id); if (g) g.position.y = 0; }
     if (D.movido || D.v != null) { cambio(); marcar(); if (D.giro || D.altura) info(); } else if (D.p) info(); motor.dirty = true; };
   motor.pasar = e => { if (ED.on && CON.pasar(e)) return; const p = motor.enPiso(e.clientX, e.clientY);
