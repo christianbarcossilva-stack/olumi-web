@@ -15,7 +15,9 @@ import { recorrer } from './recorrer.js?v=2';
 import { transito } from './transito.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const CAPAS = [['base', 'Construcciones y caminos'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['equipos', 'Equipos'], ['campos', 'Campo de las cámaras'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
+const CAPAS = [['base', 'Construcciones y caminos'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
+// los equipos se prenden y apagan por clase: cámaras, Wi-Fi, racks y gabinetes, fibra, y el resto
+const CAPA_DE = { camara: 'camaras', ap: 'wifi', rack: 'racks', gabinete: 'racks', fibra: 'fibra' }, CAPAS_EQ = ['camaras', 'campos', 'wifi', 'racks', 'fibra', 'equipos'];
 const EQ_DE = { cam: 'camara', ap: 'ap', sw: 'switch', gw: 'router', sen: 'sensor', otro: 'ups' };
 const ESTADO = e => ['online', 'en_linea', 'abierta', 'cerrada'].includes(e) ? 'ok' : ['offline', 'caido'].includes(e) ? 'crit' : ['alerting', 'atencion'].includes(e) ? 'warn' : 'off';
 const ESTX = { ok: 'En línea', crit: 'Caído', warn: 'Con alertas', off: 'Sin dato' };
@@ -44,7 +46,7 @@ export async function abrirMaqueta(o) {
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
     <div class="mbtns"><button id="btema" class="mbtn" aria-label="Cambiar entre día y noche" title="Día o noche">${svg('tema')}</button><button id="bcapas" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bpaseo" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando">${svg('caminar')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
-  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'darvi' && (k === 'equipos' || k === 'campos')) && !(k === 'transito' && app !== 'ondi')).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}
+  <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(app === 'darvi' && CAPAS_EQ.includes(k)) && !(k === 'transito' && app !== 'ondi')).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}
     <div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><p class="mvacio" id="mocultos" hidden></p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">${HERR.map(([k, n, t], i) => `<button data-h="${k}" aria-pressed="${k === 'mano'}" title="${n} (${i + 1}${t ? ' o ' + t : ''})" aria-label="${n}">${svg(k)}<sup>${i + 1}</sup></button>`).join('')}${host && host.equipos ? `<button id="beq" title="Equipos del cliente" aria-label="Equipos del cliente">${svg('equipos')}</button>` : ''}
@@ -102,8 +104,10 @@ export async function abrirMaqueta(o) {
     el.hidden = !t; el.textContent = t ? `Este plano también tiene ${t}${c.equipos ? ' (se ven en Ondi)' : ''}. Acá no se muestran y no se tocan.` : ''; }
   function armarTodo() { for (const g of objs.values()) { mundo.remove(g); limpiar(g); } objs.clear(); ocultas(); for (const p of E.piezas) { if (!veo(p)) continue; const g = armarPieza(p, ctx); if (g) { objs.set(p.id, g); mundo.add(g); aplicarCapas(g); } } pintaSuelo(); etiquetas(); revisarTr(); motor.dirty = true; }
   function limpiar(g) { g.traverse(k => { if (k.geometry && !k.geometry.parameters?.width && k.geometry.type !== 'BoxGeometry' && k.geometry.type !== 'CylinderGeometry' && k.geometry.type !== 'IcosahedronGeometry' && k.geometry.type !== 'ConeGeometry') k.geometry.dispose(); }); }
-  const capas = Object.fromEntries(CAPAS.map(([k]) => [k, true]));
-  function aplicarCapas(g) { const T = g.userData.tipo; g.visible = capas[T.capa] !== false; g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; }); }
+  const capas = Object.fromEntries(CAPAS.map(([k]) => [k, true])); // lo que cada uno apaga queda recordado en su navegador
+  try { const g = JSON.parse(localStorage.getItem('motor.capas.' + app) || '{}'); for (const k in capas) if (g[k] === false) capas[k] = false; } catch (e) {}
+  for (const c of raiz.querySelectorAll('[data-capa]')) c.checked = capas[c.dataset.capa] !== false;
+  function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false; g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; }); }
   motor.alTema.push(() => { armarTodo(); });
   function encuadre() { const b = new THREE.Box3(); for (const p of E.piezas) { const [x, z] = centro(p); if (p.pts) for (const q of p.pts) b.expandByPoint(new THREE.Vector3(q[0], 0, q[1])); else b.expandByPoint(new THREE.Vector3(x, 0, z)); }
     if (b.isEmpty()) return { tx: 0, tz: 0, yaw: 0.7, pitch: 0.75, d: 160 }; const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3()); return { tx: c.x, tz: c.z, yaw: 0.7, pitch: 0.72, d: Math.max(60, Math.max(s.x, s.z) * 1.05) }; }
@@ -179,7 +183,7 @@ export async function abrirMaqueta(o) {
 
   // ---------- capas, buscar, vista, pantalla completa ----------
   $('#bcapas').onclick = () => { $('#mcapas').hidden = !$('#mcapas').hidden; };
-  $('#mcapas').addEventListener('change', e => { const k = e.target.dataset.capa; capas[k] = e.target.checked; if (k === 'transito') { if (TR) TR.ver(capas[k]); return; } for (const g of objs.values()) aplicarCapas(g); motor.dirty = true; });
+  $('#mcapas').addEventListener('change', e => { const k = e.target.dataset.capa; capas[k] = e.target.checked; try { localStorage.setItem('motor.capas.' + app, JSON.stringify(capas)); } catch (err) {} if (k === 'transito') { if (TR) TR.ver(capas[k]); return; } for (const g of objs.values()) aplicarCapas(g); motor.dirty = true; });
   $('#mcapas').addEventListener('click', e => { const b = e.target.closest('[data-pared]'); if (b) paredes(b.dataset.pared); });
   $('#bvista').onclick = () => motor.vista();
   let antes = null; $('#bplano').onclick = () => { const b = $('#bplano'), on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); if (on) { antes = { pitch: motor.C.pitch, yaw: motor.C.yaw }; motor.ir({ pitch: 1.45, yaw: Math.round(motor.C.yaw / (Math.PI / 2)) * Math.PI / 2 }, 0.6); } else motor.ir(antes || { pitch: 0.7 }, 0.6); };
@@ -420,7 +424,7 @@ export async function abrirMaqueta(o) {
     avatar: async g => { await cargarGLB('avatares', 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); RC.paseo(!RC.R.on); });
   // camiones que entran, atracan y salen (transito.js): solo en Ondi, de ejemplo, y solo si hay naves con andenes
-  TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, subtitulo }) : null;
+  TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, subtitulo }) : null; if (TR && capas.transito === false) TR.ver(false);
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
   motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
     for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla }); ob.sync(); } return true; });
