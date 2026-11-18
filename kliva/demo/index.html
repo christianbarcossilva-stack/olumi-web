@@ -141,6 +141,37 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .me > span:nth-child(2) { flex: 1 1 auto; min-width: 0; }
 .me b, .me small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .me small { color: var(--muted); font-size: 12.5px; }
+/* Qué empresa y qué área se está mirando: debajo de la marca, como el selector de espacio de trabajo. */
+.me.scope { width: 100%; gap: 10px; padding: 7px 8px; box-shadow: inset 0 0 0 1px var(--line); }
+.me.scope b { font-size: 14.5px; }
+.me.scope .badge { width: 32px; height: 32px; border-radius: 12px; color: var(--accent-ink); background: var(--accent-soft); box-shadow: none; }
+.me.scope:disabled { opacity: 1; cursor: default; background: none; }
+.title-pick { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; }
+.title-pick .i { flex: none; width: 22px; height: 22px; color: var(--muted); transition: color var(--t2); }
+.title-pick:hover .i { color: var(--fg); }
+.row .tick { flex: none; color: var(--accent-ink); }
+.row[aria-pressed="true"] strong { color: var(--accent-ink); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+/* Control de horario: el resumen del período y los días del turno. */
+.card.tally { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 0; }
+.tally > div { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; }
+.tally > div + div { box-shadow: inset 1px 0 0 var(--line); }
+.tally strong { font-size: 30px; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.tally span { color: var(--muted); font-size: 13.5px; }
+.tally [data-tone="warn"] strong { color: var(--warn); }
+.tally [data-tone="deny"] strong { color: var(--deny); }
+.days { display: flex; gap: 8px; flex-wrap: wrap; }
+.days label { position: relative; cursor: pointer; }
+.days input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.days span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); font-weight: 700; transition: background var(--t2), color var(--t2); }
+.days input:checked + span { background: var(--accent); color: var(--accent-fg, #fff); box-shadow: none; }
+.days input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .card.tally { grid-template-columns: 1fr 1fr; }
+  .tally > div:nth-child(3) { box-shadow: inset 0 1px 0 var(--line); }
+  .tally > div:nth-child(4) { box-shadow: inset 1px 0 0 var(--line), inset 0 1px 0 var(--line); }
+  .tally strong { font-size: 26px; }
+}
 .switch { position: relative; flex: none; width: 40px; height: 24px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); transition: background var(--t2); }
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform var(--t2) var(--mo); }
 [aria-checked="true"] > .switch, [aria-pressed="true"] > .switch { background: var(--pass); }
@@ -228,7 +259,7 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field > span { font-weight: 600; font-size: 14px; }
 .field small, .hint { color: var(--muted); font-size: 13px; line-height: 1.4; }
-input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], input[type="url"], input[type="datetime-local"], input[type="date"], select, textarea {
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], input[type="url"], input[type="datetime-local"], input[type="date"], input[type="time"], input[type="tel"], select, textarea {
   width: 100%; min-height: 44px; padding: 9px 13px; border: 0; border-radius: 12px; background: var(--field); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); }
 select { appearance: none; padding-right: 34px; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 18px) 19px, calc(100% - 13px) 19px; background-size: 5px 5px; background-repeat: no-repeat; }
 textarea { min-height: 80px; resize: vertical; }
@@ -446,6 +477,53 @@ button.row:hover { background: var(--surface-2); }
 <script>
 (() => {
 'use strict';
+// Control de horario: el cálculo, sin base de datos ni red. Lo usan el servidor (store.js) y la demostración de la web
+// (scripts/build-web.js lo copia adentro de la página), así los dos cuentan igual.
+// Para cada persona y cada día: la entrada (primera pasada), la salida (última), las horas y cómo estuvo contra su turno.
+// La ventana de un día con turno va de 4 horas antes de la entrada a 6 después de la salida; un turno de noche sale al día siguiente.
+// Estados: ok, tarde, salio_antes, ausente, en_curso (entró y el turno no terminó), sin_salida, pendiente (todavía no empezó),
+// extra (vino un día que no le tocaba), sin_turno. Los días van en hora local.
+const HORARIO_MIN = 60_000, HORARIO_HORA = 3600_000;
+const nextDay = t => { const d = new Date(t); d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const atMinute = (day, minutes) => { const d = new Date(day); d.setHours(0, minutes, 0, 0); return d.getTime(); };
+const dateKey = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+/** people: [{ id, schedule_id, since (desde cuándo cuenta: el alta o su primera pasada, lo que sea antes), … }] · schedules: Map id → { name, days: [0..6], start_min, end_min, tolerance } · passes: Map id persona → [ts ordenados]. */
+function attendanceReport({ people, schedules, passes, from, to, now = Date.now() }) {
+  const MIN = HORARIO_MIN, HOUR = HORARIO_HORA;
+  const days = []; for (let d = new Date(from).setHours(0, 0, 0, 0); d < to; d = nextDay(d)) days.push(d);
+  const rows = [], totals = [];
+  for (const p of people) {
+    const sch = schedules.get(p.schedule_id), mine = passes.get(p.id), used = new Set(), out = [];
+    const since = p.since ?? -Infinity;
+    // primero los días con turno: la ventana va de 4 horas antes de la entrada a 6 después de la salida
+    if (sch) for (const day of days) {
+      if (!sch.days.includes(new Date(day).getDay())) continue;
+      const start = atMinute(day, sch.start_min), end = sch.end_min > sch.start_min ? atMinute(day, sch.end_min) : atMinute(nextDay(day), sch.end_min), tol = sch.tolerance * MIN;
+      const got = mine.filter((t, i) => !used.has(i) && t >= start - 4 * HOUR && t <= end + 6 * HOUR && used.add(i));
+      // un turno que empezó antes de que la persona estuviera cargada, y sin pasadas, no es una falta
+      if (!got.length && start < since) continue;
+      const entry = got[0] ?? null, exit = got.length > 1 && got.at(-1) - entry > MIN ? got.at(-1) : null;
+      const late = entry && entry - start > tol ? Math.round((entry - start) / MIN) : 0, early = exit && end - exit > tol ? Math.round((end - exit) / MIN) : 0;
+      const state = !entry ? (now < start + tol ? 'pendiente' : 'ausente') : !exit ? (now < end + 6 * HOUR ? 'en_curso' : 'sin_salida') : late ? 'tarde' : early ? 'salio_antes' : 'ok';
+      out.push({ date: dateKey(day), start, end, entry, exit, minutes: exit ? Math.round((exit - entry) / MIN) : 0, late, early, state });
+    }
+    // después, lo que sobra: días sin turno (o sin turno asignado) en los que igual pasó
+    const loose = new Map();
+    mine.forEach((t, i) => { if (!used.has(i) && t >= from && t < to) { const k = dateKey(t); (loose.get(k) ?? loose.set(k, []).get(k)).push(t); } });
+    for (const [date, list] of loose) {
+      const entry = list[0], exit = list.length > 1 && list.at(-1) - entry > MIN ? list.at(-1) : null;
+      out.push({ date, start: null, end: null, entry, exit, minutes: exit ? Math.round((exit - entry) / MIN) : 0, late: 0, early: 0, state: sch ? 'extra' : 'sin_turno' });
+    }
+    out.sort((x, y) => x.date.localeCompare(y.date));
+    for (const r of out) rows.push({ person_id: p.id, ...r });
+    totals.push({ id: p.id, ref: p.ref, name: p.name, document: p.document, company: p.company, site_id: p.site_id, schedule_id: p.schedule_id, schedule: sch?.name ?? '',
+      days: out.filter(r => r.entry).length, minutes: out.reduce((n, r) => n + r.minutes, 0), late: out.filter(r => r.late).length,
+      early: out.filter(r => r.early).length, absent: out.filter(r => r.state === 'ausente').length, inside: out.some(r => r.state === 'en_curso') });
+  }
+  return { from, to, people: totals, days: rows };
+}
+
 // Utilidades de la interfaz.
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -524,6 +602,8 @@ const ICONS = {
   data: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
   look: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z"/>',
   clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+  horario: '<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4M18.5 6l1.2-1.2"/>',
+  empresa: '<path d="M4 20V6.5L11 4v16M11 9h9v11M2.5 20h19M7 9h1M7 13h1M7 16.5h1M14.5 13h2M14.5 16.5h2"/>',
   tag: '<path d="M4 12V5a1 1 0 0 1 1-1h7l8 8-8 8z"/><path d="M8.5 8.5h.01"/>',
   right: '<path d="M10 6l6 6-6 6"/>',
 };
@@ -535,12 +615,14 @@ const GLYPH = raw('<svg class="glyph" viewBox="0 0 64 64" aria-hidden="true"><pa
 
 // Acceso al servidor real. La demostración (03-demo.js) ofrece exactamente esta misma interfaz.
 function liveApi() {
-  let token = saved.get('kliva.token');
+  let token = saved.get('kliva.token'), view = {};
+  // Qué empresa y qué área se está mirando: el servidor recorta todo a eso (y nunca deja ver más de lo que el usuario puede).
+  const auth = () => ({ ...(token && { Authorization: `Bearer ${token}` }), ...(view.empresa && { 'X-Kliva-Empresa': view.empresa }), ...(view.area && { 'X-Kliva-Area': view.area }) });
 
   async function call(method, path, body) {
     const res = await fetch(path, {
       method,
-      headers: { ...(body && { 'Content-Type': 'application/json' }), ...(token && { Authorization: `Bearer ${token}` }) },
+      headers: { ...(body && { 'Content-Type': 'application/json' }), ...auth() },
       body: body && JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
@@ -557,12 +639,13 @@ function liveApi() {
     del: path => call('DELETE', path),
     /** Baja un archivo que necesita la sesión (la copia de datos, la planilla de eventos). */
     async download(path, filename) {
-      const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(path, { headers: auth() });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'No se pudo descargar');
       saveBlob(await res.blob(), filename);
     },
     hasSession: () => Boolean(token),
     setSession(value) { token = value; saved.set('kliva.token', value); },
+    setView(value) { view = { ...value }; },
 
     /** Escucha lo que pasa en vivo y se reconecta sola. Devuelve la función para cortar. */
     stream(onMessage) {
@@ -570,7 +653,7 @@ function liveApi() {
       (async () => {
         while (!abort.signal.aborted) {
           try {
-            const res = await fetch('/api/stream', { headers: { Authorization: `Bearer ${token}` }, signal: abort.signal });
+            const res = await fetch('/api/stream', { headers: auth(), signal: abort.signal });
             if (res.status === 401) return onMessage('expired', {});
             onMessage('online', {});
             const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -605,9 +688,9 @@ function demoApi() {
     { brand: 'intelbras', label: 'Intelbras', protocol: 'API Bio-T (CGI)', defaultPort: 80, doors: 1, model: 'SS 3532 MF W', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true } },
   ];
   const brandOf = brand => BRANDS.find(b => b.brand === brand);
-  const me = { id: 'u1', name: 'Christian', email: 'christian@demo.uy', role: 'admin', mfa: false };
+  const me = { id: 'u1', name: 'Christian', email: 'christian@demo.uy', role: 'admin', mfa: false, company_id: null, areas: '' };
   const listeners = new Set();
-  const emit = (type, data) => listeners.forEach(fn => fn(type, structuredClone(data)));
+  const emit = (type, data) => { if (visible(type, data)) listeners.forEach(fn => fn(type, structuredClone(data))); };
   const fail = (status, message) => Object.assign(new Error(message), { status });
   const fold = text => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
   const pick = list => list[Math.floor(Math.random() * list.length)];
@@ -622,27 +705,48 @@ function demoApi() {
   const db = {
     org: 'Instalaciones Demo',
     license: { valid: true, plan: 'Profesional', customer: 'Instalaciones Demo', maxDevices: 25, expires: now() + 300 * 24 * H },
+    // Empresas inventadas. Cada una dividida en áreas: el laboratorio tiene su planta y su centro logístico.
+    companies: [
+      { id: 'c1', name: 'Laboratorio Andino', legal_name: 'Laboratorio Andino S.A.', tax_id: '210000000017', address: 'Ruta 5 km 28, Canelones', phone: '2000 0101',
+        email: 'administracion@andino.demo.uy', contact: 'Recursos humanos', notes: '', active: 1, created_at: now() - 90 * 24 * H },
+      ...(cine ? [] : [{ id: 'c2', name: 'Frigorífico del Este', legal_name: 'Frigorífico del Este S.R.L.', tax_id: '210000000025', address: 'Ruta 8 km 31, Pando', phone: '2000 0202',
+        email: 'personal@frigorifico.demo.uy', contact: 'Jefatura de planta', notes: 'Turno de noche en las cámaras de frío.', active: 1, created_at: now() - 60 * 24 * H }]),
+    ],
     sites: [
-      { id: 's1', name: 'Planta Ruta 5', address: 'Ruta 5 km 28, Canelones' },
-      { id: 's2', name: 'Centro logístico Ruta 1', address: 'Ruta 1 km 22, Montevideo' },
+      { id: 's1', company_id: 'c1', name: 'Planta Ruta 5', address: 'Ruta 5 km 28, Canelones' },
+      { id: 's2', company_id: 'c1', name: 'Centro logístico Ruta 1', address: 'Ruta 1 km 22, Montevideo' },
+      ...(cine ? [] : [{ id: 's3', company_id: 'c2', name: 'Planta Ruta 8', address: 'Ruta 8 km 31, Pando' }]),
+    ],
+    schedules: [
+      { id: 'sch1', company_id: 'c1', name: 'Planta, mañana', days: [1, 2, 3, 4, 5], start_min: 360, end_min: 840, tolerance: 10 },
+      { id: 'sch2', company_id: 'c1', name: 'Administración', days: [1, 2, 3, 4, 5], start_min: 540, end_min: 1080, tolerance: 10 },
+      { id: 'sch3', company_id: 'c1', name: 'Logística, tarde', days: [1, 2, 3, 4, 5, 6], start_min: 840, end_min: 1320, tolerance: 10 },
+      ...(cine ? [] : [
+        { id: 'sch4', company_id: 'c2', name: 'Faena, mañana', days: [1, 2, 3, 4, 5, 6], start_min: 300, end_min: 780, tolerance: 5 },
+        { id: 'sch5', company_id: 'c2', name: 'Frío, noche', days: [0, 1, 2, 3, 4], start_min: 1320, end_min: 360, tolerance: 10 }]),
     ],
     devices: [], doors: [], levels: [], people: [], events: [], sync: new Map(), keys: [], webhooks: [],
     security: { require_2fa: false, idle_hours: 168, backups: true },
     backups: [0, 1, 2].map(n => ({ name: `kliva-demo-${n + 1}.db`, at: now() - (n * 24 + 5) * H, size: 4_300_000 - n * 21_000 })),
     users: [
       { ...me, active: 1 },
-      { id: 'u2', name: 'Guardia de portería', email: 'porteria@demo.uy', role: 'operator', active: 1 },
-      { id: 'u3', name: 'Gerencia', email: 'gerencia@demo.uy', role: 'viewer', active: 1 },
+      { id: 'u4', name: 'Técnico de guardia', email: 'tecnico@demo.uy', role: 'operator', active: 1, company_id: null, areas: '' },
+      { id: 'u2', name: 'Guardia de portería', email: 'porteria@andino.demo.uy', role: 'operator', active: 1, company_id: 'c1', areas: 's1' },
+      { id: 'u3', name: 'Recursos humanos', email: 'rrhh@andino.demo.uy', role: 'admin', active: 1, company_id: 'c1', areas: '' },
+      { id: 'u5', name: 'Gerencia', email: 'gerencia@andino.demo.uy', role: 'viewer', active: 1, company_id: 'c1', areas: '' },
+      ...(cine ? [] : [{ id: 'u6', name: 'Jefatura de planta', email: 'jefatura@frigorifico.demo.uy', role: 'admin', active: 1, company_id: 'c2', areas: '' }]),
     ],
     audit: [],
   };
 
   // ── Datos de ejemplo ───────────────────────────────────────────────────────
+  // Las puertas de entrada marcan horario; las de adentro (vestuarios, depósitos, cámaras) no.
+  const CLOCK = ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Administración', 'Acceso de personal'];
   const addDevice = (site_id, brand, name, host, model, firmware, doorNames, status = 'online', detail = '') => {
     const d = { id: newId('d'), site_id, brand, name, host, port: brandOf(brand).defaultPort, secure: 0, username: brand === 'zkteco' ? '' : 'admin', enabled: 1,
       model, serial: `${model.replace(/\W/g, '').slice(0, 6).toUpperCase()}${20230000 + serial * 137}`, firmware, status, status_detail: detail, last_seen: status === 'online' ? now() : now() - 5 * H };
     db.devices.push(d);
-    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' ? 'closed' : 'unknown', state_at: now() }));
+    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' ? 'closed' : 'unknown', state_at: now(), clock: Number(CLOCK.includes(name)) }));
     return d;
   };
   addDevice('s1', 'zkteco', 'Controladora de portería', '10.20.1.21', 'inBio460', 'AC Ver 5.0.9', ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Depósito de repuestos']);
@@ -650,13 +754,21 @@ function demoApi() {
   addDevice('s2', 'dahua', 'Controladora de portones', '10.30.0.12', 'ASC2204C-S', '1.000.0000000.5.R', ['Portón 1', 'Portón 2', 'Sala de racks', 'Oficina de tráfico']);
   addDevice('s2', 'intelbras', 'Facial de administración', '10.30.0.18', 'SS 3532 MF W', 'V3.002.00IB000', ['Administración']);
   addDevice('s2', 'hikvision', 'Portero de camiones', '10.30.0.40', 'DS-KD8003-IME1', 'V2.2.56', ['Barrera de camiones'], 'offline', 'No se llega al equipo por la red');
+  if (!cine) {
+    addDevice('s3', 'hikvision', 'Facial de acceso de personal', '10.40.0.15', 'DS-K1T671TM-3XF', 'V3.3.5 build 230511', ['Acceso de personal']);
+    addDevice('s3', 'zkteco', 'Controladora de cámaras', '10.40.0.21', 'inBio460', 'AC Ver 5.0.9', ['Cámara de frío 1', 'Cámara de frío 2', 'Sala de máquinas', 'Expedición']);
+  }
 
   const doorId = name => db.doors.find(p => p.name === name).id;
-  const addLevel = (name, ...doors) => db.levels.push({ id: newId('l'), name, doors: doors.map(doorId) });
-  addLevel('Operarios de planta', 'Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Vestuarios');
-  addLevel('Mantenimiento', 'Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Vestuarios', 'Depósito de repuestos', 'Sala de racks');
-  addLevel('Administración', 'Administración', 'Oficina de tráfico', 'Portería peatonal');
-  addLevel('Tráfico y portones', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Oficina de tráfico');
+  const addLevel = (company_id, name, ...doors) => db.levels.push({ id: newId('l'), company_id, name, doors: doors.map(doorId) });
+  addLevel('c1', 'Operarios de planta', 'Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Vestuarios');
+  addLevel('c1', 'Mantenimiento', 'Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Vestuarios', 'Depósito de repuestos', 'Sala de racks');
+  addLevel('c1', 'Administración', 'Administración', 'Oficina de tráfico', 'Portería peatonal');
+  addLevel('c1', 'Tráfico y portones', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Oficina de tráfico');
+  if (!cine) {
+    addLevel('c2', 'Operarios de faena', 'Acceso de personal', 'Cámara de frío 1', 'Cámara de frío 2', 'Expedición');
+    addLevel('c2', 'Mantenimiento de frío', 'Acceso de personal', 'Cámara de frío 1', 'Cámara de frío 2', 'Sala de máquinas', 'Expedición');
+  }
 
   [
     ['Ana Núñez', 'Logística Sur', ['5550123'], true, '', [0]], ['Bruno Castro', 'Logística Sur', ['5550187'], false, '', [0]],
@@ -666,10 +778,19 @@ function demoApi() {
     ['Inés Barrios', 'Logística Sur', ['5550402'], true, '', [0]], ['Joaquín Techera', 'Seguridad Atlántica', ['5550440'], false, '1964', [0, 3]],
     ['Karina Acosta', 'Logística Sur', [], true, '', [2]], ['Luis Ferreira', 'Mantenimiento Industrial', ['5550488'], false, '', [1]],
     ['Mariana Cabrera', 'Logística Sur', ['5550513'], true, '', [0]], ['Nicolás Silva', 'Transporte del Este', ['5550547'], false, '', [3]],
-  ].forEach(([name, company, cards, hasFace, pin, levels], i) => db.people.push({
-    id: newId('h'), ref: String(1001 + i), name, company, document: '', cards, pin, face: '', hasFace, active: 1,
-    valid_from: null, valid_to: null, levels: levels.map(n => db.levels[n].id), created_at: now() - 40 * 24 * H, updated_at: now() - 2 * 24 * H,
-  }));
+    ...(cine ? [] : [
+      ['Omar Pereyra', '', ['5551102'], true, '', [4]], ['Paula Gadea', '', ['5551131'], true, '', [4]], ['Raúl Benítez', 'Faena Oriental', ['5551164'], false, '', [4]],
+      ['Silvana Correa', '', ['5551190'], true, '', [4]], ['Tomás Rivero', '', ['5551215'], false, '2580', [5]], ['Valeria Duarte', '', ['5551243'], true, '', [5]]]),
+  ].forEach(([name, company, cards, hasFace, pin, levels], i) => {
+    const first = levels[0], frigo = first >= 4;
+    db.people.push({
+      id: newId('h'), ref: String(1001 + i), name, company, document: '', cards, pin, face: '', hasFace, active: 1,
+      valid_from: null, valid_to: null, levels: levels.map(n => db.levels[n].id), created_at: now() - 40 * 24 * H, updated_at: now() - 2 * 24 * H,
+      // de qué empresa es, en qué área trabaja y su turno; el de seguridad es contratista y no tiene área fija ni turno
+      company_id: frigo ? 'c2' : 'c1', site_id: frigo ? 's3' : levels.length > 1 ? null : first < 2 ? 's1' : 's2',
+      schedule_id: levels.length > 1 ? null : ['sch1', 'sch1', 'sch2', 'sch3', 'sch4', 'sch5'][first],
+    });
+  });
 
   // ── Reglas ─────────────────────────────────────────────────────────────────
   const site = id => db.sites.find(s => s.id === id);
@@ -680,6 +801,31 @@ function demoApi() {
   };
   const doorsOf = person => new Set(person.levels.flatMap(id => db.levels.find(l => l.id === id)?.doors ?? []));
   const syncRows = ref => db.devices.map(d => db.sync.get(`${ref}|${d.id}`)).filter(Boolean);
+
+  // Qué empresa y qué área se mira (lo manda la app en cada pedido): igual que store.scope() en el servidor.
+  let view = {};
+  function scope() {
+    const company = me.company_id ?? (db.companies.some(c => c.id === view.empresa) ? view.empresa : null);
+    let sites = db.sites.filter(x => !company || x.company_id === company).map(x => x.id);
+    const area = sites.includes(view.area) ? view.area : null;
+    if (area) sites = [area];
+    return { company, sites: new Set(sites), area };
+  }
+  const doorSite = id => { const p = db.doors.find(x => x.id === id); return p ? device(p.device_id)?.site_id : null; };
+  const personIn = (sc, p) => (!sc.company || p.company_id === sc.company) && (!sc.area || p.site_id === sc.area || [...doorsOf(p)].some(id => sc.sites.has(doorSite(id))));
+  const companyFor = wanted => {
+    const sc = scope(), id = wanted || sc.company || (db.companies.length === 1 ? db.companies[0].id : null);
+    if (!db.companies.some(c => c.id === id)) throw fail(400, 'Elegí la empresa');
+    return id;
+  };
+  /** Lo que llega en vivo también se recorta: cada uno ve lo de su empresa y su área. */
+  function visible(type, data) {
+    const sc = scope();
+    if (type === 'event') return !data.site_id || sc.sites.has(data.site_id);
+    if (type === 'door') return sc.sites.has(doorSite(data.id));
+    if (type === 'device') return sc.sites.has(device(data.id)?.site_id);
+    return true;
+  }
 
   /** Igual que el servidor: decide qué le corresponde a cada equipo; acá el "envío" tarda un segundo. */
   function plan(person, instant = false) {
@@ -698,10 +844,11 @@ function demoApi() {
 
   const event = (ts, kind, door, person, extra = {}) => ({
     id: newId('e'), ts, kind, device_id: door.device_id, door_id: door.id, person_id: person?.id ?? null,
-    site_name: site(device(door.device_id).site_id).name, door_name: door.name, person_name: person?.name ?? '',
+    site_id: device(door.device_id).site_id, site_name: site(device(door.device_id).site_id).name, door_name: door.name, person_name: person?.name ?? '',
     card: '', method: '', detail: '', actor: '', ...extra,
   });
   const onlineDoors = () => db.doors.filter(p => device(p.device_id).status === 'online');
+  const byDoor = name => db.doors.find(p => p.name === name);
 
   function swing(door, ms = 2600) {
     door.state = 'open'; door.state_at = now();
@@ -716,7 +863,8 @@ function demoApi() {
   function pass(ts, live) {
     const person = pick(db.people.filter(p => p.active));
     const allowed = doorsOf(person), open = onlineDoors();
-    const mine = open.filter(p => allowed.has(p.id)), roll = Math.random();
+    // quien tiene turno marca al entrar y al salir (eso lo arma la historia de abajo); en el día pasa por las puertas de adentro
+    const mine = open.filter(p => allowed.has(p.id) && !(person.schedule_id && p.clock)), roll = Math.random();
     if (roll < 0.9 && mine.length) {
       const door = pick(mine), brand = device(door.device_id).brand;
       const method = person.hasFace && (brand === 'hikvision' || brand === 'intelbras') ? 'face' : person.cards.length ? 'card' : 'pin';
@@ -734,6 +882,24 @@ function demoApi() {
   for (let i = 0, t = now(); i < 150; i++) {
     const ts = t - Math.random() * 24 * H, hour = new Date(ts).getHours();
     if (hour >= 6 && hour < 19 ? Math.random() < 0.95 : Math.random() < 0.12) db.events.push(pass(ts, false));
+  }
+  // Dos semanas de entradas y salidas de quienes tienen turno, para el control de horario: casi todos a tiempo,
+  // algunos tarde, alguno que se va antes y alguna falta. Lo de hoy solo hasta la hora actual.
+  const SHIFT_DOOR = { sch1: ['Molinete de entrada', 'Molinete de salida'], sch2: ['Administración', 'Administración'], sch3: ['Portón 1', 'Portón 1'],
+    sch4: ['Acceso de personal', 'Acceso de personal'], sch5: ['Acceso de personal', 'Acceso de personal'] };
+  const minutes = (a, b) => (a + Math.random() * (b - a)) * 60_000;
+  for (const person of db.people) {
+    const sch = db.schedules.find(x => x.id === person.schedule_id);
+    if (!sch) continue;
+    const [inName, outName] = SHIFT_DOOR[sch.id], method = person.hasFace && ['Administración', 'Acceso de personal'].includes(inName) ? 'face' : 'card';
+    for (let back = 14; back >= 0; back--) {
+      const day = new Date(now()); day.setHours(0, 0, 0, 0); day.setDate(day.getDate() - back);
+      if (!sch.days.includes(day.getDay()) || Math.random() < 0.04) continue;
+      const start = day.getTime() + sch.start_min * 60_000, end = day.getTime() + (sch.end_min > sch.start_min ? sch.end_min : sch.end_min + 1440) * 60_000;
+      const entry = start + (Math.random() < 0.86 ? minutes(-14, 6) : minutes(12, 42)), exit = end + (Math.random() < 0.9 ? minutes(0, 18) : minutes(-70, -25));
+      if (entry < now()) db.events.push(event(entry, 'access_granted', byDoor(inName), person, { method, card: method === 'card' ? person.cards[0] ?? '' : '' }));
+      if (exit < now()) db.events.push(event(exit, 'access_granted', byDoor(outName), person, { method, card: method === 'card' ? person.cards[0] ?? '' : '' }));
+    }
   }
   db.events.sort((a, b) => b.ts - a.ts);
   db.audit.push(
@@ -754,19 +920,22 @@ function demoApi() {
   }
 
   function overview() {
+    const sc = scope(), devices = db.devices.filter(d => sc.sites.has(d.site_id)), ids = new Set(devices.map(d => d.id));
+    const doors = db.doors.filter(p => ids.has(p.device_id)), people = db.people.filter(p => p.active && personIn(sc, p));
     const t = now(), midnight = new Date(t).setHours(0, 0, 0, 0), first = Math.floor(t / H) - 23;
     const hours = Array.from({ length: 24 }, (_, i) => ({ t: (first + i) * H, granted: 0, denied: 0 }));
     const today = { granted: 0, denied: 0, alerts: 0 };
     for (const e of db.events) {
+      if (!sc.sites.has(e.site_id)) continue;
       const slot = hours[Math.floor(e.ts / H) - first], key = e.kind === 'access_granted' ? 'granted' : e.kind === 'access_denied' ? 'denied' : null;
       if (slot && key) slot[key]++;
       if (e.ts >= midnight) { if (key) today[key]++; else if (ALERT_KINDS.includes(e.kind)) today.alerts++; }
     }
-    const sync = [...db.sync.values()], n = status => sync.filter(r => r.status === status).length;
+    const sync = [...db.sync.values()].filter(r => ids.has(r.device_id)), n = status => sync.filter(r => r.status === status).length;
     return {
-      devices: { total: db.devices.length, online: db.devices.filter(d => d.status === 'online').length },
-      doors: { total: db.doors.length, open: db.doors.filter(p => p.state === 'open').length },
-      people: db.people.filter(p => p.active).length, today,
+      devices: { total: devices.length, online: devices.filter(d => d.status === 'online').length },
+      doors: { total: doors.length, open: doors.filter(p => p.state === 'open').length },
+      people: people.length, today,
       sync: { pending: n('pending'), error: n('error'), unsupported: n('unsupported') }, hours,
     };
   }
@@ -774,10 +943,16 @@ function demoApi() {
   const listed = p => ({
     id: p.id, ref: p.ref, name: p.name, company: p.company, document: p.document, active: p.active, valid_from: p.valid_from, valid_to: p.valid_to,
     updated_at: p.updated_at, has_face: Number(p.hasFace), has_pin: Number(Boolean(p.pin)), cards: p.cards, levels: p.levels,
+    company_id: p.company_id, site_id: p.site_id, schedule_id: p.schedule_id,
     sync: syncRows(p.ref).reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] ?? 0) + 1 }), {}),
   });
 
   function savePerson(person, input) {
+    const company = person.company_id || companyFor(input.company_id);
+    const area = (input.site_id === undefined ? person.site_id : input.site_id) || null, shift = (input.schedule_id === undefined ? person.schedule_id : input.schedule_id) || null;
+    if (area && site(area)?.company_id !== company) throw fail(400, 'El área elegida es de otra empresa');
+    if (shift && db.schedules.find(x => x.id === shift)?.company_id !== company) throw fail(400, 'Ese turno no es de la empresa de la persona');
+    input = { ...input, company_id: company, site_id: area, schedule_id: shift };
     const next = { ...person, ...input };
     next.name = String(next.name ?? '').trim();
     next.cards = [...new Set((next.cards ?? []).map(c => String(c).trim()).filter(Boolean))];
@@ -804,37 +979,59 @@ function demoApi() {
   on('POST', '/api/setup', session);
   on('POST', '/api/login', session);
   on('POST', '/api/logout', () => {});
-  on('GET', '/api/me', () => ({ user: me, org: db.org, engine: 'sqlite', license: db.license, security: db.security }));
+  on('GET', '/api/me', () => ({ user: me, org: db.org, engine: 'sqlite', license: db.license, security: db.security, companies: companies() }));
+
+  // Empresas: cada una con sus áreas, cuántas personas y cuántos usuarios tiene.
+  const companies = () => db.companies.filter(c => !me.company_id || c.id === me.company_id).map(c => ({ ...c,
+    people: db.people.filter(p => p.company_id === c.id && p.active).length, users: db.users.filter(u => u.company_id === c.id).length,
+    areas: db.sites.filter(x => x.company_id === c.id).map(x => ({ id: x.id, name: x.name, address: x.address, devices: db.devices.filter(d => d.site_id === x.id).length })) }));
+  const COMPANY_FIELDS = ['name', 'legal_name', 'tax_id', 'address', 'phone', 'email', 'contact', 'notes'];
+  const saveCompany = (c, body) => {
+    const next = Object.fromEntries(COMPANY_FIELDS.map(k => [k, String(body[k] ?? c[k] ?? '').trim()]));
+    if (!next.name) throw fail(400, 'Falta el nombre de la empresa');
+    if (next.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next.email)) throw fail(400, 'El correo de la empresa no es válido');
+    return Object.assign(c, next);
+  };
+  on('GET', '/api/companies', companies);
+  on('POST', '/api/companies', ({ body }) => { const c = saveCompany({ id: newId('c'), active: 1, created_at: now() }, body); db.companies.push(c); log('Alta de empresa', c.name); return { id: c.id }; });
+  on('PATCH', '/api/companies/:id', ({ params, body }) => { const c = saveCompany(db.companies.find(x => x.id === params.id), body); log('Cambio en empresa', c.name); return { id: c.id }; });
+  on('DELETE', '/api/companies/:id', ({ params }) => {
+    if (db.sites.some(x => x.company_id === params.id) || db.people.some(p => p.company_id === params.id)) throw fail(400, 'La empresa todavía tiene áreas o personas. Quitalas antes de eliminarla.');
+    db.companies = db.companies.filter(c => c.id !== params.id);
+    db.users = db.users.filter(u => u.company_id !== params.id);
+  });
   on('GET', '/api/overview', overview);
 
-  on('GET', '/api/sites', () => db.sites.map(s => ({ ...s, devices: db.devices.filter(d => d.site_id === s.id).length })));
+  on('GET', '/api/sites', () => { const sc = scope(); return db.sites.filter(x => sc.sites.has(x.id)).map(s => ({ ...s, devices: db.devices.filter(d => d.site_id === s.id).length })); });
   on('POST', '/api/sites', ({ body }) => {
-    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del sitio');
-    const s = { id: newId('s'), name: body.name.trim(), address: body.address ?? '' };
+    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del área');
+    const s = { id: newId('s'), company_id: companyFor(body.company_id), name: body.name.trim(), address: body.address ?? '' };
+    log('Alta de área', s.name);
     db.sites.push(s);
     return s;
   });
   on('PATCH', '/api/sites/:id', ({ params, body }) => { Object.assign(site(params.id), { name: body.name, address: body.address ?? '' }); });
-  // El plano de cada sitio: el de ejemplo hasta que se edita; lo editado queda guardado en este navegador.
+  // El plano de cada área: el de ejemplo hasta que se edita; lo editado queda guardado en este navegador.
   const planos = {}, doorByName = name => db.doors.find(p => p.name === name)?.id;
   const planoDe = id => {
     if (id in planos) return planos[id];
     let p = null; try { p = JSON.parse(saved.get(`kliva.demo.plano.${id}`) || 'null'); } catch { p = null; }
     return planos[id] = p || (site(id) ? planoEjemplo(site(id), doorByName) : null);
   };
-  on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Ese sitio no existe'); return { plano: planoDe(params.id), updated_at: null }; });
+  on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Esa área no existe'); return { plano: planoDe(params.id), updated_at: null }; });
   on('PUT', '/api/sites/:id/plano', ({ params, body }) => {
     if (me.role !== 'admin') throw fail(403, 'Tu usuario no tiene permiso para hacer esto');
     planos[params.id] = body.plano; if (!cine) saved.set(`kliva.demo.plano.${params.id}`, JSON.stringify(body.plano));
     return { updated_at: now() };
   });
-  on('GET', '/api/places', () => Object.fromEntries(db.sites.flatMap(s => (planoDe(s.id)?.puertas ?? []).map(x => [x.puerta, x.lugar]))));
+  on('GET', '/api/places', () => Object.fromEntries(db.sites.filter(x => scope().sites.has(x.id)).flatMap(s => (planoDe(s.id)?.puertas ?? []).map(x => [x.puerta, x.lugar]))));
   on('DELETE', '/api/sites/:id', ({ params }) => {
-    if (db.devices.some(d => d.site_id === params.id)) throw fail(400, 'El sitio todavía tiene equipos. Quitalos o movelos antes de borrarlo.');
+    if (db.devices.some(d => d.site_id === params.id)) throw fail(400, 'El área todavía tiene equipos. Quitalos o movelos antes de borrarla.');
+    db.people.forEach(p => { if (p.site_id === params.id) p.site_id = null; });
     db.sites = db.sites.filter(s => s.id !== params.id);
   });
 
-  on('GET', '/api/devices', () => db.devices.map(d => {
+  on('GET', '/api/devices', () => db.devices.filter(d => scope().sites.has(d.site_id)).map(d => {
     const rows = [...db.sync.values()].filter(r => r.device_id === d.id), b = brandOf(d.brand);
     return { ...d, site_name: site(d.site_id).name, doors: db.doors.filter(p => p.device_id === d.id).length, brand_label: b.label, protocol: b.protocol,
       capabilities: b.capabilities, sync_pending: rows.filter(r => r.status === 'pending').length, sync_errors: rows.filter(r => r.status === 'error').length };
@@ -847,7 +1044,7 @@ function demoApi() {
   on('POST', '/api/devices', ({ body }) => {
     const b = brandOf(body.brand);
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del equipo');
-    if (!site(body.site_id)) throw fail(400, 'Elegí el sitio donde está el equipo');
+    if (!site(body.site_id)) throw fail(400, 'Elegí el área donde está el equipo');
     const d = addDevice(body.site_id, body.brand, body.name.trim(), body.host, b.model, 'demostración', Array.from({ length: b.doors }, (_, i) => `Puerta ${i + 1}`));
     d.port = Number(body.port) || b.defaultPort;
     log('Alta de equipo', `${d.name}, ${d.host}`);
@@ -866,10 +1063,13 @@ function demoApi() {
   });
   on('POST', '/api/devices/:id/resync', () => { db.people.forEach(p => plan(p)); });
 
-  on('GET', '/api/doors', () => db.doors.map(doorRow));
+  on('GET', '/api/doors', () => db.doors.filter(p => scope().sites.has(doorSite(p.id))).map(doorRow));
   on('PATCH', '/api/doors/:id', ({ params, body }) => {
+    const door = db.doors.find(p => p.id === params.id);
+    if (body.clock !== undefined) door.clock = Number(Boolean(body.clock));
+    if (body.name === undefined) return;
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre de la puerta');
-    db.doors.find(p => p.id === params.id).name = body.name.trim();
+    door.name = body.name.trim();
   });
   on('POST', '/api/doors/:id/open', ({ params }) => {
     const door = db.doors.find(p => p.id === params.id), d = device(door.device_id);
@@ -884,7 +1084,8 @@ function demoApi() {
 
   on('GET', '/api/people', ({ query }) => {
     const q = fold(query.get('q') ?? '');
-    return db.people.filter(p => fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
+    const sc = scope();
+    return db.people.filter(p => personIn(sc, p) && fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
   });
   on('GET', '/api/people/:id', ({ params }) => {
     const p = db.people.find(x => x.id === params.id);
@@ -893,7 +1094,7 @@ function demoApi() {
   });
   on('POST', '/api/people', ({ body }) => {
     const p = { id: newId('h'), ref: String(1001 + db.people.length + serial), name: '', company: '', document: '', cards: [], pin: '', face: '', hasFace: false,
-      active: 1, valid_from: null, valid_to: null, levels: [], created_at: now() };
+      active: 1, valid_from: null, valid_to: null, levels: [], created_at: now(), company_id: null, site_id: null, schedule_id: null };
     savePerson(p, body);
     db.people.push(p);
     log('Alta de persona', p.name);
@@ -907,13 +1108,13 @@ function demoApi() {
     log('Baja de persona', p.name);
   });
 
-  on('GET', '/api/levels', () => db.levels.map(l => ({ ...l, members: db.people.filter(p => p.levels.includes(l.id)).length })));
+  on('GET', '/api/levels', () => { const sc = scope(); return db.levels.filter(l => !sc.company || l.company_id === sc.company).map(l => ({ ...l, members: db.people.filter(p => p.levels.includes(l.id)).length })); });
   const saveLevel = (level, body) => {
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del nivel');
     Object.assign(level, { name: body.name.trim(), doors: body.doors ?? [] });
     db.people.filter(p => p.levels.includes(level.id)).forEach(p => plan(p));
   };
-  on('POST', '/api/levels', ({ body }) => { const l = { id: newId('l'), name: '', doors: [] }; saveLevel(l, body); db.levels.push(l); return { id: l.id }; });
+  on('POST', '/api/levels', ({ body }) => { const l = { id: newId('l'), company_id: companyFor(body.company_id), name: '', doors: [] }; saveLevel(l, body); db.levels.push(l); return { id: l.id }; });
   on('PATCH', '/api/levels/:id', ({ params, body }) => saveLevel(db.levels.find(l => l.id === params.id), body));
   on('DELETE', '/api/levels/:id', ({ params }) => {
     db.levels = db.levels.filter(l => l.id !== params.id);
@@ -923,21 +1124,24 @@ function demoApi() {
   on('GET', '/api/events', ({ query }) => {
     const group = query.get('group'), before = Number(query.get('before')), door = query.get('door'), person = query.get('person');
     const kinds = { access: ['access_granted', 'access_denied'], denied: ['access_denied'], alerts: ALERT_KINDS }[group];
-    return db.events.filter(e => (!before || e.ts < before) && (!door || e.door_id === door) && (!person || e.person_id === person) && (!kinds || kinds.includes(e.kind)))
+    const sc = scope();
+    return db.events.filter(e => sc.sites.has(e.site_id) && (!before || e.ts < before) && (!door || e.door_id === door) && (!person || e.person_id === person) && (!kinds || kinds.includes(e.kind)))
       .slice(0, Number(query.get('limit')) || 60);
   });
   on('GET', '/api/audit', () => db.audit);
 
-  on('GET', '/api/users', () => db.users.map(u => ({ ...u, mfa: Number(u.id === me.id ? me.mfa : Boolean(u.mfa)) })));
+  on('GET', '/api/users', () => db.users.map(u => ({ ...u, company_name: db.companies.find(c => c.id === u.company_id)?.name ?? null, mfa: Number(u.id === me.id ? me.mfa : Boolean(u.mfa)) })));
   on('POST', '/api/users', ({ body }) => {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email ?? '')) throw fail(400, 'El correo no es válido');
     if (String(body.password ?? '').length < 10) throw fail(400, 'La contraseña debe tener al menos 10 caracteres');
-    db.users.push({ id: newId('u'), name: body.name, email: body.email.toLowerCase(), role: body.role ?? 'operator', active: 1 });
+    if (db.users.some(u => u.email === body.email.toLowerCase())) throw fail(400, 'Ya hay un usuario con ese correo');
+    db.users.push({ id: newId('u'), name: body.name, email: body.email.toLowerCase(), role: body.role ?? 'operator', active: 1, company_id: body.company_id || null,
+      areas: body.company_id ? (body.areas ?? []).join(',') : '' });
   });
   on('PATCH', '/api/users/:id', ({ params, body }) => {
     const u = db.users.find(x => x.id === params.id), { password: _omit, ...rest } = body;
     if (u.role === 'admin' && (rest.role ?? 'admin') !== 'admin' && !db.users.some(x => x !== u && x.role === 'admin')) throw fail(400, 'Tiene que quedar al menos un administrador activo');
-    Object.assign(u, rest, rest.reset2fa ? { mfa: false } : {});
+    Object.assign(u, rest, rest.reset2fa ? { mfa: false } : {}, { areas: u.company_id && rest.areas ? rest.areas.join(',') : u.areas ?? '' });
   });
   on('DELETE', '/api/users/:id', ({ params }) => {
     if (params.id === me.id) throw fail(400, 'No podés borrar tu propio usuario');
@@ -945,10 +1149,43 @@ function demoApi() {
   });
   on('POST', '/api/license', () => { throw fail(400, 'En la demostración no se cargan licencias'); });
 
+  // Control de horario: turnos y el cálculo, el mismo que usa el servidor (server/core/horario.js).
+  on('GET', '/api/schedules', () => { const sc = scope(); return db.schedules.filter(x => !sc.company || x.company_id === sc.company)
+    .map(x => ({ ...x, people: db.people.filter(p => p.schedule_id === x.id && p.active).length })); });
+  const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t ?? '')); if (!m || +m[1] > 23 || +m[2] > 59) throw fail(400, 'La hora tiene que ser como 08:30'); return +m[1] * 60 + +m[2]; };
+  const saveSchedule = (x, body) => {
+    const name = String(body.name ?? '').trim(), days = [...new Set((body.days ?? []).map(Number))].filter(d => d >= 0 && d <= 6).sort();
+    if (!name) throw fail(400, 'Falta el nombre del turno');
+    if (!days.length) throw fail(400, 'Elegí al menos un día');
+    const start_min = toMin(body.start), end_min = toMin(body.end);
+    if (start_min === end_min) throw fail(400, 'La entrada y la salida no pueden ser a la misma hora');
+    return Object.assign(x, { name, days, start_min, end_min, tolerance: Math.min(Math.max(Number(body.tolerance) || 0, 0), 120) });
+  };
+  on('POST', '/api/schedules', ({ body }) => { const x = saveSchedule({ id: newId('sch'), company_id: companyFor(body.company_id) }, body); db.schedules.push(x); log('Alta de turno', x.name); return { id: x.id }; });
+  on('PATCH', '/api/schedules/:id', ({ params, body }) => { saveSchedule(db.schedules.find(x => x.id === params.id), body); return { id: params.id }; });
+  on('DELETE', '/api/schedules/:id', ({ params }) => {
+    db.schedules = db.schedules.filter(x => x.id !== params.id);
+    db.people.forEach(p => { if (p.schedule_id === params.id) p.schedule_id = null; });
+  });
+  function attendance(query) {
+    const sc = scope(), monday = new Date(now()); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const from = Number(query.get('from')) || monday.getTime(), to = Math.min(Number(query.get('to')) || now() + 1, now() + 1);
+    if (to - from > 93 * 24 * H) throw fail(400, 'El período máximo es de tres meses');
+    const people = db.people.filter(p => p.active && personIn(sc, p)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => ({ ...p }));
+    const clocks = new Set(db.doors.filter(p => p.clock).map(p => p.id)), passes = new Map(people.map(p => [p.id, []]));
+    for (const e of db.events) if (e.kind === 'access_granted' && clocks.has(e.door_id) && passes.has(e.person_id) && e.ts >= from - 12 * H && e.ts < to + 18 * H) passes.get(e.person_id).push(e.ts);
+    passes.forEach(list => list.sort((a, b) => a - b));
+    const first = new Map();
+    for (const e of db.events) if (e.kind === 'access_granted' && e.person_id && !(first.get(e.person_id) <= e.ts)) first.set(e.person_id, e.ts);
+    for (const p of people) p.since = Math.min(p.created_at ?? Infinity, first.get(p.id) ?? Infinity);
+    return attendanceReport({ people, schedules: new Map(db.schedules.map(x => [x.id, x])), passes, from, to, now: now() });
+  }
+  on('GET', '/api/attendance', ({ query }) => attendance(query));
+
   // Avisos, seguridad, datos e integraciones
   on('GET', '/api/alerts', () => [
-    ...db.devices.filter(d => d.enabled && d.status === 'offline').map(d => ({ id: `dev-${d.id}`, kind: 'device_offline', ts: d.last_seen, title: d.name, detail: d.status_detail, device_id: d.id })),
-    ...db.events.filter(e => ALERT_KINDS.includes(e.kind) && e.ts > now() - 24 * H).slice(0, 20).map(e => ({ id: e.id, kind: e.kind, ts: e.ts, title: e.door_name, detail: e.site_name, door_id: e.door_id })),
+    ...db.devices.filter(d => d.enabled && d.status === 'offline' && scope().sites.has(d.site_id)).map(d => ({ id: `dev-${d.id}`, kind: 'device_offline', ts: d.last_seen, title: d.name, detail: d.status_detail, device_id: d.id })),
+    ...db.events.filter(e => ALERT_KINDS.includes(e.kind) && e.ts > now() - 24 * H && scope().sites.has(e.site_id)).slice(0, 20).map(e => ({ id: e.id, kind: e.kind, ts: e.ts, title: e.door_name, detail: e.site_name, door_id: e.door_id })),
   ].sort((a, b) => b.ts - a.ts));
   const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   on('POST', '/api/me/2fa/start', () => {
@@ -1001,16 +1238,23 @@ function demoApi() {
   function download(path, filename) {
     const [route, search = ''] = path.split('?'), q = new URLSearchParams(search);
     if (route === '/api/export') {
-      const copy = { product: 'Kliva', exported_at: new Date().toISOString(), org: db.org, sites: db.sites, devices: db.devices, doors: db.doors, levels: db.levels,
+      const copy = { product: 'Kliva', exported_at: new Date().toISOString(), org: db.org, companies: db.companies, sites: db.sites, schedules: db.schedules, devices: db.devices, doors: db.doors, levels: db.levels,
         people: db.people.map(({ face, hasFace, ...p }) => ({ ...p, has_face: hasFace, ...(q.get('fotos') === '1' && face && { face }) })), operators: db.users, events: db.events.length };
       return saveBlob(new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' }), filename);
     }
     const from = Number(q.get('from')) || 0, to = Number(q.get('to')) || now(), cell = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
+    if (route === '/api/attendance.csv') {
+      const { days, people } = attendance(q), byId = new Map(people.map(p => [p.id, p])), hm = t => t ? new Date(t).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+      const STATE = { ok: 'Bien', tarde: 'Llegó tarde', salio_antes: 'Salió antes', ausente: 'Faltó', en_curso: 'Adentro', sin_salida: 'Sin marca de salida', pendiente: 'Todavía no empezó', extra: 'Día fuera de turno', sin_turno: 'Sin turno' };
+      const rows = days.map(d => { const p = byId.get(d.person_id); return [d.date.split('-').reverse().join('/'), p.ref, p.name, p.document, p.schedule, hm(d.start), hm(d.end), hm(d.entry), hm(d.exit),
+        (d.minutes / 60).toFixed(2).replace('.', ','), d.late || '', d.early || '', STATE[d.state]].map(cell).join(';'); });
+      return saveBlob(new Blob(['\ufeff' + ['Fecha;Legajo;Persona;Documento;Turno;Entrada esperada;Salida esperada;Entrada;Salida;Horas;Llegó tarde (min);Salió antes (min);Estado', ...rows].join('\r\n')], { type: 'text/csv' }), filename);
+    }
     const rows = db.events.filter(e => e.ts >= from && e.ts < to && inGroup(e, q.get('group') ?? 'all')).map(e => {
       const d = new Date(e.ts);
       return [d.toLocaleDateString('es-UY'), d.toLocaleTimeString('es-UY', { hour12: false }), KIND[e.kind], e.person_name, e.card, e.method, e.door_name, e.site_name, e.detail, e.actor].map(cell).join(';');
     });
-    saveBlob(new Blob(['﻿' + ['Fecha;Hora;Tipo;Persona;Tarjeta;Método;Puerta;Sitio;Detalle;Operador', ...rows].join('\r\n')], { type: 'text/csv' }), filename);
+    saveBlob(new Blob(['﻿' + ['Fecha;Hora;Tipo;Persona;Tarjeta;Método;Puerta;Área;Detalle;Operador', ...rows].join('\r\n')], { type: 'text/csv' }), filename);
   }
 
   // ── La historia de la web (modo cine) ──────────────────────────────────────
@@ -1040,7 +1284,7 @@ function demoApi() {
     ['inicio', '07:40', live => { if (live && !ticker) ticker = setTimeout(tick, 1400); }],
     ['alta', '07:40', live => {
       const p = { id: newId('h'), ref: '1099', name: LUCIA, company: 'Logística Sur', document: '', cards: ['5550600'], pin: '', face: '', hasFace: true, active: 1,
-        valid_from: null, valid_to: null, levels: [db.levels[0].id], created_at: now(), updated_at: now() };
+        valid_from: null, valid_to: null, levels: [db.levels[0].id], created_at: now(), updated_at: now(), company_id: 'c1', site_id: 's1', schedule_id: null };
       db.people.push(p);
       plan(p, !live);
       if (live) emit('sync', { fresh: p.id });
@@ -1091,6 +1335,7 @@ function demoApi() {
     cine: cine ? { rewind, play } : null,
     hasSession: () => true,
     setSession() {},
+    setView(value) { view = { ...value }; },
     stream(onMessage) {
       listeners.add(onMessage);
       if (!ticker && !cine) ticker = setTimeout(tick, 1800); // en modo cine las escenas las pide la página
@@ -1351,6 +1596,7 @@ const S = {
   overview: null, sites: [], devices: [], doors: [], levels: [], people: [], feed: [], events: [], notices: [],
   view: 'panel', peopleQ: '', eventGroup: 'main', settingsTab: 'empresa', lastPass: {}, doorAlert: {}, linkDown: false, draftFace: undefined, fresh: null,
   places: {}, planoSite: null, planoFocus: null, motorOk: undefined,
+  companies: [], vista: { empresa: '', area: '' }, companyOpen: null, users: null, schedules: [], attendance: null, horarioPeriod: 'semana',
 };
 const root = document.documentElement, hostTheme = root.dataset.theme;
 const isAdmin = () => S.me?.role === 'admin';
@@ -1363,7 +1609,8 @@ async function load(...keys) {
   const paths = {
     overview: '/api/overview', sites: '/api/sites', devices: '/api/devices', doors: '/api/doors', levels: '/api/levels', notices: '/api/alerts',
     people: `/api/people?q=${encodeURIComponent(S.peopleQ)}`, feed: '/api/events?group=main&limit=40',
-    events: `/api/events?group=${S.eventGroup}&limit=60`, places: '/api/places',
+    events: `/api/events?group=${S.eventGroup}&limit=60`, places: '/api/places', companies: '/api/companies', schedules: '/api/schedules',
+    attendance: (r => `/api/attendance?from=${r.from}&to=${r.to}`)(periodRange()),
   };
   await Promise.all(keys.map(async key => { S[key] = await S.api.get(paths[key]); }));
 }
@@ -1654,14 +1901,17 @@ const PRIMARY = {
   niveles: () => isAdmin() && ['Nivel', 'level-new', 'plus'],
   equipos: () => isAdmin() && ['Equipo', 'device-new', 'plus'],
   eventos: () => ['Descargar', 'events-download', 'download'],
+  horario: () => ['Descargar', 'horario-download', 'download'],
   integraciones: () => isAdmin() && ['Conexión', 'hook-new', 'plus'],
 };
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 views.panel = () => html`
-  <header class="view-head"><div><h1>Panel</h1><p class="lede" id="status">${statusText()}</p></div>${demoNote()}</header>
+  <header class="view-head"><div>${canSwitch() ? html`<h1><button class="title-pick" type="button" data-action="scope" aria-label="Elegir empresa y área">${scopeTitle()}${icon('updown')}</button></h1>` : html`<h1>${scopeTitle()}</h1>`}
+    <p class="lede" id="status">${statusText()}</p></div>${demoNote()}</header>
+  ${areaBar()}
   <div class="panel-grid">
-    <div class="stack" style="gap:20px">${S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">Todavía no hay sitios. Creá el primero en Ajustes y después agregá sus equipos.</p></section>`}</div>
+    <div class="stack" style="gap:20px">${S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">${viewCompany() ? `${viewCompany().name} todavía no tiene áreas. Se agregan en Ajustes, en la ficha de la empresa.` : 'Todavía no hay empresas. Se agregan en Ajustes, con sus áreas y sus usuarios.'}</p></section>`}</div>
     <section class="card flush" aria-label="Movimientos en vivo">
       <div class="card-head"><h2>Ahora</h2></div>${hoursChart(S.overview.hours)}
       <ol class="events" id="feed">${S.feed.filter(e => inGroup(e, 'main')).slice(0, 40).map(e => eventRow(e))}</ol>
@@ -1671,8 +1921,8 @@ views.panel = () => html`
 
 function siteCard(site) {
   const doors = S.doors.filter(d => d.site_id === site.id);
-  return html`<section class="card"><div class="card-head"><h2>${site.name}<small>${site.address}</small></h2><span class="chip plain">${count(doors.length, 'puerta', 'puertas')}</span></div>
-    ${doors.length ? html`<div class="wall">${doors.map(doorTile)}</div>` : html`<p class="empty">Este sitio todavía no tiene puertas. Aparecen solas al agregar un equipo.</p>`}</section>`;
+  return html`<section class="card"><div class="card-head"><h2>${site.name}<small>${areaSub(site)}</small></h2><span class="chip plain">${count(doors.length, 'puerta', 'puertas')}</span></div>
+    ${doors.length ? html`<div class="wall">${doors.map(doorTile)}</div>` : html`<p class="empty">Esta área todavía no tiene puertas. Aparecen solas al agregar un equipo.</p>`}</section>`;
 }
 
 actions.door = async el => {
@@ -1681,10 +1931,11 @@ actions.door = async el => {
   sheet.open(d.name, html`
     ${canOperate() ? html`<button class="btn go wide" type="button" data-action="door-open" data-id="${d.id}" ${off ? raw('disabled') : ''}>Abrir puerta</button>` : ''}
     ${off ? html`<p class="hint">El equipo está sin conexión. Hasta que vuelva no se puede abrir desde acá.</p>` : ''}
-    <dl class="facts"><dt>Sitio</dt><dd>${d.site_name}</dd>${S.places?.[d.id] && S.places[d.id] !== d.site_name ? html`<dt>Lugar</dt><dd>${S.places[d.id]}</dd>` : ''}<dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
+    <dl class="facts"><dt>Área</dt><dd>${d.site_name}</dd>${S.places?.[d.id] && S.places[d.id] !== d.site_name ? html`<dt>Lugar</dt><dd>${S.places[d.id]}</dd>` : ''}<dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
     <button class="btn wide" type="button" data-action="door-plan" data-id="${d.id}">${icon('plano')}<span>Ver en el plano</span></button>
     <h3>Últimos movimientos</h3>
     ${recent.length ? html`<ol class="events">${recent.map(e => eventRow(e))}</ol>` : html`<p class="empty">Sin movimientos registrados.</p>`}
+    ${isAdmin() ? html`<ul class="rows" style="margin-top:6px"><li>${toggle('door-clock', d.clock, 'Marca horario', 'Pasar por esta puerta cuenta como entrada o salida en el control de horario.')}</li></ul>` : ''}
     ${isAdmin() ? html`<form class="form" data-form="door-name" data-id="${d.id}">
       <label class="field"><span>Nombre de la puerta</span><input type="text" name="name" value="${d.name}" maxlength="60" required></label>
       <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Guardar nombre</button></div></form>` : ''}`);
@@ -1696,6 +1947,12 @@ actions['door-open'] = async el => {
   catch (e) { toast(e.message, 'deny'); }
   finally { el.disabled = false; disarm(el); }
 };
+actions['door-clock'] = async el => {
+  const d = S.doors.find(p => p.id === $('#sheet [data-form="door-name"]').dataset.id), on = !d.clock;
+  el.setAttribute('aria-checked', String(on));
+  try { await S.api.patch(`/api/doors/${d.id}`, { clock: on }); d.clock = Number(on); toast(on ? 'Esta puerta marca horario' : 'Esta puerta deja de marcar horario'); }
+  catch (e) { el.setAttribute('aria-checked', String(!on)); toast(e.message, 'deny'); }
+};
 forms['door-name'] = async (form, v) => {
   await S.api.patch(`/api/doors/${form.dataset.id}`, { name: v.name });
   await load('doors');
@@ -1706,7 +1963,7 @@ forms['door-name'] = async (form, v) => {
 const GROUPS = [['main', 'Principales'], ['access', 'Accesos'], ['denied', 'Rechazos'], ['alerts', 'Alertas'], ['all', 'Todo']];
 views.eventos = () => html`
   ${head('Eventos', 'Todo lo que pasó en las puertas, de todas las marcas, en un solo historial.')}
-  ${seg('event-group', GROUPS, S.eventGroup, 'Filtrar eventos')}
+  ${areaBar()}${seg('event-group', GROUPS, S.eventGroup, 'Filtrar eventos')}
   <section class="card flush"><ol class="events" id="event-list">${S.events.length ? S.events.map(e => eventRow(e, { long: true })) : html`<li class="empty">No hay eventos de este tipo.</li>`}</ol>
     ${S.events.length >= 60 ? html`<div class="form-actions" style="padding-bottom:12px"><button class="btn sm" type="button" data-action="event-more">Ver anteriores</button></div>` : ''}</section>`;
 actions['event-group'] = async el => { S.eventGroup = el.dataset.id; await load('events'); render(); };
@@ -1730,6 +1987,7 @@ forms['events-csv'] = async (_form, v) => {
 // ── Personas ─────────────────────────────────────────────────────────────────
 views.personas = () => html`
   ${head('Personas', 'Cada persona se carga una vez. Kliva la lleva a los equipos de sus puertas, sea cual sea la marca.')}
+  ${areaBar()}
   <section class="card flush">
     <label class="top-search" style="min-height:48px">${icon('search')}<input id="people-q" type="search" placeholder="Buscar por nombre, empresa, documento o tarjeta" value="${S.peopleQ}" autocomplete="off" aria-label="Buscar personas" style="background:none;box-shadow:none;padding:0;min-height:0"></label>
     <ul class="rows" id="people-list">${peopleRows()}</ul></section>`;
@@ -1742,7 +2000,7 @@ function peopleRows() {
     const manual = p.sync.unsupported && (p.sync.done || p.sync.pending || p.sync.error);
     return html`<li><button class="row ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}">
       <span class="avatar ${p.active ? '' : 'idle'}">${initials(p.name)}</span>
-      <span class="row-main"><strong>${p.name}</strong><span>${[p.company, creds || 'sin credenciales'].filter(Boolean).join(', ')}</span></span>
+      <span class="row-main"><strong>${p.name}</strong><span>${[areaById(p.site_id)?.name ?? (viewCompany() ? '' : companyById(p.company_id)?.name), p.company, creds || 'sin credenciales'].filter(Boolean).join(', ')}</span></span>
       <span class="row-side">${syncChip(p)}<span>${levels || 'Sin nivel de acceso'}${manual ? `, carga manual en ${p.sync.unsupported}` : ''}</span></span></button></li>`;
   });
 }
@@ -1753,9 +2011,10 @@ function personSheet(p) {
   sheet.open(p ? p.name : 'Agregar persona', html`<form class="form" data-form="person" data-id="${p?.id ?? ''}">
     <label class="field"><span>Nombre y apellido</span><input type="text" name="name" value="${p?.name}" required ${p ? '' : raw('autofocus')}></label>
     <div class="form-row">
-      <label class="field"><span>Empresa</span><input type="text" name="company" value="${p?.company}"></label>
       <label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>
+      <label class="field"><span>Contratista o empleador</span><input type="text" name="company" value="${p?.company}" placeholder="Si viene por otra empresa"></label>
     </div>
+    ${personPlace(p)}
     <label class="field"><span>Tarjetas</span><input type="text" name="cards" class="mono" value="${p?.cards.join(', ')}" inputmode="numeric" placeholder="5550123, 5550124">
       <small>Los números tal como los lee el equipo, separados por coma.</small></label>
     <label class="field"><span>Clave numérica</span><input type="text" name="pin" class="mono" value="${p?.pin}" inputmode="numeric" maxlength="8" autocomplete="off">
@@ -1766,9 +2025,7 @@ function personSheet(p) {
           <button class="btn sm" type="button" data-action="face-clear" id="face-clear" ${face || p?.has_face ? '' : raw('hidden')}>Quitar</button></div></div>
       <input type="file" id="face-file" accept="image/*" hidden>
       <small id="face-hint">${p?.has_face && !face ? 'Tiene una foto cargada.' : 'De frente y con buena luz. Se ajusta sola al tamaño que aceptan los equipos y se guarda cifrada.'}</small></div>
-    <fieldset><legend>Niveles de acceso</legend>
-      ${S.levels.length ? S.levels.map(l => html`<label class="check"><input type="checkbox" name="levels" data-list value="${l.id}" ${p?.levels.includes(l.id) ? raw('checked') : ''}>
-        <span>${l.name}<small>${count(l.doors.length, 'puerta', 'puertas')}</small></span></label>`) : html`<p class="hint">Todavía no hay niveles. Se crean en la sección Niveles.</p>`}</fieldset>
+    <fieldset id="person-levels"><legend>Niveles de acceso</legend>${personLevels(personCompany(p), p)}</fieldset>
     <div class="form-row">
       <label class="field"><span>Vigente desde</span><input type="datetime-local" name="valid_from" value="${toLocalInput(p?.valid_from)}"></label>
       <label class="field"><span>Vigente hasta</span><input type="datetime-local" name="valid_to" value="${toLocalInput(p?.valid_to)}"></label>
@@ -1798,12 +2055,13 @@ actions['person-delete'] = async el => {
 forms.person = async (form, v) => {
   const body = {
     name: v.name, company: v.company, document: v.document, pin: v.pin, cards: v.cards.split(/[\s,;]+/).filter(Boolean),
+    company_id: v.company_id || personCompany(null), site_id: v.site_id || null, schedule_id: v.schedule_id || null,
     levels: v.levels ?? [], active: v.active, valid_from: fromLocalInput(v.valid_from), valid_to: fromLocalInput(v.valid_to),
     ...(S.draftFace !== undefined && { face: S.draftFace }),
   };
   const id = form.dataset.id;
   if (id) await S.api.patch(`/api/people/${id}`, body); else S.fresh = (await S.api.post('/api/people', body)).id;
-  await load('people', 'overview');
+  await load('people', 'overview', 'schedules');
   sheet.close(); render(); toast(id ? 'Cambios guardados' : 'Persona agregada');
 };
 
@@ -1812,22 +2070,28 @@ views.niveles = () => html`
   ${head('Niveles de acceso', 'Un nivel junta las puertas que un grupo de personas puede pasar, sin importar de qué marca sea cada equipo.')}
   <section class="card flush"><ul class="rows">${S.levels.length ? S.levels.map(l => html`<li><button class="row" type="button" data-action="level-edit" data-id="${l.id}">
     <span class="badge">${icon('niveles')}</span>
-    <span class="row-main"><strong>${l.name}</strong><span>${l.doors.map(id => S.doors.find(d => d.id === id)?.name).filter(Boolean).join(', ') || 'Sin puertas'}</span></span>
+    <span class="row-main"><strong>${l.name}</strong><span>${[!viewCompany() && companyById(l.company_id)?.name, l.doors.map(id => S.doors.find(d => d.id === id)?.name).filter(Boolean).join(', ') || 'Sin puertas'].filter(Boolean).join(': ')}</span></span>
     <span class="row-side"><span class="chip plain">${count(l.members, 'persona', 'personas')}</span><span>${count(l.doors.length, 'puerta', 'puertas')}</span></span></button></li>`)
     : html`<li class="empty">Todavía no hay niveles. Creá uno, elegí sus puertas y asignalo a las personas.</li>`}</ul></section>`;
 
 function levelSheet(level) {
   sheet.open(level ? level.name : 'Agregar nivel', html`<form class="form" data-form="level" data-id="${level?.id ?? ''}">
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${level?.name}" maxlength="60" required ${level ? '' : raw('autofocus')}></label>
-    ${S.sites.map(site => {
-      const doors = S.doors.filter(d => d.site_id === site.id);
-      return doors.length ? html`<fieldset><legend>${site.name}</legend>${doors.map(d => html`<label class="check">
-        <input type="checkbox" name="doors" data-list value="${d.id}" ${level?.doors.includes(d.id) ? raw('checked') : ''}><span>${d.name}<small>${d.device_name}</small></span></label>`)}</fieldset>` : '';
-    })}
-    ${S.doors.length ? '' : html`<p class="hint">Todavía no hay puertas: aparecen al agregar un equipo.</p>`}
+    ${!level && !viewCompany() && S.companies.length > 1 ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="level">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
+    <div id="level-doors">${levelDoors(level ? level.company_id : viewCompany()?.id ?? S.companies[0]?.id, level)}</div>
     <p class="form-error" role="alert"></p>
     ${isAdmin() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       ${level ? html`<button class="btn danger push" type="button" data-action="level-delete" data-id="${level.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
+}
+/** Las puertas que puede abrir un nivel: las de las áreas de su empresa, agrupadas por área. */
+function levelDoors(companyId, level) {
+  const sites = S.sites.filter(site => !companyId || site.company_id === companyId);
+  const out = sites.map(site => {
+    const doors = S.doors.filter(d => d.site_id === site.id);
+    return doors.length ? html`<fieldset><legend>${site.name}</legend>${doors.map(d => html`<label class="check">
+      <input type="checkbox" name="doors" data-list value="${d.id}" ${level?.doors.includes(d.id) ? raw('checked') : ''}><span>${d.name}<small>${d.device_name}</small></span></label>`)}</fieldset>` : '';
+  }).filter(Boolean);
+  return out.length ? out : html`<p class="hint">Todavía no hay puertas: aparecen al agregar un equipo.</p>`;
 }
 actions['level-new'] = () => levelSheet(null);
 actions['level-edit'] = el => levelSheet(S.levels.find(l => l.id === el.dataset.id));
@@ -1838,7 +2102,7 @@ actions['level-delete'] = async el => {
   sheet.close(); render(); toast('Nivel eliminado');
 };
 forms.level = async (form, v) => {
-  const id = form.dataset.id, body = { name: v.name, doors: v.doors ?? [] };
+  const id = form.dataset.id, body = { name: v.name, doors: v.doors ?? [], company_id: v.company_id || viewCompany()?.id };
   if (id) await S.api.patch(`/api/levels/${id}`, body); else await S.api.post('/api/levels', body);
   await load('levels', 'people', 'overview');
   sheet.close(); render(); toast('Nivel guardado');
@@ -1855,17 +2119,18 @@ const deviceChip = d => !d.enabled ? html`<span class="chip">Deshabilitado</span
 
 views.equipos = () => html`
   ${head('Equipos', 'Controladoras, terminales faciales y porteros de todas las marcas, cada uno hablando su propio protocolo.')}
+  ${areaBar()}
   ${S.sites.map(site => {
     const devices = S.devices.filter(d => d.site_id === site.id);
-    return html`<section class="card flush"><div class="card-head"><h2>${site.name}<small>${site.address}</small></h2></div>
+    return html`<section class="card flush"><div class="card-head"><h2>${site.name}<small>${areaSub(site)}</small></h2></div>
       <ul class="rows">${devices.length ? devices.map(d => html`<li><button class="row" type="button" data-action="device-edit" data-id="${d.id}">
         <span class="badge">${icon('equipos')}</span>
         <span class="row-main"><strong>${d.name}</strong><span>${d.brand_label} <span class="mono" style="display:inline">${d.host}:${d.port}</span>${d.model ? `, ${d.model}` : ''}</span>
           <span>${canDo(d.capabilities)}${d.capabilities.people ? '' : '. Las personas se cargan con el software de la marca'}</span></span>
         <span class="row-side">${deviceChip(d)}<span>${d.status === 'offline' ? d.status_detail : count(d.doors, 'puerta', 'puertas')}${d.sync_errors ? `, ${count(d.sync_errors, 'alta con error', 'altas con error')}` : ''}</span></span></button></li>`)
-        : html`<li class="empty">Este sitio no tiene equipos todavía.</li>`}</ul></section>`;
+        : html`<li class="empty">Esta área no tiene equipos todavía.</li>`}</ul></section>`;
   })}
-  ${S.sites.length ? '' : html`<section class="card"><p class="empty">Antes de agregar equipos creá un sitio en Ajustes: es el lugar físico donde están instalados.</p></section>`}`;
+  ${S.sites.length ? '' : html`<section class="card"><p class="empty">Antes de agregar equipos creá un área en Ajustes, en la ficha de la empresa: es el lugar donde están instalados.</p></section>`}`;
 
 const brandHint = b => b.capabilities.people
   ? `Con ${b.label}, Kliva recibe los eventos, abre puertas y carga personas con tarjeta, clave y rostro.`
@@ -1881,7 +2146,7 @@ function deviceSheet(d) {
           <input type="radio" name="brand" value="${b.brand}" ${b === first ? raw('checked') : ''}><strong>${b.label}</strong><small>${b.protocol}</small></label>`)}</div>
           <p class="hint" id="brand-hint" style="margin-top:8px">${brandHint(first)}</p></fieldset>`}
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${d?.name}" placeholder="Controladora de portería" required></label>
-    <label class="field"><span>Sitio</span><select name="site_id" required>${S.sites.map(s => html`<option value="${s.id}" ${d?.site_id === s.id ? raw('selected') : ''}>${s.name}</option>`)}</select></label>
+    <label class="field"><span>Área</span><select name="site_id" required>${S.sites.map(s => html`<option value="${s.id}" ${(d?.site_id ?? S.vista.area) === s.id ? raw('selected') : ''}>${viewCompany() ? s.name : `${companyById(s.company_id)?.name ?? ''}, ${s.name}`}</option>`)}</select></label>
     <div class="form-row">
       <label class="field"><span>Dirección IP</span><input type="text" name="host" class="mono" value="${d?.host}" placeholder="192.168.1.201" inputmode="decimal" required></label>
       <label class="field"><span>Puerto</span><input type="number" name="port" class="mono" value="${d?.port ?? first.defaultPort}" min="1" max="65535" required></label>
@@ -1900,7 +2165,7 @@ function deviceSheet(d) {
     ${d?.capabilities.people ? html`<div class="form-actions"><button class="btn sm" type="button" data-action="device-resync" data-id="${d.id}">Reenviar todas las personas a este equipo</button></div>` : ''}
   </form>`);
 }
-actions['device-new'] = () => S.sites.length ? deviceSheet(null) : toast('Primero creá un sitio en Ajustes', 'deny');
+actions['device-new'] = () => S.sites.length ? deviceSheet(null) : toast('Primero creá un área en Ajustes', 'deny');
 actions['device-edit'] = el => isAdmin() && deviceSheet(S.devices.find(d => d.id === el.dataset.id));
 actions['device-test'] = async el => {
   const form = el.closest('form'), v = values(form), box = $('#test-result');
@@ -1965,7 +2230,7 @@ views.integraciones = () => {
       <button class="btn sm danger" type="button" data-action="key-delete" data-id="${k.id}">Eliminar</button></li>`)
       : html`<li class="empty">Sin claves. Cada sistema lleva la suya, así se puede cortar una sin tocar las demás.</li>`}</ul>
     <details style="padding:0 2px 14px"><summary class="hint" style="cursor:pointer">Qué puede consultar un sistema con su clave</summary>
-      <dl class="facts" style="margin-top:10px"><dt class="mono">GET /api/v1/status</dt><dd>Sitios, equipos con su estado y puertas</dd><dt class="mono">GET /api/v1/events</dt><dd>Eventos en el orden en que llegaron; se sigue con <span class="mono">?after=</span></dd>
+      <dl class="facts" style="margin-top:10px"><dt class="mono">GET /api/v1/status</dt><dd>Empresas, áreas, equipos con su estado y puertas</dd><dt class="mono">GET /api/v1/events</dt><dd>Eventos en el orden en que llegaron; se sigue con <span class="mono">?after=</span></dd>
         <dt class="mono">GET /api/v1/marks</dt><dd>Primera y última pasada de cada persona por día</dd><dt class="mono">POST /api/v1/doors/:id/open</dt><dd>Abrir una puerta (solo claves con ese permiso)</dd></dl></details></section>`;
 };
 
@@ -2033,29 +2298,19 @@ async function loadIntegrations() {
 }
 
 // ── Ajustes ──────────────────────────────────────────────────────────────────
-const TABS = [['empresa', 'Empresa'], ['seguridad', 'Seguridad'], ['datos', 'Datos'], ['apariencia', 'Apariencia'], ['bitacora', 'Bitácora']];
+/** Las pestañas de Ajustes según quién mira: la instaladora ve todo; el administrador de una empresa, la suya. */
+const settingsTabs = () => !isAdmin() ? [['apariencia', 'Apariencia']] : isGlobal()
+  ? [['empresas', 'Empresas'], ['instalacion', 'Instalación'], ['seguridad', 'Seguridad'], ['datos', 'Datos'], ['apariencia', 'Apariencia'], ['bitacora', 'Bitácora']]
+  : [['empresa', 'Empresa'], ['apariencia', 'Apariencia']];
+const settingsTab = () => settingsTabs().some(t => t[0] === S.settingsTab) ? S.settingsTab : settingsTabs()[0][0];
 const IDLE = [[1, '1 hora'], [8, '8 horas'], [24, '1 día'], [168, '7 días']];
-views.ajustes = () => html`${head('Ajustes')}${seg('settings-tab', isAdmin() ? TABS : TABS.filter(t => ['apariencia'].includes(t[0])), isAdmin() ? S.settingsTab : 'apariencia', 'Secciones de ajustes')}
-  ${settings[isAdmin() ? S.settingsTab : 'apariencia']()}`;
-actions['settings-tab'] = el => { S.settingsTab = el.dataset.id; render(); };
+views.ajustes = () => { const tab = settingsTab(); return html`${head('Ajustes')}${seg('settings-tab', settingsTabs(), tab, 'Secciones de ajustes')}${settings[tab]()}`; };
+actions['settings-tab'] = el => { S.settingsTab = el.dataset.id; S.companyOpen = null; render(); };
 
 const toggle = (action, on, title, sub) => html`<button class="row flat" type="button" role="switch" aria-checked="${String(Boolean(on))}" data-action="${action}">
   <span class="row-main"><strong>${title}</strong><span>${sub}</span></span><span class="switch"></span></button>`;
 
 const settings = {
-  empresa: () => { const l = S.license; return html`
-    <section class="card flush"><div class="card-head"><h2>Sitios<small>Cada lugar físico: una planta, un galpón, una oficina</small></h2><button class="btn sm" type="button" data-action="site-new">Agregar sitio</button></div>
-      <ul class="rows">${S.sites.length ? S.sites.map(s => html`<li><button class="row" type="button" data-action="site-edit" data-id="${s.id}">
-        <span class="badge">${icon('site')}</span><span class="row-main"><strong>${s.name}</strong><span>${s.address || 'Sin dirección'}</span></span><span class="row-side">${count(s.devices, 'equipo', 'equipos')}</span></button></li>`)
-        : html`<li class="empty">Todavía no hay sitios.</li>`}</ul></section>
-    <section class="card flush"><div class="card-head"><h2>Operadores<small>Quién entra a Kliva y qué puede hacer</small></h2><button class="btn sm" type="button" data-action="user-new">Agregar operador</button></div>
-      <ul class="rows" id="user-list"><li class="empty">Cargando…</li></ul></section>
-    <section class="card"><div class="card-head"><h2>Licencia</h2>${l.valid ? html`<span class="chip" data-tone="pass">${l.plan}</span>` : html`<span class="chip" data-tone="warn">${l.plan}</span>`}</div>
-      <dl class="facts">${l.customer ? html`<dt>Cliente</dt><dd>${l.customer}</dd>` : ''}<dt>Equipos</dt><dd>${S.devices.length} en uso de ${l.maxDevices} permitidos</dd>
-        ${l.expires ? html`<dt>Vence</dt><dd>${dateFormat.format(l.expires)}</dd>` : ''}${l.valid ? '' : html`<dt>Estado</dt><dd>${l.note}</dd>`}</dl>
-      <form class="form" data-form="license"><label class="field"><span>Cargar una licencia</span><textarea name="key" class="mono" placeholder="Pegá acá la clave que recibiste" required></textarea></label>
-        <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Cargar licencia</button></div></form></section>`; },
-
   seguridad: () => html`
     <section class="card flush"><div class="card-head"><h2>Entrada a Kliva<small>Reglas para todos los operadores de ${S.org}</small></h2></div><ul class="rows">
       <li>${toggle('policy-2fa', S.security.require_2fa, 'Exigir verificación en dos pasos a los administradores', 'Además de la contraseña, un código de la app del teléfono. Sin eso no se puede administrar.')}</li>
@@ -2074,7 +2329,7 @@ const settings = {
       <dl class="facts"><dt>Base de datos</dt><dd>${S.engine === 'postgres' ? 'PostgreSQL, en el servidor que eligió la empresa' : 'Local, en este mismo servidor'}</dd><dt>Versión</dt><dd>Kliva ${S.version}</dd></dl>
       ${S.api.demo ? html`<div class="form-actions"><button class="btn" type="button" data-action="wizard-preview">Ver el asistente de primera instalación</button></div>` : ''}</section>
     <section class="card"><div class="card-head"><h2>Tus datos son tuyos<small>Una copia completa para guardar o para llevarte</small></h2></div>
-      <p class="muted">Sitios, equipos, puertas, niveles, personas con sus tarjetas y operadores, en un archivo. Nunca incluye contraseñas ni claves.</p>
+      <p class="muted">Empresas, áreas, equipos, puertas, niveles, turnos, personas con sus tarjetas y usuarios, en un archivo. Nunca incluye contraseñas ni claves.</p>
       <label class="check"><input type="checkbox" id="export-faces"><span>Incluir las fotos de rostro<small>Son datos biométricos: guardá ese archivo con cuidado.</small></span></label>
       <div class="form-actions"><button class="btn pri" type="button" data-action="export">${icon('download')}Descargar la copia</button>
         <a class="btn" href="#eventos">Los eventos se bajan como planilla</a></div></section>
@@ -2098,12 +2353,11 @@ const settings = {
 /** Lo que cada pestaña de Ajustes carga aparte, después de dibujarse. */
 async function fillSettings() {
   if (!isAdmin()) return;
-  const tab = S.settingsTab, still = () => S.view === 'ajustes' && S.settingsTab === tab;
-  if (tab === 'empresa') {
+  const tab = settingsTab(), still = () => S.view === 'ajustes' && settingsTab() === tab;
+  if ($('#user-list')) {
     S.users = await S.api.get('/api/users');
-    if (still()) setHTML($('#user-list'), S.users.map(u => html`<li><button class="row" type="button" data-action="user-edit" data-id="${u.id}">
-      <span class="avatar ${u.active ? '' : 'idle'}">${initials(u.name)}</span><span class="row-main"><strong>${u.name}</strong><span>${u.email}</span></span>
-      <span class="row-side">${u.active ? html`<span class="chip plain">${ROLE[u.role]}</span>` : html`<span class="chip">Deshabilitado</span>`}<span>${u.mfa ? 'Con dos pasos' : 'Solo contraseña'}</span></span></button></li>`));
+    const list = $('#user-list');
+    if (still() && list) setHTML(list, userRows(list.dataset.company || null));
   } else if (tab === 'bitacora') {
     const audit = await S.api.get('/api/audit');
     if (still()) setHTML($('#audit-list'), audit.length ? audit.map(a => html`<li class="ev long"><time>${dayFormat.format(a.ts)}</time><span class="sign" aria-hidden="true"></span>
@@ -2131,62 +2385,6 @@ actions['look-solid'] = () => { look.set({ solid: !look.get().solid }); render()
 actions['look-plain'] = () => { look.set({ plain: !look.get().plain }); render(); };
 actions.night = () => { look.set({ mode: root.dataset.mode === 'dark' ? 'light' : 'dark' }); drawChrome(); planTheme(); if (S.view === 'ajustes') render(); };
 
-function siteSheet(site) {
-  sheet.open(site ? site.name : 'Agregar sitio', html`<form class="form" data-form="site" data-id="${site?.id ?? ''}">
-    <label class="field"><span>Nombre</span><input type="text" name="name" value="${site?.name}" placeholder="Planta Ruta 5" required ${site ? '' : raw('autofocus')}></label>
-    <label class="field"><span>Dirección</span><input type="text" name="address" value="${site?.address}"></label>
-    <p class="form-error" role="alert"></p>
-    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
-      ${site ? html`<button class="btn danger push" type="button" data-action="site-delete" data-id="${site.id}">Eliminar</button>` : ''}</div></form>`);
-}
-actions['site-new'] = () => siteSheet(null);
-actions['site-edit'] = el => isAdmin() && siteSheet(S.sites.find(s => s.id === el.dataset.id));
-actions['site-delete'] = async el => {
-  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
-  try { await S.api.del(`/api/sites/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
-  await load('sites');
-  sheet.close(); render(); toast('Sitio eliminado');
-};
-forms.site = async (form, v) => {
-  const id = form.dataset.id;
-  if (id) await S.api.patch(`/api/sites/${id}`, v); else await S.api.post('/api/sites', v);
-  await load('sites', 'doors');
-  sheet.close(); render(); toast('Sitio guardado');
-};
-
-function userSheet(u) {
-  sheet.open(u ? u.name : 'Agregar operador', html`<form class="form" data-form="user" data-id="${u?.id ?? ''}">
-    <label class="field"><span>Nombre</span><input type="text" name="name" value="${u?.name}" required ${u ? '' : raw('autofocus')}></label>
-    ${u ? html`<dl class="facts"><dt>Correo</dt><dd>${u.email}</dd><dt>Dos pasos</dt><dd>${u.mfa ? 'Activos' : 'Sin activar'}</dd></dl>` : html`<label class="field"><span>Correo</span><input type="email" name="email" required autocomplete="off"></label>`}
-    <label class="field"><span>Permisos</span><select name="role">${Object.entries(ROLE).map(([id, label]) => html`<option value="${id}" ${(u?.role ?? 'operator') === id ? raw('selected') : ''}>${label}</option>`)}</select>
-      <small>Administrador: todo. Operador: personas y apertura de puertas. Solo lectura: mirar.</small></label>
-    <label class="field"><span>${u ? 'Nueva contraseña' : 'Contraseña'}</span><input type="password" name="password" autocomplete="new-password" ${u ? '' : raw('required')} minlength="10">
-      <small>${u ? 'Dejala vacía para no cambiarla. ' : ''}Al menos 10 caracteres.</small></label>
-    ${u ? html`<label class="check"><input type="checkbox" name="active" ${u.active ? raw('checked') : ''}><span>Habilitado</span></label>` : ''}
-    <p class="form-error" role="alert"></p>
-    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
-      ${u?.mfa && u.id !== S.me.id ? html`<button class="btn" type="button" data-action="user-reset2fa" data-id="${u.id}">Quitarle los dos pasos</button>` : ''}
-      ${u && u.id !== S.me.id ? html`<button class="btn danger push" type="button" data-action="user-delete" data-id="${u.id}">Eliminar</button>` : ''}</div>
-    ${u?.mfa && u.id !== S.me.id ? html`<p class="hint">Quitarle los dos pasos sirve cuando perdió el teléfono: vuelve a entrar con su contraseña y los activa de nuevo.</p>` : ''}</form>`);
-}
-actions['user-new'] = () => userSheet(null);
-actions['user-edit'] = el => userSheet(S.users.find(u => u.id === el.dataset.id));
-actions['user-delete'] = async el => {
-  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
-  await S.api.del(`/api/users/${el.dataset.id}`);
-  sheet.close(); fillSettings(); toast('Operador eliminado');
-};
-actions['user-reset2fa'] = async el => {
-  if (!confirmed(el, 'Tocá de nuevo para quitarlos')) return;
-  await S.api.patch(`/api/users/${el.dataset.id}`, { reset2fa: true });
-  sheet.close(); fillSettings(); toast('Listo: entra con su contraseña');
-};
-forms.user = async (form, v) => {
-  const id = form.dataset.id, { password, ...rest } = v;
-  if (id) await S.api.patch(`/api/users/${id}`, { ...rest, ...(password && { password }) });
-  else await S.api.post('/api/users', v);
-  sheet.close(); fillSettings(); toast('Operador guardado');
-};
 forms.license = async (_form, v) => { S.license = await S.api.post('/api/license', { key: v.key }); render(); toast('Licencia cargada'); };
 
 // ── Mi cuenta: dos pasos, sesiones abiertas y salida ─────────────────────────
@@ -2224,7 +2422,7 @@ actions['session-close'] = async el => { await S.api.del(`/api/me/sessions/${el.
 actions['sessions-close-others'] = async () => { await S.api.post('/api/me/sessions/close-others'); toast('Las demás sesiones quedaron cerradas'); actions.account(); };
 
 // ── Plano ────────────────────────────────────────────────────────────────────
-// El plano de cada sitio con las puertas en 3D arriba. Es el motor común de Unity Tech (el mismo de Ondi y Darvi), dentro de un marco:
+// El plano de cada área con las puertas en 3D arriba. Es el motor común de Unity Tech (el mismo de Ondi y Darvi), dentro de un marco:
 // Kliva le pasa un anfitrión con el plano guardado, las puertas reales y lo que pasa en vivo; el motor dibuja, edita y avisa qué guardar.
 const MOTOR = '/motor/beta/index.html?app=kliva&embebida';
 const planoSite = () => S.sites.find(s => s.id === S.planoSite) || S.sites[0];
@@ -2280,11 +2478,11 @@ function planLive(type, data) {
 
 views.plano = () => {
   const site = planoSite();
-  if (!site) return html`${head('Plano')}<section class="card"><p class="empty">Todavía no hay sitios. Creá el primero en Ajustes y después agregá sus equipos.</p></section>`;
+  if (!site) return html`${head('Plano')}<section class="card"><p class="empty">Todavía no hay áreas. Se crean en Ajustes, en la ficha de la empresa, y después se les suman sus equipos.</p></section>`;
   const lede = isAdmin() ? 'Tocá Editar para subir el plano del lugar, ubicar cada puerta y nombrar los sectores.' : 'Cada puerta, en su lugar y en vivo.';
   return html`
     <header class="view-head"><div><h1>Plano</h1><p class="lede">${lede}</p></div>
-      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Sitio') : ''}</header>
+      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Área') : ''}</header>
     <div class="plano">${S.motorOk === false
       ? html`<p class="empty">El plano 3D se abre con Kliva instalado o en unitytech.uy/kliva/demo. Esta copia no trae los archivos del motor.</p>`
       : html`<iframe id="plano-frame" src="${MOTOR}&sitio=${site.id}" title="Plano de ${site.name}" allow="fullscreen"></iframe>`}</div>`;
@@ -2324,10 +2522,403 @@ function planTheme() {
   if (M && M.motor.tema !== tema) M.motor.ponerTema(tema);
 }
 
+// Empresas y áreas. Una instalación de Kliva atiende a varias empresas; cada empresa se divide en áreas
+// (una planta, un centro logístico, una oficina) y cada área tiene sus equipos, sus puertas y su plano.
+// Arriba siempre se ve qué empresa y qué área se está mirando; el servidor recorta todo a eso.
+
+const isGlobal = () => Boolean(S.me) && !S.me.company_id;          // usuario de la instaladora: ve todas las empresas
+const companyById = id => S.companies.find(c => c.id === id);
+/** La empresa que se está mirando; null es "todas las empresas" (solo la instaladora). */
+const viewCompany = () => isGlobal() ? companyById(S.vista.empresa) ?? null : companyById(S.me.company_id) ?? S.companies[0] ?? null;
+const areaById = id => S.companies.flatMap(c => c.areas).find(a => a.id === id);
+const companyOfArea = id => S.companies.find(c => c.areas.some(a => a.id === id));
+const canSwitch = () => (isGlobal() && S.companies.length > 1) || (viewCompany()?.areas.length ?? 0) > 1;
+
+/** Deja la vista en algo que existe y que el usuario puede ver, y se la pasa al cliente de la API. */
+function fixVista(v = S.vista) {
+  // con una sola empresa, mirar "todas" es mirar esa: se muestra su nombre
+  const own = isGlobal() ? companyById(v.empresa) ?? (S.companies.length === 1 ? S.companies[0] : null) : viewCompany();
+  const area = own?.areas.find(a => a.id === v.area);
+  S.vista = { empresa: isGlobal() && own ? own.id : '', area: area?.id ?? '' };
+  S.api.setView(S.vista);
+}
+
+function scopeTitle() {
+  const c = viewCompany();
+  return c ? c.name : 'Todas las empresas';
+}
+function scopeSub() {
+  const c = viewCompany();
+  if (!c) return count(S.companies.length, 'empresa', 'empresas');
+  if (S.vista.area) return areaById(S.vista.area)?.name ?? '';
+  return c.areas.length === 1 ? c.areas[0].name : c.areas.length ? `Todas las áreas (${c.areas.length})` : 'Sin áreas todavía';
+}
+
+/** En el menú, debajo de la marca: dónde estás parado. */
+const scopeSwitch = () => html`<button class="me scope" type="button" data-action="scope" ${canSwitch() ? '' : raw('disabled')} title="${scopeTitle()}" aria-label="Elegir empresa y área">
+  <span class="badge">${icon('empresa')}</span><span><b>${scopeTitle()}</b><small>${scopeSub()}</small></span>${canSwitch() ? icon('updown') : ''}</button>`;
+const drawScope = () => { setHTML($('#scope'), scopeSwitch()); };
+
+/** Las áreas de la empresa que se mira, para elegir una o todas. Solo aparece si hay más de una. */
+function areaBar() {
+  const c = viewCompany();
+  if (!c || c.areas.length < 2) return '';
+  return seg('scope-area', [['', 'Todas'], ...c.areas.map(a => [a.id, a.name])], S.vista.area, 'Área');
+}
+/** Debajo del nombre de un área: de qué empresa es (si se miran todas) y dónde queda. */
+const areaSub = site => [!viewCompany() && companyById(site.company_id)?.name, site.address].filter(Boolean).join(', ');
+
+const pickRow = (action, id, title, sub, on, glyph) => html`<li><button class="row" type="button" data-action="${action}" data-id="${id}" aria-pressed="${String(on)}">
+  <span class="badge">${icon(glyph)}</span><span class="row-main"><strong>${title}</strong><span>${sub}</span></span>${on ? html`<span class="tick">${icon('check')}</span>` : ''}</button></li>`;
+
+function scopeSheet() {
+  const c = viewCompany();
+  sheet.open('Qué mirar', html`
+    ${isGlobal() && S.companies.length > 1 ? html`<h3>Empresa</h3><ul class="rows">
+      ${pickRow('scope-company', '', 'Todas las empresas', `${count(S.companies.length, 'empresa', 'empresas')} de ${S.org}`, !S.vista.empresa, 'empresa')}
+      ${S.companies.map(x => pickRow('scope-company', x.id, x.name, `${count(x.areas.length, 'área', 'áreas')}, ${count(x.people, 'persona', 'personas')}`, S.vista.empresa === x.id, 'empresa'))}</ul>` : ''}
+    ${c && c.areas.length > 1 ? html`<h3>Área de ${c.name}</h3><ul class="rows">
+      ${pickRow('scope-pick-area', '', 'Todas las áreas', count(c.areas.length, 'área', 'áreas'), !S.vista.area, 'site')}
+      ${c.areas.map(a => pickRow('scope-pick-area', a.id, a.name, a.address || count(a.devices, 'equipo', 'equipos'), S.vista.area === a.id, 'site'))}</ul>` : ''}`);
+}
+actions.scope = () => canSwitch() && scopeSheet();
+actions['scope-company'] = async el => {
+  await setVista({ empresa: el.dataset.id, area: '' });
+  if ((viewCompany()?.areas.length ?? 0) > 1) scopeSheet(); else sheet.close();
+};
+actions['scope-pick-area'] = async el => { sheet.close(); await setVista({ ...S.vista, area: el.dataset.id }); };
+actions['scope-area'] = el => el.dataset.id !== S.vista.area && setVista({ ...S.vista, area: el.dataset.id });
+
+/** Cambia lo que se mira: vuelve a traer todo recortado a eso y reengancha lo que llega en vivo. */
+async function setVista(v) {
+  S.vista = v;
+  fixVista();
+  saved.set('kliva.vista', JSON.stringify(S.vista));
+  try { await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules'); }
+  catch (e) { return toast(e.message, 'deny'); }
+  if (!S.sites.some(s => s.id === S.planoSite)) S.planoSite = null;
+  S.stop?.();
+  S.stop = S.api.stream(onLive);
+  drawScope();
+  await route();
+}
+
+// ── Ajustes: empresas, sus áreas y sus usuarios ──────────────────────────────
+const COMPANY_FACTS = [['legal_name', 'Razón social'], ['tax_id', 'RUT'], ['address', 'Dirección'], ['phone', 'Teléfono'], ['email', 'Correo'], ['contact', 'Contacto'], ['notes', 'Notas']];
+const areasText = u => {
+  const ids = String(u.areas || '').split(',').filter(Boolean);
+  return ids.length ? ids.map(id => areaById(id)?.name).filter(Boolean).join(', ') : 'Todas las áreas';
+};
+function userRows(companyId) {
+  const list = (S.users ?? []).filter(u => (u.company_id ?? null) === companyId);
+  if (!S.users) return [html`<li class="empty">Cargando…</li>`];
+  if (!list.length) return [html`<li class="empty">${companyId ? 'Nadie de esta empresa entra a Kliva todavía.' : 'Todavía no hay usuarios.'}</li>`];
+  return list.map(u => html`<li><button class="row" type="button" data-action="user-edit" data-id="${u.id}">
+    <span class="avatar ${u.active ? '' : 'idle'}">${initials(u.name)}</span><span class="row-main"><strong>${u.name}</strong><span>${u.email}</span></span>
+    <span class="row-side">${u.active ? html`<span class="chip plain">${ROLE[u.role]}</span>` : html`<span class="chip">Deshabilitado</span>`}<span>${companyId ? areasText(u) : u.mfa ? 'Con dos pasos' : 'Solo contraseña'}</span></span></button></li>`);
+}
+
+/** La ficha de una empresa: sus datos, sus áreas y quién de esa empresa entra a Kliva. */
+function companyDetail(c, back) {
+  const facts = COMPANY_FACTS.filter(([k]) => c[k]);
+  return html`
+    ${back ? html`<div><button class="btn sm" type="button" data-action="company-back">${icon('left')}<span>Empresas</span></button></div>` : ''}
+    <section class="card"><div class="card-head"><h2>${c.name}<small>${count(c.areas.length, 'área', 'áreas')}, ${count(c.people, 'persona', 'personas')}</small></h2>
+      ${isAdmin() ? html`<button class="btn sm" type="button" data-action="company-edit" data-id="${c.id}">Editar datos</button>` : ''}</div>
+      ${facts.length ? html`<dl class="facts">${facts.map(([k, label]) => html`<dt>${label}</dt><dd>${c[k]}</dd>`)}</dl>`
+        : html`<p class="empty">Faltan los datos de la empresa: razón social, RUT, dirección y un contacto.</p>`}</section>
+    <section class="card flush"><div class="card-head"><h2>Áreas<small>Cada parte de la empresa con sus propias puertas: una planta, un centro logístico, una oficina</small></h2>
+      ${isAdmin() && !S.me.areas ? html`<button class="btn sm" type="button" data-action="site-new" data-company="${c.id}">Agregar área</button>` : ''}</div>
+      <ul class="rows">${c.areas.length ? c.areas.map(a => html`<li><button class="row" type="button" data-action="site-edit" data-id="${a.id}">
+        <span class="badge">${icon('site')}</span><span class="row-main"><strong>${a.name}</strong><span>${a.address || 'Sin dirección'}</span></span>
+        <span class="row-side">${count(a.devices, 'equipo', 'equipos')}</span></button></li>`)
+        : html`<li class="empty">Sin áreas todavía. Agregá la primera: después se le suman sus equipos y su plano.</li>`}</ul></section>
+    <section class="card flush"><div class="card-head"><h2>Usuarios<small>Quién de ${c.name} entra a Kliva, con qué permisos y a qué áreas</small></h2>
+      ${isAdmin() ? html`<button class="btn sm" type="button" data-action="user-new" data-company="${c.id}">Agregar usuario</button>` : ''}</div>
+      <ul class="rows" id="user-list" data-company="${c.id}">${userRows(c.id)}</ul></section>`;
+}
+
+settings.empresas = () => {
+  const open = companyById(S.companyOpen);
+  if (open) return companyDetail(open, true);
+  return html`<section class="card flush"><div class="card-head"><h2>Empresas<small>Los clientes que atiende ${S.org}: cada uno ve solo lo suyo</small></h2>
+    <button class="btn sm" type="button" data-action="company-new">Agregar empresa</button></div>
+    <ul class="rows">${S.companies.length ? S.companies.map(c => html`<li><button class="row" type="button" data-action="company-open" data-id="${c.id}">
+      <span class="badge">${icon('empresa')}</span><span class="row-main"><strong>${c.name}</strong><span>${[c.legal_name, c.tax_id && `RUT ${c.tax_id}`].filter(Boolean).join(', ') || 'Faltan los datos'}</span></span>
+      <span class="row-side"><span class="chip plain">${count(c.areas.length, 'área', 'áreas')}</span><span>${count(c.people, 'persona', 'personas')}, ${count(c.users, 'usuario', 'usuarios')}</span></span>${icon('right')}</button></li>`)
+      : html`<li class="empty">Todavía no hay empresas. Agregá la primera con sus datos y sus áreas.</li>`}</ul></section>`;
+};
+settings.empresa = () => viewCompany() ? companyDetail(viewCompany(), false) : html`<section class="card"><p class="empty">Tu usuario no tiene empresa asignada.</p></section>`;
+settings.instalacion = () => { const l = S.license; return html`
+  <section class="card flush"><div class="card-head"><h2>Usuarios de ${S.org}<small>La instaladora: ven todas las empresas</small></h2><button class="btn sm" type="button" data-action="user-new" data-company="">Agregar usuario</button></div>
+    <ul class="rows" id="user-list" data-company="">${userRows(null)}</ul></section>
+  <section class="card"><div class="card-head"><h2>Licencia</h2>${l.valid ? html`<span class="chip" data-tone="pass">${l.plan}</span>` : html`<span class="chip" data-tone="warn">${l.plan}</span>`}</div>
+    <dl class="facts">${l.customer ? html`<dt>Cliente</dt><dd>${l.customer}</dd>` : ''}<dt>Equipos</dt><dd>${S.devices.length} en uso de ${l.maxDevices} permitidos</dd>
+      ${l.expires ? html`<dt>Vence</dt><dd>${dateFormat.format(l.expires)}</dd>` : ''}${l.valid ? '' : html`<dt>Estado</dt><dd>${l.note}</dd>`}</dl>
+    <form class="form" data-form="license"><label class="field"><span>Cargar una licencia</span><textarea name="key" class="mono" placeholder="Pegá acá la clave que recibiste" required></textarea></label>
+      <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Cargar licencia</button></div></form></section>`; };
+
+actions['company-open'] = el => { S.companyOpen = el.dataset.id; render(); $('#main').scrollTop = 0; };
+actions['company-back'] = () => { S.companyOpen = null; render(); };
+
+function companySheet(c) {
+  sheet.open(c ? c.name : 'Agregar empresa', html`<form class="form" data-form="company" data-id="${c?.id ?? ''}">
+    <label class="field"><span>Nombre</span><input type="text" name="name" value="${c?.name}" maxlength="80" placeholder="Como la conocen todos" required ${c ? '' : raw('autofocus')}></label>
+    <div class="form-row">
+      <label class="field"><span>Razón social</span><input type="text" name="legal_name" value="${c?.legal_name}"></label>
+      <label class="field"><span>RUT</span><input type="text" name="tax_id" class="mono" value="${c?.tax_id}" inputmode="numeric" maxlength="20"></label>
+    </div>
+    <label class="field"><span>Dirección</span><input type="text" name="address" value="${c?.address}"></label>
+    <div class="form-row">
+      <label class="field"><span>Teléfono</span><input type="tel" name="phone" value="${c?.phone}"></label>
+      <label class="field"><span>Correo</span><input type="email" name="email" value="${c?.email}"></label>
+    </div>
+    <label class="field"><span>Contacto</span><input type="text" name="contact" value="${c?.contact}" placeholder="Quién atiende por la empresa"></label>
+    <label class="field"><span>Notas</span><textarea name="notes" maxlength="1000">${c?.notes ?? ''}</textarea></label>
+    <p class="form-error" role="alert"></p>
+    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+      ${c && isGlobal() ? html`<button class="btn danger push" type="button" data-action="company-delete" data-id="${c.id}">Eliminar</button>` : ''}</div>
+    ${c && isGlobal() ? html`<p class="hint">Para eliminar una empresa primero hay que quitarle sus áreas y sus personas.</p>` : ''}</form>`);
+}
+actions['company-new'] = () => companySheet(null);
+actions['company-edit'] = el => companySheet(companyById(el.dataset.id));
+actions['company-delete'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
+  try { await S.api.del(`/api/companies/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  S.companyOpen = null;
+  sheet.close();
+  await setVista({ ...S.vista });
+  toast('Empresa eliminada');
+};
+forms.company = async (form, v) => {
+  const id = form.dataset.id;
+  if (id) await S.api.patch(`/api/companies/${id}`, v);
+  else S.companyOpen = (await S.api.post('/api/companies', v)).id;
+  await load('companies');
+  sheet.close(); drawScope(); render(); toast(id ? 'Datos guardados' : 'Empresa agregada: ahora sumale sus áreas');
+};
+
+function siteSheet(site, companyId) {
+  const c = site ? companyOfArea(site.id) : companyById(companyId);
+  sheet.open(site ? site.name : `Agregar área a ${c?.name ?? 'la empresa'}`, html`<form class="form" data-form="site" data-id="${site?.id ?? ''}" data-company="${c?.id ?? ''}">
+    <label class="field"><span>Nombre</span><input type="text" name="name" value="${site?.name}" placeholder="Planta B, Centro logístico, Oficinas" required ${site ? '' : raw('autofocus')}></label>
+    <label class="field"><span>Dirección</span><input type="text" name="address" value="${site?.address}"></label>
+    <p class="hint">Cada área tiene sus equipos, sus puertas y su plano. Los usuarios de la empresa se pueden limitar a algunas áreas.</p>
+    <p class="form-error" role="alert"></p>
+    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+      ${site ? html`<button class="btn danger push" type="button" data-action="site-delete" data-id="${site.id}">Eliminar</button>` : ''}</div></form>`);
+}
+actions['site-new'] = el => siteSheet(null, el?.dataset?.company || viewCompany()?.id);
+actions['site-edit'] = el => isAdmin() && siteSheet(areaById(el.dataset.id) ?? S.sites.find(s => s.id === el.dataset.id));
+actions['site-delete'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
+  try { await S.api.del(`/api/sites/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  sheet.close();
+  await setVista({ ...S.vista });
+  toast('Área eliminada');
+};
+forms.site = async (form, v) => {
+  const id = form.dataset.id;
+  if (id) await S.api.patch(`/api/sites/${id}`, v); else await S.api.post('/api/sites', { ...v, company_id: form.dataset.company || undefined });
+  await load('companies', 'sites', 'doors');
+  sheet.close(); drawScope(); render(); toast(id ? 'Área guardada' : 'Área agregada');
+};
+
+const ROLE_HINT = 'Administrador: todo lo de su empresa. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.';
+function userSheet(u, companyId) {
+  const cid = u ? u.company_id ?? null : companyId || null, c = companyById(cid), mine = String(u?.areas || '').split(',').filter(Boolean);
+  sheet.open(u ? u.name : c ? `Usuario de ${c.name}` : `Usuario de ${S.org}`, html`<form class="form" data-form="user" data-id="${u?.id ?? ''}" data-company="${cid ?? ''}">
+    <label class="field"><span>Nombre</span><input type="text" name="name" value="${u?.name}" required ${u ? '' : raw('autofocus')}></label>
+    ${u ? html`<dl class="facts"><dt>Correo</dt><dd>${u.email}</dd><dt>Empresa</dt><dd>${c?.name ?? `${S.org}, la instaladora`}</dd><dt>Dos pasos</dt><dd>${u.mfa ? 'Activos' : 'Sin activar'}</dd></dl>`
+      : html`<label class="field"><span>Correo</span><input type="email" name="email" required autocomplete="off"></label>`}
+    <label class="field"><span>Permisos</span><select name="role">${Object.entries(ROLE).map(([id, label]) => html`<option value="${id}" ${(u?.role ?? 'operator') === id ? raw('selected') : ''}>${label}</option>`)}</select>
+      <small>${c ? ROLE_HINT : 'Administrador: todo, en todas las empresas. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.'}</small></label>
+    ${c && c.areas.length > 1 ? html`<fieldset><legend>Áreas que ve</legend>
+      ${c.areas.map(a => html`<label class="check"><input type="checkbox" name="areas" data-list value="${a.id}" ${mine.includes(a.id) ? raw('checked') : ''}><span>${a.name}<small>${a.address || count(a.devices, 'equipo', 'equipos')}</small></span></label>`)}
+      <p class="hint">Sin marcar ninguna, ve todas las áreas de ${c.name}. Un guardia de una planta, por ejemplo, ve solo esa.</p></fieldset>` : ''}
+    <label class="field"><span>${u ? 'Nueva contraseña' : 'Contraseña'}</span><input type="password" name="password" autocomplete="new-password" ${u ? '' : raw('required')} minlength="10">
+      <small>${u ? 'Dejala vacía para no cambiarla. ' : ''}Al menos 10 caracteres. Se la pasás en persona, nunca por un chat.</small></label>
+    ${u ? html`<label class="check"><input type="checkbox" name="active" ${u.active ? raw('checked') : ''}><span>Habilitado</span></label>` : ''}
+    <p class="form-error" role="alert"></p>
+    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+      ${u?.mfa && u.id !== S.me.id ? html`<button class="btn" type="button" data-action="user-reset2fa" data-id="${u.id}">Quitarle los dos pasos</button>` : ''}
+      ${u && u.id !== S.me.id ? html`<button class="btn danger push" type="button" data-action="user-delete" data-id="${u.id}">Eliminar</button>` : ''}</div>
+    ${u?.mfa && u.id !== S.me.id ? html`<p class="hint">Quitarle los dos pasos sirve cuando perdió el teléfono: vuelve a entrar con su contraseña y los activa de nuevo.</p>` : ''}</form>`);
+}
+actions['user-new'] = el => userSheet(null, el?.dataset?.company);
+actions['user-edit'] = el => userSheet(S.users.find(u => u.id === el.dataset.id));
+actions['user-delete'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
+  try { await S.api.del(`/api/users/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  sheet.close(); fillSettings(); toast('Usuario eliminado');
+};
+actions['user-reset2fa'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para quitarlos')) return;
+  await S.api.patch(`/api/users/${el.dataset.id}`, { reset2fa: true });
+  sheet.close(); fillSettings(); toast('Listo: entra con su contraseña');
+};
+forms.user = async (form, v) => {
+  const id = form.dataset.id, { password, ...rest } = v, areas = v.areas ?? [];
+  if (id) await S.api.patch(`/api/users/${id}`, { ...rest, areas, ...(password && { password }) });
+  else await S.api.post('/api/users', { ...v, areas, company_id: form.dataset.company || null });
+  await load('companies');
+  sheet.close(); fillSettings(); toast(id ? 'Usuario guardado' : 'Usuario agregado');
+};
+
+// ── Personas: de qué empresa, de qué área y con qué turno ────────────────────
+const personCompany = p => p?.company_id ?? viewCompany()?.id ?? S.companies[0]?.id ?? null;
+function personPlace(p) {
+  const pick = !p && !viewCompany() && S.companies.length > 1, cid = personCompany(p);
+  return html`${pick ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="person">${S.companies.map(c => html`<option value="${c.id}" ${c.id === cid ? raw('selected') : ''}>${c.name}</option>`)}</select></label>` : ''}
+    <div class="form-row" id="person-place">${personPlaceFields(cid, p)}</div>`;
+}
+function personPlaceFields(cid, p) {
+  const areas = companyById(cid)?.areas ?? [], schedules = S.schedules.filter(x => x.company_id === cid);
+  const area = p ? p.site_id : S.vista.area || (areas.length === 1 ? areas[0].id : '');
+  return html`<label class="field"><span>Área</span><select name="site_id">${S.me.areas ? '' : html`<option value="">Ninguna en especial</option>`}
+      ${areas.map(a => html`<option value="${a.id}" ${a.id === area ? raw('selected') : ''}>${a.name}</option>`)}</select></label>
+    <label class="field"><span>Turno</span><select name="schedule_id"><option value="">Sin control de horario</option>
+      ${schedules.map(x => html`<option value="${x.id}" ${x.id === p?.schedule_id ? raw('selected') : ''}>${x.name}, ${hhmmText(x.start_min)} a ${hhmmText(x.end_min)}</option>`)}</select></label>`;
+}
+function personLevels(cid, p) {
+  const list = S.levels.filter(l => !cid || l.company_id === cid);
+  return list.length ? list.map(l => html`<label class="check"><input type="checkbox" name="levels" data-list value="${l.id}" ${p?.levels.includes(l.id) ? raw('checked') : ''}>
+    <span>${l.name}<small>${count(l.doors.length, 'puerta', 'puertas')}</small></span></label>`) : html`<p class="hint">Todavía no hay niveles. Se crean en la sección Niveles.</p>`;
+}
+/** Al cambiar de empresa en un formulario, las áreas, turnos, niveles y puertas pasan a ser los de esa empresa. */
+function redrawForCompany(el) {
+  if (el.dataset.redraw === 'person') {
+    setHTML($('#person-place'), personPlaceFields(el.value, null));
+    setHTML($('#person-levels'), html`<legend>Niveles de acceso</legend>${personLevels(el.value, null)}`);
+  }
+  if (el.dataset.redraw === 'level') setHTML($('#level-doors'), levelDoors(el.value, null));
+}
+
+// Control de horario: a qué hora entró y salió cada persona contra su turno, con las pasadas de las puertas que marcan horario.
+// El cálculo es el mismo del servidor (server/core/horario.js); acá solo se muestra y se administran los turnos.
+
+const hhmmText = min => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const hoursText = min => min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}` : ''}`;
+const WEEK = [[1, 'L', 'lunes'], [2, 'M', 'martes'], [3, 'M', 'miércoles'], [4, 'J', 'jueves'], [5, 'V', 'viernes'], [6, 'S', 'sábado'], [0, 'D', 'domingo']];
+function daysText(days) {
+  const has = new Set(days), run = list => list.every(d => has.has(d)) && has.size === list.length;
+  if (run([0, 1, 2, 3, 4, 5, 6])) return 'Todos los días';
+  if (run([1, 2, 3, 4, 5])) return 'Lunes a viernes';
+  if (run([1, 2, 3, 4, 5, 6])) return 'Lunes a sábado';
+  const names = WEEK.filter(([d]) => has.has(d)).map(([, , name]) => name.slice(0, 3));
+  return names.length ? names.join(', ').replace(/^./, c => c.toUpperCase()) : 'Ningún día';
+}
+const scheduleText = x => `${daysText(x.days)}, ${hhmmText(x.start_min)} a ${hhmmText(x.end_min)}${x.end_min <= x.start_min ? ' del día siguiente' : ''}`;
+
+const STATE_LOOK = {
+  ok: ['Bien', 'pass'], tarde: ['Llegó tarde', 'warn'], salio_antes: ['Salió antes', 'warn'], ausente: ['Faltó', 'deny'], en_curso: ['Adentro', 'accent'],
+  sin_salida: ['Sin marca de salida', 'warn'], pendiente: ['Todavía no empezó', ''], extra: ['Fuera de turno', ''], sin_turno: ['Sin turno', ''],
+};
+const stateChip = state => { const [text, tone] = STATE_LOOK[state]; return html`<span class="chip" ${tone ? raw(`data-tone="${tone}"`) : ''}>${text}</span>`; };
+
+const PERIODS = [['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes']];
+function periodRange(id = S.horarioPeriod) {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  if (id === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  if (id === 'mes') d.setDate(1);
+  return { from: d.getTime(), to: Date.now() + 1 };
+}
+
+views.horario = () => {
+  const A = S.attendance, people = A?.people.filter(p => p.schedule_id || p.days) ?? [];
+  const sum = key => people.reduce((n, p) => n + p[key], 0);
+  const period = PERIODS.find(x => x[0] === S.horarioPeriod)[1].toLowerCase();
+  return html`
+  ${head('Horario', 'A qué hora entró y salió cada persona, contra su turno. Cuentan las pasadas por las puertas que marcan horario.')}
+  ${areaBar()}${seg('horario-period', PERIODS, S.horarioPeriod, 'Período')}
+  ${A ? html`<section class="card tally" aria-label="Resumen de ${period}">
+      <div><strong>${people.filter(p => p.inside).length}</strong><span>Adentro ahora</span></div>
+      <div data-tone="${sum('late') ? 'warn' : ''}"><strong>${sum('late')}</strong><span>Llegadas tarde</span></div>
+      <div data-tone="${sum('absent') ? 'deny' : ''}"><strong>${sum('absent')}</strong><span>Faltas</span></div>
+      <div><strong>${Math.round(sum('minutes') / 60)}</strong><span>Horas trabajadas</span></div></section>
+    <section class="card flush"><div class="card-head"><h2>Personas<small>${count(people.length, 'persona con turno o con pasadas', 'personas con turno o con pasadas')} ${period}</small></h2></div>
+      <ul class="rows">${people.length ? people.map(p => html`<li><button class="row" type="button" data-action="horario-person" data-id="${p.id}">
+        <span class="avatar">${initials(p.name)}</span>
+        <span class="row-main"><strong>${p.name}</strong><span>${[p.schedule || 'Sin turno', !S.vista.area && areaById(p.site_id)?.name].filter(Boolean).join(', ')}</span></span>
+        <span class="row-side"><span>${p.minutes ? hoursText(p.minutes) : 'Sin horas'}${p.days ? `, ${count(p.days, 'día', 'días')}` : ''}</span>
+          <span class="chips">${p.inside ? stateChip('en_curso') : ''}${p.late ? html`<span class="chip" data-tone="warn">${count(p.late, 'tarde', 'tardes')}</span>` : ''}${p.absent ? html`<span class="chip" data-tone="deny">${count(p.absent, 'falta', 'faltas')}</span>` : ''}</span></span>
+        </button></li>`) : html`<li class="empty">Nadie con turno todavía. Creá un turno abajo y asignalo en la ficha de cada persona.</li>`}</ul></section>`
+    : html`<section class="card"><p class="empty">Cargando…</p></section>`}
+  <section class="card flush"><div class="card-head"><h2>Turnos<small>El horario esperado de cada grupo, con su tolerancia para llegar</small></h2>
+    ${isAdmin() ? html`<button class="btn sm" type="button" data-action="schedule-new">Agregar turno</button>` : ''}</div>
+    <ul class="rows">${S.schedules.length ? S.schedules.map(x => html`<li><button class="row" type="button" data-action="schedule-edit" data-id="${x.id}">
+      <span class="badge">${icon('horario')}</span><span class="row-main"><strong>${x.name}</strong><span>${[!viewCompany() && companyById(x.company_id)?.name, scheduleText(x)].filter(Boolean).join(': ')}</span></span>
+      <span class="row-side"><span class="chip plain">${count(x.people, 'persona', 'personas')}</span><span>${x.tolerance ? `${x.tolerance} min de tolerancia` : 'Sin tolerancia'}</span></span></button></li>`)
+      : html`<li class="empty">Todavía no hay turnos.</li>`}</ul></section>`;
+};
+actions['horario-period'] = async el => { S.horarioPeriod = el.dataset.id; await load('attendance'); render(); };
+
+actions['horario-person'] = el => {
+  const p = S.attendance.people.find(x => x.id === el.dataset.id), days = S.attendance.days.filter(d => d.person_id === p.id).reverse();
+  const dayName = date => new Date(`${date}T12:00`).toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'short' });
+  sheet.open(p.name, html`
+    <dl class="facts"><dt>Turno</dt><dd>${p.schedule || 'Sin turno'}</dd>${areaById(p.site_id) ? html`<dt>Área</dt><dd>${areaById(p.site_id).name}</dd>` : ''}
+      <dt>${PERIODS.find(x => x[0] === S.horarioPeriod)[1]}</dt><dd>${hoursText(p.minutes)} en ${count(p.days, 'día', 'días')}${p.late ? `, ${count(p.late, 'llegada tarde', 'llegadas tarde')}` : ''}${p.absent ? `, ${count(p.absent, 'falta', 'faltas')}` : ''}</dd></dl>
+    <ul class="rows">${days.length ? days.map(d => html`<li class="row flat">
+      <span class="row-main"><strong>${dayName(d.date)}</strong><span>${d.start ? `Turno ${clockText(d.start)} a ${clockText(d.end)}` : 'Sin turno ese día'}</span></span>
+      <span class="row-side">${stateChip(d.state)}<span>${d.entry ? `${clockText(d.entry)} a ${d.exit ? clockText(d.exit) : '…'}${d.minutes ? `, ${hoursText(d.minutes)}` : ''}` : 'Sin pasadas'}${d.late ? `, ${d.late} min tarde` : ''}${d.early ? `, ${d.early} min antes` : ''}</span></span></li>`)
+      : html`<li class="empty">Sin días con turno ni pasadas en este período.</li>`}</ul>`);
+};
+const clockText = ts => hourFormat.format(ts);
+
+actions['horario-download'] = () => {
+  const { from } = periodRange();
+  sheet.open('Descargar horario', html`<form class="form" data-form="horario-csv">
+    <p class="hint">Una planilla para Excel o Numbers con cada persona y cada día: entrada, salida, horas, llegadas tarde y faltas. Sirve para liquidar sueldos.</p>
+    <div class="form-row"><label class="field"><span>Desde</span><input type="date" name="from" value="${toLocalInput(from).slice(0, 10)}" required></label>
+      <label class="field"><span>Hasta</span><input type="date" name="to" value="${toLocalInput(Date.now()).slice(0, 10)}" required></label></div>
+    <p class="hint">Hasta tres meses por planilla.</p>
+    <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn pri" type="submit">${icon('download')}Descargar planilla</button></div></form>`);
+};
+forms['horario-csv'] = async (_form, v) => {
+  const from = new Date(`${v.from}T00:00`).getTime(), to = Math.min(new Date(`${v.to}T00:00`).getTime() + 86_400_000, Date.now() + 1);
+  await S.api.download(`/api/attendance.csv?from=${from}&to=${to}`, `kliva-horario-${v.from}-a-${v.to}.csv`);
+  sheet.close(); toast('Planilla descargada');
+};
+
+function scheduleSheet(x) {
+  const on = new Set(x?.days ?? [1, 2, 3, 4, 5]), pickCompany = !x && !viewCompany() && S.companies.length > 1;
+  sheet.open(x ? x.name : 'Agregar turno', html`<form class="form" data-form="schedule" data-id="${x?.id ?? ''}">
+    <label class="field"><span>Nombre</span><input type="text" name="name" value="${x?.name}" maxlength="60" placeholder="Planta, mañana" required ${x ? '' : raw('autofocus')}></label>
+    ${pickCompany ? html`<label class="field"><span>Empresa</span><select name="company_id">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
+    <fieldset><legend>Días</legend><div class="days">${WEEK.map(([d, letter, name]) => html`<label title="${name}">
+      <input type="checkbox" name="days" data-list value="${d}" ${on.has(d) ? raw('checked') : ''} aria-label="${name}"><span aria-hidden="true">${letter}</span></label>`)}</div></fieldset>
+    <div class="form-row">
+      <label class="field"><span>Entrada</span><input type="time" name="start" value="${x ? hhmmText(x.start_min) : '08:00'}" required></label>
+      <label class="field"><span>Salida</span><input type="time" name="end" value="${x ? hhmmText(x.end_min) : '17:00'}" required></label>
+    </div>
+    <p class="hint">Si la salida es más temprano que la entrada, es un turno de noche: sale al día siguiente.</p>
+    <label class="field"><span>Tolerancia para llegar</span><select name="tolerance">${[0, 5, 10, 15, 20, 30].map(m => html`<option value="${m}" ${(x?.tolerance ?? 10) === m ? raw('selected') : ''}>${m ? `${m} minutos` : 'Sin tolerancia'}</option>`)}</select>
+      <small>Llegar dentro de ese margen no cuenta como tarde. Lo mismo para irse antes.</small></label>
+    <p class="form-error" role="alert"></p>
+    ${isAdmin() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+      ${x ? html`<button class="btn danger push" type="button" data-action="schedule-delete" data-id="${x.id}">Eliminar</button>` : ''}</div>` : ''}
+    ${x?.people ? html`<p class="hint">Al eliminarlo, ${count(x.people, 'la persona que lo tiene queda', 'las personas que lo tienen quedan')} sin control de horario.</p>` : ''}</form>`);
+}
+actions['schedule-new'] = () => scheduleSheet(null);
+actions['schedule-edit'] = el => scheduleSheet(S.schedules.find(x => x.id === el.dataset.id));
+actions['schedule-delete'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
+  await S.api.del(`/api/schedules/${el.dataset.id}`);
+  await load('schedules', 'attendance');
+  sheet.close(); render(); toast('Turno eliminado');
+};
+forms.schedule = async (form, v) => {
+  const id = form.dataset.id, body = { name: v.name, days: (v.days ?? []).map(Number), start: v.start, end: v.end, tolerance: Number(v.tolerance), company_id: v.company_id || viewCompany()?.id };
+  if (id) await S.api.patch(`/api/schedules/${id}`, body); else await S.api.post('/api/schedules', body);
+  await load('schedules', 'attendance');
+  sheet.close(); render(); toast(id ? 'Turno guardado' : 'Turno agregado');
+};
+
 // Arranque, menú, ingreso, instalación y lo que llega en vivo.
 const NAV = [
   { id: 'panel', label: 'Panel' }, { id: 'plano', label: 'Plano' }, { id: 'eventos', label: 'Eventos' },
-  { group: 'Gestión' }, { id: 'personas', label: 'Personas' }, { id: 'niveles', label: 'Niveles' },
+  { group: 'Gestión' }, { id: 'personas', label: 'Personas' }, { id: 'horario', label: 'Horario' }, { id: 'niveles', label: 'Niveles' },
   { group: 'Instalación' }, { id: 'equipos', label: 'Equipos' }, { id: 'integraciones', label: 'Integraciones' }, { id: 'ajustes', label: 'Ajustes' },
 ];
 const DOCK = ['panel', 'plano', 'eventos', 'personas'];
@@ -2337,7 +2928,8 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 function shell() {
   $('#root').innerHTML = html`<div class="app" id="app" data-nav="${saved.get('kliva.nav') === 'mini' ? 'mini' : 'open'}">
     <aside class="side">
-      <div class="side-head">${brand(S.org, 'con Kliva')}<button class="fold" type="button" data-action="fold" aria-label="Plegar o desplegar el menú">${icon('left')}</button></div>
+      <div class="side-head">${brand(isGlobal() ? S.org : viewCompany()?.name ?? S.org, 'con Kliva')}<button class="fold" type="button" data-action="fold" aria-label="Plegar o desplegar el menú">${icon('left')}</button></div>
+      <div id="scope">${scopeSwitch()}</div>
       <button class="side-search" type="button" data-action="palette" aria-label="Buscar" title="Buscar">${icon('search')}<span>Buscar</span><kbd>${isMac ? '⌘K' : 'Ctrl K'}</kbd></button>
       <nav class="menu" id="menu" aria-label="Secciones"><span class="pill"></span>
         ${NAV.map(n => n.group ? html`<p class="menu-label">${n.group}</p>` : html`<a class="nav" href="#${n.id}" data-nav="${n.id}" title="${n.label}">${icon(n.id)}<span>${n.label}</span></a>`)}</nav>
@@ -2387,7 +2979,8 @@ async function route() {
   if ($('#menu')) drawChrome();   // la pastilla va a la sección en el momento, aunque los datos tarden
   try {
     if (S.view === 'eventos') await load('events');
-    if (S.view === 'personas') await load('people', 'levels');
+    if (S.view === 'personas') await load('people', 'levels', 'schedules');
+    if (S.view === 'horario') await load('attendance', 'schedules');
     if (S.view === 'integraciones') { S.integrations = isAdmin() ? await S.api.get('/api/integrations') : null; }
     if (S.view === 'plano') await preparePlan();
     else root.classList.remove('plano-full');
@@ -2413,6 +3006,7 @@ actions.fold = () => {
   setTimeout(() => movePill($('#menu'), 'y'), 580);
 };
 actions.more = () => sheet.open('Más', html`<ul class="rows">
+  ${canSwitch() ? html`<li><button class="row" type="button" data-action="scope"><span class="badge">${icon('empresa')}</span><span class="row-main"><strong>${scopeTitle()}</strong><span>${scopeSub()}</span></span>${icon('updown')}</button></li>` : ''}
   ${NAV.filter(n => n.id && !DOCK.includes(n.id)).map(n => html`<li><a class="row" href="#${n.id}" data-action="go" data-id="${n.id}" style="text-decoration:none"><span class="badge">${icon(n.id)}</span><span class="row-main"><strong>${n.label}</strong></span>${icon('right')}</a></li>`)}
   <li><button class="row" type="button" data-action="account"><span class="avatar">${initials(S.me.name)}</span><span class="row-main"><strong>Mi cuenta</strong><span>${S.me.email}</span></span>${icon('right')}</button></li>
   <li><button class="row flat" type="button" role="switch" aria-checked="${String(root.dataset.mode === 'dark')}" data-action="night-more"><span class="badge">${icon('moon')}</span><span class="row-main"><strong>Modo noche</strong></span><span class="switch"></span></button></li></ul>`);
@@ -2432,6 +3026,7 @@ function refreshSoon(...keys) {
     try { await load(...batch); } catch { return; }
     if (S.view === 'personas') { setHTML($('#people-list'), peopleRows()); showFresh(); }
     else if (['panel', 'equipos', 'niveles'].includes(S.view)) render();
+    else if (S.view === 'horario' && batch.includes('attendance')) render();
     drawBell();
   }, 350);
 }
@@ -2486,6 +3081,7 @@ function handleLive(type, data) {
       $('#event-list .empty')?.remove();
       $('#event-list')?.insertAdjacentHTML('afterbegin', eventRow(data, { fresh: true, long: true }));
     }
+    if (S.view === 'horario' && data.kind === 'access_granted' && data.person_id) refreshSoon('attendance');
   } else if (type === 'door') {
     const door = S.doors.find(p => p.id === data.id);
     if (!door) return refreshSoon('doors');
@@ -2602,13 +3198,15 @@ forms.setup = async (_form, v) => {
 async function enter() {
   try {
     const me = await S.api.get('/api/me');
-    Object.assign(S, { me: me.user, org: me.org, license: me.license, engine: me.engine, security: me.security });
+    Object.assign(S, { me: me.user, org: me.org, license: me.license, engine: me.engine, security: me.security, companies: me.companies ?? [] });
   } catch (e) {
     if (e.status !== 401) throw e;
     S.api.setSession(null);
     return showLogin();
   }
-  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places');
+  try { S.vista = JSON.parse(saved.get('kliva.vista') || '{}'); } catch { S.vista = {}; }
+  fixVista();
+  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules');
   S.planoSite = saved.get('kliva.plano.site');
   shell();
   await route();
@@ -2668,6 +3266,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const el = e.target;
   if (el.name === 'engine') $('#pg-url').hidden = el.value !== 'postgres';
+  if (el.dataset.redraw) redrawForCompany(el);
   if (el.name === 'brand') {
     const b = S.brands.find(x => x.brand === el.value);
     el.form.elements.port.value = b.defaultPort;
