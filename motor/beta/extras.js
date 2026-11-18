@@ -1,8 +1,9 @@
-// Motor común · presentación, vista desde una cámara y hora real (beta)
+// Motor común · presentación, vista desde una cámara, hora real y clima (beta)
 //  · Recorrido de presentación: la cámara va sola de la vista general a los edificios más grandes, girando despacio en cada uno. Cualquier toque lo corta.
 //  · Ver desde una cámara: la vista se pone en el lugar de la cámara, mirando hacia donde apunta; de noche, con filtro de visión nocturna.
 //  · Hora real: elige mañana, mediodía, hora azul o noche según el reloj de quien mira, y se va corriendo sola.
-export function extras(M) { const { motor, objs, raiz } = M, C = motor.C, doc = document.documentElement, X = { tour: null, cam: null, auto: 0 };
+//  · Clima: despejado, nublado, lluvia (con gotas y piso mojado) o niebla; «Real» pregunta el tiempo de la ciudad a Open-Meteo (servicio abierto, sin cuenta ni clave; solo viaja la ciudad).
+export function extras(M) { const { motor, objs, raiz } = M, THREE = motor.THREE, C = motor.C, doc = document.documentElement, X = { tour: null, cam: null, auto: 0 };
   const el = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.firstElementChild; };
 
   // ---------- recorrido de presentación ----------
@@ -40,4 +41,27 @@ export function extras(M) { const { motor, objs, raiz } = M, C = motor.C, doc = 
     else { const i = L.indexOf(motor.hora); if (i === L.length - 1) { horaReal(true); txt = 'Hora real · ahora ' + motor.horas.find(q => q[0] === motor.hora)[1].toLowerCase(); } else { motor.ponerHora(L[i + 1]); txt = motor.horas[i + 1][1]; } }
     try { localStorage.setItem('motor.tema', motor.tema); localStorage.setItem('motor.hora', X.real ? 'auto' : motor.hora); } catch (e) {} M.toast(txt); }
   try { if (localStorage.getItem('motor.hora') === 'auto' && !M.temaFijo) horaReal(true); } catch (e) {}
-  return { presentar, verCamara, horaReal, siguienteHora, get tour() { return !!X.tour; }, get camara() { return X.cam ? X.cam.p : null; } }; }
+
+  // ---------- clima ----------
+  // la lluvia son rayitas que caen dentro de una caja que sigue a lo que se mira (se dibujan todas juntas)
+  let lluvia = null; const UL = { uT: { value: 0 }, uS: { value: 80 }, uC: { value: new THREE.Vector3() }, uO: { value: 0.3 } };
+  function gotas() { if (lluvia) return lluvia; const N = motor.tactil ? 900 : 2600, pos = new Float32Array(N * 6), ext = new Float32Array(N * 2); for (let i = 0; i < N; i++) { const x = Math.random(), y = Math.random(), z = Math.random(); pos.set([x, y, z, x, y, z], i * 6); ext[i * 2 + 1] = 1; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('ext', new THREE.BufferAttribute(ext, 1));
+    lluvia = new THREE.LineSegments(g, new THREE.ShaderMaterial({ uniforms: UL, transparent: true, depthWrite: false, fog: false,
+      vertexShader: 'uniform float uT, uS; uniform vec3 uC; attribute float ext; varying float vA; void main(){ vec3 p = position; float v = 0.6 + fract(p.x * 37.0) * 0.4; p.y = fract(p.y - uT * v); vec3 w = vec3((fract(p.x - uC.x / uS) - 0.5) * uS + uC.x, p.y * uS * 0.62 + ext * uS * 0.02, (fract(p.z - uC.z / uS) - 0.5) * uS + uC.z); w.x += ext * uS * 0.004; vA = 1.0 - ext * 0.85; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }',
+      fragmentShader: 'uniform float uO; varying float vA; void main(){ gl_FragColor = vec4(0.86, 0.9, 0.95, uO * vA); }' }));
+    lluvia.frustumCulled = false; lluvia.renderOrder = 6; lluvia.raycast = () => {}; lluvia.userData.noPica = lluvia.userData.noChoca = true; lluvia.visible = false; motor.scene.add(lluvia); return lluvia; }
+  motor.cada.push((dt) => { if (!lluvia || !lluvia.visible) return false; UL.uT.value = (UL.uT.value + dt * 0.95) % 1000; UL.uS.value = Math.min(520, Math.max(42, C.d * 1.5)); UL.uC.value.set(C.tx, 0, C.tz); return true; });
+  const mojar = on => { if (M.AMB) M.AMB.mojado = on; motor.scene.traverse(k => { const m = k.material; if (m && m.userData && m.userData.suelo) m.roughness = on ? Math.min(m.userData.r0, 0.4) : m.userData.r0; }); };
+  function aplicarClima(c) { motor.ponerClima(c); const ll = c === 'lluvia'; if (ll || lluvia) { gotas().visible = ll; UL.uO.value = motor.tema === 'oscuro' ? 0.2 : 0.34; } mojar(ll); motor.dirty = true; }
+  motor.alTema.push(() => { if (lluvia) UL.uO.value = motor.tema === 'oscuro' ? 0.2 : 0.34; });
+  // tiempo real de la ciudad: código del tiempo de la OMM → uno de los cuatro climas
+  const LUGAR = M.lugar || [-34.9, -56.2];
+  async function tiempoReal() { try { const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + LUGAR[0] + '&longitude=' + LUGAR[1] + '&current=weather_code', { cache: 'no-store' }); if (!r.ok) return null; const w = (await r.json()).current.weather_code; return w <= 1 ? 'despejado' : w <= 3 ? 'nublado' : w === 45 || w === 48 ? 'niebla' : 'lluvia'; } catch (e) { return null; } }
+  const nomClima = k => (motor.climas.find(q => q[0] === k) || [0, k])[1];
+  async function ponerClima(k, callado) { clearInterval(X.tclima); X.tclima = 0; X.clima = k; try { localStorage.setItem('motor.clima', k); } catch (e) {} M.alClima && M.alClima(k);
+    if (k !== 'real') { aplicarClima(k); if (!callado) M.toast(nomClima(k)); return; }
+    const pon = async (avisa) => { const c = await tiempoReal(); if (X.clima !== 'real') return; if (!c) { if (avisa) M.toast('No se pudo consultar el tiempo; queda como estaba'); return; } aplicarClima(c); if (avisa) M.toast('Tiempo real · ahora ' + nomClima(c).toLowerCase()); };
+    await pon(!callado); X.tclima = setInterval(() => pon(false), 20 * 60000); }
+  X.clima = 'despejado'; try { const g = localStorage.getItem('motor.clima'); if (g && g !== 'despejado' && (g === 'real' || motor.climas.some(q => q[0] === g)) && !M.temaFijo) ponerClima(g, true); } catch (e) {}
+  return { presentar, verCamara, horaReal, siguienteHora, ponerClima, get clima() { return X.clima; }, get tour() { return !!X.tour; }, get camara() { return X.cam ? X.cam.p : null; } }; }

@@ -16,6 +16,10 @@ const HORAS = {
   dia: { ...TEMAS.claro, base: 'claro', n: 'Mediodía', sold: [-1.1, 2.2, 1.4] },
   azul: { ...TEMAS.oscuro, base: 'oscuro', n: 'Hora azul', sold: [-1.7, 0.55, 0.7], alto: 0x16264f, cielo: 0x9a6f9c, niebla: 0x4a4468, sol: 0x9fb0ff, solI: 0.95, hemiA: 0x6e84c8, hemiB: 0x191c2a, hemiI: 1.05, env: 0.3, exp: 1.12, umbral: 0.55, brillo: 0.8, borde: 0.7, noche: 0.3, cerca: 600, lejos: 3200 },
   noche: { ...TEMAS.oscuro, base: 'oscuro', n: 'Noche', sold: [-1.1, 2.2, 1.4] } };
+// clima: cambia el cielo, la fuerza del sol y la bruma encima de la hora que sea. gris = cuánto se tapa el cielo; espesa = bruma [cerca, lejos, × distancia, × distancia]
+const CLIMAS = { despejado: { n: 'Despejado' }, nublado: { n: 'Nublado', gris: 0.8, sol: 0.3, hemi: 1.4 }, lluvia: { n: 'Lluvia', gris: 0.92, sol: 0.14, hemi: 1.25, exp: 0.94, osc: 0.8, espesa: [70, 760, 1.15, 4.4] }, niebla: { n: 'Niebla', gris: 0.96, sol: 0.2, hemi: 1.5, espesa: [8, 230, 0.22, 2.2] } };
+function conClima(T, c) { const K = CLIMAS[c]; if (!K || !K.gris) return T; const col = h => new THREE.Color(h), g = col(T.cielo), L = (g.r * 0.3 + g.g * 0.55 + g.b * 0.15) * (K.osc || 1), gr = new THREE.Color(L * 0.95, L * 0.98, L * 1.04), m = (h, k, f = 1) => col(h).lerp(gr.clone().multiplyScalar(f), k).getHex();
+  return { ...T, alto: m(T.alto, K.gris, 0.8), cielo: m(T.cielo, K.gris), niebla: m(T.niebla, K.gris), sol: m(T.sol, 0.6, 1.6), solI: T.solI * K.sol, hemiI: T.hemiI * K.hemi, exp: T.exp * (K.exp || 1), noche: Math.min(T.noche, 0.5), disco: 0, espesa: K.espesa || null }; }
 // cielo: degradé del horizonte al cenit, resplandor del sol y estrellas de noche
 const CIELO_VS = 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = modelViewMatrix * vec4(position, 1.0); gl_Position = (projectionMatrix * p).xyww; }';
 const CIELO_FS = `uniform vec3 alto, hor, solC; uniform vec3 solD; uniform float noche; varying vec3 vD;
@@ -83,17 +87,19 @@ export function crearMotor(canvas, o = {}) {
   const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
   function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 ? 0.06 : 0.5; if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
-    if (motor.bruma) { scene.fog.near = Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = Math.max(motor.bruma[1], C.d * 5); }
+    if (motor.bruma) { const e = motor.espesa; scene.fog.near = e ? Math.max(e[0], C.d * e[2]) : Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = e ? Math.max(e[1], C.d * e[3]) : Math.max(motor.bruma[1], C.d * 5); }
     cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
     // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca)
     const r = Math.min(700, Math.max(40, C.d * 0.85)); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
     sol.position.set(C.tx + SD.x * r * 2.8, SD.y * r * 2.8, C.tz + SD.z * r * 2.8); sol.target.position.set(C.tx, 0, C.tz); }
 
-  motor.horas = Object.keys(HORAS).map(k => [k, HORAS[k].n]);
+  motor.horas = Object.keys(HORAS).map(k => [k, HORAS[k].n]); motor.climas = Object.keys(CLIMAS).map(k => [k, CLIMAS[k].n]); motor.clima = 'despejado';
+  // cambiar el clima: solo se mueve la luz y el cielo (las piezas no se rearman)
+  motor.ponerClima = c => { if (!CLIMAS[c] || c === motor.clima) return; motor.clima = c; motor.ponerTema(motor.tema, true); };
   // cambiar de hora: si no cambia de día a noche (o al revés) solo se mueve la luz; si cambia, además se rearman las piezas (luces prendidas o apagadas)
   motor.ponerHora = h => { if (!HORAS[h]) return; motor.hora = h; motor.ponerTema(HORAS[h].base, HORAS[h].base === motor.tema); };
-  motor.ponerTema = (t, soloLuz) => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; if (!HORAS[motor.hora] || HORAS[motor.hora].base !== t) motor.hora = t === 'oscuro' ? 'noche' : 'dia'; const T = HORAS[motor.hora]; SD.set(T.sold[0], T.sold[1], T.sold[2]).normalize(); cieloU.solD.value.copy(SD); scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
-    cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol); cieloU.noche.value = T.noche;
+  motor.ponerTema = (t, soloLuz) => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; if (!HORAS[motor.hora] || HORAS[motor.hora].base !== t) motor.hora = t === 'oscuro' ? 'noche' : 'dia'; const T = conClima(HORAS[motor.hora], motor.clima); motor.espesa = T.espesa || null; SD.set(T.sold[0], T.sold[1], T.sold[2]).normalize(); cieloU.solD.value.copy(SD); scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
+    cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol).multiplyScalar(T.disco ?? 1); cieloU.noche.value = T.noche;
     sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp; if (post) { post.umbral = T.umbral; post.fuerza = T.brillo; post.borde = T.borde; }
     // de día el reflejo de chapas y vidrios es el del cielo de la maqueta (no el de una sala de estudio); de noche queda el reflejo tenue de antes
     if (t === 'claro') { const uu = THREE.UniformsUtils.clone(cieloU); uu.alto.value.lerp(uu.hor.value, 0.72); /* cielo más pálido para alumbrar: si no, las sombras quedan azules */ const s = new THREE.Scene(), c2 = new THREE.Mesh(cielo.geometry, new THREE.ShaderMaterial({ uniforms: uu, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false })), ps = new THREE.Mesh(new THREE.CircleGeometry(90, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xa9a59b })); c2.scale.setScalar(60); c2.renderOrder = -10; ps.position.y = -2; s.add(c2, ps); if (envCielo) envCielo.dispose(); envCielo = pmrem.fromScene(s, 0.035, 0.1, 400).texture; scene.environment = envCielo; ps.geometry.dispose(); ps.material.dispose(); c2.material.dispose(); } else scene.environment = envSala;

@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=9';
+import { THREE } from './nucleo.js?v=10';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=4';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=5';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- materiales y formas compartidas ----------
@@ -47,7 +47,10 @@ function calmo(base, k = 0.4) { const key = base.uuid + '|' + k; let m = CALMOS.
   m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#ifdef USE_MAP\n{ vec4 fino = texture2D( map, vMapUv ); vec4 prom = texture2D( map, vMapUv, 12.0 ); fino.rgb = mix( prom.rgb, fino.rgb, ' + k.toFixed(2) + ' ); diffuseColor *= fino; }\n#endif'); };
   m.customProgramCacheKey = () => 'calmo' + k; CALMOS.set(key, m); return m; }
 export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto';
-  const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return parejo ? calmo(b, 0.3) : b; }
+  const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return piso(parejo ? calmo(b, 0.3) : b); }
+// con lluvia los pisos brillan: cada material de piso recuerda su aspereza de seco
+export const AMB = { mojado: false };
+function piso(m) { if (m.userData.r0 == null) m.userData.r0 = m.roughness; m.userData.suelo = true; m.roughness = AMB.mojado ? Math.min(m.userData.r0, 0.4) : m.userData.r0; return m; }
 // superficie plana con la forma de un polígono (x, z)
 function area(g, pts, y, m) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); const geo = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
   const k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); return k; }
@@ -323,7 +326,7 @@ export const TIPOS = {
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['continua', 'Continua'], ['no', 'Sin línea']] }],
     armar(p) { const g = new THREE.Group(), y = 0.05, c = { asfalto: oscuro() ? '#2b3036' : '#7d838a', ruta: oscuro() ? '#272c31' : '#73797f', hormigon: suelo('hormigon'), tierra: suelo('ripio') }[p.tipo] || '#7d838a';
       const tq = { asfalto: 'asfalto', ruta: 'asfalto', hormigon: 'hormigon', tierra: 'pedregullo' }[p.tipo] || 'asfalto', mt = METROS[tq], po = { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -4 };
-      const mc0 = matTex(texSuelo(tq), oscuro() ? '#55595c' : (p.tipo === 'ruta' ? '#e4e6e8' : '#ffffff'), [p.ancho / mt, 1 / mt], po), mc = tq === 'pedregullo' ? mc0 : calmo(mc0, 0.38);
+      const mc0 = matTex(texSuelo(tq), oscuro() ? '#55595c' : (p.tipo === 'ruta' ? '#e4e6e8' : '#ffffff'), [p.ancho / mt, 1 / mt], po), mc = piso(tq === 'pedregullo' ? mc0 : calmo(mc0, 0.38));
       g.add(sombra(new THREE.Mesh(cinta(p.pts, p.ancho, y), mc), false, true));
       const blanca = oscuro() ? new THREE.MeshBasicMaterial({ color: '#cfe9ff', toneMapped: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -6 }) : mat('#f4f6f7', { roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -6 });
       if (p.linea !== 'no' && p.tipo !== 'tierra') { if (p.linea === 'continua') g.add(new THREE.Mesh(cinta(p.pts, 0.15, y + 0.005), blanca)); else for (const [x, z, d] of aLoLargo(p.pts, 9)) { const k = new THREE.Mesh(CAJA, blanca); k.scale.set(0.15, 0.01, 4.2); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } }
