@@ -66,22 +66,26 @@ export function crearMotor(canvas, o = {}) {
 
   // controles de Los Sims 4: rueda acerca hacia el mouse, clic derecho gira, arrastrar el piso desplaza; WASD/flechas desplazan, Z/X acercan, , . giran
   // el editor puede quedarse con un arrastre devolviendo true en motor.agarrar(e)
-  const dedos = new Map(); let arr = null, gesto = null, teclas = {};
+  const dedos = new Map(); let arr = null, gesto = null, teclas = {}, largo = 0; const vuelta = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
   const vel = { yaw: 0, pitch: 0, tx: 0, tz: 0 }, rueda = { k: 0, x: 0, y: 0 }; let tMov = 0; const frena = () => { vel.yaw = vel.pitch = vel.tx = vel.tz = 0; };
   const zoomHacia = (k, x, y) => { const a = x != null && motor.enPiso(x, y); C.d = Math.min(C.max, Math.max(C.min, C.d * k)); if (a) { ubicarCam(); const b = motor.enPiso(x, y); if (b) { C.tx += a.x - b.x; C.tz += a.z - b.z; } } motor.dirty = true; };
   motor.zoomHacia = zoomHacia;
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); dedos.set(e.pointerId, { x: e.clientX, y: e.clientY }); viaje = null; frena(); rueda.k = 0;
-    if (dedos.size === 2) { arr = null; const [a, b] = [...dedos.values()]; gesto = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; motor.soltar && motor.soltar(e, true); return; }
+    if (dedos.size === 2) { arr = null; clearTimeout(largo); const [a, b] = [...dedos.values()]; gesto = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, modo: null, giro: false }; Object.assign(gesto, { d0: gesto.d, ang0: gesto.ang, mx0: gesto.mx, my0: gesto.my }); motor.soltar && motor.soltar(e, true); return; }
     if (e.button === 0 && !e.shiftKey && motor.agarrar && motor.agarrar(e)) { arr = { editor: true }; return; }
     // gira: clic derecho, ruedita, Ctrl o Alt + arrastrar (en la Mac, Ctrl + clic es el clic derecho); caminando, cualquier arrastre mira alrededor
     const girar = e.button === 2 || e.button === 1 || (e.button === 0 && (e.ctrlKey || (e.altKey && !motor.editando) || motor.caminando));
-    arr = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, girar, btn: e.button, p: girar ? null : motor.enPiso(e.clientX, e.clientY), mov: 0, t: performance.now() }; canvas.classList.add('arrastra'); });
+    arr = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, girar, btn: e.button, p: girar ? null : motor.enPiso(e.clientX, e.clientY), mov: 0, t: performance.now() }; canvas.classList.add('arrastra');
+    // con el dedo, editando: mantener apretado sobre una pieza la agarra (un arrastre corto sobre algo sin elegir mueve la vista, no la pieza)
+    clearTimeout(largo); if (e.pointerType === 'touch' && motor.editando && motor.agarrarLargo) { const a0 = arr; largo = setTimeout(() => { if (arr === a0 && a0.mov < 8 && dedos.size === 1 && motor.agarrarLargo(e)) { arr = { editor: true }; frena(); canvas.classList.remove('arrastra'); try { navigator.vibrate && navigator.vibrate(12); } catch (err) {} motor.dirty = true; } }, 380); } });
   canvas.addEventListener('pointermove', e => {
     if (dedos.has(e.pointerId)) dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (dedos.size === 2 && gesto) { const [a, b] = [...dedos.values()], d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      const p0 = motor.enPiso(gesto.mx, gesto.my); zoomHacia(gesto.d / d, mx, my); C.yaw -= ang - gesto.ang; ubicarCam(); const p1 = motor.enPiso(mx, my); if (p0 && p1) { C.tx += p0.x - p1.x; C.tz += p0.z - p1.z; }
-      C.pitch = incl(C.pitch + (my - gesto.my) * 0.004); gesto = { d, ang, mx, my }; motor.dirty = true; return; }
+    // dos dedos: primero se mira qué gesto es y después se hace solo ese. Pellizco (los dedos se separan, se juntan o giran entre sí): acerca hacia
+    // donde están los dedos y, si la torsión es clara (más de unos 11°), además gira. Los dos dedos juntos para el mismo lado: de costado gira la vista
+    // y hacia arriba o abajo la inclina (igual que en el trackpad). Así un pellizco no inclina de rebote ni un giro acerca sin querer.
+    // (cada dedo avisa por separado: se mira una vez por cuadro, con los dos ya en su lugar; si no, el primero que avisa parece un pellizco)
+    if (dedos.size === 2 && gesto) { if (!gesto.pend) { gesto.pend = true; requestAnimationFrame(dosDedos); } return; }
     if (!arr) { motor.pasar && motor.pasar(e); return; }
     if (arr.editor) { motor.mover && motor.mover(e); return; }
     const dx = e.clientX - arr.x, dy = e.clientY - arr.y; arr.x = e.clientX; arr.y = e.clientY; arr.mov += Math.abs(dx) + Math.abs(dy);
@@ -89,7 +93,15 @@ export function crearMotor(canvas, o = {}) {
     if (arr.girar) { const a = C.yaw, b = C.pitch; C.yaw -= dx * 0.006; C.pitch = incl(C.pitch + dy * 0.004); vel.yaw = mz(vel.yaw, (C.yaw - a) / dt); vel.pitch = mz(vel.pitch, (C.pitch - b) / dt); }
     else if (arr.p) { ubicarCam(); const q = motor.enPiso(e.clientX, e.clientY); if (q) { const ax = arr.p.x - q.x, az = arr.p.z - q.z; C.tx += ax; C.tz += az; vel.tx = mz(vel.tx, ax / dt); vel.tz = mz(vel.tz, az / dt); } }
     motor.dirty = true; });
-  const fin = e => { const tenia = dedos.has(e.pointerId); dedos.delete(e.pointerId); if (dedos.size < 2) gesto = null; canvas.classList.remove('arrastra');
+  function dosDedos() { if (!gesto) return; gesto.pend = false; if (dedos.size !== 2) return; { const [a, b] = [...dedos.values()], d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      if (!gesto.modo) { const esc = Math.abs(d / gesto.d0 - 1), tor = Math.abs(vuelta(ang - gesto.ang0)), ax = Math.abs(mx - gesto.mx0), ay = Math.abs(my - gesto.my0);
+        if (esc > 0.08 || tor > 0.16) gesto.modo = 'pellizco'; else if (Math.hypot(ax, ay) > 14) { gesto.modo = 'orbita'; gesto.eje = ax > ay * 1.6 ? 'x' : ay > ax * 1.6 ? 'y' : 'xy'; }
+        Object.assign(gesto, { d, ang, mx, my }); return; }
+      if (gesto.modo === 'pellizco') { const p0 = motor.caminando ? null : motor.enPiso(gesto.mx, gesto.my); zoomHacia(gesto.d / d, motor.caminando ? null : mx, my); if (!gesto.giro && Math.abs(vuelta(ang - gesto.ang0)) > 0.2) gesto.giro = true;
+        if (gesto.giro) C.yaw -= vuelta(ang - gesto.ang); ubicarCam(); const p1 = p0 && motor.enPiso(mx, my); if (p0 && p1) { C.tx += p0.x - p1.x; C.tz += p0.z - p1.z; } }
+      else { if (gesto.eje !== 'y') C.yaw -= (mx - gesto.mx) * 0.006; if (gesto.eje !== 'x') C.pitch = incl(C.pitch + (my - gesto.my) * 0.004); }
+      Object.assign(gesto, { d, ang, mx, my }); motor.dirty = true; } }
+  const fin = e => { const tenia = dedos.has(e.pointerId); dedos.delete(e.pointerId); if (dedos.size < 2) gesto = null; canvas.classList.remove('arrastra'); clearTimeout(largo);
     if (!tenia || !arr) return; const a = arr; arr = null; if (performance.now() - tMov > 90 || a.editor) frena();
     if (a.editor) { motor.soltar && motor.soltar(e); return; }
     if (e.type !== 'pointerup' || a.mov >= 6 || performance.now() - a.t > 600) return;
@@ -98,12 +110,16 @@ export function crearMotor(canvas, o = {}) {
   canvas.addEventListener('pointerup', fin); canvas.addEventListener('pointercancel', fin);
   // rueda y trackpad. Mouse: la rueda acerca hacia el puntero. Trackpad: dos dedos arriba/abajo acercan, dos dedos de costado giran, pellizco acerca
   // (el navegador lo manda como rueda con Ctrl), Shift + dos dedos inclina. Caminando, la rueda acerca o aleja la cámara del muñeco.
+  const rg = { t: 0, eje: null, ax: 0, ay: 0 };
   canvas.addEventListener('wheel', e => { if (o.ruedaConCtrl && !motor.editando && !motor.caminando && !document.fullscreenElement && !(e.ctrlKey || e.metaKey)) return;
     e.preventDefault(); viaje = null; frena(); const k = e.deltaMode ? 30 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
     if (motor.alRueda && motor.alRueda(e, dx, dy)) { motor.dirty = true; return; }
+    // un mismo gesto de dos dedos en el trackpad (eventos seguidos) queda en lo que empezó: girar o acercar. Si no, un dedo que se desvía hace las dos cosas a la vez.
+    const ya = performance.now(); if (ya - rg.t > 180) { rg.eje = null; rg.ax = rg.ay = 0; } rg.t = ya;
+    if (!e.ctrlKey && !e.shiftKey && !rg.eje) { rg.ax += Math.abs(dx); rg.ay += Math.abs(dy); if (rg.ax + rg.ay >= 20 || Math.abs(dy) >= 40) rg.eje = rg.ax > rg.ay ? 'x' : 'y'; }
     if (e.shiftKey && !e.ctrlKey) C.pitch = incl(C.pitch + (dy || dx) * 0.003);
-    else if (!e.ctrlKey && Math.abs(dx) > Math.abs(dy) * 1.2) C.yaw -= dx * 0.004;
-    else { rueda.k += dy * (e.ctrlKey && Math.abs(dy) < 50 ? 0.009 : 0.0011); rueda.x = motor.caminando ? null : e.clientX; rueda.y = e.clientY; }
+    else if (!e.ctrlKey && rg.eje === 'x') C.yaw -= dx * 0.004;
+    else if (e.ctrlKey || rg.eje === 'y') { rueda.k += dy * (e.ctrlKey && Math.abs(dy) < 50 ? 0.009 : 0.0011); rueda.x = motor.caminando ? null : e.clientX; rueda.y = e.clientY; }
     motor.dirty = true; }, { passive: false });
   // Safari en la Mac: girar y pellizcar con dos dedos sobre el trackpad
   let gs = null; canvas.addEventListener('gesturestart', e => { e.preventDefault(); gs = { r: e.rotation, s: e.scale }; });

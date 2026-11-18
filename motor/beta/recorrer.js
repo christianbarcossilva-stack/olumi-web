@@ -6,7 +6,7 @@
 // W A S D la llevan, E o Espacio suben, Q baja, Shift apura; al salir del vuelo el muñeco baja donde quedó la cámara).
 // Se puede editar mientras se recorre: el toque pone o elige, arrastrar mira.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=4';
+import { THREE } from './nucleo.js?v=5';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);

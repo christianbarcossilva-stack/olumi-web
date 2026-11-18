@@ -11,13 +11,13 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
-import { THREE, crearMotor } from './nucleo.js?v=4';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=15';
+import { THREE, crearMotor } from './nucleo.js?v=5';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=16';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=5';
-import { recorrer } from './recorrer.js?v=2';
-import { transito } from './transito.js?v=4';
+import { construir } from './construir.js?v=6';
+import { recorrer } from './recorrer.js?v=3';
+import { transito } from './transito.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -81,7 +81,8 @@ export async function abrirMaqueta(o) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t, alphaMap: new THREE.CanvasTexture(f), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false, polygonOffset: true, polygonOffsetFactor: -16, polygonOffsetUnits: -12 }));
     m.position.y = 0.06; m.renderOrder = 1; m.visible = false; motor.scene.add(m); return m; })();
   // con el plano del lugar en el piso, la grilla de noche no se le pone arriba
-  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); grillaNoche.visible = motor.tema === 'oscuro' && !E.piezas.some(p => p.t === 'plano'); grillaNoche.material.color.set(getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea'); };
+  let cuadricula = false; // el cuadriculado del piso se ve solo editando (de día y de noche)
+  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); grillaNoche.visible = cuadricula && motor.tema === 'oscuro' && !E.piezas.some(p => p.t === 'plano'); grillaNoche.material.color.set(getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea'); };
 
   // ---------- equipos reales (Ondi) ----------
   const EQ = { lista: [], porUid: new Map(), at: 0 };
@@ -269,7 +270,7 @@ export async function abrirMaqueta(o) {
   function cambio(guardarYa = true, escribiendo) { const ahora = limpio(); if (ahora === foto) return; revisarTr(); capasLugar(); if (!escribiendo || !undo.length || undo[undo.length - 1].t < Date.now() - 1500) undo.push({ s: foto, t: Date.now() }); if (undo.length > 80) undo.shift(); redo.length = 0; foto = ahora; if (guardarYa) guardar(); if (RC.R.on) { clearTimeout(cambio.t); cambio.t = setTimeout(() => RC.R.on && RC.obstaculos(), 250); } }
   function volver(de, a) { if (!de.length) { toast(de === undo ? 'No hay nada para deshacer' : 'No hay nada para rehacer'); return; } CON.cancelar(); cancelar(true); a.push({ s: foto, t: 0 }); foto = de.pop().s; E.piezas = JSON.parse(foto); SEL = SEL && E.piezas.find(p => p.id === SEL.id) || null; armarTodo(); CON.alElegir(SEL); marcar(); info(); guardar(); }
   function editar(on) { if (!puede) return; if (!on && MED.p) finMedir(); ED.on = on; motor.editando = on; document.documentElement.classList.toggle('editando', on); $('#mtool').hidden = !on; $('#bedit').setAttribute('aria-pressed', on); $('#bedit').querySelector('span').textContent = on ? 'Listo' : 'Editar';
-    grilla.visible = on && ED.grilla; if (!on) { CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); CON.marcar(); marcar(); info(); motor.dirty = true; }
+    grilla.visible = on && ED.grilla; cuadricula = on && ED.grilla; pintaSuelo(); if (!on) { CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); CON.marcar(); marcar(); info(); motor.dirty = true; }
   if (puede) $('#bedit').onclick = () => editar(!ED.on);
   const PISTA = { mano: '<b>Mano</b>: arrastrá el piso para moverte. Tocá algo para elegirlo y arrastralo para correrlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
   function herramienta(h) { CON.cancelar(); cancelar(true); if (h === 'pared' || h === 'recinto') { CON.empezar(h); return; } if (h === 'puerta' || h === 'ventana') { CON.empezar('abertura', h); return; } if (h === 'catalogo') { catalogo($('#mcat').hidden); return; } ED.h = h; herrVis(null); }
@@ -277,7 +278,7 @@ export async function abrirMaqueta(o) {
   function herrVis(h) { const v = h || ED.h; canvas.dataset.h = v; document.querySelectorAll('#mtool [data-h]').forEach(b => b.setAttribute('aria-pressed', b.dataset.h === v)); if (!h && ED.on && !ED.colocar && !ED.linea) hint(PISTA[ED.h]); puntos(); }
   $('#mtool').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.h) herramienta(b.dataset.h); if (b.id === 'beq') panelEquipos($('#meq').hidden); if (b.id === 'bundo') volver(undo, redo); if (b.id === 'bredo') volver(redo, undo); if (b.id === 'bpap') papelera(b);
     if (b.id === 'bpared') paredes({ alta: 'corte', corte: 'baja', baja: 'alta' }[ctx.paredes]);
-    if (b.id === 'bgrid') { ED.grilla = !ED.grilla; b.setAttribute('aria-pressed', ED.grilla); grilla.visible = ED.on && ED.grilla; motor.dirty = true; } });
+    if (b.id === 'bgrid') { ED.grilla = !ED.grilla; b.setAttribute('aria-pressed', ED.grilla); grilla.visible = ED.on && ED.grilla; cuadricula = grilla.visible; pintaSuelo(); motor.dirty = true; } });
   document.addEventListener('click', e => { const b = e.target.closest('[data-cerrar]'); if (b) $('#' + b.dataset.cerrar).hidden = true; });
   const pegar = (v, alt) => alt ? Math.round(v * 100) / 100 : Math.round(v * 2) / 2;
   let nid = 1; const nuevoId = t => { let id; do id = t.slice(0, 3) + (nid++).toString(36); while (E.piezas.some(p => p.id === id)); return id; };
@@ -451,8 +452,12 @@ export async function abrirMaqueta(o) {
       else if (ud.medio != null) { SEL.pts.splice(ud.medio, 0, [pegar(p0.x, e.altKey), pegar(p0.z, e.altKey)]); CON.insertado(SEL, ud.medio); ED.drag = { v: ud.medio }; rehacer(SEL); } else ED.drag = { v: ud.vertice }; return true; }
     // Con la mano, arrastrar mueve la vista salvo que se agarre algo chico (un equipo, un auto, un árbol) o algo que ya estaba elegido.
     // Lo grande (galpones, edificios, calles, recintos) primero se elige con un toque; el terreno no se corre arrastrando, solo por sus puntos.
-    const h = hallar(e); if (CON.agarrar(e, p0, h)) return true; if (!h || ED.h !== 'mano' || h.p.t === 'terreno' || h.p.fijo || MED.p || (h.p !== SEL && !directo(h.p))) return false;
-    elegir(h.p); ED.drag = { p: h.p, x0: p0.x, z0: p0.z, orig: h.p.pts ? h.p.pts.map(q => [...q]) : [h.p.x || 0, h.p.z || 0], movido: false, con: e.altKey ? [] : CON.contenido(h.p).map(q => ({ q, o: q.pts ? q.pts.map(k => [...k]) : [q.x || 0, q.z || 0] })) }; return true; };
+    // Con el dedo no se agarra de una lo que no estaba elegido (un arrastre corto mueve la vista): se elige con un toque o se mantiene apretado.
+    const h = hallar(e); if (CON.agarrar(e, p0, h)) return true; if (!h || ED.h !== 'mano' || h.p.t === 'terreno' || h.p.fijo || MED.p || (h.p !== SEL && (e.pointerType === 'touch' || !directo(h.p)))) return false;
+    tomar(h.p, p0, e); return true; };
+  const tomar = (p, p0, e) => { elegir(p); ED.drag = { p, x0: p0.x, z0: p0.z, orig: p.pts ? p.pts.map(q => [...q]) : [p.x || 0, p.z || 0], movido: false, con: e.altKey ? [] : CON.contenido(p).map(q => ({ q, o: q.pts ? q.pts.map(k => [...k]) : [q.x || 0, q.z || 0] })) }; };
+  // mantener apretado con el dedo sobre una pieza: la elige y la deja lista para arrastrar
+  motor.agarrarLargo = e => { if (!ED.on || ED.colocar || ED.linea || CON.T.h || ED.h !== 'mano' || MED.p) return false; const p0 = motor.enPiso(e.clientX, e.clientY), h = hallar(e); if (!p0 || !h || h.p.t === 'terreno' || h.p.fijo) return false; menu(null); tomar(h.p, p0, e); canvas.classList.add('lleva'); hint('Agarrado: arrastrá para moverlo'); return true; };
   motor.mover = e => { if (CON.mover(e)) return; const D = ED.drag; if (!D) return;
     if (D.altura) { const v = motor.rayo(e.clientX, e.clientY).ray.intersectPlane(D.altura, new THREE.Vector3()); if (v) { const y = Math.max(0, Math.min(60, Math.round(v.y * (e.altKey ? 100 : 10)) / (e.altKey ? 100 : 10))); if (y !== SEL.y) { SEL.y = y; D.movido = true; rehacer(SEL); } } return; }
     const p = motor.enPiso(e.clientX, e.clientY); if (!p) return;
