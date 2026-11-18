@@ -24,7 +24,7 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 
 ## Kliva (vista previa)
 - `kliva/`: la web de Kliva (control de acceso multimarca: ZKTeco, Hikvision, Dahua e Intelbras en un solo panel). Cuenta una semana de trabajo y usa la demostración real como escenario: cada capítulo le pide una escena por mensaje (`demo/?cine=1`).
-- `kliva/demo/`: la demostración, con datos inventados (no hay servidor detrás: todo corre en el navegador y se borra al recargar).
+- `kliva/demo/`: la demostración, con datos inventados (no hay servidor detrás: todo corre en el navegador; lo que se edita en el plano queda en ese navegador). Su vista Plano abre el motor común de `motor/beta/` (ruta absoluta `/motor/beta/`), con el plano de ejemplo de cada sitio.
 - Las dos páginas se generan con `npm run build:web` en el proyecto de Kliva (salen en `web/dist/sitio/`); no editarlas a mano. La web se escribe en `web/sitio/index.html` de ese proyecto.
 - Llevan `noindex` y no tienen enlace desde la portada: Kliva todavía no tiene instalaciones con equipos reales. La app con servidor irá en `kliva/app/` y `kliva/beta/` cuando se instale. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
 - `portuno/` redirige a `kliva/` (fue el nombre de los primeros minutos).

@@ -164,6 +164,13 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .main { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
 .view { max-width: 1240px; padding: 30px 30px 72px; display: flex; flex-direction: column; gap: 20px; }
 .view-head { display: flex; align-items: flex-end; gap: 12px 16px; flex-wrap: wrap; }
+/* Plano: el motor común ocupa todo lo que queda de la pantalla; con pantalla completa, todo */
+.main.fixed { overflow: hidden; }
+.view.full { max-width: none; height: 100%; padding-bottom: 24px; }
+.plano { position: relative; flex: 1 1 auto; min-height: 360px; border-radius: 20px; overflow: hidden; border: 1px solid var(--line); background: var(--pop); }
+.plano iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.plano .empty { margin: 24px; }
+:root.plano-full .plano { position: fixed; inset: 0; z-index: 60; border: 0; border-radius: 0; }
 .view-head > div:first-child { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .lede { color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 68ch; }
 .lede b { color: var(--fg); font-weight: 600; }
@@ -191,6 +198,9 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
   .top .btn.pri { width: 44px; min-width: 44px; padding: 0; }
   .top .btn.pri span { display: none; }
   .view { padding: 20px 16px 128px; gap: 16px; }
+  .view.full { padding: 14px 12px calc(86px + env(safe-area-inset-bottom)); gap: 12px; }
+  .view.full .view-head .lede { display: none; }
+  .plano { min-height: 300px; border-radius: 16px; }
   .wall { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .dock { --bar: color-mix(in srgb, var(--pop) 88%, transparent); }
   h1 { font-size: 30px; }
@@ -493,6 +503,7 @@ const ICONS = {
   personas: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/>',
   niveles: '<circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M17 12v3M20.5 12v2"/>',
   equipos: '<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M10 16h4"/>',
+  plano: '<path d="M3.5 7.5 12 3l8.5 4.5L12 12z"/><path d="M3.5 7.5V16L12 20.5V12M20.5 7.5V16L12 20.5"/><path d="M9 10.4v4.3l3 1.6"/>',
   integraciones: '<path d="M9 15l6-6M10.5 6.5l1-1a4.2 4.2 0 0 1 6 6l-1 1M13.5 17.5l-1 1a4.2 4.2 0 0 1-6-6l1-1"/>',
   ajustes: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
@@ -542,6 +553,7 @@ function liveApi() {
     get: path => call('GET', path),
     post: (path, body = {}) => call('POST', path, body),
     patch: (path, body = {}) => call('PATCH', path, body),
+    put: (path, body = {}) => call('PUT', path, body),
     del: path => call('DELETE', path),
     /** Baja un archivo que necesita la sesión (la copia de datos, la planilla de eventos). */
     async download(path, filename) {
@@ -803,6 +815,20 @@ function demoApi() {
     return s;
   });
   on('PATCH', '/api/sites/:id', ({ params, body }) => { Object.assign(site(params.id), { name: body.name, address: body.address ?? '' }); });
+  // El plano de cada sitio: el de ejemplo hasta que se edita; lo editado queda guardado en este navegador.
+  const planos = {}, doorByName = name => db.doors.find(p => p.name === name)?.id;
+  const planoDe = id => {
+    if (id in planos) return planos[id];
+    let p = null; try { p = JSON.parse(saved.get(`kliva.demo.plano.${id}`) || 'null'); } catch { p = null; }
+    return planos[id] = p || (site(id) ? planoEjemplo(site(id), doorByName) : null);
+  };
+  on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Ese sitio no existe'); return { plano: planoDe(params.id), updated_at: null }; });
+  on('PUT', '/api/sites/:id/plano', ({ params, body }) => {
+    if (me.role !== 'admin') throw fail(403, 'Tu usuario no tiene permiso para hacer esto');
+    planos[params.id] = body.plano; if (!cine) saved.set(`kliva.demo.plano.${params.id}`, JSON.stringify(body.plano));
+    return { updated_at: now() };
+  });
+  on('GET', '/api/places', () => Object.fromEntries(db.sites.flatMap(s => (planoDe(s.id)?.puertas ?? []).map(x => [x.puerta, x.lugar]))));
   on('DELETE', '/api/sites/:id', ({ params }) => {
     if (db.devices.some(d => d.site_id === params.id)) throw fail(400, 'El sitio todavía tiene equipos. Quitalos o movelos antes de borrarlo.');
     db.sites = db.sites.filter(s => s.id !== params.id);
@@ -1059,6 +1085,7 @@ function demoApi() {
     get: path => call('GET', path),
     post: (path, body) => call('POST', path, body),
     patch: (path, body) => call('PATCH', path, body),
+    put: (path, body) => call('PUT', path, body),
     del: path => call('DELETE', path),
     download: async (path, filename) => download(path, filename),
     cine: cine ? { rewind, play } : null,
@@ -1220,11 +1247,110 @@ function qrSvg(text) {
   return `<svg class="qr" viewBox="0 0 ${n} ${n}" role="img" aria-label="Código QR para la app de verificación"><rect width="${n}" height="${n}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
 
+// Los planos de ejemplo de la demostración (datos inventados), hechos con las piezas del motor común.
+// Planta Ruta 5: el plano del edificio (una imagen, como la que sube un cliente) con las puertas en 3D arriba y una zona por ambiente.
+// Centro logístico Ruta 1: el predio armado en 3D, con las puertas de cada galpón, de las oficinas y de los portones del cerco.
+
+/** Dibuja el plano de la Planta Ruta 5 como lo exportaría un programa de arquitectura: 48 × 30 m a 40 px por metro. */
+function dibujoPlanta() {
+  const M = 40, W = 48 * M, H = 30 * M, c = Object.assign(document.createElement('canvas'), { width: W, height: H }), x = c.getContext('2d');
+  const X = v => (v + 24) * M, Y = v => (v + 15) * M;
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.lineCap = 'butt';
+  // muros con sus huecos: [x0, z0, x1, z1, grosor, huecos [desde, hasta] a lo largo]
+  const muros = [
+    [-22, 13, 22, 13, 0.3, [[-18.5, -17.5]]], [-22, -13, 22, -13, 0.3, [[-2, 4]]], [-22, -13, -22, 13, 0.3, []], [22, -13, 22, 13, 0.3, []],
+    [-22, 5, 22, 5, 0.15, [[-11, -7.6], [3.55, 4.45], [14.6, 15.5]]], [-14, -13, -14, 13, 0.15, [[-8.45, -7.55], [-0.45, 0.45], [8.5, 9.5]]],
+    [-22, -4, -14, -4, 0.15, []], [-6, 5, -6, 13, 0.15, [[8.55, 9.45]]], [6, 5, 6, 13, 0.15, [[8.55, 9.45]]], [14, 5, 14, 13, 0.15, []],
+    [12, -13, 12, -2, 0.15, [[-6.45, -5.55]]], [12, -2, 22, -2, 0.15, []],
+  ];
+  x.fillStyle = '#1f2125';
+  for (const [x0, z0, x1, z1, g, huecos] of muros) {
+    const horiz = z0 === z1, a = horiz ? x0 : z0, b = horiz ? x1 : z1, tramos = []; let s = a;
+    for (const [h0, h1] of huecos) { tramos.push([s, h0]); s = h1; } tramos.push([s, b]);
+    for (const [t0, t1] of tramos) if (t1 > t0) horiz ? x.fillRect(X(t0) - (t0 === a ? g * M / 2 : 0), Y(z0) - g * M / 2, (t1 - t0) * M + (t0 === a ? g * M / 2 : 0) + (t1 === b ? g * M / 2 : 0), g * M)
+      : x.fillRect(X(x0) - g * M / 2, Y(t0), g * M, (t1 - t0) * M);
+  }
+  // puertas dibujadas como en el plano: la hoja y su giro
+  x.strokeStyle = '#1f2125'; x.lineWidth = 2;
+  const puerta = (hx, hz, ancho, a0, a1) => { x.beginPath(); x.moveTo(X(hx), Y(hz)); x.lineTo(X(hx) + Math.cos(a1) * ancho * M, Y(hz) + Math.sin(a1) * ancho * M); x.stroke();
+    x.setLineDash([6, 6]); x.beginPath(); x.arc(X(hx), Y(hz), ancho * M, Math.min(a0, a1), Math.max(a0, a1)); x.stroke(); x.setLineDash([]); };
+  puerta(-18.5, 13, 0.9, 0, -Math.PI / 2); puerta(-14, 8.5, 0.9, Math.PI / 2, 0); puerta(-14, -0.45, 0.9, Math.PI / 2, Math.PI); puerta(-14, -8.45, 0.9, Math.PI / 2, Math.PI);
+  puerta(3.55, 5, 0.9, 0, Math.PI / 2); puerta(-6, 8.55, 0.9, Math.PI / 2, 0); puerta(6, 8.55, 0.9, Math.PI / 2, 0); puerta(12, -6.45, 0.9, -Math.PI / 2, 0); puerta(14.6, 5, 0.9, 0, Math.PI / 2);
+  // portón de carga y molinetes
+  x.setLineDash([10, 8]); x.strokeRect(X(-2), Y(-13.6), 6 * M, 0.5 * M); x.setLineDash([]);
+  for (const mx of [-10.3, -8.3]) { x.fillStyle = '#8a8f98'; x.fillRect(X(mx - 0.62), Y(4.6), 0.3 * M, 0.8 * M); x.strokeRect(X(mx - 0.31), Y(4.6), 0.62 * M, 0.8 * M); }
+  // muebles livianos, para que se lea como un plano real
+  x.strokeStyle = '#9aa0a8'; x.lineWidth = 1.5;
+  for (let i = 0; i < 6; i++) x.strokeRect(X(-21.4), Y(-3.4 + i * 1.3), 0.5 * M, 1.1 * M);                    // lockers
+  for (const [ax, az] of [[-20, -10], [-17, -10], [-20, -7], [-17, -7]]) x.strokeRect(X(ax), Y(az), 2 * M, 1 * M);   // mesas del comedor
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) x.strokeRect(X(-10 + i * 5.5), Y(-10 + j * 6), 4 * M, 2.2 * M);   // líneas de producción
+  for (let i = 0; i < 4; i++) x.strokeRect(X(13), Y(-12.2 + i * 2.4), 8 * M, 0.8 * M);                      // estanterías
+  for (const [ax, az] of [[-4, 7], [-1.5, 7], [-4, 10], [-1.5, 10], [8, 7.5], [16, 7.5]]) x.strokeRect(X(ax), Y(az), 1.6 * M, 0.8 * M);
+  // nombre y superficie de cada ambiente
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  for (const [n, cx, cz, m2] of [['Portería', -18, 9, '64,0'], ['Hall de molinetes', -10, 10.2, '64,0'], ['Oficinas', 0, 12, '96,0'], ['Gerencia', 10, 11.5, '64,0'], ['Sala de reuniones', 18, 11.5, '64,0'],
+    ['Vestuarios', -18, 1, '72,0'], ['Comedor', -18, -5.2, '72,0'], ['Producción', -1, -2, '442,0'], ['Depósito de repuestos', 17, -8.2, '110,0']]) {
+    x.fillStyle = '#2b2e35'; x.font = '600 26px system-ui, sans-serif'; x.fillText(n, X(cx), Y(cz));
+    x.fillStyle = '#7b818b'; x.font = '20px system-ui, sans-serif'; x.fillText(`${m2} m²`, X(cx), Y(cz) + 30);
+  }
+  // cotas, norte y rótulo
+  x.strokeStyle = '#7b818b'; x.fillStyle = '#7b818b'; x.lineWidth = 1.5; x.font = '22px system-ui, sans-serif';
+  x.beginPath(); x.moveTo(X(-22), Y(-14.2)); x.lineTo(X(22), Y(-14.2)); x.moveTo(X(-23.2), Y(-13)); x.lineTo(X(-23.2), Y(13)); x.stroke();
+  for (const v of [-22, 22]) { x.beginPath(); x.moveTo(X(v), Y(-14.5)); x.lineTo(X(v), Y(-13.9)); x.stroke(); }
+  x.fillText('44,00', X(0), Y(-14.6));
+  x.save(); x.translate(X(-23.6), Y(0)); x.rotate(-Math.PI / 2); x.fillText('26,00', 0, 0); x.restore();
+  x.lineWidth = 2; x.beginPath(); x.moveTo(X(23), Y(-11.5)); x.lineTo(X(23.4), Y(-12.6)); x.lineTo(X(23.8), Y(-11.5)); x.stroke(); x.fillText('N', X(23.4), Y(-13.3));
+  x.textAlign = 'right'; x.fillStyle = '#2b2e35'; x.font = '600 22px system-ui, sans-serif'; x.fillText('Planta Ruta 5 · planta baja', X(22), Y(14.3));
+  x.textAlign = 'left'; x.fillStyle = '#7b818b'; x.font = '20px system-ui, sans-serif';
+  for (let i = 0; i <= 2; i++) { x.fillRect(X(-22 + i * 5), Y(14.05), 2, 14); x.fillText(`${i * 5}`, X(-22 + i * 5) + 5, Y(14.45)); }
+  x.fillRect(X(-22), Y(14.4), 10 * M, 2); x.fillText('m', X(-11.6), Y(14.45));
+  const webp = c.toDataURL('image/webp', 0.9);
+  return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/jpeg', 0.9);
+}
+
+/** El plano de ejemplo de cada sitio, con las puertas enlazadas a las de la demostración. */
+function planoEjemplo(site, door) {
+  const acc = (id, nombre, clase, x, z, r = 0, extra = {}) => ({ id, t: 'acceso', nombre, clase, x, z, r, puerta: door(nombre), ...extra });
+  if (site.name === 'Planta Ruta 5') {
+    const zona = (id, nombre, x0, z0, x1, z1) => ({ id, t: 'recinto', nombre, tipo: 'sin', piso: 'sin', pts: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] });
+    return { v: 1, motor: 1, escena: { nombre: site.name, inicio: { tx: -8, tz: 4, yaw: 0.3, pitch: 0.82, d: 36 }, piezas: [
+      { id: 'ter1', t: 'terreno', nombre: site.name, mat: 'hormigon', pts: [[-40, -28], [40, -28], [40, 28], [-40, 28]] },
+      { id: 'pla1', t: 'plano', nombre: 'Planta baja', x: 0, z: 0, ancho: 48, aspecto: 30 / 48, fijo: true, img: dibujoPlanta() },
+      zona('zon1', 'Portería', -22, 5, -14, 13), zona('zon2', 'Hall de molinetes', -14, 5, -6, 13), zona('zon3', 'Vestuarios', -22, -4, -14, 5), zona('zon4', 'Depósito de repuestos', 12, -13, 22, -2),
+      acc('acc1', 'Portería peatonal', 'puerta', -18, 13),
+      acc('acc2', 'Molinete de entrada', 'molinete', -10.3, 5, 0, { muro: false }), acc('acc3', 'Molinete de salida', 'molinete', -8.3, 5),
+      acc('acc4', 'Vestuarios', 'puerta', -14, 0, Math.PI / 2), acc('acc5', 'Depósito de repuestos', 'puerta', 12, -6, -Math.PI / 2),
+    ] }, puertas: [['Portería peatonal', 'acc1', 'Portería'], ['Molinete de entrada', 'acc2', 'Hall de molinetes'], ['Molinete de salida', 'acc3', 'Hall de molinetes'], ['Vestuarios', 'acc4', 'Vestuarios'], ['Depósito de repuestos', 'acc5', 'Depósito de repuestos']]
+      .map(([n, id, lugar]) => ({ puerta: door(n), id, lugar })) };
+  }
+  if (site.name === 'Centro logístico Ruta 1') {
+    const cerco = (id, pts) => ({ id, t: 'cerco', tipo: 'malla', alto: 2.4, pts });
+    return { v: 1, motor: 1, escena: { nombre: site.name, inicio: { tx: 6, tz: 14, yaw: 0.55, pitch: 0.72, d: 170 }, piezas: [
+      { id: 'ter1', t: 'terreno', nombre: site.name, mat: 'ripio', pts: [[-95, -55], [95, -55], [95, 66], [-95, 66]] },
+      { id: 'cal1', t: 'calle', ancho: 10, tipo: 'asfalto', linea: 'no', pts: [[10, 70], [10, 9]] }, { id: 'cal2', t: 'calle', ancho: 10, tipo: 'asfalto', linea: 'no', pts: [[-78, 9], [86, 9]] },
+      { id: 'gal1', t: 'galpon', nombre: 'Galpón A', x: -35, z: -15, ancho: 60, fondo: 30, alto: 10, portones: 4 },
+      { id: 'gal2', t: 'galpon', nombre: 'Galpón B', x: 40, z: -15, ancho: 50, fondo: 30, alto: 10, portones: 3, color: '#dfe4e8' },
+      { id: 'mod1', t: 'modulo', nombre: 'Oficinas', x: -35, z: 32, ancho: 22, fondo: 8, pisos: 2 },
+      cerco('cer1', [[-90, 60], [-90, -50], [90, -50], [90, 5.6]]), cerco('cer2', [[90, 19.5], [90, 60], [15.4, 60]]), cerco('cer3', [[-2.5, 60], [-90, 60]]),
+      { id: 'arb1', t: 'arboles', tipo: 'fronda', paso: 8, pts: [[-86, 56], [-10, 56]] }, { id: 'arb2', t: 'arboles', tipo: 'pino', paso: 9, pts: [[-86, 50], [-86, -46]] },
+      acc('acc1', 'Portón 1', 'porton', 10, 60, 0, { ancho: 8 }), acc('acc2', 'Barrera de camiones', 'barrera', 10, 50),
+      acc('acc3', 'Portón 2', 'porton', 90, 10, Math.PI / 2),
+      acc('acc4', 'Sala de racks', 'puerta', -50, 0.13, Math.PI, { muro: false, lector: 'ambos' }),
+      acc('acc5', 'Oficina de tráfico', 'puerta', 31.5, 0.13, Math.PI, { muro: false, lector: 'ambos' }),
+      acc('acc6', 'Administración', 'vidrio', -35, 36.13, Math.PI, { muro: false, lector: 'ambos' }),
+    ] }, puertas: [['Portón 1', 'acc1', site.name], ['Barrera de camiones', 'acc2', site.name], ['Portón 2', 'acc3', site.name], ['Sala de racks', 'acc4', 'Galpón A'], ['Oficina de tráfico', 'acc5', 'Galpón B'], ['Administración', 'acc6', 'Oficinas']]
+      .map(([n, id, lugar]) => ({ puerta: door(n), id, lugar })) };
+  }
+  return null;
+}
+
 // Estado de la interfaz y piezas compartidas entre vistas.
 const S = {
   api: null, me: null, org: '', license: null, engine: '', version: '', brands: [], security: {},
   overview: null, sites: [], devices: [], doors: [], levels: [], people: [], feed: [], events: [], notices: [],
   view: 'panel', peopleQ: '', eventGroup: 'main', settingsTab: 'empresa', lastPass: {}, doorAlert: {}, linkDown: false, draftFace: undefined, fresh: null,
+  places: {}, planoSite: null, planoFocus: null, motorOk: undefined,
 };
 const root = document.documentElement, hostTheme = root.dataset.theme;
 const isAdmin = () => S.me?.role === 'admin';
@@ -1237,7 +1363,7 @@ async function load(...keys) {
   const paths = {
     overview: '/api/overview', sites: '/api/sites', devices: '/api/devices', doors: '/api/doors', levels: '/api/levels', notices: '/api/alerts',
     people: `/api/people?q=${encodeURIComponent(S.peopleQ)}`, feed: '/api/events?group=main&limit=40',
-    events: `/api/events?group=${S.eventGroup}&limit=60`,
+    events: `/api/events?group=${S.eventGroup}&limit=60`, places: '/api/places',
   };
   await Promise.all(keys.map(async key => { S[key] = await S.api.get(paths[key]); }));
 }
@@ -1555,7 +1681,8 @@ actions.door = async el => {
   sheet.open(d.name, html`
     ${canOperate() ? html`<button class="btn go wide" type="button" data-action="door-open" data-id="${d.id}" ${off ? raw('disabled') : ''}>Abrir puerta</button>` : ''}
     ${off ? html`<p class="hint">El equipo está sin conexión. Hasta que vuelva no se puede abrir desde acá.</p>` : ''}
-    <dl class="facts"><dt>Sitio</dt><dd>${d.site_name}</dd><dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
+    <dl class="facts"><dt>Sitio</dt><dd>${d.site_name}</dd>${S.places?.[d.id] && S.places[d.id] !== d.site_name ? html`<dt>Lugar</dt><dd>${S.places[d.id]}</dd>` : ''}<dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
+    <button class="btn wide" type="button" data-action="door-plan" data-id="${d.id}">${icon('plano')}<span>Ver en el plano</span></button>
     <h3>Últimos movimientos</h3>
     ${recent.length ? html`<ol class="events">${recent.map(e => eventRow(e))}</ol>` : html`<p class="empty">Sin movimientos registrados.</p>`}
     ${isAdmin() ? html`<form class="form" data-form="door-name" data-id="${d.id}">
@@ -2002,7 +2129,7 @@ actions['look-mode'] = el => { look.set({ mode: el.dataset.id || undefined }); r
 actions['look-accent'] = el => { const c = el.dataset.color; look.set(c === ACCENTS[0][0] ? { accent: undefined, fg: undefined } : { accent: c, fg: look.ink(c) }); render(); };
 actions['look-solid'] = () => { look.set({ solid: !look.get().solid }); render(); };
 actions['look-plain'] = () => { look.set({ plain: !look.get().plain }); render(); };
-actions.night = () => { look.set({ mode: root.dataset.mode === 'dark' ? 'light' : 'dark' }); drawChrome(); if (S.view === 'ajustes') render(); };
+actions.night = () => { look.set({ mode: root.dataset.mode === 'dark' ? 'light' : 'dark' }); drawChrome(); planTheme(); if (S.view === 'ajustes') render(); };
 
 function siteSheet(site) {
   sheet.open(site ? site.name : 'Agregar sitio', html`<form class="form" data-form="site" data-id="${site?.id ?? ''}">
@@ -2096,13 +2223,114 @@ forms['2fa-disable'] = async (_form, v) => { await S.api.post('/api/me/2fa/disab
 actions['session-close'] = async el => { await S.api.del(`/api/me/sessions/${el.dataset.id}`); actions.account(); };
 actions['sessions-close-others'] = async () => { await S.api.post('/api/me/sessions/close-others'); toast('Las demás sesiones quedaron cerradas'); actions.account(); };
 
+// ── Plano ────────────────────────────────────────────────────────────────────
+// El plano de cada sitio con las puertas en 3D arriba. Es el motor común de Unity Tech (el mismo de Ondi y Darvi), dentro de un marco:
+// Kliva le pasa un anfitrión con el plano guardado, las puertas reales y lo que pasa en vivo; el motor dibuja, edita y avisa qué guardar.
+const MOTOR = '/motor/beta/index.html?app=kliva&embebida';
+const planoSite = () => S.sites.find(s => s.id === S.planoSite) || S.sites[0];
+
+/** Cómo está cada puerta, en las palabras del motor. */
+function doorPlanState(d) {
+  if (!d || d.device_status !== 'online') return 'caida';
+  if (S.doorAlert[d.id]) return 'alerta';
+  return d.state === 'open' ? 'abierta' : 'cerrada';
+}
+
+/** Prepara el anfitrión del motor para el sitio elegido. El marco lo lee al abrir, así que esto va antes de dibujar la vista. */
+async function preparePlan() {
+  const site = planoSite();
+  S.planoSite = site?.id ?? null;
+  if (!site) return;
+  if (S.motorOk === undefined) S.motorOk = await fetch(MOTOR.split('?')[0], { method: 'HEAD' }).then(r => r.ok, () => false);
+  const { plano } = await S.api.get(`/api/sites/${site.id}/plano`);
+  let timer = null, pending = null, listener = null;
+  window.__maquetaHost = {
+    state: plano, park: site.name, installer: S.me.name,
+    role: isAdmin() ? 'inst' : 'cli',
+    tema: root.dataset.mode === 'dark' ? 'oscuro' : 'claro',
+    save(state) {   // el motor ya espera a que se termine de mover algo; acá se juntan los cambios seguidos en un solo envío
+      pending = state; clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const body = pending; pending = null;
+        try { await S.api.put(`/api/sites/${site.id}/plano`, { plano: body }); for (const x of body.puertas ?? []) S.places[x.puerta] = x.lugar; }
+        catch (e) { toast(e.status === 413 ? 'El plano es demasiado grande: probá con una imagen más liviana' : e.message, 'deny'); }
+      }, 600);
+    },
+    puertas: async () => S.doors.filter(d => d.site_id === site.id).map(d => ({ id: d.id, nombre: d.name, equipo: d.device_name, estado: doorPlanState(d) })),
+    alVivo: fn => { listener = fn; },
+    vivo: m => listener?.(m),
+    abrir: canOperate() ? id => S.api.post(`/api/doors/${id}/open`) : undefined,
+    juego: on => root.classList.toggle('plano-full', on),
+  };
+}
+
+/** Lo que llega en vivo, traducido para el motor: solo las puertas del sitio que se está mirando. */
+function planLive(type, data) {
+  const host = window.__maquetaHost;
+  if (S.view !== 'plano' || !host) return;
+  const ofSite = id => S.doors.find(d => d.id === id && d.site_id === S.planoSite);
+  if (type === 'event' && data.door_id && ofSite(data.door_id)) {
+    const d = ofSite(data.door_id);
+    if (data.kind === 'access_granted') host.vivo({ puerta: d.id, ev: 'pasa', quien: data.person_name || '', estado: doorPlanState(d) });
+    else if (data.kind === 'access_denied') host.vivo({ puerta: d.id, ev: 'rechazo', estado: doorPlanState(d) });
+    else host.vivo({ puerta: d.id, estado: doorPlanState(d) });
+  } else if (type === 'door' && ofSite(data.id)) host.vivo({ puerta: data.id, estado: doorPlanState(ofSite(data.id)) });
+  else if (type === 'device') for (const d of S.doors.filter(x => x.device_id === data.id && x.site_id === S.planoSite)) host.vivo({ puerta: d.id, estado: doorPlanState(d) });
+}
+
+views.plano = () => {
+  const site = planoSite();
+  if (!site) return html`${head('Plano')}<section class="card"><p class="empty">Todavía no hay sitios. Creá el primero en Ajustes y después agregá sus equipos.</p></section>`;
+  const lede = isAdmin() ? 'Tocá Editar para subir el plano del lugar, ubicar cada puerta y nombrar los sectores.' : 'Cada puerta, en su lugar y en vivo.';
+  return html`
+    <header class="view-head"><div><h1>Plano</h1><p class="lede">${lede}</p></div>
+      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Sitio') : ''}</header>
+    <div class="plano">${S.motorOk === false
+      ? html`<p class="empty">El plano 3D se abre con Kliva instalado o en unitytech.uy/kliva/demo. Esta copia no trae los archivos del motor.</p>`
+      : html`<iframe id="plano-frame" src="${MOTOR}&sitio=${site.id}" title="Plano de ${site.name}" allow="fullscreen"></iframe>`}</div>`;
+};
+
+actions['plano-site'] = async el => {
+  if (el.dataset.id === S.planoSite) return;
+  S.planoSite = el.dataset.id; saved.set('kliva.plano.site', S.planoSite);
+  await preparePlan(); render();
+};
+
+/** Lleva al plano y, cuando el motor está listo, elige la puerta. */
+actions['door-plan'] = async el => {
+  const d = S.doors.find(p => p.id === el.dataset.id);
+  sheet.close();
+  if (d) { S.planoSite = d.site_id; saved.set('kliva.plano.site', d.site_id); }
+  S.planoFocus = el.dataset.id;
+  if (location.hash === '#plano') { await preparePlan(); render(); } else location.hash = 'plano';
+};
+
+/** El motor avisa que está listo cuando aparece window.__maqueta en el marco; entonces se elige la puerta pedida. */
+async function focusPlanDoor() {
+  const id = S.planoFocus; if (!id) return;
+  S.planoFocus = null;
+  for (let i = 0; i < 300; i++) {   // hasta 30 s: en un celular viejo el motor tarda en arrancar
+    const M = $('#plano-frame')?.contentWindow?.__maqueta;
+    if (M) { const p = M.E.piezas.find(q => q.puerta === id); if (p) M.elegir(p, true); else toast('Esa puerta todavía no está ubicada en el plano'); return; }
+    await wait(100);
+  }
+}
+
+/** El modo noche de Kliva manda: el motor cambia con él. */
+function planTheme() {
+  const host = window.__maquetaHost, M = $('#plano-frame')?.contentWindow?.__maqueta;
+  const tema = root.dataset.mode === 'dark' ? 'oscuro' : 'claro';
+  if (host) host.tema = tema;
+  if (M && M.motor.tema !== tema) M.motor.ponerTema(tema);
+}
+
 // Arranque, menú, ingreso, instalación y lo que llega en vivo.
 const NAV = [
-  { id: 'panel', label: 'Panel' }, { id: 'eventos', label: 'Eventos' },
+  { id: 'panel', label: 'Panel' }, { id: 'plano', label: 'Plano' }, { id: 'eventos', label: 'Eventos' },
   { group: 'Gestión' }, { id: 'personas', label: 'Personas' }, { id: 'niveles', label: 'Niveles' },
   { group: 'Instalación' }, { id: 'equipos', label: 'Equipos' }, { id: 'integraciones', label: 'Integraciones' }, { id: 'ajustes', label: 'Ajustes' },
 ];
-const DOCK = ['panel', 'eventos', 'personas', 'equipos'];
+const DOCK = ['panel', 'plano', 'eventos', 'personas'];
 const label = id => NAV.find(n => n.id === id).label;
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -2145,6 +2373,8 @@ function drawChrome() {
 function render() {
   const view = $('#view');
   if (!view || !views[S.view]) return;
+  view.classList.toggle('full', S.view === 'plano');
+  $('#main')?.classList.toggle('fixed', S.view === 'plano');
   setHTML(view, views[S.view]());
   $$('.seg-in', view).forEach(el => movePill(el, 'x'));
   drawChrome();
@@ -2154,10 +2384,13 @@ function render() {
 async function route() {
   const id = location.hash.slice(1);
   S.view = views[id] ? id : 'panel';
+  if ($('#menu')) drawChrome();   // la pastilla va a la sección en el momento, aunque los datos tarden
   try {
     if (S.view === 'eventos') await load('events');
     if (S.view === 'personas') await load('people', 'levels');
     if (S.view === 'integraciones') { S.integrations = isAdmin() ? await S.api.get('/api/integrations') : null; }
+    if (S.view === 'plano') await preparePlan();
+    else root.classList.remove('plano-full');
   } catch (e) { toast(e.message, 'deny'); }
   render();
   // La pantalla aterriza y el punto del logo late: solo al cambiar de pantalla, nunca por algo que llegó en vivo.
@@ -2169,6 +2402,7 @@ async function route() {
   view.classList.add('land');
   setTimeout(() => view.classList.remove('land'), 1000);
   for (const mark of $$('.mark')) { mark.classList.remove('beat'); void mark.offsetWidth; mark.classList.add('beat'); }
+  if (S.view === 'plano') focusPlanDoor();
 }
 
 actions.fold = () => {
@@ -2221,6 +2455,10 @@ function showFresh() {
 }
 
 function onLive(type, data) {
+  try { handleLive(type, data); } finally { planLive(type, data); }
+}
+
+function handleLive(type, data) {
   const status = () => { if (S.view === 'panel') setHTML($('#status'), statusText()); };
   if (type === 'event') {
     S.feed.unshift(data);
@@ -2257,6 +2495,7 @@ function onLive(type, data) {
     if (S.view === 'panel') { patchDoor(door.id); status(); }
   } else if (type === 'device') {
     Object.assign(S.devices.find(d => d.id === data.id) ?? {}, data);
+    if (data.status) for (const d of S.doors) if (d.device_id === data.id) d.device_status = data.status;
     refreshSoon('devices', 'doors', 'overview', 'notices');
   } else if (type === 'sync') {
     if (data.fresh) S.fresh = data.fresh;
@@ -2369,7 +2608,8 @@ async function enter() {
     S.api.setSession(null);
     return showLogin();
   }
-  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices');
+  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places');
+  S.planoSite = saved.get('kliva.plano.site');
   shell();
   await route();
   S.stop?.();
