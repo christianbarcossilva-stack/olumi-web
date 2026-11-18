@@ -42,11 +42,11 @@ const P_BLUR = 'uniform sampler2D t; uniform vec2 d; varying vec2 vUv; void main
 // Es lo que saca el aspecto «de plástico»: las cosas quedan apoyadas y con volumen. El radio crece con la distancia, así se nota de cerca y de lejos.
 const P_AO = `uniform sampler2D tD; uniform mat4 pInv; uniform float p11, asp; uniform vec2 px; varying vec2 vUv;
   vec3 pos(vec2 uv){ uv = (floor(uv / px) + 0.5) * px; /* al centro del punto de la imagen: si no, en superficies muy inclinadas aparecen franjas */ float d = texture2D(tD, uv).x; vec4 v = pInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
-  void main(){ float d0 = texture2D(tD, vUv).x; if (d0 >= 0.999999) { gl_FragColor = vec4(1.0, 9000.0, 0.0, 1.0); return; }
-    vec3 p = pos(vUv), pl = pos(vUv - vec2(px.x, 0.0)), pr = pos(vUv + vec2(px.x, 0.0)), pd = pos(vUv - vec2(0.0, px.y)), pu = pos(vUv + vec2(0.0, px.y));
+  void main(){ vec2 u0 = vUv - 0.5 * px; /* el centro de un punto de la imagen grande: justo en el borde entre dos, cada placa de video elige distinto y quedan franjas */ float d0 = texture2D(tD, (floor(u0 / px) + 0.5) * px).x; if (d0 >= 0.999999) { gl_FragColor = vec4(1.0, 9000.0, 0.0, 1.0); return; }
+    vec3 p = pos(u0), pl = pos(u0 - vec2(px.x, 0.0)), pr = pos(u0 + vec2(px.x, 0.0)), pd = pos(u0 - vec2(0.0, px.y)), pu = pos(u0 + vec2(0.0, px.y));
     vec3 dx = abs(pl.z - p.z) < abs(pr.z - p.z) ? p - pl : pr - p, dy = abs(pd.z - p.z) < abs(pu.z - p.z) ? p - pd : pu - p, n = normalize(cross(dx, dy));
     float z = -p.z, radio = clamp(z * 0.035, 0.2, 7.0), ruv = radio * p11 / z * 0.5, ang = (mod(floor(gl_FragCoord.x), 4.0) * 5.0 + mod(floor(gl_FragCoord.y), 4.0) * 3.0 + mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) * 8.0) / 16.0 * 6.2832, s = 0.0;
-    for (int i = 0; i < 12; i++) { float f = sqrt((float(i) + 0.5) / 12.0), a = ang + float(i) * 2.39996; vec3 v = pos(vUv + vec2(cos(a) / asp, sin(a)) * f * ruv) - p; float l = length(v) + 0.0001;
+    for (int i = 0; i < 12; i++) { float f = sqrt((float(i) + 0.5) / 12.0), a = ang + float(i) * 2.39996; vec3 v = pos(u0 + vec2(cos(a) / asp, sin(a)) * f * ruv) - p; float l = length(v) + 0.0001;
       s += max(0.0, dot(n, v) / l - 0.16) * smoothstep(radio * 1.7, radio * 0.35, l); }
     gl_FragColor = vec4(clamp(1.0 - s / 12.0 * 3.3, 0.0, 1.0), z, 0.0, 1.0); }`;
 const P_AOB = `uniform sampler2D t; uniform vec2 d; varying vec2 vUv;
