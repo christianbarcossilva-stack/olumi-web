@@ -7,7 +7,7 @@
 //   host.clave(o)   pide la clave de borrado de la empresa (promesa: true o false); sin eso, se confirma manteniendo apretado
 //   host.abrirDoc(p) abre la documentación de un rack o gabinete (bocas, patch cords, fibras)
 import { THREE, crearMotor } from './nucleo.js?v=3';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, COL, aLoLargo, matSuelo, ABERTURAS, areaSig } from './piezas.js?v=10';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig } from './piezas.js?v=10';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=2';
 import { svg } from './iconos.js?v=1';
 import { construir } from './construir.js?v=1';
