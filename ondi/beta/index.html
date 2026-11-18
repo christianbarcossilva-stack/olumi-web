@@ -368,6 +368,11 @@ html.bfullon body::after{content:"";position:fixed;inset:0;background:rgba(0,0,0
 .cj-f{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cj-f li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--line);border-radius:10px}.cj-f span{color:var(--muted);font-size:13.5px}
 .cj-n{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:12px;border:1px dashed var(--line);border-radius:10px}.cj-t td{padding:4px 6px;vertical-align:middle}.cj-t select,.cj-t input{padding:6px 8px;font-size:13px}.cj-x{color:var(--muted);text-align:center}
 .cjd{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25)}
+/* clave de borrado de racks y gabinetes */
+.modal.clv{z-index:300}.modal.clv > div{width:min(380px,100%);gap:10px;text-align:left}.clv h2{font-size:19px;display:flex;align-items:center;gap:10px}.clv h2 svg{width:22px;height:22px;flex:none;color:var(--crit)}
+.clv p{margin:0;color:var(--muted);font-size:14px}.clv input{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--fill);padding:0 14px;font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.35em;-webkit-text-security:disc;outline:none}
+.clv input::placeholder{letter-spacing:0;font:500 15px/1 var(--f-text,system-ui)}.clv input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}.clv .clverr{color:var(--crit);min-height:18px;font-size:13px}.clv .acts{display:flex;gap:8px;justify-content:flex-end}
+.docpap{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px}.docpap > button{justify-self:start}.docpap div{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:4px 2px}.docpap small{color:var(--muted);display:block}
 </style>
 </head>
 <body>
@@ -702,6 +707,8 @@ function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos'
 let MAQ = null, maqT = null;
 function maqBar() { return `<span class="save" id="savest">${siteEd() ? esc(S.maqSave || 'Los cambios se guardan solos.') : 'Solo lectura.'}</span><span class="grow"></span>
   ${siteEd() && !['polo', 'motor'].includes((S.site.data && S.site.data.base) || 'vacia') ? `<button class="btn sm pri" data-do="maqplano" title="Una imagen o captura del plano del cliente: queda de fondo, con su escala, para dibujar encima">${IC.plano}Subir plano</button>` : ''}
+  ${staff() && S.maqVieja ? `<button class="btn sm" data-do="maqprobar" title="Abre una copia de esta maqueta en el motor nuevo, para compararlas. No cambia la maqueta real.">Probar en el motor nuevo</button>` : ''}
+  ${S.prueba && S.prueba.site === S.site.id ? `<span class="tag" title="Lo que cambies acá queda solo en este navegador">Copia de prueba · motor nuevo</span><button class="btn sm" data-do="maqprobarre" title="Vuelve a armar la copia desde la maqueta real (se pierde lo que cambiaste en la copia)">Rehacer la copia</button><button class="btn sm pri" data-do="maqprobarfin">Volver a la maqueta de siempre</button>` : ''}
   ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}<button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button>`; }
 // varios en la misma maqueta: canal en tiempo real por cliente (Realtime de Supabase, sin tablas). Cada uno manda su posición
 // mientras camina y recibe la de los otros; la lista de conectados sale de la presencia del canal.
@@ -729,11 +736,18 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
         ...E.list.map(d => ({ uid: (d.marca || 'unifi') + ':' + (d.mac || d.id), marca: d.marca || 'unifi', nombre: d.nombre, modelo: d.modelo, linea: d.linea, ip: d.ip, mac: d.mac, estado: d.estado, version: d.version, consola: d.consola, actualizar: d.actualizar })),
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     crearEquipo: siteEd() ? async row => { const r = await SB.from('ondi_equipos').insert({ org_id: st.org_id, site_id: st.id, ...row }).select().single(); if (r.error) throw r.error; (S.man[st.id] = S.man[st.id] || []).push(r.data); delete S.eq[st.id]; return r.data; } : null,
-    ir: S.maqIr || null, indice: idx => docIndice(st, idx), presencia: maqPresencia(st),
+    ir: S.maqIr || null, indice: idx => docIndice(st, idx), presencia: maqPresencia(st), clave: o => pedirClave(o),
+    papelera: (id, cab, dev) => { const P = S.docPrev[st.id] = S.docPrev[st.id] || {}; P.papelera = [{ id, cab: docCl(cab) || { items: [], links: [], ports: {} }, pieza: null, dev: docCl(dev), cuando: Date.now(), quien: myName() }, ...docPap(P)].slice(0, 20); },
+    abrirDoc: staff() ? p => { S.docIni = p.id; if (S.doc && S.doc.site === st.id) { S.doc.cid = p.id; S.doc.hist = false; S.doc.caja = null; } S.tab = 'doc'; render(); } : null,
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
   S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
   const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=10' : 'maqueta.html?v=53'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  // copia de prueba en el motor nuevo: sale de lo que arma la maqueta de siempre y se guarda solo en este navegador (la real no se toca)
+  const pr = !nuevo && S.prueba && S.prueba.site === st.id ? S.prueba : null;
+  if (pr) { let g = null; try { g = JSON.parse(localStorage.getItem('ondi.prueba.' + st.id) || 'null'); } catch (e) {} if (pr.nueva || !g || !g.escena) g = { v: 1, motor: 1, escena: pr.escena }; pr.nueva = false;
+    MAQ = { ...MAQ, state: g, presencia: null, abrirDoc: null, save: s2 => { try { localStorage.setItem('ondi.prueba.' + st.id, JSON.stringify(s2)); setSave('Copia de prueba: se guarda solo en este navegador.'); } catch (e) { setSave('No se pudo guardar la copia de prueba.'); } } }; window.__ondiMaqueta = MAQ; S.maqSave = 'Copia de prueba: se guarda solo en este navegador.'; }
+  S.maqVieja = !nuevo && !pr; { const mb = $('#maqbar'); if (mb) mb.innerHTML = maqBar(); }
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo || pr ? '../../motor/beta/?app=ondi&v=11' : 'maqueta.html?v=55'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
 function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
@@ -875,6 +889,41 @@ function datosView() { const st = S.site, d = st.data || {}, dis = editor() ? ''
       <form class="form" data-do-f="delsite"><label class="fld">Escribí el nombre para confirmar<input id="del_name" autocomplete="off" placeholder="${esc(st.name)}"></label><div><button class="btn danger" type="submit">Borrar ${esc(st.name)}</button></div></form></div>` : ''}</div>`; }
 
 /* ajustes */
+// ---------- clave de borrado (racks y gabinetes) ----------
+// La define un administrador en Ajustes. Se guarda su huella (PBKDF2-SHA256 con sal) en los ajustes de la empresa, nunca el número.
+// Es una traba contra borrar por error: se pide cada vez, en la documentación y en la maqueta. Lo borrado va además a la papelera (30 días).
+const CLV = { fallos: 0, hasta: 0, abierta: false };
+const b64 = u => btoa(String.fromCharCode(...u)), deB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function claveHuella(pin, sal, iter) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']); return b64(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: iter }, k, 256))); }
+async function claveGuardar(pin) { const sal = b64(crypto.getRandomValues(new Uint8Array(16))), clave = { sal, iter: 150000, hash: await claveHuella(pin, sal, 150000), por: myName(), cuando: new Date().toISOString() };
+  const data = { ...(S.ajustes || {}), clave }, r = await SB.from('ondi_ajustes').upsert({ org_id: orgId(), data }, { onConflict: 'org_id' }); if (r.error) throw r.error; S.ajustes = data; }
+// pide la clave y devuelve true si es la correcta. o: { titulo, detalle, boton, crear (definir una nueva) }
+async function pedirClave(o = {}) { if (CLV.abierta) return false; if (staff() && S.ajustes === null) { try { await loadAjustes(); } catch (e) {} }
+  const C = (S.ajustes || {}).clave, crear = o.crear || (!C && admin()), candado = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>';
+  if (!C && !crear) { toast(staff() ? 'Todavía no hay clave de borrado: un administrador la define en Ajustes → Empresa y equipo.' : 'Solo la instaladora puede sacar racks y gabinetes.'); return false; }
+  return new Promise(listo => { CLV.abierta = true; const m = document.createElement('div'); m.className = 'modal clv'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Clave de borrado');
+    const campo = (id, ph) => `<input id="${id}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="${ph}" aria-label="${ph}">`;
+    m.innerHTML = `<div><form style="display:grid;gap:10px"><h2>${candado}<span>${esc(crear && !o.crear ? 'Definí la clave de borrado' : o.titulo || 'Clave de borrado')}</span></h2>
+      <p>${esc(crear && !o.crear ? 'Todavía no hay clave. Elegí una de 4 a 8 números: se va a pedir cada vez que alguien quiera sacar un rack o un gabinete.' : o.detalle || 'Escribí la clave de borrado de la empresa.')}</p>
+      ${campo('clv1', crear ? 'Clave nueva' : 'Clave')}${crear ? campo('clv2', 'Repetila') : ''}<p class="clverr" role="alert"></p>
+      <div class="acts"><button class="btn" type="button" data-no>Cancelar</button><button class="btn ${crear ? 'pri' : 'danger'}" type="submit">${esc(crear ? 'Guardar la clave' : o.boton || 'Sacar')}</button></div></form></div>`;
+    document.body.appendChild(m); const i1 = m.querySelector('#clv1'), err = m.querySelector('.clverr'), fin = v => { CLV.abierta = false; removeEventListener('keydown', tecla, true); m.remove(); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(false); } };
+    addEventListener('keydown', tecla, true); m.addEventListener('pointerdown', e => { if (e.target === m) fin(false); }); m.querySelector('[data-no]').onclick = () => fin(false); setTimeout(() => i1.focus(), 30);
+    m.querySelector('form').addEventListener('submit', async e => { e.preventDefault(); const pin = i1.value.trim(), falta = Math.ceil((CLV.hasta - Date.now()) / 1000);
+      if (falta > 0) { err.textContent = `Demasiados intentos. Probá de nuevo en ${falta} segundos.`; return; }
+      if (crear) { if (!/^\d{4,8}$/.test(pin)) { err.textContent = 'Tienen que ser de 4 a 8 números.'; return; } if (pin !== m.querySelector('#clv2').value.trim()) { err.textContent = 'Las dos no coinciden.'; return; }
+        try { await claveGuardar(pin); toast('Clave de borrado guardada'); fin(true); } catch (er) { err.textContent = 'No se pudo guardar: ' + errTxt(er); } return; }
+      let ok = false; try { ok = (await claveHuella(pin, C.sal, C.iter)) === C.hash; } catch (er) {}
+      if (ok) { CLV.fallos = 0; fin(true); return; } CLV.fallos++; i1.value = ''; i1.focus();
+      if (CLV.fallos >= 5) { CLV.fallos = 0; CLV.hasta = Date.now() + 60000; err.textContent = 'Cinco intentos fallidos: se bloquea un minuto.'; } else err.textContent = 'Esa no es la clave.'; }); }); }
+// cambiarla (Ajustes): pide la actual y después la nueva
+async function claveCambiar() { if (!admin()) return; if ((S.ajustes || {}).clave && !(await pedirClave({ titulo: 'Cambiar la clave de borrado', detalle: 'Primero escribí la clave actual.', boton: 'Seguir' }))) return;
+  if (await pedirClave({ crear: true, titulo: 'Clave de borrado nueva', detalle: 'De 4 a 8 números. Se pide para sacar un rack o un gabinete.' })) render(); }
+function claveCard() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return ''; } const C = S.ajustes.clave;
+  return `<div class="card pad" style="grid-column:1/-1"><h2>Clave de borrado</h2><p class="muted" style="margin:6px 0 12px;font-size:14px">Para sacar un rack o un gabinete, de la documentación o de la maqueta, se pide esta clave. Lo que se saca queda 30 días en la papelera de la documentación.</p>
+    <p style="margin:0 0 12px">${C ? `Definida${C.por ? ' por ' + esc(C.por) : ''}${C.cuando ? ' el ' + new Date(C.cuando).toLocaleDateString('es-UY') : ''}.` : '<b>Todavía no está definida.</b>'}</p>${admin() ? `<button class="btn" data-clave="cambiar">${C ? 'Cambiar la clave' : 'Definir la clave'}</button>` : '<p class="muted" style="font-size:13px;margin:0">La cambia un administrador.</p>'}</div>`; }
+document.addEventListener('click', e => { if (e.target.closest('[data-clave=cambiar]')) claveCambiar(); });
+
 function ajustesView() { const t = S.atab;
   const tabs = [['empresa', 'Empresa y equipo'], ['roles', 'Roles y permisos'], ['clientes', 'Clientes'], ['integraciones', 'Integraciones'], ['avisos', 'Avisos'], ...(admin() ? [['actividad', 'Actividad']] : []), ['cuenta', 'Mi cuenta']];
   return `<div class="wrap"><div class="head"><div><h1>Ajustes</h1><p>${esc(S.ctx.name)} · ${esc(ROLN[S.ctx.role] || S.ctx.role)}</p></div></div>
@@ -885,7 +934,7 @@ function empresaView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div clas
   return `<div class="grid2"><div class="card pad"><h2>${esc(o.name)}</h2><dl class="rows" style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:8px 0 0;font-size:14px"><dt class="muted">Plan de Ondi</dt><dd style="margin:0">${esc(S.ctx.plan || o.plan || '—')}</dd><dt class="muted">Clientes en Ondi</dt><dd style="margin:0">${S.sites.length}</dd><dt class="muted">Tu rol</dt><dd style="margin:0">${esc(ROLN[S.ctx.role] || S.ctx.role)}</dd></dl>
       ${admin() ? `<form class="form inline" data-do-f="orgname" style="margin-top:14px"><label class="fld">Nombre de la empresa<input id="o_name" value="${esc(o.name)}" maxlength="80" required></label><button class="btn" type="submit">Guardar</button></form>` : ''}
       ${o.join_code && admin() ? `<h3 style="margin:18px 0 6px;font-size:15px">Sumar a alguien de tu equipo</h3><p class="muted" style="margin:0 0 8px;font-size:14px">Le pasás este código: crea su cuenta en Ondi, elige "Tengo un código" y queda en tu empresa.</p><p><span class="code">${esc(o.join_code)}</span></p>` : ''}</div>
-    <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.nombre || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}${m.ultimo ? ' · entró ' + esc(ago(m.ultimo)) : ''}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div></div>`; }
+    <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.nombre || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}${m.ultimo ? ' · entró ' + esc(ago(m.ultimo)) : ''}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div>${claveCard()}</div>`; }
 async function loadOrg() { const [o, t] = await Promise.all([SB.from('orgs').select('id,name,plan,join_code').eq('id', orgId()).maybeSingle(), SB.rpc('ondi_equipo', { o: orgId() }).then(r => r.error ? SB.from('members').select('user_id,role,display_name,email').eq('org_id', orgId()) : r)]);
   S.org = o.data || { name: S.ctx.name }; S.team = (t.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)); if (S.view === 'ajustes') render(); }
 /* sitios de la cuenta de la marca: a qué cliente de Ondi va cada uno */
@@ -1141,6 +1190,10 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (a === 'newcode') { const r = await SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: !!S.code }); if (r.error) throw r.error; S.code = r.data; toast('Código nuevo listo'); render(); }
     if (a === 'nocode') { const r = await SB.rpc('ondi_sin_codigo', { o: st.org_id, s: st.id }); if (r.error) throw r.error; S.code = null; toast('Código desactivado: los que ya entraron siguen hasta que los quites'); render(); }
     if (a === 'copylink') { const link = HERE + '?codigo=' + encodeURIComponent(S.code); try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch (er) { prompt('Copiá el enlace:', link); } }
+    if (a === 'maqprobar' || a === 'maqprobarre') { let r = null; if (a === 'maqprobar') { try { r = $('#maqframe').contentWindow.__aMotor(); } catch (e) {} if (!r || !r.escena) { toast('No se pudo armar la copia. Esperá a que termine de cargar la maqueta y probá de nuevo.'); return; } S.prueba = { site: S.site.id, escena: r.escena, nueva: true };
+        const f = Object.entries(r.sin || {}).map(([k, n]) => n + ' ' + k).join(', '); toast(`Copia de prueba armada: ${r.escena.piezas.length} piezas.${f ? ' Todavía no pasan: ' + f + '.' : ''}`); mountMaq(); }
+      else { S.prueba = null; try { localStorage.removeItem('ondi.prueba.' + S.site.id); } catch (e) {} S.maqSave = ''; await mountMaq(); toast('Cuando cargue la maqueta de siempre, tocá «Probar en el motor nuevo» para armar la copia otra vez.'); } return; }
+    if (a === 'maqprobarfin') { S.prueba = null; S.maqSave = ''; mountMaq(); return; }
     if (a === 'maqfull') { const b = $('#maqbox'); if (!b) return; if (b.requestFullscreen && !document.fullscreenElement) b.requestFullscreen().catch(() => b.classList.toggle('full')); else if (document.fullscreenElement) document.exitFullscreen(); else b.classList.toggle('full'); }
     if (a === 'maqexport') { const blob = new Blob([JSON.stringify(MAQ && MAQ.state || {}, null, 1)], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'maqueta-' + st.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
     if (a === 'maqplano') { S.startPlano = true; mountMaq(); return; }
@@ -1201,7 +1254,7 @@ function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D
   const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
-  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
   if (data.campoMq) { if (Array.isArray(data.campo)) data.campo = data.campo.map(x => { const m = data.campoMq[x.id]; return m && m.name && m.name !== x.nombre ? { ...x, nombre: m.name } : x; }); delete data.campoMq; } // nombres que se cambiaron en la maqueta
   const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data), campoDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
   S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
@@ -1264,7 +1317,7 @@ async function mountDoc() { const st = S.site, box = $('#docbox'); if (!box) ret
   if (S.site !== st || !$('#docbox')) return; docPaint(); }
 function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx || {};
   return { cabs: W.cabs, fibs: W.fibs, editar: () => siteEd(), aviso: m => toast(m), cliente: () => (st.data && st.data.parque) || st.name,
-    devs: () => docMotor(W) ? (((W.escena || {}).piezas) || []).filter(p => ['camara', 'wifi', 'sensor', 'grabador', 'router', 'switch', 'ups'].includes(p.t)).map(p => ({ id: p.id, nombre: p.nombre || '', lugar: '', estado: 'ok' })) : (idx.devs || []).map(d => ({ ...d, estado: 'ok' })),
+    devs: () => docMotor(W) ? (((W.escena || {}).piezas) || []).filter(p => ['camara', 'ap', 'wifi', 'sensor', 'nvr', 'grabador', 'router', 'switch', 'ups'].includes(p.t)).map(p => ({ id: p.id, nombre: p.nombre || '', lugar: '', estado: 'ok' })) : (idx.devs || []).map(d => ({ ...d, estado: 'ok' })),
     reales: () => (((S.eq[st.id] || {}).list) || []).filter(x => !x.consola).map(x => ({ uid: (x.marca || 'unifi') + ':' + (x.mac || x.id), nombre: x.nombre, modelo: x.modelo, mac: x.mac, ip: x.ip, version: x.version, estado: VIVO.includes(x.estado) ? 'ok' : ['offline', 'caido'].includes(x.estado) ? 'crit' : 'warn' })),
     guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
     largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
@@ -1278,7 +1331,7 @@ function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx
       return `<button class="red-b docback" data-r="acc" data-v="volver">${DIC.back}<span>Racks</span></button><button class="red-b ico" data-r="acc" data-v="full" title="${full ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}" aria-label="${full ? 'Salir de pantalla completa' : 'Pantalla completa'}">${full ? DIC.chico : DIC.grande}</button>`
         + (r && r.sin ? `<button class="red-b pri" data-r="acc" data-v="ir">Ubicar en la maqueta</button>` : `<button class="red-b" data-r="acc" data-v="ir">Ver en la maqueta</button>`); },
     menu: () => siteEd() ? [['borrar', 'Sacar este rack de la documentación']] : [],
-    accion: (v, b) => { if (v === 'volver') { D.cid = null; docPaint(); } else if (v === 'ir') docIr(D.cid); else if (v === 'full') docFull(); else if (v === 'borrar') { if (b.dataset.ok !== '1') { const c = W.cabs[D.cid] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(D.cid); } } }; }
+    accion: (v, b) => { if (v === 'volver') { D.cid = null; docPaint(); } else if (v === 'ir') docIr(D.cid); else if (v === 'full') docFull(); else if (v === 'borrar') docPedirBorrar(D.cid); } }; }
 // pantalla completa: la documentación ocupa toda la pantalla (sin el menú de la app); Esc vuelve
 function docFull(on) { const box = $('#docbox'); if (!box) return; on = on == null ? !box.classList.contains('full') : on; box.classList.toggle('full', on); document.documentElement.classList.toggle('docfull', on);
   try { if (on && !document.fullscreenElement && box.requestFullscreen) box.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} docPaint(); }
@@ -1313,6 +1366,8 @@ function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim
       <span class="docu" aria-hidden="true"><i style="width:${Math.min(100, Math.round(r.usoU / Math.max(1, r.cap) * 100))}%"></i></span><small>${r.links} ${r.links === 1 ? 'patch cord' : 'patch cords'}</small>
       ${r.sin ? `<span class="docsin">Sin ubicar en la maqueta</span>` : ''}</button>`; }
   h += listaCajas; if ((R.length || Object.keys(D.W.cajas || {}).length) && !F.length && !CJ.length) h += `<p class="muted" style="margin:6px 4px">No hay nada con «${esc(D.q)}».</p>`;
+  const P = docPap(D.W), hace = t => { const d = Math.floor((Date.now() - t) / 864e5); return d ? `hace ${d} día${d > 1 ? 's' : ''}` : 'hoy'; };
+  if (P.length && ed) h += `<div class="docpap"><button class="btn sm" data-dk="papelera" aria-expanded="${!!D.pap}">Papelera · ${P.length}</button>${D.pap ? P.map((x, i) => `<div><span><b>${esc(x.id)}</b><small>${(x.cab.items || []).length} equipos · sacado ${hace(x.cuando)}${x.quien ? ' por ' + esc(x.quien) : ''}</small></span><button class="btn sm" data-dk="recuperar" data-v="${i}">Recuperar</button></div>`).join('') : ''}</div>`;
   return h; }
 function docList() { const l = $('#docl'); if (l) l.innerHTML = docListHTML(); }
 function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D.cid ? all.filter(e => e.r === D.cid) : all;
@@ -1342,7 +1397,15 @@ function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = 
   else { id = docNid(W, D, gab ? 'G-' : 'RK-'); const sz = gab ? (ga <= 40 ? 'S' : ga <= 70 ? 'M' : 'L') : u <= 6 ? 'S' : u <= 9 ? 'M' : 'L';
     W.devs = W.devs || []; W.devs.push(Object.assign({ id, type: gab ? 'gab' : 'wr', status: 'ok', custom: true, cli: 0, hoy: 0, name: nom, loc: lug, x: home[0] + k, z: home[1], y: gab ? 0 : 1.3, sinUbicar: true }, gab ? { kind: 'Gabinete metálico ' + gv.replace('x', '×') + ' cm', size: sz } : { kind: `Rack de pared ${u}U`, u })); }
   W.cabs[id] = Object.assign({ cap: u, items: [], links: [], ports: {} }, gv ? { dim: gv } : {}); D.nuevo = false; D.cid = id; D.hist = false; docSave(); docPaint(); toast((gab ? 'Gabinete ' : 'Rack ') + id + ' creado. Queda sin ubicar en la maqueta hasta que lo arrastres.'); }
+async function docPedirBorrar(id) { const W = S.doc.W, c = W.cabs[id]; if (!c || !siteEd()) return; const n = (c.items || []).length, l = (c.links || []).length;
+  if (await pedirClave({ titulo: 'Sacar ' + id, detalle: (n ? `Se sacan sus ${n} equipos anotados${l ? ' y ' + l + ' patch cords' : ''}. ` : '') + 'Queda 30 días en la papelera de la documentación.' })) docBorrar(id); }
+// papelera: lo que se saca se guarda entero (el rack con sus equipos y cables, y su lugar en la maqueta) para poder volver atrás
+const docPap = W => (W.papelera || []).filter(x => Date.now() - x.cuando < 30 * 864e5);
+function docRecuperar(i) { const D = S.doc, W = D.W, L = docPap(W), x = L[i]; if (!x || !siteEd()) return; if (W.cabs[x.id]) { toast('Ya hay un rack con ese nombre'); return; }
+  W.cabs[x.id] = x.cab; if (x.pieza && W.escena && !W.escena.piezas.some(p => p.id === x.id)) W.escena.piezas.push(x.pieza); if (x.dev && !(W.devs || []).some(d => d.id === x.id)) (W.devs = W.devs || []).push(x.dev); W.removed = (W.removed || []).filter(r => r !== x.id);
+  W.papelera = L.filter(y => y !== x); D.cid = x.id; D.hist = false; docSave(); docPaint(); toast(x.id + ' recuperado, con todo lo que tenía'); }
 function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) return;
+  W.papelera = [{ id, cab: c, pieza: ((W.escena || {}).piezas || []).find(p => p.id === id) || null, dev: (W.devs || []).find(d => d.id === id) || null, cuando: Date.now(), quien: myName() }, ...docPap(W)].slice(0, 20);
   delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
   D.cid = null; docSave(); docPaint(); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'); if (!b || !S.doc || b.tagName === 'FORM') return; const D = S.doc, k = b.dataset.dk, v = b.dataset.v;
@@ -1369,7 +1432,9 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'
   else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = CAJT[v] ? CAJT[v][3] : v === 'gab' ? 9 : 12; if (v === 'gab') D.nuevo.dim = '40x30'; docList(); }
   else if (k === 'cancelar') { D.nuevo = false; docList(); }
   else if (k === 'ir') docIr(v);
-  else if (k === 'borrar') { if (b.dataset.ok !== '1') { const c = D.W.cabs[v] || { items: [] }; b.dataset.ok = '1'; b.textContent = c.items.length ? `Se borran ${c.items.length} equipos anotados: tocá de nuevo` : 'Tocá de nuevo para sacarlo'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar'; } }, 4000); return; } docBorrar(v); } });
+  else if (k === 'borrar') docPedirBorrar(v);
+  else if (k === 'papelera') { D.pap = !D.pap; docPaint(); }
+  else if (k === 'recuperar') docRecuperar(+v); });
 document.addEventListener('submit', e => { if (e.target.matches('form[data-dk="crear"]')) { e.preventDefault(); docCrear(); } });
 document.addEventListener('input', e => { if (e.target.id === 'docq' && S.doc) { S.doc.q = e.target.value; const pos = e.target.selectionStart; docList(); const n = $('#docq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } });
 

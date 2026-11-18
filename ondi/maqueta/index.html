@@ -1889,7 +1889,11 @@ function newDev0(tool, x, y) {
   edSave(); select(d.id, false); log('info', `${d.id} agregado · ${d.loc}`, d.id); }
 const UNDO = [];
 function removeSel() { removeId(SEL); }
-function removeId(id, noHist) { if (innerRef(id)) return removeInner(id, noHist); { const a = PROPS.find(x => x.id === id) || PLBL.find(x => x.id === id); if (a) { if (!noHist) recRemove(a); rmAnyRaw(id); edSave(); toast(id + ' borrado · Ctrl+Z para deshacer'); return true; } }
+function removeId(id, noHist) { const en = !noHist && !innerRef(id) && entity(id), d = en && en.d;
+  if (d && ['gab', 'wr', 'rack'].includes(d.type) && (d.type !== 'rack' || d.custom) && HOST && HOST.clave) { const n = ((CABS[id] || {}).items || []).length;
+    HOST.clave({ titulo: 'Sacar ' + id, detalle: (n ? 'Se sacan sus ' + n + ' equipos anotados y sus cables. ' : '') + 'Queda 30 días en la papelera de la documentación.' }).then(ok => { if (!ok || !entity(id)) return; if (HOST.papelera) HOST.papelera(id, CABS[id] || null, d); removeIdYa(id); }); return true; }
+  return removeIdYa(id, noHist); }
+function removeIdYa(id, noHist) { if (innerRef(id)) return removeInner(id, noHist); { const a = PROPS.find(x => x.id === id) || PLBL.find(x => x.id === id); if (a) { if (!noHist) recRemove(a); rmAnyRaw(id); edSave(); toast(id + ' borrado · Ctrl+Z para deshacer'); return true; } }
   const e = entity(id); if (!e) return false;
   const snap = JSON.stringify({ fibs: FIBS, cabs: CABS }), remPrev = ED.removed.slice();
   const restore = () => { const S = JSON.parse(snap); FIBS.length = 0; S.fibs.forEach(f => FIBS.push(f)); for (const k in CABS) delete CABS[k]; Object.assign(CABS, S.cabs); ED.removed = remPrev; };
@@ -5912,6 +5916,36 @@ avSync = (o => function (dt = 0) { const show = WALK.on && TP.on && !TP.near; if
   try { AV3.CORE.avPose(AV3.av, sp > 0.25 ? 'walk' : 'idle', dt, { x: AV3.x, y: 0, t: AV3.t }); AV3.av.sync(); av3Skin(); } catch (e) { console.warn('avatar 3D', e); AV3.st = -1; for (const p of AV3.parts) p.o.on = false; return o(dt); }
   const Mo = M.trs(WALK.x, WALK.y - 1.7, WALK.z, TP.h, 0); for (const p of AV3.parts) { p.o.on = true; p.o.version++; p.o.model = Mo; } })(avSync);
 window.__av3 = { AV3, gaps: id => { const N = naveById(id); return innerOf(N).items.filter(it => it.k === 'mez').map(it => { const along = alongOf(it), len = along === 'd' ? it.sd : it.su, wid = along === 'd' ? it.su : it.sd; return [it.name, along, len, wid, mzGaps(N, it, along, len, wid, (it.y0 || 0) + mzH(it) + 0.25)]; }); }, ext: l => { EXT.list = l; EXT.at = new Date(); EXT.demo = false; extSync(); return REALM(); }, kpi: () => document.getElementById('kEq').textContent, cargar: () => av3Load(), caminar: i => enterWalk(NAVES[i || 0]), ir: (id, u, d, yaw, y) => { const N = naveById(id); enterWalk(N); const [x, z] = NP(N, u, -d); WALK.x = x; WALK.z = z; if (yaw != null) WALK.yaw = yaw; if (y != null) WALK.y = y; return [x, z, WALK.yaw]; }, labels: () => LBL.filter(L => !L.el.classList.contains('off')).map(L => L.el.textContent), estado: () => ({ st: AV3.st, partes: AV3.parts.length, on: AV3.parts.filter(p => p.o.on).length, walk: WALK.on, tp: TP.on, near: TP.near }) };
+window.__aMotor = () => { const P = [], sin = {}, r2 = v => Math.round(v * 100) / 100, R = (x, z, yaw, u, v) => { const a = axX(yaw || 0), b = axZ(yaw || 0); return [r2(x + a[0] * u + b[0] * v), r2(z + a[1] * u + b[1] * v)]; };
+  const pon = o => { try { P.push(o); } catch (e) {} }, B = { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 }, toca = (x, z) => { if (isFinite(x) && isFinite(z)) { B.x0 = Math.min(B.x0, x); B.x1 = Math.max(B.x1, x); B.z0 = Math.min(B.z0, z); B.z1 = Math.max(B.z1, z); } };
+  for (const N of NAVES) { try { toca(N.x0, N.z0); toca(N.x1, N.z1); pon({ t: 'galpon', id: N.id, nombre: [N.code, N.name].filter(Boolean).join(' · '), x: r2((N.x0 + N.x1) / 2), z: r2((N.z0 + N.z1) / 2), ancho: r2(N.x1 - N.x0), fondo: r2(N.z1 - N.z0), alto: N.h || 10 }); } catch (e) {} }
+  for (const r of ED.roads || []) { try { const pts = (r.pts || []).map(q => [r2(q[0]), r2(q[1])]); if (pts.length < 2) continue; pts.forEach(q => toca(q[0], q[1]));
+      if (r.kind === 'alambrado' || r.muro) pon({ t: 'cerco', id: r.id, nombre: r.name || '', pts, tipo: r.muro ? 'hormigon' : 'alambrado', alto: r.muro ? 2.4 : 2 }); else pon({ t: 'calle', id: r.id, nombre: r.name || '', pts, ancho: r.w || 8, linea: r.dash === false ? 'ninguna' : 'discontinua' }); } catch (e) {} }
+  for (const q of PROPS) { try { const k = q.k, x = r2(q.x), z = r2(q.z), yaw = q.yaw || 0, b = { id: q.id, x, z, r: yaw }; toca(x, z); if (q.name) b.nombre = q.name;
+      if (k === 'tree' || k === 'palm') pon({ ...b, t: 'arbol', tipo: 'fronda', alto: k === 'palm' ? 1.3 : 1 });
+      else if (k === 'lamp') pon({ ...b, t: 'columna', alto: q.h || 10, focos: 1 });
+      else if (k === 'edif') pon(q.id === 'EDI-01' ? { ...b, t: 'edificio', nombre: q.name || 'Oficinas', ancho: q.w || 36, fondo: q.d || 30, pisos: q.pisos || 2 } : { ...b, t: 'modulo', ancho: q.w || 12, fondo: q.d || 6, pisos: q.pisos || Math.max(1, Math.round((q.h || 3.1) / 3.1)), color: q.osc ? '#3a3f44' : '#f5f6f7' });
+      else if (k === 'casilla' || k === 'porteria') pon({ ...b, t: 'modulo', nombre: q.name || (k === 'porteria' ? 'Portería' : 'Casilla'), ancho: q.w || (k === 'porteria' ? 6 : 8.5), fondo: q.d || (k === 'porteria' ? 4 : 3.4), pisos: 1 });
+      else if (k === 'truck') pon({ ...b, t: 'camion', r: yaw + Math.PI / 2 }); else if (k === 'pickup' || k === 'car' || k === 'pickphitel') pon({ ...b, t: 'vehiculo', modelo: k === 'car' ? 'suv' : 'toro', r: yaw + Math.PI / 2 });
+      else if (k === 'pila') pon({ ...b, t: 'monticulo', ancho: (q.r || 8) * 2, fondo: (q.r || 8) * 2, alto: q.h || 4 }); else if (k === 'tanque') pon({ ...b, t: 'tanque', radio: q.r || 6, alto: q.h || 10 });
+      else if (k === 'cartel') pon({ ...b, t: 'cartel', texto: q.text || q.name || '' });
+      else if (k === 'balanza') { const L = (q.L || 22) / 2; pon({ t: 'terreno', id: q.id, nombre: q.name || 'Balanza', mat: 'hormigon', pts: [R(x, z, yaw, -L, -1.7), R(x, z, yaw, L, -1.7), R(x, z, yaw, L, 1.7), R(x, z, yaw, -L, 1.7)] }); }
+      else if (k === 'parking') { const w = (q.cols || 6) * 2.6 / 2, d = (q.rows || 1) * 5.2 / 2; pon({ t: 'terreno', id: q.id, nombre: q.name || 'Estacionamiento', mat: 'asfalto', pts: [R(x, z, yaw, -w, -d), R(x, z, yaw, w, -d), R(x, z, yaw, w, d), R(x, z, yaw, -w, d)] }); }
+      else if (k === 'arboleda') { const L = ((q.n || 10) - 1) * (q.sp || 10) / 2; pon({ t: 'arboles', id: q.id, pts: [R(x, z, yaw, -L, 0), R(x, z, yaw, L, 0)], paso: q.sp || 10, tipo: 'fronda' }); }
+      else if (BK[k] && BK[k].wall) { const e = wallEnds(q); pon({ t: 'pared', id: q.id, pts: e.map(c => [r2(c[0]), r2(c[1])]), alto: q.h || 2.6, tipo: BK[k].thin ? 'vidrio' : 'maciza', ...(BK[k].door ? { huecos: [{ s: 0, a: r2((BK[k].L - 0.9) / 2), k: 'puerta' }] } : k === 'wwin' ? { huecos: [{ s: 0, a: r2((BK[k].L - 1.2) / 2), k: 'ventana' }] } : {}) }); }
+      else sin[k] = (sin[k] || 0) + 1; } catch (e) { sin.error = (sin.error || 0) + 1; } }
+  const MONT = { wall: 'pared', ceiling: 'techo', dome: 'techo', canopy: 'techo', pole: 'poste' };
+  for (const d of DEV) { try { const b = { id: d.id, nombre: d.name || d.id, x: r2(d.x), z: r2(d.z), y: r2(d.mount === 'pole' ? (d.ph || d.y || 8) : (d.y || 0)), modelo: d.kind || '', notas: d.loc || '' }, m = MONT[d.mount] || (d.nave ? 'pared' : 'poste'); if (d.marca) b.marca = String(d.marca).toLowerCase(); toca(b.x, b.z);
+      if (d.type === 'cam') pon({ ...b, t: 'camara', clase: /PTZ/.test(d.kind) ? 'ptz' : /Fisheye/.test(d.kind) ? 'ojo' : /Domo/.test(d.kind) ? 'domo' : 'bullet', montaje: m, r: (d.yaw || 0) + Math.PI / 2 });
+      else if (d.type === 'ap') pon({ ...b, t: 'ap', montaje: m, r: d.yaw || 0 });
+      else if (d.type === 'gab') pon({ ...b, t: 'gabinete', y: 0, r: d.yaw || 0 }); else if (d.type === 'wr') pon({ ...b, t: 'rack', clase: 'pared', alto: 0.5, base: Math.max(0, (d.y || 1.5) - 0.25), y: 0, r: d.yaw || 0 }); else if (d.type === 'rack') pon({ ...b, t: 'rack', clase: 'piso', alto: 2, y: 0, r: d.yaw || 0 });
+      else if (SENS[d.type] || d.type === 'rd') pon({ ...b, t: 'sensor', clase: ({ humo: 'humo', temp: 'temp', pir: 'mov', sir: 'sirena', rd: 'acceso' })[d.type] || 'mov', montaje: d.mount === 'ceiling' ? 'techo' : 'pared', r: (d.yaw || 0) + Math.PI / 2 });
+      else sin['equipo ' + d.type] = (sin['equipo ' + d.type] || 0) + 1; } catch (e) { sin.error = (sin.error || 0) + 1; } }
+  for (const F of FIBS) { try { if ((F.pts || []).length > 1) pon({ t: 'fibra', id: F.id, nombre: F.name || F.id, pts: F.pts.map(q => [r2(q[0]), r2(q[1])]), hilos: F.hilos || 12, y: 0 }); } catch (e) {} }
+  if (B.x0 > B.x1) Object.assign(B, { x0: -60, x1: 60, z0: -40, z1: 40 }); const m = 60;
+  P.unshift({ t: 'terreno', id: 'predio', nombre: (HOST && HOST.park) || 'Predio', mat: 'pasto', pts: [[r2(B.x0 - m), r2(B.z0 - m)], [r2(B.x1 + m), r2(B.z0 - m)], [r2(B.x1 + m), r2(B.z1 + m)], [r2(B.x0 - m), r2(B.z1 + m)]] });
+  const ids = new Set(); for (const p of P) { if (!p.id || ids.has(p.id)) p.id = (p.t.slice(0, 3) + Math.random().toString(36).slice(2, 7)); ids.add(p.id); }
+  return { escena: { v: 1, nombre: (HOST && HOST.park) || 'Maqueta', piezas: P }, sin }; };
 window.__dbg = { ed: { setEdit, setTool, openCab, FIBS, CABS, DEV, NAVES, flyTo, groundAt: (x, y) => groundAt(x, y) }, sim: (n, dt) => { for (let i = 0; i < n; i++) { TRUCKS.forEach(t => stepTruck(t, dt)); FORKS.forEach(f => stepFork(f, dt)); PACKETS.forEach(p => stepPacket(p, dt)); stepArms(dt); } }, ARMS, FORKS, cam, TRUCKS, select, OBJ, main, stop: () => { tween = null; }, finish: () => { if (tween) { Object.assign(cam, tween.to); tween = null; } }, env: () => ENV };
 })();
 </script>
