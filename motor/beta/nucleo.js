@@ -46,12 +46,13 @@ export function crearMotor(canvas, o = {}) {
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 ? 0.06 : 0.5; if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
+    if (motor.bruma) { scene.fog.near = Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = Math.max(motor.bruma[1], C.d * 5); }
     cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
     // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca)
     const r = Math.min(700, Math.max(40, C.d * 0.85)); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
     sol.position.set(C.tx - r * 1.1, r * 2.2, C.tz + r * 1.4); sol.target.position.set(C.tx, 0, C.tz); }
 
-  motor.ponerTema = t => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; const T = TEMAS[t]; scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos;
+  motor.ponerTema = t => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; const T = TEMAS[t]; scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
     cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol); cieloU.noche.value = T.noche;
     sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp;
     document.documentElement.dataset.tema = t; motor.dirty = true; motor.alTema.forEach(f => f(t)); };

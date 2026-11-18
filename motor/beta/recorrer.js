@@ -3,7 +3,7 @@
 // Mirar: arrastrar, o dos dedos de costado en el trackpad. Rueda o pellizco: acerca la cámara; del todo cerca se ve por los ojos (V).
 // E o clic sobre un equipo: abre su ficha. Esc sale. En el celular: palanca a la izquierda y arrastrar para mirar.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=3';
+import { THREE } from './nucleo.js?v=4';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);

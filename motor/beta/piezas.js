@@ -1,7 +1,7 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=3';
+import { THREE } from './nucleo.js?v=4';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
@@ -459,7 +459,8 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'hilos', n: 'Hilos', t: 'num', min: 1, max: 288, paso: 1 }, { k: 'y', n: 'Altura (0 = subterráneo)', t: 'num', min: 0, max: 30, paso: 0.5 }, F.color('Color'), { k: 'notas', n: 'Notas', t: 'area' }],
     armar(p) { const g = new THREE.Group(), y = p.y || 0, m = new THREE.MeshBasicMaterial({ color: p.color, transparent: !y, opacity: y ? 1 : 0.85, depthWrite: !!y });
       if (y) { const c = new THREE.CatmullRomCurve3(p.pts.map(q => new THREE.Vector3(q[0], y, q[1])), false, 'catmullrom', 0); const k = new THREE.Mesh(new THREE.TubeGeometry(c, Math.max(8, p.pts.length * 8), 0.06, 6), m); g.add(k); }
-      else for (const [x, z, d] of aLoLargo(p.pts, 2.2)) { const k = new THREE.Mesh(CAJA, m); k.scale.set(0.22, 0.02, 1.2); k.position.set(x, 0.09, z); k.rotation.y = d; k.renderOrder = 2; g.add(k); } return g; } }
+      else { const c = new THREE.Mesh(cinta(p.pts, 0.7, 0.085), new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -8 })); c.renderOrder = 2; g.add(c);
+        const cl = new THREE.MeshBasicMaterial({ color: mix(p.color, '#ffffff', 0.55), transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -10 }); for (const [x, z, d] of aLoLargo(p.pts, 3)) { const k = new THREE.Mesh(CAJA, cl); k.scale.set(0.22, 0.02, 1.2); k.position.set(x, 0.1, z); k.rotation.y = d; k.renderOrder = 3; g.add(k); } } return g; } }
 };
 export const GRUPOS = ['Terreno', 'Construcción', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
 
