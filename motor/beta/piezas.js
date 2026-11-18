@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=8';
+import { THREE } from './nucleo.js?v=9';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=3';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=4';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- materiales y formas compartidas ----------
@@ -737,7 +737,21 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
   if (os) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false); AN.forEach(([u]) => { brillo(g, -w + u, 6.4, d + 0.6, 3.2, '#ffe2b0', 0.7); pozo(g, -w + u, d + 6.5, 8, '#ffcf8a', 0.24); }); // cada andén con su luz y su charco de luz en el piso
     if (ax) pozo(g, -w + (ax[0] + ax[1]) / 2, d + 6, 9, '#ffe9c4', 0.2); }
   // lo que no se atraviesa a pie: las cuatro paredes, la oficina y los volúmenes propios
-  const sg = [[-w, -d, w, -d, e, 0, h], [-w, d, w, d, e, 0, h], [-w, -d, -w, d, e, 0, h], [w, -d, w, d, e, 0, h]]; if (ax) sg.push([-w + ax[0] + 5.8, d - 3.2, -w + ax[1] - 5.8, d - 3.2, 5.8, 0, 8.6]);
+  // puerta de personal en el frente, en la punta contraria a la oficina: por ahí se entra a pie
+  const uP = p.anexo === 'izq' ? L - 2.2 : 2.2; fr(uP - 0.62, uP + 0.62, 0, 0.3, 0, 2.25, M('marco')); fr(uP - 0.5, uP + 0.5, 0.3, 0.33, 0.05, 2.15, mat(os ? '#8fa0ad' : '#dfe4e8', { roughness: 0.5 }), false); fr(uP + 0.32, uP + 0.4, 0.33, 0.37, 1.0, 1.12, M('goma'), false);
+  const sg = [[-w, -d, w, -d, e, 0, h], [-w, d, -w + uP - 0.7, d, e, 0, h], [-w + uP + 0.7, d, w, d, e, 0, h], [-w, -d, -w, d, e, 0, h], [w, -d, w, d, e, 0, h]];
+  // por dentro: piso, estanterías con mercadería y luces colgantes. Se ve apagando «Techos» en Capas (en el celular no se arma, para no pesar)
+  if (p.interior !== false && L > 24 && p.fondo > 26 && !matchMedia('(pointer:coarse)').matches) { let sm = 11; for (const c of String(p.id || 'n')) sm = (sm * 31 + c.charCodeAt(0)) % 2147483647; const az = () => { sm = (sm * 16807 + 11) % 2147483647; return (sm & 0xffff) / 0xffff; };
+    const gr = L * p.fondo > 30000, paso = gr ? 8.4 : 5.8, bahia = gr ? 3.6 : 2.7, niv = Math.max(2, Math.min(5, Math.floor((h - 2.4) / 1.9))), hR = niv * 1.9 + 0.3, z0 = -d + 2.4, z1 = d - 15, it = [], CAR = os ? ['#6b5433', '#7a6a4c', '#4d3d26', '#77736a', '#3f5565', '#5e645c'] : ['#b98a4e', '#c9a46a', '#8a6a3c', '#d8d2c4', '#6f8fa8', '#a8b0a4'], azul = os ? '#274a6e' : '#2f5f9e', nar = os ? '#8a4a1c' : '#e07b2a';
+    for (let x = -w + 4; x < w - 4; x += paso) { for (let z = z0; z < z1 - bahia; z += bahia) { it.push([x - 1.15, hR / 2, z, 0, 0.1, hR, 0.1, azul], [x + 1.15, hR / 2, z, 0, 0.1, hR, 0.1, azul]);
+        for (let n = 0; n < niv; n++) { const y = n * 1.9; if (n) it.push([x, y + 0.02, z + bahia / 2, 0, 2.4, 0.1, bahia, nar]); if (az() < 0.8) { const hc = 0.8 + az() * 0.85; it.push([x, y + 0.12 + hc / 2, z + bahia / 2, 0, 2.1, hc, bahia - 0.35, CAR[Math.floor(az() * CAR.length)]]); } } }
+      sg.push([x, z0, x, z1, 1.25, 0, hR]); }
+    const li = lote(g, CAJA, mat('#ffffff', { roughness: 0.8 }), it, false); if (li) { li.userData.interior = true; li.visible = false; }
+    const ps = caja(g, -w + e, 0, -d + e, w - e, 0.07, d - e, mat(os ? '#5b646c' : '#c9cdd0', { roughness: 0.32, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), false); ps.userData.interior = true; ps.visible = false;
+    const lz = []; for (let x = -w + 6; x < w - 5; x += 12) for (let z = -d + 6; z < d - 5; z += 12) lz.push([x, h - 0.9, z, 0, 1.4, 0.12, 0.5]); const ll = lote(g, CAJA, new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#fff1cc', emissiveIntensity: os ? 2.6 : 0.5 }), lz, false); if (ll) { ll.userData.interior = true; ll.visible = false; } }
+  // extractores en el techo
+  { const ex = []; for (let x = -w + 9; x < w - 8; x += 16) ex.push([x, h + 0.42, d * 0.35, 0, 0.9, 0.7, 0.9], [x + 8, h + 0.42, -d * 0.35, 0, 0.9, 0.7, 0.9]); const le = lote(g, CIL, mat(os ? '#6a7682' : '#b9c0c6', { metalness: 0.6, roughness: 0.4 }), ex); if (le) le.userData.techo = true; }
+  if (ax) sg.push([-w + ax[0] + 5.8, d - 3.2, -w + ax[1] - 5.8, d - 3.2, 5.8, 0, 8.6]);
   for (const c of p.cajas || []) if (c[7] == null && c[4] < 1.6 && c[5] > 0.5) { const eu = Math.abs(c[1] - c[0]), ev = Math.abs(c[3] - c[2]), um = (c[0] + c[1]) / 2, vm = (c[2] + c[3]) / 2; sg.push(eu >= ev ? [-w + Math.min(c[0], c[1]) + ev / 2, d + vm, -w + Math.max(c[0], c[1]) - ev / 2, d + vm, ev / 2, c[4], c[5]] : [-w + um, d + Math.min(c[2], c[3]) + eu / 2, -w + um, d + Math.max(c[2], c[3]) - eu / 2, eu / 2, c[4], c[5]]); }
   g.userData.segs = sg; return g; }
 

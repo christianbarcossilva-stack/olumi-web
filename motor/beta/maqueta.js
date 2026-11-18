@@ -11,13 +11,14 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
-import { THREE, crearMotor } from './nucleo.js?v=8';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=21';
+import { THREE, crearMotor } from './nucleo.js?v=9';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=22';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=11';
-import { recorrer } from './recorrer.js?v=6';
-import { transito } from './transito.js?v=10';
+import { construir } from './construir.js?v=12';
+import { recorrer } from './recorrer.js?v=7';
+import { transito } from './transito.js?v=11';
+import { extras } from './extras.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -54,9 +55,9 @@ export async function abrirMaqueta(o) {
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" tabindex="0" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover; rueda o dos dedos para acercar; clic derecho, o dos dedos de costado, para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
-    <div class="mbtns">${host && host.tema ? '' : `<button id="btema" class="mbtn" aria-label="Cambiar la hora del día" title="Hora del día: mañana, mediodía, hora azul o noche">${svg('tema')}</button>`}<button id="bcapas" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bpaseo" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando">${svg('caminar')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
+    <div class="mbtns">${host && host.tema ? '' : `<button id="btema" class="mbtn" aria-label="Cambiar la hora del día" title="Hora del día: mañana, mediodía, hora azul, noche u hora real">${svg('tema')}</button>`}<button id="bcapas" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bpaseo" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando">${svg('caminar')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
   <div id="mcapas" class="vidrio mpop" hidden>${CAPAS.filter(([k]) => !(SIN_CAPA[app] || []).includes(k) && !(k === 'transito' && app !== 'ondi')).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}
-    <div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><div id="mlug"></div><p class="mvacio" id="mocultos" hidden></p></div>
+    <div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><div id="mlug"></div><p class="mvacio" id="mocultos" hidden></p><button class="mbtn mpresb" id="bpres">${svg('ojo', 16)}Recorrido de presentación</button><p class="mayuda">Con «Techos» apagado se ve cada nave por dentro.</p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas">${HERR.map(([k, n, t], i) => `<button data-h="${k}" aria-pressed="${k === 'mano'}" title="${n} (${i + 1}${t ? ' o ' + t : ''})" aria-label="${n}">${svg(k)}<sup>${i + 1}</sup></button>`).join('')}${host && host.puertas ? `<button id="beq" title="Puertas para ubicar" aria-label="Puertas para ubicar">${svg('puerta')}</button>` : host && host.equipos ? `<button id="beq" title="Equipos del cliente" aria-label="Equipos del cliente">${svg('equipos')}</button>` : ''}
     <span class="msep"></span><button id="bundo" title="Deshacer (Ctrl+Z)" aria-label="Deshacer">${svg('deshacer')}</button><button id="bredo" title="Rehacer (Ctrl+Y)" aria-label="Rehacer">${svg('rehacer')}</button><button id="bgrid" aria-pressed="true" title="Grilla (G)" aria-label="Grilla">${svg('grilla')}</button><button id="bpared" title="Paredes altas, cortadas o al ras (P)" aria-label="Vista de las paredes">${svg('paredes')}</button><button id="bpap" title="Papelera: recuperar lo sacado" aria-label="Papelera">${svg('restaurar')}</button></nav>
@@ -149,7 +150,7 @@ export async function abrirMaqueta(o) {
   try { const g = JSON.parse(localStorage.getItem('motor.capas.' + app) || '{}'); for (const k in capas) if (g[k] === false) capas[k] = false; } catch (e) {}
   for (const c of raiz.querySelectorAll('[data-capa]')) c.checked = capas[c.dataset.capa] !== false;
   const LUG = new Set();   // lugares cuyas puertas están ocultas
-  function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; }); }
+  function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; if (k.userData.interior) k.visible = !capas.techos; }); }
   motor.alTema.push(() => { armarTodo(); });
   function encuadre() { const b = new THREE.Box3(); for (const p of E.piezas) { const [x, z] = centro(p); if (p.pts) for (const q of p.pts) b.expandByPoint(new THREE.Vector3(q[0], 0, q[1])); else b.expandByPoint(new THREE.Vector3(x, 0, z)); }
     if (b.isEmpty()) return { tx: 0, tz: 0, yaw: 0.7, pitch: 0.75, d: 160 }; const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3()); return { tx: c.x, tz: c.z, yaw: 0.7, pitch: 0.72, d: Math.max(60, Math.max(s.x, s.z) * 1.05) }; }
@@ -209,7 +210,7 @@ export async function abrirMaqueta(o) {
       : SEL.t === 'fila' ? [['Contenedores', g && g.userData.cuenta], ['Tipo', q.carga === 'reefer' ? 'Refrigerados' : 'Secos'], ['Medida', q.pies + ' pies'], ['Ancho', q.ancho + ' contenedores'], ['Alto máximo', q.alto], ['Largo', q.largo + ' m']]
       : [...(SEL.t === 'recinto' ? [['Superficie', fmt(Math.abs(areaSig(SEL.pts))) + ' m²']] : []), ...T.campos.filter(c => !['nombre', 'x', 'z', 'r'].includes(c.k) && q[c.k] !== undefined && q[c.k] !== '' && c.t !== 'color').map(c => [c.n, c.t === 'sel' ? esc((c.ops.find(z => z[0] == q[c.k]) || [, q[c.k]])[1]) : c.t === 'bool' ? (q[c.k] ? 'Sí' : 'No') : esc(q[c.k])])]).filter(f => f[1] !== undefined && f[1] !== '' && f[1] !== null);
     const sub = T.equipo ? [T.n.replace(/ \(.*/, ''), (d && d.modelo) || q.modelo, (d && d.ip) || q.ip].filter(Boolean).join(' · ') : T.n;
-    box.innerHTML = `<div class="mfila">${T.equipo ? `<i class="mest ${est}" title="${ESTX[est]}"></i>` : ''}<div class="mtit"><b>${esc(q.nombre || (d && d.nombre) || T.n)}</b><small>${esc(sub)}</small></div><button class="mic" data-acc="enfocar" title="Enfocar" aria-label="Enfocar">${svg('enfocar')}</button>${doc}${filas.length ? mas('Más datos') : ''}${cerrar}</div>
+    box.innerHTML = `<div class="mfila">${T.equipo ? `<i class="mest ${est}" title="${ESTX[est]}"></i>` : ''}<div class="mtit"><b>${esc(q.nombre || (d && d.nombre) || T.n)}</b><small>${esc(sub)}</small></div>${SEL.t === 'camara' ? `<button class="mic" data-acc="ver" title="Ver desde esta cámara" aria-label="Ver desde esta cámara">${svg('ojo')}</button>` : ''}<button class="mic" data-acc="enfocar" title="Enfocar" aria-label="Enfocar">${svg('enfocar')}</button>${doc}${filas.length ? mas('Más datos') : ''}${cerrar}</div>
       <div class="mmas"><dl class="mdl">${filas.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></div>`; }
   function campo(c, q) { const v = q[c.k] ?? '', id = 'f_' + c.k;
     if (c.t === 'sel') return `<label><span>${c.n}</span><select id="${id}" data-k="${c.k}">${c.ops.map(([a, b]) => `<option value="${esc(a)}" ${String(a) === String(v) ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></label>`;
@@ -227,7 +228,7 @@ export async function abrirMaqueta(o) {
     if (el.dataset.k === 'puerta') { const d = PU.porId.get(v); if (d) SEL.nombre = d.nombre; }
     if (v === null || v === '') delete SEL[el.dataset.k]; else SEL[el.dataset.k] = v; rehacer(SEL); cambio(true, el.type === 'text' || el.tagName === 'TEXTAREA'); if (el.dataset.k === 'uid' || el.dataset.k === 'puerta' || el.tagName === 'SELECT') info(); if (el.dataset.k === 'puerta') { capasLugar(); if (!$('#meq').hidden) listaPuertas(); } });
   $('#minfo').addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.sel === 'no') { CON.sub = null; elegir(null); return; } if (b.dataset.c) { CON.accion(b); return; } if (b.dataset.sin) { delete SEL[b.dataset.sin]; SEL[b.dataset.sin] = ''; rehacer(SEL); cambio(); info(); return; }
-    const a = b.dataset.acc;
+    const a = b.dataset.acc; if (a === 'ver') { if (RC.R.on) RC.paseo(false); XT.verCamara(SEL); return; }
     if (a === 'mas') { UI.abierta = !UI.abierta; try { localStorage.setItem('motor.ficha', UI.abierta ? '1' : '0'); } catch (er) {} $('#minfo').classList.toggle('abierta', UI.abierta); b.setAttribute('aria-expanded', UI.abierta); return; }
     if (a === 'alta') { const T = TIPOS[SEL.t], p = SEL; if (!p.nombre) { toast('Ponele un nombre primero'); return; } b.disabled = true;
       try { const r = await host.crearEquipo({ marca: p.marca || 'otra', tipo: T.ondi || 'otro', nombre: p.nombre, modelo: p.modelo || null, ip: p.ip || null, ubicacion: lugarDe(p), notas: p.notas || null });
@@ -384,7 +385,7 @@ export async function abrirMaqueta(o) {
     const w = m.offsetWidth, h = m.offsetHeight; m.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px'; m.style.top = Math.max(8, Math.min(innerHeight - h - 8, arriba ? y - h : y)) + 'px'; }
   $('#mmenu').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const it = $('#mmenu')._it[+b.dataset.i]; menu(null); it.f(); });
   motor.alMenu = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e), p = motor.enPiso(e.clientX, e.clientY), T = h && TIPOS[h.p.t], its = [];
-    if (h) { elegir(h.p); its.push({ n: 'Enfocar', ic: 'enfocar', f: () => elegir(h.p, true) }); if (T.protegido && host && host.abrirDoc) its.push({ n: 'Abrir documentación', ic: 'doc', f: () => host.abrirDoc(h.p) });
+    if (h) { elegir(h.p); its.push({ n: 'Enfocar', ic: 'enfocar', f: () => elegir(h.p, true) }); if (h.p.t === 'camara' && !RC.R.on) its.push({ n: 'Ver desde esta cámara', ic: 'ojo', f: () => XT.verCamara(h.p) }); if (T.protegido && host && host.abrirDoc) its.push({ n: 'Abrir documentación', ic: 'doc', f: () => host.abrirDoc(h.p) });
       if (ED.on && h.p.t === 'columna' && app !== 'darvi') its.push({ n: 'Sumar una cámara a la columna', ic: 'ojo', f: () => adosar(h.p, 'camara') }, { n: 'Sumar Wi-Fi a la columna', ic: 'equipos', f: () => adosar(h.p, 'ap') }, '-');
       if (ED.on) its.push({ n: 'Propiedades', ic: 'ajustes', f: () => { UI.abierta = true; info(); } }, { n: 'Duplicar', ic: 'duplicar', k: 'Ctrl D', f: duplicar }, { n: 'Girar 90°', ic: 'girar', k: 'R', f: () => girarSel(Math.PI / 2) }, '-', { n: 'Sacar', ic: T.protegido ? 'candado' : 'borrar', k: 'Supr', peligro: true, f: () => sacar(h.p) }); }
     else if (ED.on) { its.push({ n: 'Catálogo', ic: 'catalogo', k: 'Tab', f: () => catalogo(true) }); if (copia) its.push({ n: 'Pegar', ic: 'duplicar', k: 'Ctrl V', f: pegarCopia }); }
@@ -535,7 +536,10 @@ export async function abrirMaqueta(o) {
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
   const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, AVM: () => AVM,
     avatar: async g => { await cargarGLB('avatares', 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
-  $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); RC.paseo(!RC.R.on); });
+  $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
+  // recorrido de presentación, vista desde una cámara y hora real (extras.js)
+  const XT = extras({ motor, objs, raiz, TIPOS, get E() { return E; }, toast, aplicarCapas, temaFijo: !!(o.tema || (host && host.tema)) });
+  $('#bpres').addEventListener('click', () => { $('#mcapas').hidden = true; if (RC.R.on) RC.paseo(false); if (ED.on) editar(false); elegir(null); XT.presentar(true); });
   // camiones que entran, atracan y salen (transito.js): solo en Ondi, de ejemplo, y solo si hay naves con andenes
   TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, subtitulo }) : null; if (TR && capas.transito === false) TR.ver(false);
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
@@ -548,12 +552,12 @@ export async function abrirMaqueta(o) {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', m => { if (!o.tema && !(host && host.tema) && !elegido) motor.ponerTema(m.matches ? 'oscuro' : 'claro'); });
   // día o noche: lo elige cada uno y queda guardado en su navegador
   // el botón de día y noche recorre las cuatro horas: mañana, mediodía, hora azul y noche
-  $('#btema')?.addEventListener('click', () => { const L = motor.horas.map(q => q[0]), h = L[(L.indexOf(motor.hora) + 1) % L.length]; elegido = true; motor.ponerHora(h); try { localStorage.setItem('motor.tema', motor.tema); localStorage.setItem('motor.hora', h); } catch (e) {} toast(motor.horas.find(q => q[0] === h)[1]); });
+  $('#btema')?.addEventListener('click', () => { elegido = true; XT.siguienteHora(); });
   document.addEventListener('fullscreenchange', () => document.documentElement.classList.toggle('mfull', !!document.fullscreenElement));
 
   armarTodo();
   const enc = E.inicio || encuadre(); motor.inicio(enc); if (o.intro !== false) { Object.assign(motor.C, { ...enc, d: enc.d * 1.35, yaw: enc.yaw - 0.45, pitch: Math.min(1.2, enc.pitch + 0.2) }); motor.ir(enc, 1.8); }
-  const api = { importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, PASEO: RC.R, paseo: RC.paseo, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
+  const api = { importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, XT, PASEO: RC.R, paseo: RC.paseo, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
 function normal(e) { e = JSON.parse(JSON.stringify(e || {})); e.v = 1; e.piezas = (e.piezas || []).filter(p => p && p.t && TIPOS[p.t]); let n = 0; const ids = new Set(); for (const p of e.piezas) { if (!p.id) p.id = p.t.slice(0, 3) + 'x' + (n++); if (ids.has(p.id)) { let i = 2; while (ids.has(p.id + '-' + i)) i++; p.id += '-' + i; } ids.add(p.id); } return e; }

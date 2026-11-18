@@ -78,6 +78,7 @@ export function crearMotor(canvas, o = {}) {
   const motor = { THREE, scene, cam, renderer, canvas, C, sol, hemi, tactil, post, cada: [], despues: [], alTema: [], tema: 'claro', dirty: true };
   motor.inicio = v => { Object.assign(HOME, v); Object.assign(C, v); };
   motor.ir = (v, t = 0.9) => { if (v.yaw !== undefined) { let d = v.yaw - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); v = { ...v, yaw: C.yaw + d }; } viaje = { de: { ...C }, a: { ...C, ...v }, t: 0, dur: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.01 : t }; };
+  motor.casa = () => ({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
   function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 ? 0.06 : 0.5; if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
