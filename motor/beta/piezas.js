@@ -235,8 +235,9 @@ export const TIPOS = {
       if (p.tipo === 'ruta') for (const s of [-1, 1]) { const off = offset(p.pts, s * (p.ancho / 2 - 0.6)); g.add(new THREE.Mesh(cinta(off, 0.18, y + 0.005), blanca)); } return g; } },
   rotonda: { n: 'Rotonda', g: 'Terreno', forma: 'punto', capa: 'base', def: { radio: 14, isla: 7 },
     campos: [F.nombre, { k: 'radio', n: 'Radio (m)', t: 'num', min: 4, max: 60, paso: 0.5 }, { k: 'isla', n: 'Isla verde (m)', t: 'num', min: 0, max: 50, paso: 0.5 }],
-    armar(p) { const g = new THREE.Group(); const k = new THREE.Mesh(new THREE.CircleGeometry(p.radio, 48).rotateX(-Math.PI / 2), matTex(texSuelo('asfalto'), oscuro() ? '#55595c' : '#ffffff', [p.radio * 2 / METROS.asfalto, p.radio * 2 / METROS.asfalto], { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -5 })); k.position.y = 0.052; k.receiveShadow = true; g.add(k);
-      if (p.isla > 0) { const i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.25, 40), matSuelo('pasto', {}, 0.5)); i.position.y = 0.12; g.add(sombra(i)); const b = new THREE.Mesh(new THREE.TorusGeometry(p.isla, 0.14, 6, 48).rotateX(Math.PI / 2), mat('#e8eaec')); b.position.y = 0.2; g.add(b); } return g; } },
+    armar(p) { const g = new THREE.Group(); const k = new THREE.Mesh(new THREE.CircleGeometry(p.radio, 48).rotateX(-Math.PI / 2), calmo(matTex(texSuelo('asfalto'), oscuro() ? '#55595c' : '#ffffff', [p.radio * 2 / METROS.asfalto, p.radio * 2 / METROS.asfalto], { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -5 }), 0.38)); k.position.y = 0.052; k.receiveShadow = true; g.add(k);
+      // la isla va por encima de las calles que cruzan por el centro (más alta y dibujada adelante)
+      if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const b = new THREE.Mesh(new THREE.CylinderGeometry(p.isla + 0.32, p.isla + 0.36, 0.3, 48, 1, true), mat(oscuro() ? '#7c858d' : '#DAE1E6', { side: THREE.DoubleSide, ...ad })); b.position.y = 0.15; g.add(b); g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
     campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['guardarrail', 'Guardarraíl']] }, F.alto('Alto (m)', 0.5, 6), { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
     armar(p) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
@@ -547,9 +548,10 @@ function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.al
     sc(nv(k, caja(g, xm0, ym - 0.2, Math.min(a0, b0), xm1, ym, Math.max(a1, b1), M.mEsc)));
     suelos.push({ rampa: true, x0: xm1, x1: xl, z0: a0, z1: a1, xa: xl, xb: xm1, y0: yb, y1: ym }, { x0: xm0, x1: xm1, z0: Math.min(a0, b0), z1: Math.max(a1, b1), y: ym }, { rampa: true, x0: xm1, x1: xl, z0: b0, z1: b1, xa: xm1, xb: xl, y0: ym, y1: yb + hp });
     // baranda del piso de arriba alrededor del hueco: del lado del pasillo, sobre el carril A en la llegada, y entre carriles
-    const ya = yb + hp, uP = Math.min(a0, b0); nv(k + 1, caja(g, xm0, ya, uP - 0.06, xl, ya + 1.0, uP, M.mBar, false)); nv(k + 1, caja(g, xl - 0.05, ya, a0, xl, ya + 1.0, a1, M.mBar, false));
-    nv(k + 1, caja(g, xm1, ya, Math.min(a1, b0), xl, ya + 1.0, Math.max(a1, b0), M.mBar, false));
-    nv(k, caja(g, xm1, yb, Math.min(a1, b0), xl, yb + hp / 2 + 1.0, Math.max(a1, b0), M.mEsc, false)); }
+    // (el carril A puede quedar de cualquiera de los dos lados: el pasillo está del lado de afuera de A y el hueco entre carriles, del lado de adentro)
+    const ya = yb + hp, aMenor = a0 < b0, uP = aMenor ? a0 : a1, g0 = aMenor ? a1 : b1, g1 = aMenor ? b0 : a0; nv(k + 1, caja(g, xm0, ya, aMenor ? uP - 0.06 : uP, xl, ya + 1.0, aMenor ? uP : uP + 0.06, M.mBar, false)); nv(k + 1, caja(g, xl - 0.05, ya, a0, xl, ya + 1.0, a1, M.mBar, false));
+    nv(k + 1, caja(g, xm1, ya, g0, xl, ya + 1.0, g1, M.mBar, false));
+    nv(k, caja(g, xm1, yb, g0, xl, yb + hp / 2 + 1.0, g1, M.mEsc, false)); }
   // techo: pretil oscuro y turbina de ventilación
   const Ht = N * hp; for (const [a, b, c, d] of [[-L / 2, -W / 2, L / 2, -W / 2 + 0.2], [-L / 2, W / 2 - 0.2, L / 2, W / 2], [-L / 2, -W / 2, -L / 2 + 0.2, W / 2], [L / 2 - 0.2, -W / 2, L / 2, W / 2]]) { nv(N, caja(g, a, Ht - 0.6, b, c, Ht + 0.05, d, M.mFr)); nv(N, caja(g, a, Ht + 0.05, b, c, Ht + 0.9, d, M.mFach)); }
   nv(N, cil(g, L / 2 - 2, Ht, -W / 2 + 1.5, 0.08, 0.7, mat('#9aa0a6', { metalness: 0.6, roughness: 0.4 }))); nv(N, cil(g, L / 2 - 2, Ht + 0.7, -W / 2 + 1.5, 0.28, 0.4, mat('#b9bec3', { metalness: 0.7, roughness: 0.35 }), BOLA));

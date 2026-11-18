@@ -3,7 +3,7 @@
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos en una sola llamada (cajas instanciadas), así no pesa aunque haya muchos.
 import { THREE } from './nucleo.js?v=4';
-import { andenesDe } from './piezas.js?v=12';
+import { andenesDe } from './piezas.js?v=13';
 
 const PARTES = [ // centro (x, y, z), tamaño (x, y, z) y de qué color va: 0 oscuro, 1 caja, 2 cabina, 3 vidrio, 4 puertas
   [0, 1.2, 0, 12.4, 0.3, 2.3, 0], [0, 2.74, 0, 12.3, 2.78, 2.5, 1], [-4.2, 0.5, 0, 2.6, 1.0, 2.45, 0], [7.75, 1.95, 0, 2.7, 2.9, 2.45, 2],
@@ -24,6 +24,9 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     const nuevo = (x, z, ruta, an) => { const n = { x, z, v: [], ruta, an, i: nodos.length }; nodos.push(n); return n; }, une = (a, b) => { if (a === b || a.v.includes(b)) return; a.v.push(b); b.v.push(a); };
     const filas = calles.map(c => { const f = [], an = c.ancho || 8, ruta = c.tipo === 'ruta'; for (let i = 0; i < c.pts.length - 1; i++) { const [ax, az] = c.pts[i], [bx, bz] = c.pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 10));
         for (let k = i ? 1 : 0; k <= n; k++) f.push(nuevo(ax + (bx - ax) * k / n, az + (bz - az) * k / n, ruta, an)); } for (let i = 0; i < f.length - 1; i++) une(f[i], f[i + 1]); return f; });
+    // rotondas: los nodos que caen sobre la isla se corren al anillo, así los camiones la rodean en vez de cruzarla
+    for (const ro of E.piezas) { if (ro.t !== 'rotonda' || !(ro.isla > 0)) continue; const Ri = ro.isla + 3.5, Ra = Math.max(ro.isla + 4.5, ((ro.radio || 14) + ro.isla) / 2);
+      for (const n of nodos) { let dx = n.x - ro.x, dz = n.z - ro.z; const d = Math.hypot(dx, dz); if (d >= Ri) continue; if (d < 0.6) { const m = n.v[0]; if (!m) continue; const l = Math.hypot(m.x - n.x, m.z - n.z) || 1; dx = -(m.z - n.z) / l; dz = (m.x - n.x) / l; } else { dx /= d; dz /= d; } n.x = ro.x + dx * Ra; n.z = ro.z + dz * Ra; } }
     // cruces y empalmes: dos nodos de calles distintas a menos de medio ancho se unen (con una grilla para no comparar todos contra todos)
     const G = new Map(), kk = (x, z) => Math.floor(x / 16) + ',' + Math.floor(z / 16); nodos.forEach(n => { const k = kk(n.x, n.z); (G.get(k) || G.set(k, []).get(k)).push(n); });
     filas.forEach((f, fi) => f.forEach((n, ni) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const o of G.get(kk(n.x + dx * 16, n.z + dz * 16)) || []) { if (o === n || filas[fi].includes(o)) continue; const d = Math.hypot(o.x - n.x, o.z - n.z), tol = Math.max(5.5, (n.an + o.an) / 4 + 1.5), punta = ni === 0 || ni === f.length - 1;
