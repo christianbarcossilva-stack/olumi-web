@@ -11,13 +11,13 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
-import { THREE, crearMotor } from './nucleo.js?v=11';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=25';
+import { THREE, crearMotor } from './nucleo.js?v=12';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=26';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=15';
-import { recorrer } from './recorrer.js?v=9';
-import { transito } from './transito.js?v=14';
+import { construir } from './construir.js?v=16';
+import { recorrer } from './recorrer.js?v=10';
+import { transito } from './transito.js?v=15';
 import { extras } from './extras.js?v=3';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=11';
+import { THREE } from './nucleo.js?v=12';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=6';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=7';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -214,7 +214,7 @@ function matPiso(k) { const os = oscuro(), key = k + os; if (MPISO.has(key)) ret
     nube(xr, 40, 50, 220, 0.22, ['0,0,0', '255,255,255']); const cj = por ? 'rgba(74,76,78,.9)' : 'rgba(150,146,138,.9)'; for (let i = 0; i < n; i++) { junta(i * t - 1.5 * u, 0, 3 * u, N, cj, 0.25); junta(0, i * t - 1.5 * u, N, 3 * u, cj, 0.25); } }
   else if (k === 'alfombra') { nube(x, 30, 80, 260, 0.08, ['0,0,0', '255,255,255']); for (let i = 0; i < 26000; i++) { const px = R() * N, py = R() * N, c2 = R() < 0.5 ? '0,0,0' : '255,255,255', al = R() * 0.13; x.fillStyle = `rgba(${c2},${al})`; x.fillRect(px, py, 2 * u, 3 * u); xb.fillStyle = `rgba(${c2},${al * 2.4})`; xb.fillRect(px, py, 2 * u, 3 * u); } }
   else if (k === 'goma') { grano(x, 6000, 0.05); const t = N / 24; for (let i = 0; i < 24; i++) for (let j = 0; j < 24; j++) { const cx = (i + 0.5) * t, cy = (j + 0.5) * t, g = xb.createRadialGradient(cx, cy, 0, cx, cy, t * 0.34); g.addColorStop(0, gr(0.95)); g.addColorStop(0.8, gr(0.9)); g.addColorStop(1, gr(0.5)); xb.fillStyle = g; xb.beginPath(); xb.arc(cx, cy, t * 0.34, 0, 7); xb.fill(); x.fillStyle = 'rgba(255,255,255,.05)'; x.beginPath(); x.arc(cx - t * 0.06, cy - t * 0.06, t * 0.26, 0, 7); x.fill(); } }
-  else { nube(x, 60, 70, 300, 0.09, ['255,255,255', '60,60,58', '120,116,106']); grano(x, 9000, 0.07); nube(xr, 50, 60, 260, 0.25, ['0,0,0', '255,255,255']); for (let i = 0; i < 4; i++) { x.strokeStyle = 'rgba(40,40,40,.22)'; x.lineWidth = u; x.beginPath(); let px = R() * N, py = R() * N; x.moveTo(px, py); for (let q = 0; q < 9; q++) { px += (R() - 0.5) * 90 * u; py += (R() - 0.2) * 70 * u; x.lineTo(px, py); } x.stroke(); } }
+  else { nube(x, 60, 70, 300, 0.045, ['255,255,255', '60,60,58', '120,116,106']); grano(x, 9000, 0.06); nube(xr, 50, 60, 260, 0.22, ['0,0,0', '255,255,255']); for (let i = 0; i < 3; i++) { x.strokeStyle = 'rgba(40,40,40,.14)'; x.lineWidth = u; x.beginPath(); let px = R() * N, py = R() * N; x.moveTo(px, py); for (let q = 0; q < 9; q++) { px += (R() - 0.5) * 90 * u; py += (R() - 0.2) * 70 * u; x.lineTo(px, py); } x.stroke(); } }
   const m = { ceramica: 2.4, porcelanato: 2.4, madera: 2.4, alfombra: 2, goma: 2.4 }[k] || 3, tx = (c, srgb) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / m, 1 / m); return t; };
   const M = new THREE.MeshStandardMaterial({ map: tx(cC, true), bumpMap: tx(cB), bumpScale: k === 'alfombra' ? 1.2 : k === 'goma' ? 2 : 1.5, roughnessMap: tx(cR), roughness: 1, envMapIntensity: 0.55, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -2 }); MPISO.set(key, M); return M; }
 // un tramo de pared de a hasta b (metros del mundo) con sus aberturas; lo macizo se anota en segs: [x0, z0, x1, z1, medio grosor, y de abajo, y de arriba]

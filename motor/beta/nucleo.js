@@ -41,7 +41,7 @@ const P_BLUR = 'uniform sampler2D t; uniform vec2 d; varying vec2 vUv; void main
 // sombra de contacto (oclusión ambiental propia): mira la profundidad alrededor de cada punto y oscurece rincones, pies de muebles y encuentros de pared y piso.
 // Es lo que saca el aspecto «de plástico»: las cosas quedan apoyadas y con volumen. El radio crece con la distancia, así se nota de cerca y de lejos.
 const P_AO = `uniform sampler2D tD; uniform mat4 pInv; uniform float p11, asp; uniform vec2 px; varying vec2 vUv;
-  vec3 pos(vec2 uv){ float d = texture2D(tD, uv).x; vec4 v = pInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
+  vec3 pos(vec2 uv){ uv = (floor(uv / px) + 0.5) * px; /* al centro del punto de la imagen: si no, en superficies muy inclinadas aparecen franjas */ float d = texture2D(tD, uv).x; vec4 v = pInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
   void main(){ float d0 = texture2D(tD, vUv).x; if (d0 >= 0.999999) { gl_FragColor = vec4(1.0, 9000.0, 0.0, 1.0); return; }
     vec3 p = pos(vUv), pl = pos(vUv - vec2(px.x, 0.0)), pr = pos(vUv + vec2(px.x, 0.0)), pd = pos(vUv - vec2(0.0, px.y)), pu = pos(vUv + vec2(0.0, px.y));
     vec3 dx = abs(pl.z - p.z) < abs(pr.z - p.z) ? p - pl : pr - p, dy = abs(pd.z - p.z) < abs(pu.z - p.z) ? p - pd : pu - p, n = normalize(cross(dx, dy));
