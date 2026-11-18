@@ -9,6 +9,13 @@ const TEMAS = {
   claro: { alto: 0x5f9ee0, cielo: 0xd9e6ef, niebla: 0xd6e2eb, sol: 0xffeccf, solI: 3.6, hemiA: 0xbcd6f0, hemiB: 0x6f675a, hemiI: 0.5, env: 0.7, exp: 0.84, umbral: 1.5, brillo: 0.22, borde: 0.35, noche: 0, cerca: 700, lejos: 4200 },
   oscuro: { alto: 0x02060c, cielo: 0x0a1824, niebla: 0x08131d, sol: 0x9fb8ff, solI: 0.55, hemiA: 0x4a6c96, hemiB: 0x0b0f15, hemiI: 0.7, env: 0.2, exp: 1.18, umbral: 0.5, brillo: 0.85, borde: 0.75, noche: 1, cerca: 500, lejos: 2600 }
 };
+// horas del día: cuatro momentos. Mañana y mediodía usan las piezas de día; hora azul y noche, las de noche (luces prendidas).
+// sold = desde dónde viene el sol o la luna (x, y, z): baja en la mañana y al atardecer, así las sombras se alargan.
+const HORAS = {
+  manana: { ...TEMAS.claro, base: 'claro', n: 'Mañana', sold: [1.5, 0.8, 0.9], alto: 0x6c9fd8, cielo: 0xf3dfc8, niebla: 0xe9dccb, sol: 0xffd3a0, solI: 3.1, hemiA: 0xc7d6ea, hemiB: 0x7a6f60, env: 0.66, exp: 0.86, borde: 0.4 },
+  dia: { ...TEMAS.claro, base: 'claro', n: 'Mediodía', sold: [-1.1, 2.2, 1.4] },
+  azul: { ...TEMAS.oscuro, base: 'oscuro', n: 'Hora azul', sold: [-1.7, 0.55, 0.7], alto: 0x16264f, cielo: 0x9a6f9c, niebla: 0x4a4468, sol: 0x9fb0ff, solI: 0.95, hemiA: 0x6e84c8, hemiB: 0x191c2a, hemiI: 1.05, env: 0.3, exp: 1.12, umbral: 0.55, brillo: 0.8, borde: 0.7, noche: 0.3, cerca: 600, lejos: 3200 },
+  noche: { ...TEMAS.oscuro, base: 'oscuro', n: 'Noche', sold: [-1.1, 2.2, 1.4] } };
 // cielo: degradé del horizonte al cenit, resplandor del sol y estrellas de noche
 const CIELO_VS = 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = modelViewMatrix * vec4(position, 1.0); gl_Position = (projectionMatrix * p).xyww; }';
 const CIELO_FS = `uniform vec3 alto, hor, solC; uniform vec3 solD; uniform float noche; varying vec3 vD;
@@ -72,20 +79,24 @@ export function crearMotor(canvas, o = {}) {
   motor.inicio = v => { Object.assign(HOME, v); Object.assign(C, v); };
   motor.ir = (v, t = 0.9) => { if (v.yaw !== undefined) { let d = v.yaw - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); v = { ...v, yaw: C.yaw + d }; } viaje = { de: { ...C }, a: { ...C, ...v }, t: 0, dur: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.01 : t }; };
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
+  const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
   function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 ? 0.06 : 0.5; if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
     if (motor.bruma) { scene.fog.near = Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = Math.max(motor.bruma[1], C.d * 5); }
     cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
     // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca)
     const r = Math.min(700, Math.max(40, C.d * 0.85)); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
-    sol.position.set(C.tx - r * 1.1, r * 2.2, C.tz + r * 1.4); sol.target.position.set(C.tx, 0, C.tz); }
+    sol.position.set(C.tx + SD.x * r * 2.8, SD.y * r * 2.8, C.tz + SD.z * r * 2.8); sol.target.position.set(C.tx, 0, C.tz); }
 
-  motor.ponerTema = t => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; const T = TEMAS[t]; scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
+  motor.horas = Object.keys(HORAS).map(k => [k, HORAS[k].n]);
+  // cambiar de hora: si no cambia de día a noche (o al revés) solo se mueve la luz; si cambia, además se rearman las piezas (luces prendidas o apagadas)
+  motor.ponerHora = h => { if (!HORAS[h]) return; motor.hora = h; motor.ponerTema(HORAS[h].base, HORAS[h].base === motor.tema); };
+  motor.ponerTema = (t, soloLuz) => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; if (!HORAS[motor.hora] || HORAS[motor.hora].base !== t) motor.hora = t === 'oscuro' ? 'noche' : 'dia'; const T = HORAS[motor.hora]; SD.set(T.sold[0], T.sold[1], T.sold[2]).normalize(); cieloU.solD.value.copy(SD); scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
     cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol); cieloU.noche.value = T.noche;
     sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp; if (post) { post.umbral = T.umbral; post.fuerza = T.brillo; post.borde = T.borde; }
     // de día el reflejo de chapas y vidrios es el del cielo de la maqueta (no el de una sala de estudio); de noche queda el reflejo tenue de antes
     if (t === 'claro') { const uu = THREE.UniformsUtils.clone(cieloU); uu.alto.value.lerp(uu.hor.value, 0.72); /* cielo más pálido para alumbrar: si no, las sombras quedan azules */ const s = new THREE.Scene(), c2 = new THREE.Mesh(cielo.geometry, new THREE.ShaderMaterial({ uniforms: uu, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false })), ps = new THREE.Mesh(new THREE.CircleGeometry(90, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xa9a59b })); c2.scale.setScalar(60); c2.renderOrder = -10; ps.position.y = -2; s.add(c2, ps); if (envCielo) envCielo.dispose(); envCielo = pmrem.fromScene(s, 0.035, 0.1, 400).texture; scene.environment = envCielo; ps.geometry.dispose(); ps.material.dispose(); c2.material.dispose(); } else scene.environment = envSala;
-    document.documentElement.dataset.tema = t; motor.dirty = true; motor.alTema.forEach(f => f(t)); };
+    document.documentElement.dataset.tema = t; motor.dirty = true; if (!soloLuz) motor.alTema.forEach(f => f(t)); };
 
   // rayos: punto del piso bajo el mouse y piezas tocadas
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -178,7 +189,7 @@ export function crearMotor(canvas, o = {}) {
     if (!motor.dirty) return; motor.dirty = false; ubicarCam(); const a = performance.now(); if (post) post.dibujar(scene, cam); else renderer.render(scene, cam); acc += performance.now() - a; n++; for (const f of motor.despues) f();
     if (t - t0 > 600) { Object.assign(motor.stats, { fps: Math.round(n * 1000 / (t - t0)), ms: +(acc / Math.max(1, n)).toFixed(1), dibujos: renderer.info.render.calls, triangulos: renderer.info.render.triangles }); n = 0; acc = 0; t0 = t; } }
   let guardado = null; try { guardado = localStorage.getItem('motor.tema'); } catch (e) {}
-  motor.ponerTema(o.tema || guardado || (matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro'));
+  { const t0 = o.tema || guardado || (matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro'); let h0 = null; try { h0 = localStorage.getItem('motor.hora'); } catch (e) {} if (!o.tema && HORAS[h0] && HORAS[h0].base === (t0 === 'oscuro' ? 'oscuro' : 'claro')) motor.hora = h0; motor.ponerTema(t0); }
   requestAnimationFrame(cuadro);
   return motor;
 }

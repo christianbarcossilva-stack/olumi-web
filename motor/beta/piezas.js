@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=7';
+import { THREE } from './nucleo.js?v=8';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=2';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=3';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- materiales y formas compartidas ----------
@@ -720,7 +720,8 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
     const lp = lote(g, CAJA, pin, it, false); if (lp) lp.userData.noChoca = true; }
   for (const [u, n] of p.nivelEn || []) { fr(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, M('marco')); fr(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, mat('#16191C'), false); if (n != null) num(n, u); for (const s of [-1, 1]) fr(u + s * 2.75 - 0.16, u + s * 2.75 + 0.16, 0.5, 0.82, 0, 1.15, am); }
   for (const c of p.cajas || []) { if (c[7] != null) num(c[7], (c[0] + c[1]) / 2, c[4]); else fr(c[0], c[1], c[2], c[3], c[4], c[5], mat(os && c[6] && /^#[EF]/i.test(c[6]) ? mix(c[6], '#000', 0.5) : c[6] || p.color, { roughness: 0.7 })); }
-  if (os) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false); AN.forEach(([u], i) => { if (i % 2 === 0) { brillo(g, -w + u, 6.4, d + 0.6, 3.2, '#ffe2b0', 0.7); pozo(g, -w + u, d + 6, 7, '#ffcf8a', 0.22); } }); }
+  if (os) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false); AN.forEach(([u]) => { brillo(g, -w + u, 6.4, d + 0.6, 3.2, '#ffe2b0', 0.7); pozo(g, -w + u, d + 6.5, 8, '#ffcf8a', 0.24); }); // cada andén con su luz y su charco de luz en el piso
+    if (ax) pozo(g, -w + (ax[0] + ax[1]) / 2, d + 6, 9, '#ffe9c4', 0.2); }
   // lo que no se atraviesa a pie: las cuatro paredes, la oficina y los volúmenes propios
   const sg = [[-w, -d, w, -d, e, 0, h], [-w, d, w, d, e, 0, h], [-w, -d, -w, d, e, 0, h], [w, -d, w, d, e, 0, h]]; if (ax) sg.push([-w + ax[0] + 5.8, d - 3.2, -w + ax[1] - 5.8, d - 3.2, 5.8, 0, 8.6]);
   for (const c of p.cajas || []) if (c[7] == null && c[4] < 1.6 && c[5] > 0.5) { const eu = Math.abs(c[1] - c[0]), ev = Math.abs(c[3] - c[2]), um = (c[0] + c[1]) / 2, vm = (c[2] + c[3]) / 2; sg.push(eu >= ev ? [-w + Math.min(c[0], c[1]) + ev / 2, d + vm, -w + Math.max(c[0], c[1]) - ev / 2, d + vm, ev / 2, c[4], c[5]] : [-w + um, d + Math.min(c[2], c[3]) + eu / 2, -w + um, d + Math.max(c[2], c[3]) - eu / 2, eu / 2, c[4], c[5]]); }
