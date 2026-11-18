@@ -40,6 +40,10 @@ export const IC = {
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   pin: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>',
   subir: '<path d="M12 20V5M6 11l6-6 6 6"/>',
-  auto: '<path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16M4 16h16v3H4z"/><path d="M7.5 19v1.5M16.5 19v1.5"/>'
+  auto: '<path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16M4 16h16v3H4z"/><path d="M7.5 19v1.5M16.5 19v1.5"/>',
+  regla: '<path d="M3.5 16.5 16.5 3.5l4 4-13 13z"/><path d="m7 13 1.8 1.8M10 10l1.8 1.8M13 7l1.8 1.8"/>',
+  imagen: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/>',
+  zona: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="2.4 2.6"/><path d="M8 10h5"/>',
+  abrir: '<path d="M4 21h16M6 21V4h9v17"/><path d="M15 4l4 2v15" /><circle cx="12" cy="12.5" r=".6" fill="currentColor"/>'
 };
 export const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;

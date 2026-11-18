@@ -14,16 +14,17 @@
 <script type="module">
 // Maqueta con el motor común, versión beta (lo nuevo se prueba acá antes de pasar a /motor/). Dentro de la app de Ondi lee el cliente de window.parent.__ondiMaqueta;
 // sola, abre una escena de ejemplo (?escena=deposito) o la guardada en este navegador.
-import { abrirMaqueta } from './maqueta.js?v=22';
+import { abrirMaqueta } from './maqueta.js?v=23';
 const P = new URLSearchParams(location.search), app = (P.get('app') === 'estiba' ? 'darvi' : P.get('app')) || 'ondi';
 document.documentElement.dataset.app = app;
 if (app === 'darvi') document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">');
+if (app === 'kliva') document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap">');
 let host = null; try { host = window.parent !== window && (window.parent.__maquetaHost || window.parent.__ondiMaqueta) || null; } catch (e) {}
 let escena = null;
 if (!host) { const id = P.get('escena') || 'deposito';
   try { const g = localStorage.getItem('motor.escena.' + id); if (g && !P.has('nuevo')) escena = JSON.parse(g).escena; } catch (e) {}
   if (!escena) escena = await (await fetch('../escenas/' + id.replace(/[^\w-]/g, '') + '.json')).json(); }
-const M = await abrirMaqueta({ host, escena, app, raiz: document.body, catalogo: '../../olumi/beta/3d/', clave: 'motor.escena.' + (P.get('escena') || 'deposito'), editable: host ? undefined : !P.has('ver'), ruedaConCtrl: P.has('embebida') });
+const M = await abrirMaqueta({ host, escena, app, raiz: document.body, catalogo: app === 'kliva' ? null : '../../olumi/beta/3d/', tema: (host && host.tema) || P.get('tema') || undefined, clave: 'motor.escena.' + (P.get('escena') || 'deposito'), editable: host ? undefined : !P.has('ver'), ruedaConCtrl: P.has('embebida') });
 window.__maqueta = M;
 </script>
 </body>

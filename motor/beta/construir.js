@@ -7,7 +7,7 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=4';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=13';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=14';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -32,13 +32,13 @@ export function construir(M) {
   document.body.insertAdjacentHTML('beforeend', '<div id="mmed" class="vidrio" hidden></div>'); const med = document.getElementById('mmed'); let medV = null;
   function medir(txt, x, z, y = 1.4) { if (!txt) { med.hidden = true; medV = null; return; } med.textContent = txt; med.hidden = false; medV = new THREE.Vector3(x, y, z); motor.dirty = true; }
   motor.despues.push(() => { if (!medV) return; const s = motor.aPantalla(medV); med.style.transform = `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) translate(-50%,-140%)`; });
-  const nombreNuevo = () => { let n = 1; while (M.E.piezas.some(q => q.nombre === 'Recinto ' + n)) n++; return 'Recinto ' + n; };
+  const nombreNuevo = zona => { const b = zona ? 'Zona ' : 'Recinto '; let n = 1; while (M.E.piezas.some(q => q.nombre === b + n)) n++; return b + n; };
   const punto = (x, z) => { const m = new THREE.Mesh(BOL, mB); m.scale.setScalar(Math.max(0.12, motor.C.d * 0.005)); m.position.set(x, 0.3, z); m.renderOrder = 9; guias.add(m); motor.dirty = true; };
 
   // ---------- herramientas ----------
-  function empezar(h, k) { cancelar(); SUB = null; T.h = h; M.elegir(null);
+  function empezar(h, k) { cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
     if (h === 'pared') { T.pts = []; T.p = null; M.hint('<b>Pared</b>: tocá punto por punto. Si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Esc</kbd> sale'); }
-    if (h === 'recinto') { T.a = null; T.p = null; M.hint('<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
+    if (h === 'recinto') { T.a = null; T.p = null; T.zona = k === 'zona'; M.hint(T.zona ? '<b>Zona</b>: arrastrá de una esquina a la otra sobre el sector que querés nombrar (una oficina, un depósito). No lleva paredes ni piso. <kbd>Esc</kbd> sale' : '<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
     if (h === 'abertura') { T.k = ABERTURAS[k] ? k : 'puerta'; T.en = null; M.hint(`<b>${ABERTURAS[T.k].n}</b>: pasá por una pared y tocá donde va. <kbd>Shift</kbd> pone varias · <kbd>Esc</kbd> sale`); }
     M.herrVis(h === 'abertura' ? T.k : h); }
   function cancelar() { if (!T.h) return false; if (T.p) M.quitar(T.p, true); quitaPrev(); T.h = null; T.p = null; T.pts = []; T.a = null; guias.clear(); medir(''); marcar(); M.herrVis(null); return true; }
@@ -51,11 +51,11 @@ export function construir(M) {
     T.pts.push(q); if (T.pts.length === 1) punto(q[0], q[1]); else paredPasar(p, e); }
   function paredFin() { const pts = T.pts; guias.clear(); medir(''); if (T.p && pts.length >= 2) { const p = T.p; p.pts = pts.map(q => [...q]); delete p._p; M.rehacer(p); T.p = null; T.pts = []; M.cambio(); M.toast('Pared lista'); } else { if (T.p) M.quitar(T.p, true); T.p = null; T.pts = []; } }
   function recintoDe(pts) { if (T.p) M.quitar(T.p, true); T.p = null; T.pts = []; T.a = null; guias.clear(); medir('');
-    const p = { id: M.nuevoId('recinto'), t: 'recinto', nombre: nombreNuevo(), pts: pts.map(q => [...q]) }; M.E.piezas.push(p); M.rehacer(p); M.cambio(); M.toast(`${p.nombre}: ${fmt(Math.abs(areaSig(p.pts)))} m². Tocá el piso para moverlo entero`); return p; }
+    const p = { id: M.nuevoId('recinto'), t: 'recinto', nombre: nombreNuevo(T.zona), pts: pts.map(q => [...q]), ...(T.zona && { tipo: 'sin', piso: 'sin' }) }; M.E.piezas.push(p); M.rehacer(p); M.cambio(); M.toast(`${p.nombre}: ${fmt(Math.abs(areaSig(p.pts)))} m². Tocá el piso para moverlo entero`); return p; }
   // recinto de esquina a esquina
   function recPrev(p, e) { const q = iman(p, e), a = T.a, pts = [[a[0], a[1]], [q[0], a[1]], [q[0], q[1]], [a[0], q[1]]], w = Math.abs(q[0] - a[0]), f = Math.abs(q[1] - a[1]); T.q = q;
     if (w < 0.25 || f < 0.25) { if (T.p) { M.quitar(T.p, true); T.p = null; } medir(''); return false; }
-    if (!T.p) { T.p = { id: M.nuevoId('recinto'), t: 'recinto', pts, _p: 1 }; M.E.piezas.push(T.p); } T.p.pts = pts; M.rehacer(T.p); medir(`${fmt(w)} × ${fmt(f)} m · ${fmt(w * f)} m²`, (a[0] + q[0]) / 2, (a[1] + q[1]) / 2, 3); return w >= 0.5 && f >= 0.5; }
+    if (!T.p) { T.p = { id: M.nuevoId('recinto'), t: 'recinto', pts, _p: 1, ...(T.zona && { tipo: 'sin', piso: 'sin' }) }; M.E.piezas.push(T.p); } T.p.pts = pts; M.rehacer(T.p); medir(`${fmt(w)} × ${fmt(f)} m · ${fmt(w * f)} m²`, (a[0] + q[0]) / 2, (a[1] + q[1]) / 2, 3); return w >= 0.5 && f >= 0.5; }
   // abertura sobre una pared
   function quitaPrev() { if (!T.en) return; const p = T.en.p; p.huecos = (p.huecos || []).filter(h => h !== T.en.h); if (!p.huecos.length) delete p.huecos; M.rehacer(p); T.en = null; }
   function entra(p, i, a, w, menos) { return !(p.huecos || []).some(h => h !== menos && h.s === i && a < h.a + anchoDe(h) + 0.1 && a + w > h.a - 0.1); }
@@ -73,9 +73,13 @@ export function construir(M) {
   // lo que está adentro de un recinto (se mueve y gira con él)
   const adentro = (x, z, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
   function contenido(p) { if (p.t === 'recinto') return M.E.piezas.filter(q => q !== p && !q._p && (q.pts ? q.pts.every(k => adentro(k[0], k[1], p.pts)) : adentro(q.x || 0, q.z || 0, p.pts)));
-    // un edificio o un galpón se lleva los equipos que tiene puestos (adentro o en sus paredes)
+    // el plano del lugar se lleva todo lo que está apoyado arriba (menos el terreno y otros planos)
+    if (p.t === 'plano') { const d = { ...TIPOS.plano.def, ...p }, c = Math.cos(p.r || 0), s = Math.sin(p.r || 0), hw = d.ancho / 2, hd = d.ancho * (d.aspecto || 0.62) / 2;
+      const sobre = (x, z) => { const dx = x - (p.x || 0), dz = z - (p.z || 0); return Math.abs(dx * c - dz * s) <= hw && Math.abs(dx * s + dz * c) <= hd; };
+      return M.E.piezas.filter(q => q !== p && !q._p && !['terreno', 'plano'].includes(q.t) && (q.pts ? q.pts.every(k => sobre(k[0], k[1])) : sobre(q.x || 0, q.z || 0))); }
+    // un edificio o un galpón se lleva los equipos y las puertas con control de acceso que tiene puestos (adentro o en sus paredes)
     if (!['edificio', 'galpon', 'modulo', 'alero'].includes(p.t)) return []; const d = { ...TIPOS[p.t].def, ...p }, c = Math.cos(p.r || 0), s = Math.sin(p.r || 0), hw = d.ancho / 2 + 0.8, hd = d.fondo / 2 + 0.8;
-    return M.E.piezas.filter(q => { if (q === p || q._p || q.pts || !TIPOS[q.t].equipo) return false; const dx = (q.x || 0) - (p.x || 0), dz = (q.z || 0) - (p.z || 0); return Math.abs(dx * c - dz * s) <= hw && Math.abs(dx * s + dz * c) <= hd; }); }
+    return M.E.piezas.filter(q => { if (q === p || q._p || q.pts || !(TIPOS[q.t].equipo || TIPOS[q.t].vivo)) return false; const dx = (q.x || 0) - (p.x || 0), dz = (q.z || 0) - (p.z || 0); return Math.abs(dx * c - dz * s) <= hw && Math.abs(dx * s + dz * c) <= hd; }); }
   // girar una línea, un área o un recinto (con lo que tiene adentro) alrededor de su centro
   function girar(p, ang, solo) { const [cx, cz] = centro(p), c = Math.cos(ang), s = Math.sin(ang), rot = q => [Math.round((cx + (q[0] - cx) * c + (q[1] - cz) * s) * 1000) / 1000, Math.round((cz - (q[0] - cx) * s + (q[1] - cz) * c) * 1000) / 1000];
     const dentro = solo ? [] : contenido(p); p.pts = p.pts.map(rot); M.rehacer(p);
