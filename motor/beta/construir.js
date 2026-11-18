@@ -6,8 +6,8 @@
 //   Con la mano:  tocar una pared la elige (tipo, color, aberturas, arrastrarla estira el recinto); tocar el piso elige el recinto entero,
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
-import { THREE } from './nucleo.js?v=5';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=17';
+import { THREE } from './nucleo.js?v=6';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=18';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -78,6 +78,8 @@ export function construir(M) {
       const sobre = (x, z) => { const dx = x - (p.x || 0), dz = z - (p.z || 0); return Math.abs(dx * c - dz * s) <= hw && Math.abs(dx * s + dz * c) <= hd; };
       return M.E.piezas.filter(q => q !== p && !q._p && !['terreno', 'plano'].includes(q.t) && (q.pts ? q.pts.every(k => sobre(k[0], k[1])) : sobre(q.x || 0, q.z || 0))); }
     // un edificio o un galpón se lleva los equipos y las puertas con control de acceso que tiene puestos (adentro o en sus paredes)
+    // una columna de luz se lleva lo que tiene adosado (cámaras, Wi-Fi, sensores)
+    if (p.t === 'columna') return M.E.piezas.filter(q => q !== p && !q._p && !q.pts && TIPOS[q.t] && TIPOS[q.t].equipo && Math.hypot((q.x || 0) - (p.x || 0), (q.z || 0) - (p.z || 0)) < 1.6);
     if (!['edificio', 'galpon', 'modulo', 'alero'].includes(p.t)) return []; const d = { ...TIPOS[p.t].def, ...p }, c = Math.cos(p.r || 0), s = Math.sin(p.r || 0), hw = d.ancho / 2 + 0.8, hd = d.fondo / 2 + 0.8;
     return M.E.piezas.filter(q => { if (q === p || q._p || q.pts || !(TIPOS[q.t].equipo || TIPOS[q.t].vivo)) return false; const dx = (q.x || 0) - (p.x || 0), dz = (q.z || 0) - (p.z || 0); return Math.abs(dx * c - dz * s) <= hw && Math.abs(dx * s + dz * c) <= hd; }); }
   // girar una línea, un área o un recinto (con lo que tiene adentro) alrededor de su centro

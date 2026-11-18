@@ -1,8 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=5';
+import { THREE } from './nucleo.js?v=6';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=1';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- materiales y formas compartidas ----------
@@ -46,7 +47,7 @@ function calmo(base, k = 0.4) { const key = base.uuid + '|' + k; let m = CALMOS.
   m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#ifdef USE_MAP\n{ vec4 fino = texture2D( map, vMapUv ); vec4 prom = texture2D( map, vMapUv, 12.0 ); fino.rgb = mix( prom.rgb, fino.rgb, ' + k.toFixed(2) + ' ); diffuseColor *= fino; }\n#endif'); };
   m.customProgramCacheKey = () => 'calmo' + k; CALMOS.set(key, m); return m; }
 export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto';
-  const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return parejo ? calmo(b, 0.42) : b; }
+  const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return parejo ? calmo(b, 0.3) : b; }
 // superficie plana con la forma de un polígono (x, z)
 function area(g, pts, y, m) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); const geo = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
   const k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); return k; }
@@ -355,16 +356,16 @@ export const TIPOS = {
     armar(p) { const g = new THREE.Group(); arbolado(g, [[0, 0, p.tipo, p.alto]]); return g; } },
 
   // construcciones
-  galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2, estilo: 'chapa', andenes: 6, anexo: '', cubierta: 'claraboyas', desde: 1, placa: '#1F4D3A' },
-    campos: [F.nombre, F.ancho('Largo (m)', 3, 600), F.fondo('Fondo (m)', 3, 300), F.alto('Alto (m)', 2.5, 30, 0.5), F.color('Color de paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['chapa', 'Galpón de chapa'], ['logistico', 'Nave con andenes']] }, { k: 'portones', n: 'Portones al frente (chapa)', t: 'num', min: 0, max: 60, paso: 1 }, { k: 'abierto', n: 'Frente abierto (tinglado)', t: 'bool' },
+  galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2, estilo: 'chapa', perfil: 'trapezoidal', terminacion: 'prepintada', andenes: 6, anexo: '', cubierta: 'claraboyas', desde: 1, placa: '#1F4D3A' },
+    campos: [F.nombre, F.ancho('Largo (m)', 3, 600), F.fondo('Fondo (m)', 3, 300), F.alto('Alto (m)', 2.5, 30, 0.5), F.color('Color de paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['chapa', 'Galpón de chapa'], ['logistico', 'Nave con andenes']] }, { k: 'perfil', n: 'Chapa', t: 'sel', ops: [['trapezoidal', 'Trapezoidal'], ['acanalada', 'Acanalada (onda)']] }, { k: 'terminacion', n: 'Terminación', t: 'sel', ops: [['prepintada', 'Prepintada'], ['galvanizada', 'Galvanizada (cinc)'], ['vieja', 'Vieja, sin brillo']] }, { k: 'portones', n: 'Portones al frente (chapa)', t: 'num', min: 0, max: 60, paso: 1 }, { k: 'abierto', n: 'Frente abierto (tinglado)', t: 'bool' },
       { k: 'andenes', n: 'Andenes (nave)', t: 'num', min: 0, max: 80, paso: 1 }, { k: 'desde', n: 'Primer número de andén', t: 'num', min: 0, max: 999, paso: 1 }, { k: 'placa', n: 'Color de las chapas de número', t: 'color' },
       { k: 'libre', n: 'Sin inquilino (no recibe camiones)', t: 'bool' }, { k: 'anexo', n: 'Oficina al frente (nave)', t: 'sel', ops: [['', 'Sin oficina'], ['izq', 'A la izquierda'], ['der', 'A la derecha']] }, { k: 'cubierta', n: 'Techo (nave)', t: 'sel', ops: [['lisa', 'Liso'], ['claraboyas', 'Con claraboyas'], ['solar', 'Con paneles solares']] }, F.r],
-    armar(p) { if (p.estilo === 'logistico') return naveLog(p); const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2, h = p.alto, ch = chapa(16, 'galpon'), pa = matTex(ch, oscuro() ? mix(p.color, '#000', 0.5) : p.color, [1, 1], { bumpMap: ch, bumpScale: 0.8, roughness: 0.6, metalness: 0.2 }), zo = mat(oscuro() ? '#4c5257' : '#aeb3b8'), e = 0.25;
-      cajaT(g, -w, 0, -d, w, h, -d + e, pa, 4); cajaT(g, -w, 0, -d, -w + e, h, d, pa, 4); cajaT(g, w - e, 0, -d, w, h, d, pa, 4);
+    armar(p) { if (p.estilo === 'logistico') return naveLog(p); const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2, h = p.alto, CH = { perfil: p.perfil || 'trapezoidal', terminacion: p.terminacion || 'prepintada' }, pa = chapaReal(oscuro() ? mix(p.color, '#000', 0.5) : p.color, CH), zo = mat(oscuro() ? '#4c5257' : '#aeb3b8'), e = 0.25;
+      cajaT(g, -w, 0, -d, w, h, -d + e, pa, MCH); cajaT(g, -w, 0, -d, -w + e, h, d, pa, MCH); cajaT(g, w - e, 0, -d, w, h, d, pa, MCH);
       if (p.abierto) { const n = Math.max(2, Math.round(p.ancho / 8)); for (let i = 0; i <= n; i++) caja(g, -w + i * (p.ancho - 0.4) / n, 0, d - 0.4, -w + i * (p.ancho - 0.4) / n + 0.4, h, d, pa); }
-      else { cajaT(g, -w, 0, d - e, w, h, d, pa, 4); const n = p.portones | 0; for (let i = 0; i < n; i++) { const x = -w + (i + 0.5) * p.ancho / n, pw = Math.min(4.2, p.ancho / n * 0.7); caja(g, x - pw / 2, 0, d, x + pw / 2, Math.min(h - 1, 4.8), d + 0.06, mat(oscuro() ? '#5f666c' : '#d7dbde', { roughness: 0.5 })); } }
+      else { cajaT(g, -w, 0, d - e, w, h, d, pa, MCH); const n = p.portones | 0; for (let i = 0; i < n; i++) { const x = -w + (i + 0.5) * p.ancho / n, pw = Math.min(4.2, p.ancho / n * 0.7); caja(g, x - pw / 2, 0, d, x + pw / 2, Math.min(h - 1, 4.8), d + 0.06, mat(oscuro() ? '#5f666c' : '#d7dbde', { roughness: 0.5 })); } }
       for (const [x0, z0, x1, z1] of [[-w, -d, w, -d + e], [-w, d - e, w, d], [-w, -d, -w + e, d], [w - e, -d, w, d]]) caja(g, x0 - 0.02, 0, z0 - 0.02, x1 + 0.02, 1.1, z1 + 0.02, zo);
-      const t = cajaT(g, -w - 0.3, h, -d - 0.3, w + 0.3, h + 0.35, d + 0.3, matTex(ch, oscuro() ? mix(p.techo, '#000', 0.55) : p.techo, [1, 1], { bumpMap: ch, bumpScale: 0.8, roughness: 0.5, metalness: 0.3 }), 4); t.userData.techo = true;
+      const t = cajaT(g, -w - 0.3, h, -d - 0.3, w + 0.3, h + 0.35, d + 0.3, chapaReal(oscuro() ? mix(p.techo, '#000', 0.55) : p.techo, { perfil: CH.perfil, terminacion: 'galvanizada' }), MCH); t.userData.techo = true; sombraDeApoyo(g, w, d, { fuerza: oscuro() ? 0.22 : 0.4 });
       caja(g, -w - 0.32, h + 0.35, -d - 0.32, w + 0.32, h + 0.6, -d + 0.1, mat(oscuro() ? '#2a3036' : '#59616a')); caja(g, -w - 0.32, h + 0.35, d - 0.1, w + 0.32, h + 0.6, d + 0.32, mat(oscuro() ? '#2a3036' : '#59616a'));
       // de noche: tira de luz en el color de la app bajo el alero y luz sobre los portones
       if (oscuro()) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w, d, w, d + 0.05], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false);
@@ -688,12 +689,12 @@ const SIETE = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afg
 export function andenesDe(p) { const L = p.ancho; if (Array.isArray(p.andenesEn)) return p.andenesEn.filter(q => q[0] > 2 && q[0] < L - 2); const n = Math.max(0, p.andenes | 0); if (!n) return [];
   const a = p.anexo === 'izq' ? 15 : 3, b = L - (p.anexo === 'der' ? 15 : 3), paso = Math.min(6.5, (b - a) / n), ini = (a + b) / 2 - paso * (n - 1) / 2, d0 = p.desde ?? 1; if (paso < 4) return andenesDe({ ...p, andenes: Math.floor((b - a) / 4) });
   return Array.from({ length: n }, (_, i) => [ini + i * paso, d0 + i]); }
-function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.oscuro : NAVE.claro, L = p.ancho, w = L / 2, d = p.fondo / 2, h = p.alto, e = 0.25, ch = chapa(16, 'galpon');
-  const pa = matTex(ch, os ? mix(p.color, '#000', 0.5) : p.color, [1, 1], { bumpMap: ch, bumpScale: 0.6, roughness: 0.62, metalness: 0.18 }), liso = mat(os ? mix(p.color, '#000', 0.5) : p.color, { roughness: 0.7 }), M = (k, o) => mat(K[k], o);
+function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.oscuro : NAVE.claro, L = p.ancho, w = L / 2, d = p.fondo / 2, h = p.alto, e = 0.25, CH = { perfil: p.perfil || 'trapezoidal', terminacion: p.terminacion || 'prepintada' };
+  const pa = chapaReal(os ? mix(p.color, '#000', 0.5) : p.color, CH), liso = mat(os ? mix(p.color, '#000', 0.5) : p.color, { roughness: 0.7 }), M = (k, o) => mat(K[k], o);
   const fr = (u0, u1, v0, v1, y0, y1, m, s = true) => caja(g, -w + u0, y0, d + v0, -w + u1, y1, d + v1, m, s);
-  cajaT(g, -w, 0, -d, w, h, -d + e, pa, 4); cajaT(g, -w, 0, -d, -w + e, h, d, pa, 4); cajaT(g, w - e, 0, -d, w, h, d, pa, 4); cajaT(g, -w, 0, d - e, w, h, d, pa, 4);
+  cajaT(g, -w, 0, -d, w, h, -d + e, pa, MCH); cajaT(g, -w, 0, -d, -w + e, h, d, pa, MCH); cajaT(g, w - e, 0, -d, w, h, d, pa, MCH); cajaT(g, -w, 0, d - e, w, h, d, pa, MCH);
   for (const [x0, z0, x1, z1] of [[-w, -d, w, -d + e], [-w, d - e, w, d], [-w, -d, -w + e, d], [w - e, -d, w, d]]) caja(g, x0 - 0.08, 0, z0 - 0.08, x1 + 0.08, 1.1, z1 + 0.08, M('zocalo'));
-  const t = caja(g, -w + e, h - 0.15, -d + e, w - e, h, d - e, mat(os ? mix(p.techo, '#000', 0.55) : p.techo, { roughness: 0.75 })); t.userData.techo = true;
+  const t = cajaT(g, -w + e, h - 0.15, -d + e, w - e, h, d - e, chapaReal(os ? mix(p.techo, '#000', 0.55) : p.techo, { perfil: CH.perfil, terminacion: 'galvanizada' }), MCH); t.userData.techo = true; sombraDeApoyo(g, w, d, { fuerza: os ? 0.22 : 0.4 });
   for (const [x0, z0, x1, z1] of [[-w - 0.05, -d - 0.05, w + 0.05, -d + 0.45], [-w - 0.05, d - 0.45, w + 0.05, d + 0.05], [-w - 0.05, -d + 0.45, -w + 0.45, d - 0.45], [w - 0.45, -d + 0.45, w + 0.05, d - 0.45]]) caja(g, x0, h, z0, x1, h + 0.8, z1, M('pretil'));
   const ax = p.anexo === 'izq' ? [-0.2, 12] : p.anexo === 'der' ? [L - 12, L + 0.2] : null; if (p.banda !== false && h > 7) fr(p.anexo === 'izq' ? 12 : 0, p.anexo === 'der' ? L - 12 : L, 0, 0.12, h - 2.4, h - 0.6, M('banda'), false);
   // techo: claraboyas a lo largo del lado mayor, o paneles solares; y los equipos de aire

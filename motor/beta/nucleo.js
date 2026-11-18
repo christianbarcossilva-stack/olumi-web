@@ -28,7 +28,7 @@ export function crearMotor(canvas, o = {}) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, tactil ? 2 : 2)); renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(38, 1, 0.5, 6000);
-  const pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const pmrem = new THREE.PMREMGenerator(renderer); const envSala = scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; let envCielo = null;
   const hemi = new THREE.HemisphereLight(), sol = new THREE.DirectionalLight(); scene.add(hemi, sol, sol.target);
   sol.castShadow = true; { const s = o.sombra || (tactil ? 2048 : 4096); sol.shadow.mapSize.set(s, s); } sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.05;
   scene.background = new THREE.Color(); scene.fog = new THREE.Fog(0, 900, 3200);
@@ -55,6 +55,8 @@ export function crearMotor(canvas, o = {}) {
   motor.ponerTema = t => { motor.tema = t = t === 'oscuro' ? 'oscuro' : 'claro'; const T = TEMAS[t]; scene.background.set(T.cielo); scene.fog.color.set(T.niebla); scene.fog.near = T.cerca; scene.fog.far = T.lejos; motor.bruma = [T.cerca, T.lejos];
     cieloU.alto.value.set(T.alto); cieloU.hor.value.set(T.cielo); cieloU.solC.value.set(T.sol); cieloU.noche.value = T.noche;
     sol.color.set(T.sol); sol.intensity = T.solI; hemi.color.set(T.hemiA); hemi.groundColor.set(T.hemiB); hemi.intensity = T.hemiI; scene.environmentIntensity = T.env; renderer.toneMappingExposure = T.exp;
+    // de día el reflejo de chapas y vidrios es el del cielo de la maqueta (no el de una sala de estudio); de noche queda el reflejo tenue de antes
+    if (t === 'claro') { const uu = THREE.UniformsUtils.clone(cieloU); uu.alto.value.lerp(uu.hor.value, 0.72); /* cielo más pálido para alumbrar: si no, las sombras quedan azules */ const s = new THREE.Scene(), c2 = new THREE.Mesh(cielo.geometry, new THREE.ShaderMaterial({ uniforms: uu, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false })), ps = new THREE.Mesh(new THREE.CircleGeometry(90, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xa9a59b })); c2.scale.setScalar(60); c2.renderOrder = -10; ps.position.y = -2; s.add(c2, ps); if (envCielo) envCielo.dispose(); envCielo = pmrem.fromScene(s, 0.035, 0.1, 400).texture; scene.environment = envCielo; ps.geometry.dispose(); ps.material.dispose(); c2.material.dispose(); } else scene.environment = envSala;
     document.documentElement.dataset.tema = t; motor.dirty = true; motor.alTema.forEach(f => f(t)); };
 
   // rayos: punto del piso bajo el mouse y piezas tocadas

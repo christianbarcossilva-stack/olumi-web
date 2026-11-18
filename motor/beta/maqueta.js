@@ -11,13 +11,13 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
-import { THREE, crearMotor } from './nucleo.js?v=5';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=17';
+import { THREE, crearMotor } from './nucleo.js?v=6';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso } from './piezas.js?v=18';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=7';
-import { recorrer } from './recorrer.js?v=3';
-import { transito } from './transito.js?v=6';
+import { construir } from './construir.js?v=8';
+import { recorrer } from './recorrer.js?v=4';
+import { transito } from './transito.js?v=7';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -187,7 +187,7 @@ export async function abrirMaqueta(o) {
   let SEL = null; const caja = new THREE.Box3Helper(new THREE.Box3(), 0x1d9bf0), cajaH = new THREE.Box3Helper(new THREE.Box3(), 0x8ecbff); caja.visible = cajaH.visible = false; motor.scene.add(caja, cajaH);
   const UI = { abierta: false }; try { UI.abierta = localStorage.getItem('motor.ficha') === '1'; } catch (e) {}
   // la caja de lo elegido no cuenta el campo de visión ni el aro del piso (si no, una cámara queda adentro de una caja enorme)
-  const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && m !== g.userData.aro) b.expandByObject(m); }); return b; };
+  const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && !m.userData.noPica && m !== g.userData.aro) b.expandByObject(m); }); return b; };
   function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaDe(g, caja.box).expandByScalar(0.15); puntos(); motor.dirty = true; }
   function elegir(p, enfocar) { SEL = p; CON.alElegir(p); marcar(); info(); if (enfocar && p) { const [x, z] = centro(p); motor.ir({ tx: x, tz: z, d: Math.min(motor.C.d, TIPOS[p.t].equipo ? 45 : 140) }); } }
   function hallar(e) { const hit = motor.tocar(e.clientX, e.clientY, [...objs.values()].filter(g => g.visible)); for (const h of hit) { const g = h.object.userData.dueño; if (g && g.visible) { if (h.object.userData.campo || g.userData.pieza._p || (!ED.on && g.userData.tipo.fondo)) continue; return { p: g.userData.pieza, h }; } } return null; }
@@ -333,6 +333,9 @@ export async function abrirMaqueta(o) {
   function papelera(b) { const hoy = Date.now(); E.papelera = (E.papelera || []).filter(it => hoy - it.cuando < 30 * 864e5 && !E.piezas.some(q => q.id === it.p.id)); const r = b.getBoundingClientRect();
     if (!E.papelera.length) { toast('La papelera está vacía'); return; } const hace = t => { const d = Math.floor((hoy - t) / 864e5); return d ? `hace ${d} día${d > 1 ? 's' : ''}` : 'hoy'; };
     menu(E.papelera.map(it => ({ n: `${esc(it.p.nombre || TIPOS[it.p.t].n)} <small>${TIPOS[it.p.t].n} · ${hace(it.cuando)}</small>`, ic: 'restaurar', f: () => { E.papelera = E.papelera.filter(x => x !== it); if (!TIPOS[it.p.t]) return; E.piezas.push(it.p); rehacer(it.p); elegir(it.p, true); cambio(); toast('Recuperado'); } })), r.left, r.top - 8, true); }
+  // equipo adosado a una columna de luz: va sin poste propio, mirando hacia afuera; cada uno nuevo queda un cuarto de vuelta más allá, y se mueve con la columna
+  function adosar(col, t) { const ya = E.piezas.filter(q => !q.pts && TIPOS[q.t] && TIPOS[q.t].equipo && Math.hypot((q.x || 0) - (col.x || 0), (q.z || 0) - (col.z || 0)) < 1.6).length, r = (col.r || 0) + ya * Math.PI / 2, H = { ...TIPOS.columna.def, ...col }.alto;
+    const c = { ...TIPOS[t].def, t, id: nuevoId(t), x: Math.round(((col.x || 0) + Math.sin(r) * 0.3) * 100) / 100, z: Math.round(((col.z || 0) + Math.cos(r) * 0.3) * 100) / 100, r, montaje: 'pared', y: Math.max(3, Math.round((Math.min(H - 1.5, t === 'camara' ? 8 : 7) - ya * 0.6) * 10) / 10) }; E.piezas.push(c); rehacer(c); elegir(c); cambio(); toast('Quedó adosado a la columna. Se gira con la manija celeste.'); }
   function duplicar() { if (!SEL) return; const c = JSON.parse(JSON.stringify(SEL)); c.id = nuevoId(c.t); delete c.uid; delete c.doc; if (c.pts) c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4]); else { c.x = (c.x || 0) + 4; c.z = (c.z || 0) + 4; } E.piezas.push(c); rehacer(c); elegir(c); cambio(); }
   let copia = null; function pegarCopia() { if (!copia) return; const c = JSON.parse(copia); delete c.id; delete c.uid; delete c.doc; if (c.pts) { c.id = nuevoId(c.t); c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4]); E.piezas.push(c); rehacer(c); elegir(c); cambio(); } else empezar(c); }
   function girarSel(giro) { const p = ED.colocar ? ED.colocar.p || (ED.colocar.tpl.r = (ED.colocar.tpl.r || 0) + giro, null) : SEL; if (!p) return;
@@ -382,6 +385,7 @@ export async function abrirMaqueta(o) {
   $('#mmenu').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const it = $('#mmenu')._it[+b.dataset.i]; menu(null); it.f(); });
   motor.alMenu = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e), p = motor.enPiso(e.clientX, e.clientY), T = h && TIPOS[h.p.t], its = [];
     if (h) { elegir(h.p); its.push({ n: 'Enfocar', ic: 'enfocar', f: () => elegir(h.p, true) }); if (T.protegido && host && host.abrirDoc) its.push({ n: 'Abrir documentación', ic: 'doc', f: () => host.abrirDoc(h.p) });
+      if (ED.on && h.p.t === 'columna' && app !== 'darvi') its.push({ n: 'Sumar una cámara a la columna', ic: 'ojo', f: () => adosar(h.p, 'camara') }, { n: 'Sumar Wi-Fi a la columna', ic: 'equipos', f: () => adosar(h.p, 'ap') }, '-');
       if (ED.on) its.push({ n: 'Propiedades', ic: 'ajustes', f: () => { UI.abierta = true; info(); } }, { n: 'Duplicar', ic: 'duplicar', k: 'Ctrl D', f: duplicar }, { n: 'Girar 90°', ic: 'girar', k: 'R', f: () => girarSel(Math.PI / 2) }, '-', { n: 'Sacar', ic: T.protegido ? 'candado' : 'borrar', k: 'Supr', peligro: true, f: () => sacar(h.p) }); }
     else if (ED.on) { its.push({ n: 'Catálogo', ic: 'catalogo', k: 'Tab', f: () => catalogo(true) }); if (copia) its.push({ n: 'Pegar', ic: 'duplicar', k: 'Ctrl V', f: pegarCopia }); }
     if (p) its.push(...(its.length ? ['-'] : []), { n: 'Recorrer desde acá', ic: 'caminar', f: () => RC.paseo(true, [p.x, p.z]) });
@@ -437,7 +441,7 @@ export async function abrirMaqueta(o) {
         if (Math.abs(n.y) < 0.5) s = { k: 'pared', x: hit.point.x + n.x * 0.02, z: hit.point.z + n.z * 0.02, y, r: Math.atan2(n.x, n.z), montaje: 'pared' };
         else if (n.y < 0) s = { k: 'techo', x: hit.point.x, z: hit.point.z, y, montaje: 'techo' };
         else s = { k: 'sobre', x: hit.point.x, z: hit.point.z, piso: y, y: y + ((T.def.y ?? 0) > 2 ? 1.2 : 0.02) }; }
-      if (!s) { const col = E.piezas.find(q => q.t === 'columna' && Math.hypot((q.x || 0) - p.x, (q.z || 0) - p.z) < 3); if (col) s = { k: 'col', x: col.x, z: (col.z || 0) + 0.5, y: C.tpl.y ?? Math.max(3, (col.alto || 25) - (P.t === 'camara' ? 4 : 6)) }; } }
+      if (!s) { const col = E.piezas.find(q => q.t === 'columna' && Math.hypot((q.x || 0) - p.x, (q.z || 0) - p.z) < 3); if (col) { let nx = p.x - (col.x || 0), nz = p.z - (col.z || 0); const l = Math.hypot(nx, nz); if (l < 0.05) { nx = 0; nz = 1; } else { nx /= l; nz /= l; } s = { k: 'col', x: (col.x || 0) + nx * 0.3, z: (col.z || 0) + nz * 0.3, r: Math.atan2(nx, nz), montaje: 'pared', y: C.tpl.y ?? Math.max(3, (col.alto || 25) - (P.t === 'camara' ? 4 : 6)) }; } } }
     for (const k of ['y', 'montaje', 'piso']) { if (s && s[k] != null) P[k] = s[k]; else if (C.tpl[k] == null) delete P[k]; else P[k] = C.tpl[k]; }
     if (s) { P.x = Math.round(s.x * 100) / 100; P.z = Math.round(s.z * 100) / 100; if (s.r != null) P.r = s.r; } else { P.x = pegar(p.x, e.altKey); P.z = pegar(p.z, e.altKey); if (P._col === 'pared') P.r = C.tpl.r || 0; }
     const firma = s ? s.k + (s.y ?? '') : ''; if (firma !== (P._col || '')) { P._col = firma; rehacer(P); }
