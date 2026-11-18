@@ -10,7 +10,7 @@ import { THREE, crearMotor } from './nucleo.js?v=3';
 import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig } from './piezas.js?v=10';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=2';
 import { svg } from './iconos.js?v=1';
-import { construir } from './construir.js?v=1';
+import { construir } from './construir.js?v=2';
 import { recorrer } from './recorrer.js?v=1';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -202,7 +202,7 @@ export async function abrirMaqueta(o) {
   function editar(on) { if (!puede) return; if (on && RC.R.on) RC.paseo(false); ED.on = on; motor.editando = on; document.documentElement.classList.toggle('editando', on); $('#mtool').hidden = !on; $('#bedit').setAttribute('aria-pressed', on); $('#bedit').querySelector('span').textContent = on ? 'Listo' : 'Editar';
     grilla.visible = on && ED.grilla; if (!on) { CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); CON.marcar(); marcar(); info(); motor.dirty = true; }
   if (puede) $('#bedit').onclick = () => editar(!ED.on);
-  const PISTA = { mano: '<b>Mano</b>: tocá algo para elegirlo y arrastralo para moverlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
+  const PISTA = { mano: '<b>Mano</b>: arrastrá el piso para moverte. Tocá algo para elegirlo y arrastralo para correrlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
   function herramienta(h) { CON.cancelar(); cancelar(true); if (h === 'pared' || h === 'recinto') { CON.empezar(h); return; } if (h === 'puerta' || h === 'ventana') { CON.empezar('abertura', h); return; } if (h === 'catalogo') { catalogo($('#mcat').hidden); return; } ED.h = h; herrVis(null); }
   // qué botón queda marcado en la barra: la herramienta de construcción en curso o, si no hay, la mano, la maza o el gotero
   function herrVis(h) { const v = h || ED.h; canvas.dataset.h = v; document.querySelectorAll('#mtool [data-h]').forEach(b => b.setAttribute('aria-pressed', b.dataset.h === v)); if (!h && ED.on && !ED.colocar && !ED.linea) hint(PISTA[ED.h]); puntos(); }
@@ -334,12 +334,14 @@ export async function abrirMaqueta(o) {
 
   // mouse: lo que el editor agarra no mueve la cámara
   motor.agarrar = e => { if (!ED.on) return false; const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
-    if (ED.colocar || ED.linea) return true; if (CON.T.h) return CON.agarrar(e, p0, null);
+    // mientras se ubica o se dibuja algo, arrastrar mueve la vista y el toque es el que pone (solo el recinto se dibuja arrastrando)
+    if (ED.colocar || ED.linea) return false; if (CON.T.h) return CON.agarrar(e, p0, null);
     const mh = SEL && ED.h === 'mano' && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0];
     if (mh) { const ud = mh.object.userData; if (ud.giro) ED.drag = { giro: true }; else if (ud.altura) { const n = new THREE.Vector3(Math.sin(motor.C.yaw), 0, Math.cos(motor.C.yaw)); ED.drag = { altura: new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(SEL.x || 0, 0, SEL.z || 0)) }; }
       else if (ud.medio != null) { SEL.pts.splice(ud.medio, 0, [pegar(p0.x, e.altKey), pegar(p0.z, e.altKey)]); CON.insertado(SEL, ud.medio); ED.drag = { v: ud.medio }; rehacer(SEL); } else ED.drag = { v: ud.vertice }; return true; }
-    const h = hallar(e); if (CON.agarrar(e, p0, h)) return true; if (!h) { if (ED.h === 'mano') elegir(null); return false; }
-    if (ED.h === 'maza') { sacar(h.p); return true; } if (ED.h === 'gotero') { const c = JSON.parse(JSON.stringify(h.p)); delete c.id; delete c.uid; delete c.doc; delete c.pts; delete c.huecos; delete c.lados; empezar(c); return true; }
+    // Con la mano, arrastrar mueve la vista salvo que se agarre algo chico (un equipo, un auto, un árbol) o algo que ya estaba elegido.
+    // Lo grande (galpones, edificios, calles, recintos) primero se elige con un toque; el terreno no se corre arrastrando, solo por sus puntos.
+    const h = hallar(e); if (CON.agarrar(e, p0, h)) return true; if (!h || ED.h !== 'mano' || h.p.t === 'terreno' || (h.p !== SEL && !directo(h.p))) return false;
     elegir(h.p); ED.drag = { p: h.p, x0: p0.x, z0: p0.z, orig: h.p.pts ? h.p.pts.map(q => [...q]) : [h.p.x || 0, h.p.z || 0], movido: false, con: e.altKey ? [] : CON.contenido(h.p).map(q => ({ q, o: q.pts ? q.pts.map(k => [...k]) : [q.x || 0, q.z || 0] })) }; return true; };
   motor.mover = e => { if (CON.mover(e)) return; const D = ED.drag; if (!D) return;
     if (D.altura) { const v = motor.rayo(e.clientX, e.clientY).ray.intersectPlane(D.altura, new THREE.Vector3()); if (v) { const y = Math.max(0, Math.min(60, Math.round(v.y * (e.altKey ? 100 : 10)) / (e.altKey ? 100 : 10))); if (y !== SEL.y) { SEL.y = y; D.movido = true; rehacer(SEL); } } return; }
@@ -359,15 +361,23 @@ export async function abrirMaqueta(o) {
     if (ED.linea && p && ED.linea.p) { const L = ED.linea; L.p.pts = [...L.pts, [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]]; if (L.p.pts.length >= 2) rehacer(L.p); return; }
     if (e.pointerType !== 'mouse') return; const h = hallar(e), g = h && objs.get(h.p.id);
     if (!ED.on) { cajaH.visible = !!g && h.p !== SEL && TIPOS[h.p.t].forma === 'punto'; if (cajaH.visible) cajaDe(g, cajaH.box).expandByScalar(0.1); canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
-    else { cajaH.visible = false; canvas.classList.toggle('sobre', !!h || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
+    else { cajaH.visible = false; canvas.classList.toggle('sobre', (!!h && ED.h === 'mano' && h.p.t !== 'terreno' && (h.p === SEL || directo(h.p))) || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
   let ultimoToque = 0;
-  motor.alTocar = e => { if (ED.on) return; const h = hallar(e); if (RC.R.on) { if (h && TIPOS[h.p.t].equipo) { elegir(h.p); return; } const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; } elegir(h ? h.p : null); };
+  // lo que se arrastra sin elegirlo antes: equipos y cosas de menos de 8 m
+  const directo = p => { if (p.pts) return false; if (TIPOS[p.t].equipo) return true; const g = objs.get(p.id); if (!g) return false; const b = cajaDe(g, new THREE.Box3()); return Math.hypot(b.max.x - b.min.x, b.max.z - b.min.z) < 8; };
+  // un toque editando: la mano elige (tocar el terreno con otra cosa elegida solo la suelta), la maza saca y el gotero copia
+  function toqueEd(e) { if (ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
+    if (ED.h === 'maza') { if (h) sacar(h.p); return; } if (ED.h === 'gotero') { if (!h) return; const c = JSON.parse(JSON.stringify(h.p)); delete c.id; delete c.uid; delete c.doc; delete c.pts; delete c.huecos; delete c.lados; empezar(c); return; }
+    if (h && CON.tocar(h)) return; CON.sub = null; elegir(!h || (h.p.t === 'terreno' && SEL && SEL !== h.p) ? null : h.p); }
+  motor.alTocar = e => { if (ED.on) { toqueEd(e); return; } const h = hallar(e); if (RC.R.on) { if (h && TIPOS[h.p.t].equipo) { elegir(h.p); return; } const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; } elegir(h ? h.p : null); };
   // doble clic: mirando, acerca a lo que se toca (o vuela a ese lugar del piso) y abre la documentación de un rack; editando, saca un punto de una línea
   motor.alDoble = e => { if (RC.R.on || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
     if (ED.on) { const mh = SEL && SEL.pts && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0], i = mh && mh.object.userData.vertice; if (i != null) { if (SEL.pts.length <= (TIPOS[SEL.t].forma === 'area' ? 3 : 2)) { toast('No se puede sacar: quedaría sin forma'); return; } SEL.pts.splice(i, 1); CON.quitado(SEL, i); rehacer(SEL); CON.marcar(); cambio(); return; } }
     if (h && TIPOS[h.p.t].protegido && host && host.abrirDoc) { host.abrirDoc(h.p); return; } if (ED.on) return;
     if (h && TIPOS[h.p.t].forma === 'punto') { elegir(h.p, true); return; } const p = motor.enPiso(e.clientX, e.clientY); if (p) motor.ir({ tx: p.x, tz: p.z, d: Math.max(motor.C.min * 3, motor.C.d * 0.55) }, 0.6); };
-  canvas.addEventListener('pointerup', e => { if (!ED.on || e.button !== 0) return; const p = motor.enPiso(e.clientX, e.clientY); if (!p) return; if (CON.clic(e, p)) return;
+  let abajo = null; canvas.addEventListener('pointerdown', e => { abajo = [e.clientX, e.clientY]; }, true);
+  canvas.addEventListener('pointerup', e => { if (!ED.on || e.button !== 0) return; if (abajo && Math.hypot(e.clientX - abajo[0], e.clientY - abajo[1]) > 6 && CON.T.h !== 'recinto') return;   // fue un arrastre para moverse, no un toque
+    const p = motor.enPiso(e.clientX, e.clientY); if (!p) return; if (CON.clic(e, p)) return;
     if (ED.colocar && !ED.colocar.p) motor.pasar(e);
     if (ED.colocar && ED.colocar.p) { const C = ED.colocar, nuevo = C.p; delete nuevo._col; delete nuevo._p; rehacer(nuevo); C.p = null; if (!e.shiftKey) { ED.colocar = null; herrVis(null); toast(`${TIPOS[nuevo.t].n} ubicado`); } elegir(e.shiftKey ? null : nuevo); cambio(); if (e.shiftKey) motor.pasar(e); return; }
     if (ED.linea) { const L = ED.linea, ahora = performance.now(), dbl = ahora - ultimoToque < 320; ultimoToque = ahora; const q = [pegar(p.x, e.altKey), pegar(p.z, e.altKey)];

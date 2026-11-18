@@ -89,13 +89,16 @@ export function construir(M) {
     if (p.huecos) { p.huecos = p.huecos.filter(h => h.s !== i && h.s !== va).map(h => ({ ...h, s: h.s > i ? h.s - 1 : h.s })); if (!p.huecos.length) delete p.huecos; } }
 
   // ---------- lo que le llega del mouse (maqueta.js le pasa cada evento antes de usarlo) ----------
+  // sobre qué pared o abertura cayó el toque (null si fue el piso de un recinto u otra cosa)
+  function sobre(hit) { if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) return null; const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l || l.d > (p.grosor || 0.15) / 2 + 0.22) return null;
+    return { p, l, j: (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05) }; }
+  // un toque con la mano: si cayó en una pared o una abertura, la elige
+  function tocar(hit) { const s = sobre(hit); if (!s) { if (SUB) { SUB = null; marcar(); } return false; } SUB = s.j >= 0 ? { id: s.p.id, hueco: s.j } : { id: s.p.id, lado: s.l.i }; M.elegir(s.p); marcar(); M.ficha(); return true; }
   function agarrar(e, p0, hit) {
     if (T.h === 'recinto') { if (!T.a) { T.a = iman(p0, e); T.recien = true; punto(T.a[0], T.a[1]); } return true; }
-    if (T.h) return true;
-    if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) { if (SUB) { SUB = null; marcar(); } return false; }
-    const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l || l.d > (p.grosor || 0.15) / 2 + 0.22) { if (SUB) { SUB = null; marcar(); } return false; }   // el piso: se elige el recinto entero
-    const j = (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05);
-    SUB = j >= 0 ? { id: p.id, hueco: j } : { id: p.id, lado: l.i }; M.elegir(p, false, true); marcar();
+    if (T.h) return false;   // con pared o abertura, arrastrar mueve la vista; el toque es el que pone el punto
+    // una pared o una abertura se arrastra solo si ya estaba elegida (se elige con un toque): así arrastrar para moverse nunca corre nada por error
+    const s = sobre(hit); if (!s || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
     if (j >= 0) D = { p, h: p.huecos[j], off: l.s - p.huecos[j].a }; else if (p.t === 'recinto') D = { p, lado: l.i, x0: p0.x, z0: p0.z, orig: p.pts.map(q => [...q]) }; else return false;   // una pared suelta se mueve entera, como cualquier pieza
     return true; }
   function mover(e) { const p = motor.enPiso(e.clientX, e.clientY); if (!p) return !!(D || T.h);
@@ -144,4 +147,4 @@ export function construir(M) {
       for (const q of [(len - w) / 2, 0.3, len - w - 0.3, ...Array.from({ length: Math.max(0, Math.floor(len / 0.5)) }, (_, n) => 0.1 + n * 0.5)]) if (q >= 0.1 && q + w <= len - 0.1 && entra(p, i, q, w)) { a = gr(q); break; }
       if (a == null) { M.toast('No entra en esta pared'); return true; } (p.huecos = p.huecos || []).push({ s: i, a, k }); SUB = { id: p.id, hueco: p.huecos.length - 1 }; M.rehacer(p); M.cambio(); marcar(); M.ficha(); }
     return true; }
-  return { T, empezar, cancelar, agarrar, mover, soltar, pasar, clic, tecla, ficha, entrada, accion, marcar, contenido, girar, insertado, quitado, esMuro, get sub() { return SUB; }, set sub(v) { SUB = v; marcar(); }, alElegir(p) { if (SUB && (!p || p.id !== SUB.id)) { SUB = null; } marcar(); } }; }
+  return { T, empezar, cancelar, tocar, agarrar, mover, soltar, pasar, clic, tecla, ficha, entrada, accion, marcar, contenido, girar, insertado, quitado, esMuro, get sub() { return SUB; }, set sub(v) { SUB = v; marcar(); }, alElegir(p) { if (SUB && (!p || p.id !== SUB.id)) { SUB = null; } marcar(); } }; }
