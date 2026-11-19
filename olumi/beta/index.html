@@ -736,7 +736,7 @@ html.ofipan .btmenu{z-index:10005}
 #mkp .mk-cols{display:flex;justify-content:center;gap:16px}
 #mkp .mk-cols button{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:var(--c);padding:0;cursor:pointer}
 #mkp .mk-cols button.on{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
-#mkp .mk-in{position:fixed;transform:translate(-8px,-50%);min-width:140px;font:700 18px -apple-system,system-ui,sans-serif;background:rgba(255,255,255,.92);border:0;border-radius:8px;padding:6px 10px;outline:none;z-index:91}
+#mkp .mk-in{position:fixed;transform:translate(-8px,-50%);min-width:140px;max-width:calc(100vw - 24px);box-sizing:border-box;font:700 18px -apple-system,system-ui,sans-serif;background:rgba(255,255,255,.92);border:0;border-radius:8px;padding:6px 10px;outline:none;z-index:91}
 /* fin 1.52d */
 /* 1.52e */
 /* 1.52e · botones de ícono redondos (cámara, +, galería) y el bloque único de fotos y planos */
@@ -5739,15 +5739,32 @@ document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest
       if(o.t==='lapiz'){g.beginPath();o.p.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));if(o.p.length===1)g.lineTo(o.p[0][0]+.1,o.p[0][1]);g.stroke()}
       else if(o.t==='flecha'){const[a,b]=[o.p[0],o.p[o.p.length-1]],an=Math.atan2(b[1]-a[1],b[0]-a[0]),L=lw*4.5;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
         g.beginPath();g.moveTo(b[0],b[1]);g.lineTo(b[0]-L*Math.cos(an-.45),b[1]-L*Math.sin(an-.45));g.lineTo(b[0]-L*Math.cos(an+.45),b[1]-L*Math.sin(an+.45));g.closePath();g.fill()}
-      else if(o.t==='texto'){const fs=U/(o.gr?18:28);g.font=`700 ${fs}px -apple-system,system-ui,sans-serif`;g.textBaseline='middle';const w=g.measureText(o.s).width,pd=fs*.35;
-        g.fillStyle=o.c==='#ffffff'?'rgba(0,0,0,.55)':'rgba(255,255,255,.9)';g.beginPath();g.roundRect(o.p[0][0]-pd,o.p[0][1]-fs*.68,w+pd*2,fs*1.36,fs*.3);g.fill();g.fillStyle=o.c==='#ffffff'?'#fff':o.c;g.fillText(o.s,o.p[0][0],o.p[0][1])}}
+      else if(o.t==='texto'){if(o.oculto)return;let fs=U/(o.gr?18:28);const F=f=>`700 ${f}px -apple-system,system-ui,sans-serif`,m=U/160;g.font=F(fs);g.textBaseline='middle';let pd=fs*.35;
+        // 1.52q · el cartel entra siempre en la foto: lo que no entra en un renglón sigue en el de abajo (hasta 4; si aun así no entra, se achica la letra),
+        // y si se sale por un borde se corre para adentro
+        const parte=()=>{const mx=W-m*2-pd*2,L=[];let a='';for(const pal of String(o.s).split(/\s+/)){const t=a?a+' '+pal:pal;if(a&&g.measureText(t).width>mx){L.push(a);a=pal}else a=t}if(a)L.push(a);return L};
+        let L=parte();for(let k=0;k<12&&(L.length>4||L.some(x=>g.measureText(x).width>W-m*2-pd*2));k++){fs*=.88;pd=fs*.35;g.font=F(fs);L=parte()}
+        const w=Math.max(...L.map(x=>g.measureText(x).width)),lh=fs*1.18,h=lh*L.length+fs*.18;
+        const x=Math.min(Math.max(o.p[0][0],pd+m),W-w-pd-m),y=Math.min(Math.max(o.p[0][1],fs*.68+m),H-(h-fs*.68)-m);o.d=[x,y];o.bb=[x-pd,y-fs*.68,w+pd*2,h+fs*.18];
+        g.fillStyle=o.c==='#ffffff'?'rgba(0,0,0,.55)':'rgba(255,255,255,.9)';g.beginPath();g.roundRect(o.bb[0],o.bb[1],o.bb[2],o.bb[3],fs*.3);g.fill();g.fillStyle=o.c==='#ffffff'?'#fff':o.c;L.forEach((t,n)=>g.fillText(t,x,y+n*lh))}}
+    // 1.52q · un texto ya puesto se toca para cambiarlo y se arrastra para moverlo (con cualquier herramienta)
+    const enTexto=p=>{const t=U/90;for(let k=EST.ops.length-1;k>=0;k--){const o=EST.ops[k],b=o.t==='texto'&&o.bb;if(b&&p[0]>=b[0]-t&&p[0]<=b[0]+b[2]+t&&p[1]>=b[1]-t&&p[1]<=b[1]+b[3]+t)return o}return null};
     const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
     const sel=()=>{ov.querySelectorAll('[data-h]').forEach(b=>b.classList.toggle('on',b.dataset.h===EST.h));ov.querySelectorAll('[data-c]').forEach(b=>b.classList.toggle('on',b.dataset.c===EST.c));ov.querySelector('.mk-gr').classList.toggle('g',!!EST.gr)};
-    cv.addEventListener('pointerdown',e=>{e.preventDefault();const p=pos(e);if(EST.h==='texto'){escribir(p,e);return}cv.setPointerCapture(e.pointerId);EST.cur={t:EST.h,c:EST.c,gr:EST.gr,p:[p]};pinta()});
-    cv.addEventListener('pointermove',e=>{if(!EST.cur)return;const p=pos(e);if(EST.cur.t==='flecha')EST.cur.p[1]=p;else EST.cur.p.push(p);pinta()});
-    const fin=()=>{if(!EST.cur)return;if(EST.cur.t!=='flecha'||EST.cur.p.length>1)EST.ops.push(EST.cur);EST.cur=null;pinta()};cv.addEventListener('pointerup',fin);cv.addEventListener('pointercancel',fin);
-    function escribir(p,e){const i=document.createElement('input');i.className='mk-in';i.placeholder='Escribí acá';i.style.left=e.clientX+'px';i.style.top=e.clientY+'px';i.style.color=EST.c;ov.appendChild(i);i.focus();
-      const ok=()=>{if(!i.isConnected)return;const s=i.value.trim();i.remove();if(s){EST.ops.push({t:'texto',c:EST.c,gr:EST.gr,p:[p],s});pinta()}};i.addEventListener('blur',ok);i.addEventListener('keydown',x=>{if(x.key==='Enter'){x.preventDefault();i.blur()}})}
+    cv.__ops=()=>EST.ops;
+    cv.addEventListener('pointerdown',e=>{e.preventDefault();const p=pos(e),tx=enTexto(p);
+      if(tx){try{cv.setPointerCapture(e.pointerId)}catch(x){}EST.mov={o:tx,p0:p,d0:[tx.d[0],tx.d[1]],cx:e.clientX,cy:e.clientY,mv:false};return}
+      if(EST.h==='texto'){escribir(p,e);return}cv.setPointerCapture(e.pointerId);EST.cur={t:EST.h,c:EST.c,gr:EST.gr,p:[p]};pinta()});
+    cv.addEventListener('pointermove',e=>{const M=EST.mov;if(M){if(!M.mv&&Math.hypot(e.clientX-M.cx,e.clientY-M.cy)<6)return;M.mv=true;const p=pos(e);M.o.p=[[M.d0[0]+p[0]-M.p0[0],M.d0[1]+p[1]-M.p0[1]]];pinta();return}
+      if(!EST.cur)return;const p=pos(e);if(EST.cur.t==='flecha')EST.cur.p[1]=p;else EST.cur.p.push(p);pinta()});
+    const fin=e=>{const M=EST.mov;if(M){EST.mov=null;if(M.mv){M.o.p=[[M.o.d[0],M.o.d[1]]];pinta()}else if(e&&e.type==='pointerup')escribir(M.o.p[0],e,M.o);return}
+      if(!EST.cur)return;if(EST.cur.t!=='flecha'||EST.cur.p.length>1)EST.ops.push(EST.cur);EST.cur=null;pinta()};cv.addEventListener('pointerup',fin);cv.addEventListener('pointercancel',fin);
+    function escribir(p,e,o){const i=document.createElement('input');i.className='mk-in';i.placeholder='Escribí acá';let cx=e.clientX,cy=e.clientY;
+      if(o){const r=cv.getBoundingClientRect();cx=r.left+o.bb[0]*r.width/W+8;cy=r.top+(o.bb[1]+o.bb[3]/2)*r.height/H;i.value=o.s;o.oculto=true;pinta()}
+      i.style.left=cx+'px';i.style.top=cy+'px';i.style.color=(o||EST).c==='#ffffff'?'#111':(o||EST).c;ov.appendChild(i);
+      {const ir=i.getBoundingClientRect(),sob=ir.right-(innerWidth-8);if(sob>0)i.style.left=Math.max(16,cx-sob)+'px'}   // el cuadro para escribir tampoco se sale de la pantalla
+      i.focus();if(o)try{i.select()}catch(x){}
+      const ok=()=>{if(!i.isConnected)return;const s=i.value.trim();i.remove();if(o){o.oculto=false;if(s)o.s=s;else EST.ops.splice(EST.ops.indexOf(o),1);pinta();return}if(s){EST.ops.push({t:'texto',c:EST.c,gr:EST.gr,p:[p],s});pinta()}};i.addEventListener('blur',ok);i.addEventListener('keydown',x=>{if(x.key==='Enter'){x.preventDefault();i.blur()}})}
     ov.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.h){EST.h=b.dataset.h;sel();return}if(b.dataset.c){EST.c=b.dataset.c;sel();return}const k=b.dataset.mk;
       if(k==='grosor'){EST.gr=EST.gr?0:1;sel()}else if(k==='undo'){EST.ops.pop();pinta()}else if(k==='no'){if(!EST.ops.length||confirm('¿Salir sin guardar las marcas?'))ov.remove()}

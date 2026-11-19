@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es-UY">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Maqueta · Olumi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="motor.css?v=c526f94f">
+<script type="importmap">{"imports":{"three":"../lib/three.module.min.js","three/addons/RoomEnvironment.js":"../lib/RoomEnvironment.js","three/addons/GLTFLoader.js":"../lib/GLTFLoader.js","three/addons/SkeletonUtils.js":"../lib/SkeletonUtils.js","three/addons/BufferGeometryUtils.js":"../lib/BufferGeometryUtils.js"}}</script>
+</head>
+<body>
+<script type="module">
+// Maqueta con el motor común, versión beta (lo nuevo se prueba acá antes de pasar a /motor/). Dentro de la app de Ondi lee el cliente de window.parent.__ondiMaqueta;
+// sola, abre una escena de ejemplo (?escena=deposito) o la guardada en este navegador.
+import { abrirMaqueta } from './maqueta.js?v=c526f94f';
+const P = new URLSearchParams(location.search), app = P.get('app') || 'ondi';
+document.documentElement.dataset.app = app;
+if (app === 'kliva') document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap">');
+let host = null; try { host = window.parent !== window && (window.parent.__maquetaHost || window.parent.__ondiMaqueta) || null; } catch (e) {}
+let escena = null;
+if (!host) { const id = P.get('escena') || 'deposito';
+  try { const g = localStorage.getItem('motor.escena.' + id); if (g && !P.has('nuevo')) escena = JSON.parse(g).escena; } catch (e) {}
+  if (!escena) escena = await (await fetch('../escenas/' + id.replace(/[^\w-]/g, '') + '.json')).json(); }
+const M = await abrirMaqueta({ host, escena, app, raiz: document.body, catalogo: app === 'kliva' ? null : '../3d/', tema: (host && host.tema) || P.get('tema') || undefined, clave: 'motor.escena.' + (P.get('escena') || 'deposito'), editable: host ? undefined : !P.has('ver'), ruedaConCtrl: P.has('embebida') });
+window.__maqueta = M;
+</script>
+</body>
+</html>
