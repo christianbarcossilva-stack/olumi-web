@@ -3,7 +3,7 @@
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos en una sola llamada (cajas instanciadas), así no pesa aunque haya muchos.
 import { THREE } from './nucleo.js?v=14';
-import { andenesDe } from './piezas.js?v=32';
+import { andenesDe } from './piezas.js?v=33';
 
 const PARTES = [ // centro (x, y, z), tamaño (x, y, z) y de qué color va: 0 oscuro, 1 caja, 2 cabina, 3 vidrio, 4 puertas, 5 faro, 6 luz de atrás, 7 metal
   [0, 1.2, 0, 12.4, 0.3, 2.3, 0], [0, 2.74, 0, 12.3, 2.78, 2.5, 1], [-4.2, 1.0, 0, 3.0, 0.12, 2.5, 0], [7.75, 1.95, 0, 2.7, 2.9, 2.45, 2],
@@ -29,24 +29,26 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
 
   // ---------- la red: un nodo cada pocos metros de cada calle; las calles que se tocan o se cruzan quedan unidas ----------
   function red() { const E = M.E, nodos = [], calles = E.piezas.filter(p => p.t === 'calle' && p.pts && p.pts.length > 1 && p.tipo !== 'sendero');
-    const nuevo = (x, z, ruta, an) => { const n = { x, z, v: [], ruta, an, i: nodos.length }; nodos.push(n); return n; }, une = (a, b) => { if (a === b || a.v.includes(b)) return; a.v.push(b); b.v.push(a); };
-    const filas = calles.map(c => { const f = [], an = c.ancho || 8, ruta = c.tipo === 'ruta'; for (let i = 0; i < c.pts.length - 1; i++) { const [ax, az] = c.pts[i], [bx, bz] = c.pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 10));
-        for (let k = i ? 1 : 0; k <= n; k++) f.push(nuevo(ax + (bx - ax) * k / n, az + (bz - az) * k / n, ruta, an)); } for (let i = 0; i < f.length - 1; i++) une(f[i], f[i + 1]); return f; });
+    // v = hacia dónde se puede seguir desde el nodo; w = todos los vecinos (en una calle de mano única se avanza solo en el sentido en que se dibujó)
+    // k = cuánto se corre el camión a su carril: nada en mano única o en una calle angosta, 2,1 m en una calle de doble mano
+    const nuevo = (x, z, ruta, an, uno) => { const n = { x, z, v: [], w: [], ruta, an, uno, k: uno ? 0 : Math.min(1, Math.max(0, (an / 2 - 1.6) / 2.1)), i: nodos.length }; nodos.push(n); return n; }, une = (a, b, uno) => { if (a === b) return; if (!a.w.includes(b)) { a.w.push(b); b.w.push(a); } if (!a.v.includes(b)) a.v.push(b); if (!uno && !b.v.includes(a)) b.v.push(a); };
+    const filas = calles.map(c => { const f = [], an = c.ancho || 8, ruta = c.tipo === 'ruta', uno = c.mano === 'unica'; for (let i = 0; i < c.pts.length - 1; i++) { const [ax, az] = c.pts[i], [bx, bz] = c.pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 10));
+        for (let k = i ? 1 : 0; k <= n; k++) f.push(nuevo(ax + (bx - ax) * k / n, az + (bz - az) * k / n, ruta, an, uno)); } for (let i = 0; i < f.length - 1; i++) une(f[i], f[i + 1], uno); return f; });
     // rotondas: los nodos que caen sobre la isla se corren al anillo, así los camiones la rodean en vez de cruzarla
     for (const ro of E.piezas) { if (ro.t !== 'rotonda' || !(ro.isla > 0)) continue; const Ri = ro.isla + 3.5, Ra = Math.max(ro.isla + 4.5, ((ro.radio || 14) + ro.isla) / 2);
-      for (const n of nodos) { let dx = n.x - ro.x, dz = n.z - ro.z; const d = Math.hypot(dx, dz); if (d >= Ri) continue; if (d < 0.6) { const m = n.v[0]; if (!m) continue; const l = Math.hypot(m.x - n.x, m.z - n.z) || 1; dx = -(m.z - n.z) / l; dz = (m.x - n.x) / l; } else { dx /= d; dz /= d; } n.x = ro.x + dx * Ra; n.z = ro.z + dz * Ra; } }
+      for (const n of nodos) { let dx = n.x - ro.x, dz = n.z - ro.z; const d = Math.hypot(dx, dz); if (d >= Ri) continue; if (d < 0.6) { const m = n.w[0]; if (!m) continue; const l = Math.hypot(m.x - n.x, m.z - n.z) || 1; dx = -(m.z - n.z) / l; dz = (m.x - n.x) / l; } else { dx /= d; dz /= d; } n.x = ro.x + dx * Ra; n.z = ro.z + dz * Ra; } }
     // cruces y empalmes: dos nodos de calles distintas a menos de medio ancho se unen (con una grilla para no comparar todos contra todos)
     const G = new Map(), kk = (x, z) => Math.floor(x / 16) + ',' + Math.floor(z / 16); nodos.forEach(n => { const k = kk(n.x, n.z); (G.get(k) || G.set(k, []).get(k)).push(n); });
     filas.forEach((f, fi) => f.forEach((n, ni) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const o of G.get(kk(n.x + dx * 16, n.z + dz * 16)) || []) { if (o === n || filas[fi].includes(o)) continue; const d = Math.hypot(o.x - n.x, o.z - n.z), tol = Math.max(5.5, (n.an + o.an) / 4 + 1.5), punta = ni === 0 || ni === f.length - 1;
         if (d < (punta ? tol + 3 : tol)) une(n, o); } }));
     // componentes y entradas: las puntas de las rutas (o, si no hay, las puntas sueltas más lejanas)
-    const partes = () => { let c = 0; for (const n of nodos) n.c = null; for (const n of nodos) { if (n.c != null) continue; const pila = [n]; n.c = c; while (pila.length) { const a = pila.pop(); for (const b of a.v) if (b.c == null) { b.c = c; pila.push(b); } } c++; } return c; };
+    const partes = () => { let c = 0; for (const n of nodos) n.c = null; for (const n of nodos) { if (n.c != null) continue; const pila = [n]; n.c = c; while (pila.length) { const a = pila.pop(); for (const b of a.w) if (b.c == null) { b.c = c; pila.push(b); } } c++; } return c; };
     // los tramos que quedaron sueltos por poco (el hueco de una portería o de un portón) se empalman por los dos nodos más cercanos
     for (let vez = 0, nc = partes(); vez < 12 && nc > 1; vez++) { let mj = 45, par = null; for (const a of nodos) for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) for (const o of G.get(kk(a.x + dx * 16, a.z + dz * 16)) || []) { if (o.c === a.c) continue; const d = Math.hypot(o.x - a.x, o.z - a.z); if (d < mj) { mj = d; par = [a, o]; } }
       if (!par) break; une(par[0], par[1]); nc = partes(); }
     // entradas de cada parte de la red: las puntas de las rutas; si no tiene, sus puntas sueltas
     T.nodos = nodos; T.entradas = []; const porParte = new Map(); for (const n of nodos) (porParte.get(n.c) || porParte.set(n.c, []).get(n.c)).push(n);
-    for (const l of porParte.values()) { let e = l.filter(n => n.v.length === 1 && n.ruta); if (!e.length) e = l.filter(n => n.v.length === 1); if (!e.length && l.length) e = [l[0], l[l.length - 1]]; T.entradas.push(...e); }
+    for (const l of porParte.values()) { let e = l.filter(n => n.w.length === 1 && n.ruta); if (!e.length) e = l.filter(n => n.w.length === 1); if (!e.length && l.length) e = [l[0], l[l.length - 1]]; T.entradas.push(...e); }
     // andenes: lugar donde queda el camión, hacia dónde mira y el nodo de calle más cercano al frente
     T.andenes = []; for (const p of E.piezas) { if (p.t !== 'galpon' || p.estilo !== 'logistico' || p.libre) continue; const r = p.r || 0, cs = Math.cos(r), sn = Math.sin(r), w = p.ancho / 2, d = p.fondo / 2, nx = sn, nz = cs;
       for (const [u, num] of andenesDe({ andenes: 6, desde: 1, ...p })) { const lx = -w + u, X = p.x + lx * cs + d * sn, Z = p.z - lx * sn + d * cs, a = { p, num, x: X + nx * 6.9, z: Z + nz * 6.9, h: Math.atan2(-nz, nx), nx, nz, nodo: null, cam: null };
@@ -71,11 +73,11 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   const dirH = h => [Math.cos(h), -Math.sin(h)];
   // maniobra de entrada: pasa de largo unos metros y retrocede en curva hasta quedar de cola contra el andén
   function entrar(c, a, ruta) { const pts = ruta.map(n => [n.x, n.z]), k = pts[pts.length - 1], pv = pts[pts.length - 2] || [k[0] - a.nz, k[1] + a.nx]; let dx = k[0] - pv[0], dz = k[1] - pv[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-    const F = [k[0] + dx * 15, k[1] + dz * 15], D = [a.x, a.z], dist = Math.hypot(F[0] - D[0], F[1] - D[1]), cc = Math.min(22, dist * 0.55); pts.push(F);
-    c.cola = [tramo(pts, { carril: true }), tramo(curva(F, [F[0] - dx * cc, F[1] - dz * cc], [D[0] + a.nx * cc, D[1] + a.nz * cc], D), { atras: true, v: 1.9 })]; c.s = 0; c.anden = a; a.cam = c; c.estado = 'va'; }
+    const F = [k[0] + dx * 15, k[1] + dz * 15], D = [a.x, a.z], D2 = [a.x + a.nx * 9, a.z + a.nz * 9], dist = Math.hypot(F[0] - D2[0], F[1] - D2[1]), cc = Math.min(22, dist * 0.55), car = ruta.map(n => n.k); pts.push(F); car.push(car[car.length - 1]);
+    c.cola = [tramo(pts, { carril: true, car }), tramo([...curva(F, [F[0] - dx * cc, F[1] - dz * cc], [D2[0] + a.nx * cc, D2[1] + a.nz * cc], D2), D], { atras: true, v: 1.9 })]; c.s = 0; c.anden = a; a.cam = c; c.estado = 'va'; }
   function salir(c) { const a = c.anden, sal = T.entradas.filter(n => a.nodo && n.c === a.nodo.c), fin = sal.length ? de(sal) : null, ruta = fin && camino(a.nodo, fin); if (!ruta || ruta.length < 2) { c.estado = 'chau'; c.t = 1; return; }
-    const k = [ruta[0].x, ruta[0].z], sg = [ruta[1].x, ruta[1].z]; let dx = sg[0] - k[0], dz = sg[1] - k[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const D = [a.x, a.z], cc = Math.min(20, Math.hypot(k[0] - D[0], k[1] - D[1]) * 0.55);
-    c.cola = [tramo(curva(D, [D[0] + a.nx * cc, D[1] + a.nz * cc], [k[0] - dx * cc, k[1] - dz * cc], k), { v: 2.6 }), tramo(ruta.map(n => [n.x, n.z]), { carril: true })]; c.s = 0; c.estado = 'sale'; }
+    const k = [ruta[0].x, ruta[0].z], sg = [ruta[1].x, ruta[1].z]; let dx = sg[0] - k[0], dz = sg[1] - k[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const D = [a.x, a.z], D2 = [a.x + a.nx * 9, a.z + a.nz * 9], cc = Math.min(20, Math.hypot(k[0] - D2[0], k[1] - D2[1]) * 0.55);
+    c.cola = [tramo([D, ...curva(D2, [D2[0] + a.nx * cc, D2[1] + a.nz * cc], [k[0] - dx * cc, k[1] - dz * cc], k)], { v: 2.6 }), tramo(ruta.map(n => [n.x, n.z]), { carril: true, car: ruta.map(n => n.k) })]; c.s = 0; c.estado = 'sale'; }
 
   function armar() { for (const c of T.camiones.slice()) sacar(c); red(); const con = T.andenes.filter(a => a.nodo); im.visible = ir.visible = il.visible = T.on && T.andenes.length > 0; im.count = MAX * PARTES.length;
     // de entrada, cuatro de cada diez andenes ya tienen un camión
@@ -108,11 +110,11 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       if (c.s >= tr.largo) { c.cola.shift(); c.s = 0; if (c.estado === 'sale' && !c.cola.length) { c.estado = 'chau'; c.t = 1; } if (c.cola[0] && c.estado === 'sale' && c.anden) { if (c.anden.cam === c) c.anden.cam = null; avisar(); } continue; }
       let i = 1; while (i < tr.L.length - 1 && tr.L[i] < c.s) i++; const a = tr.pts[i - 1], b = tr.pts[i], f = (c.s - tr.L[i - 1]) / Math.max(0.001, tr.L[i] - tr.L[i - 1]); let dx = b[0] - a[0], dz = b[1] - a[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
       const hObj = tr.atras ? Math.atan2(dz, -dx) : Math.atan2(-dz, dx), dif = ang(c.h, hObj); c.gira = Math.abs(dif); c.h += Math.max(-1.5 * dt, Math.min(1.5 * dt, dif)) * (tr.atras ? 1.2 : 1);
-      c.lado += ((tr.carril ? 1 : 0) - c.lado) * Math.min(1, dt * 0.8); const [hx, hz] = dirH(c.h), off = 2.1 * c.lado; c.x = a[0] + (b[0] - a[0]) * f - hz * off; c.z = a[1] + (b[1] - a[1]) * f + hx * off; ubicar(c); movio = true; }
+      c.lado += ((tr.carril ? 1 : 0) - c.lado) * Math.min(1, dt * 0.8); const [hx, hz] = dirH(c.h), off = 2.1 * c.lado * (tr.car ? tr.car[i - 1] + (tr.car[i] - tr.car[i - 1]) * f : 1); c.x = a[0] + (b[0] - a[0]) * f - hz * off; c.z = a[1] + (b[1] - a[1]) * f + hx * off; ubicar(c); movio = true; }
     return movio; }
 
   motor.cada.push(paso); motor.alTema.push(() => { for (const c of T.camiones) { pintar(c); ubicar(c); } });
   // si cambian las calles o las naves (se editó), la red se arma de nuevo
-  T.revisar = () => { const f = JSON.stringify(M.E.piezas.filter(p => p.t === 'calle' || (p.t === 'galpon' && p.estilo === 'logistico')).map(p => [p.id, p.x, p.z, p.r, p.ancho, p.fondo, p.pts, p.andenes, p.andenesEn, p.anexo, p.tipo])); if (f === T.firma) return; T.firma = f; armar(); };
+  T.revisar = () => { const f = JSON.stringify(M.E.piezas.filter(p => p.t === 'calle' || (p.t === 'galpon' && p.estilo === 'logistico')).map(p => [p.id, p.x, p.z, p.r, p.ancho, p.fondo, p.pts, p.andenes, p.andenesEn, p.anexo, p.tipo, p.mano, p.libre])); if (f === T.firma) return; T.firma = f; armar(); };
   T.ver = on => { T.on = !!on; im.visible = ir.visible = il.visible = T.on && T.andenes.length > 0; avisado = ''; avisar(); motor.dirty = true; };
   T.revisar(); return T; }
