@@ -4,8 +4,8 @@
 <script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#E6E9EC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#08090B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101419" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Ondi by Unity Tech: monitoreo multicliente de redes, cámaras y sensores, con la maqueta 3D de cada predio.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -134,7 +134,12 @@ main{min-width:0;padding:26px 28px 56px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .maq{position:relative;height:calc(100vh - 250px);min-height:460px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--sunken)}
 .maq iframe{width:100%;height:100%;border:0;display:block}
-.maq.full{position:fixed;inset:30px 0 0 0;height:auto;z-index:40;border-radius:0;border:0} .maq.juego{inset:0;height:100dvh;z-index:90}
+.maq #maqvieja{opacity:.01;pointer-events:none}
+.maqpase{position:absolute;inset:0;z-index:3;display:grid;place-content:center;gap:6px;text-align:center;padding:24px;background:var(--sunken);color:var(--ink)}
+.maqpase b{font-size:17px}
+.maqpase span{font-size:13.5px;color:var(--muted);max-width:44ch}
+.maq.full{position:fixed;inset:30px 0 0 0;height:auto;z-index:40;border-radius:0;border:0}
+.maqsalir{display:none;position:absolute;left:10px;top:46%;z-index:5;width:42px;height:42px;border-radius:13px;border:1px solid rgba(255,255,255,.22);background:rgba(16,22,30,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.28)}.maqsalir svg{width:20px;height:20px}.maq.full:not(.juego) .maqsalir{display:grid}.maqsalir:focus-visible{outline:2px solid #6cc7ff;outline-offset:2px} .maq.juego{inset:0;height:100dvh;z-index:90}
 .maqbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .maqbar .grow{flex:1}
 .save{font-size:12.5px;color:var(--muted)}
@@ -291,7 +296,93 @@ body{background:radial-gradient(1100px 760px at 100% 100%,var(--glow1),transpare
 .modal{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .modal > div{background:color-mix(in srgb,var(--solid) 82%,transparent)}
 select option{background:var(--solid);color:var(--ink)}
-.auth,.app{min-height:100%}.side{top:0;height:100vh}.mtop{top:0}
+
+/* menú de la izquierda: vidrio, pastilla que se estira hasta la opción elegida y modo chico con ícono y nombre (como el riel de Olumi) */
+.side{background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%)}
+.sidehead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidetog{flex:none;width:34px;height:34px;border-radius:10px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:color .2s,background .2s}
+.sidetog:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)}.sidetog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nav{position:relative;display:grid;gap:2px}
+.nav button{position:relative;z-index:1;border-radius:999px;min-height:40px;transition:color .2s}.nav button:hover{color:var(--ink)}.nav button[aria-current="page"]{color:var(--ink);font-weight:600}.nav button[aria-current="page"] svg{color:var(--accent)}
+.nav button svg{width:19px;height:19px;flex:none}
+.navpill{position:absolute;left:0;top:0;z-index:0;border-radius:999px;pointer-events:none;opacity:0;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 22%,transparent),color-mix(in srgb,var(--accent) 12%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 38%,transparent),0 8px 22px -12px var(--accent);transition:transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1)}
+.nav button[aria-current="page"]{background:none!important}.side .nav button[aria-current="page"]::before{display:none}
+html.navmini .app{grid-template-columns:84px minmax(0,1fr)}html.navmini .side{padding:18px 8px;align-items:stretch}html.navmini .sidehead{flex-direction:column;gap:12px}
+html.navmini .side .orgsel,html.navmini .side .side-foot,html.navmini .side .sopo,html.navmini .side .logo>span{display:none}
+html.navmini .nav button{flex-direction:column;justify-content:center;gap:3px;padding:8px 2px 7px;border-radius:18px;min-height:54px}html.navmini .nav button span{font-size:10px;font-weight:600;line-height:1.1;text-align:center;white-space:normal}html.navmini .navpill{border-radius:18px}
+@media (prefers-reduced-motion:reduce){.navpill{transition:none}}
+/* documentación de conexiones */
+.doc{display:grid;grid-template-columns:var(--dw,300px) 14px minmax(0,1fr);gap:0;margin-top:14px;align-items:start}.doc.cerrada .docl{visibility:hidden;overflow:hidden;width:0;padding:0}.doc.cerrada{grid-template-columns:0 14px minmax(0,1fr)}
+.docsplit{position:relative;align-self:stretch;min-height:200px;cursor:col-resize;display:flex;flex-direction:column;align-items:center}.docsplit::before{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;border-radius:2px;background:transparent;transition:background .15s}.docsplit:hover::before,.doc.arrastra .docsplit::before,.docsplit:focus-visible::before{background:var(--accent)}
+.docsplit button{position:sticky;top:42vh;margin-top:120px;z-index:2;width:22px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s}
+.docsplit:hover button,.doc.cerrada .docsplit button,.docsplit button:focus-visible{opacity:1}.docsplit button:hover{color:var(--accent);border-color:var(--accent)}.doc.arrastra{user-select:none;cursor:col-resize}
+.docl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow:auto;padding:2px}
+.docbar{display:flex;gap:8px;align-items:center}.docbar input{flex:1;min-width:0;width:0;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.docg{font:600 12px var(--f-body);color:var(--muted);margin:8px 4px 0}
+.docr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit}
+.docr:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.docr[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.docr svg{width:18px;height:18px;color:var(--muted)}.docr b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.docr small{grid-column:2/4;color:var(--muted);font-size:12.5px}.docr .u{font:500 12px var(--f-mono,ui-monospace);color:var(--muted)}
+.docu{grid-column:2/4;height:4px;border-radius:2px;background:var(--sunken);overflow:hidden}.docu i{display:block;height:100%;background:var(--accent)}
+.docsin{grid-column:2/4;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--warn,#b7791f)}
+.docp{--glass-strong:var(--surface);--menu-bg:var(--bg,#fff);--line-strong:color-mix(in srgb,var(--ink) 18%,transparent);--accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);--ok-soft:color-mix(in srgb,var(--ok,#1f9d55) 14%,transparent);--crit-soft:color-mix(in srgb,var(--crit,#d2474b) 14%,transparent);--f-ui:var(--f-body);min-height:calc(100vh - 250px);border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden;min-width:0}
+.docp .red{height:calc(100vh - 250px);min-height:540px}.docp .red-tools select,.docp .red-x{display:none}.docp .red input,.docp .red select{color:var(--ink)}
+.docn{display:grid;gap:12px;padding:14px;border:1px solid var(--accent);border-radius:10px;background:var(--surface)}
+.docn label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.docn input,.docn select{font:inherit}
+.doch{padding:18px 20px;display:grid;gap:4px}.doch h2{margin:0 0 8px}
+.doce{display:grid;grid-template-columns:52px minmax(0,1fr);gap:2px 12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.doce time{color:var(--muted);font:500 12.5px var(--f-mono,ui-monospace);padding-top:2px}.doce span{color:var(--muted);font-size:12.5px;grid-column:2}
+.doce button{border:0;background:none;color:var(--accent-ink,var(--accent));font:600 12.5px var(--f-body);padding:0;cursor:pointer}
+.docd{font:600 13px var(--f-body);margin:14px 0 2px}
+.docback{display:none}.docp .red-eb{display:none}.docp .red{max-height:none}.docp .red-b svg{width:16px;height:16px}
+#docbox.full{position:fixed;inset:0;z-index:1000;background:var(--bg,#0d1116);padding:12px;overflow:hidden}#docbox.full .doc{margin:0;height:100%}
+#docbox.full .docl{max-height:calc(100dvh - 24px);top:0}#docbox.full .docp{min-height:0;height:calc(100dvh - 24px)}#docbox.full .docp .red{height:calc(100dvh - 26px)}
+html.docfull body{overflow:hidden}
+@media (max-width:860px){.doc,.doc.cerrada{grid-template-columns:minmax(0,1fr)}.docsplit{display:none}.doc.cerrada .docl{visibility:visible;width:auto;overflow:visible}.docl{position:static;max-height:none}.doc.abierto .docl{display:none}.doc:not(.abierto) .docp{display:none}
+  .docback{display:inline-flex;margin-bottom:8px}.docp .red-tabs{flex-wrap:wrap}.docp,.docp .red{min-height:0;height:auto}}
+
+/* integraciones: vidrio con el color de cada marca, plegables */
+.mtab{display:grid;gap:12px;margin-bottom:14px}.mtab-h{display:flex;gap:18px;justify-content:space-between;align-items:flex-start}.mtab-h p{margin:4px 0 0;max-width:70ch;font-size:14px}
+.mtab-k{display:grid;justify-items:end;flex:none}.mtab-k b{font:600 34px/1 var(--f-display);color:var(--accent)}.mtab-k span{font-size:12.5px;color:var(--muted)}
+.mt-n{display:inline-flex;gap:10px;align-items:center;color:var(--ink);text-decoration:none;font-weight:600}.mt-n:hover{color:var(--accent)}
+.mark.sm{width:26px;height:26px;font-size:10.5px;border-radius:7px}
+.bacts{display:flex;gap:8px;justify-content:flex-end;margin:0 0 10px}
+.brands{align-items:start}
+.brand{position:relative;overflow:hidden;padding:0;transition:border-color .25s,box-shadow .25s,transform .25s}
+.brand::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 80% at 0% 0%,color-mix(in srgb,var(--bc) 20%,transparent),transparent 62%)}
+.brand:hover{border-color:color-mix(in srgb,var(--bc) 50%,var(--line));box-shadow:0 18px 40px -24px color-mix(in srgb,var(--bc) 70%,transparent)}
+.brand summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:16px 18px;position:relative}
+.brand summary::-webkit-details-marker{display:none}.brand summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--r)}
+.brand{min-width:0}.brand summary .bhead{min-width:0;flex:1 1 170px}.brand summary{flex-wrap:wrap}.bsum{display:inline-flex;gap:8px;align-items:center;flex:none;margin-left:auto}.bbody>*{min-width:0}.chev{color:var(--muted);transition:transform .3s cubic-bezier(.2,.8,.2,1)}.brand[open] .chev{transform:rotate(180deg)}
+.bbody{display:grid;gap:10px;padding:0 18px 18px;position:relative}
+.brand[open] .bbody{animation:bAbre .32s cubic-bezier(.2,.8,.2,1)}@keyframes bAbre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.brand .mark{box-shadow:0 8px 20px -8px var(--bc),inset 0 1px 0 rgba(255,255,255,.35)}
+.sols .soln{font:600 11px var(--f-body);color:var(--muted);min-width:64px}
+.pill.info{background:var(--accent-soft);color:var(--accent-ink,var(--accent))}
+/* roles y clientes */
+.rolk{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:12px 0 16px}
+.rolk div{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.rolk div.yo{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.rolk span{font-size:13px;color:var(--muted)}.rolk i{font-style:normal;font-size:12px;color:var(--muted)}
+.perm td:not(:first-child),.perm th:not(:first-child){text-align:center}.perm td:first-child{min-width:240px}.ok-c{color:var(--ok);font-weight:700}
+.cfga{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.inq{max-width:260px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+@media (prefers-reduced-motion:reduce){.brand,.chev{transition:none}.brand[open] .bbody{animation:none}}
+@media (max-width:700px){.mtab-h{flex-direction:column}.mtab-k{justify-items:start}.cfga{justify-content:flex-start}}
+.docsg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}.docsc{display:grid;gap:4px;text-align:left;padding:18px;cursor:pointer;font:inherit;color:var(--ink);transition:border-color .2s,box-shadow .2s}.docsc:hover{border-color:var(--accent);box-shadow:0 14px 34px -22px var(--accent)}.docsc b{font-size:17px}.docsa{margin-top:8px;color:var(--accent);font-weight:600;font-size:14px}
+.brand.bfull{position:fixed;inset:16px;z-index:1000;overflow:auto;background:var(--surface);max-width:980px;margin:0 auto;box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}.brand.bfull summary{cursor:default;position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+html.bfullon body::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999}html.bfullon body{overflow:hidden}.brand.bfull .bbody{padding-top:16px}
+.bsum .btn svg{width:15px;height:15px}.prb{display:grid;gap:10px;padding:16px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface) 70%,transparent)}.prb h4{margin:0;font-size:15px}.prb p{margin:0;font-size:13.5px}
+.prb-f{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end}.prb-f label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.prb-f input{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.prb-r{display:flex;gap:6px;flex-wrap:wrap}.prb-e{color:var(--crit)}@media (max-width:700px){.prb-f{grid-template-columns:1fr}.brand.bfull{inset:0;border-radius:0}}
+.seg-w{flex-wrap:wrap}.cj{padding:18px 20px;display:grid;gap:12px;align-content:start}.cj-h{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.cj-h h2{margin:2px 0 0}.cj h3{margin:10px 0 0;font-size:16px}
+.cj-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.cj-g .w2{grid-column:span 2}.cj label{display:grid;gap:4px;font-size:13px;color:var(--muted)}.cj input,.cj select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;min-width:0}
+.cj-f{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cj-f li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--line);border-radius:10px}.cj-f span{color:var(--muted);font-size:13.5px}
+.cj-n{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:12px;border:1px dashed var(--line);border-radius:10px}.cj-t td{padding:4px 6px;vertical-align:middle}.cj-t select,.cj-t input{padding:6px 8px;font-size:13px}.cj-x{color:var(--muted);text-align:center}
+.cjd{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25)}
+/* clave de borrado de racks y gabinetes */
+.modal.clv{z-index:300}.modal.clv > div{width:min(380px,100%);gap:10px;text-align:left}.clv h2{font-size:19px;display:flex;align-items:center;gap:10px}.clv h2 svg{width:22px;height:22px;flex:none;color:var(--crit)}
+.clv p{margin:0;color:var(--muted);font-size:14px}.clv input{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--fill);padding:0 14px;font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.35em;-webkit-text-security:disc;outline:none}
+.clv input::placeholder{letter-spacing:0;font:500 15px/1 var(--f-text,system-ui)}.clv input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}.clv .clverr{color:var(--crit);min-height:18px;font-size:13px}.clv .acts{display:flex;gap:8px;justify-content:flex-end}
+.docpap{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px}.docpap > button{justify-self:start}.docpap div{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:4px 2px}.docpap small{color:var(--muted);display:block}
 </style>
 </head>
 <body>
@@ -308,6 +399,7 @@ const HERE = location.origin + location.pathname;
 const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const ROLN = { owner: 'Dueño', admin: 'Administrador', encargado: 'Encargado', tecnico: 'Técnico', ventas: 'Ventas', administracion: 'Administración', subcontratista: 'Subcontratista', viewer: 'Solo lectura' };
 const IC = {
+  plano: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>',
   panel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
   sites: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg>',
   cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
@@ -319,7 +411,7 @@ const IC = {
   ref: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   sim: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg>'
 };
-// Simulación: clientes inventados (no son de nadie, no usan equipos reales y no se guardan). Sus maquetas se arman solas en maqueta.html.
+// Simulación: clientes inventados (no son de nadie, no usan equipos reales y no se guardan). Sus maquetas son escenas inventadas del motor (ondi/escenas/).
 const SIMS = [{ id: 'parque', n: 'Parque Logístico Norte', d: 'Ruta 1, km 24 · 8 galpones con andenes', r: 'Logística' },
   { id: 'frigorifico', n: 'Frigorífico del Este', d: 'Camino de las Tropas 4300 · planta de frío, despacho y depósito', r: 'Alimentos' },
   { id: 'barraca', n: 'Barraca Central', d: 'Av. de los Constructores 1820 · salón de ventas y depósito', r: 'Comercio' }];
@@ -339,27 +431,31 @@ const BRANDS = [
   { k: 'honeywell', n: 'Honeywell', c: '#E4002B', ab: 'HW', via: 'Agente', what: 'Cámaras, NVR y control de acceso.', how: 'ONVIF y SNMP, desde el agente.' }
 ];
 // dos caminos por marca para monitorear: siempre hay uno que no necesita instalar nada en el cliente. [nombre, explicación, estado, etiqueta corta]
-const AG = d => ['Agente Ondi en la red', d, 'prep', 'Agente'];
-const AFUERA = q => ['Chequeo desde afuera', 'Ondi prueba cada pocos minutos si ' + q + ' responde en la dirección que el cliente ya tiene publicada. No se instala nada.', 'prep', 'Desde afuera'];
+const AG = d => ['Agente Ondi en la red', d, 'agente', 'Agente'];
+const AFUERA = q => ['Chequeo desde afuera', 'Ondi prueba cada pocos minutos si ' + q + ' responde en la dirección que el cliente ya tiene publicada. No se instala nada.', 'srv', 'Desde afuera'];
 const SOL = {
   unifi: [['Nube de UniFi', 'Con una clave de solo lectura de unifi.ui.com. No se instala nada en el cliente.', 'ok', 'Nube'], AG('Lee la consola local y los equipos por SNMP, para sitios que no usan la nube de UniFi.')],
-  meraki: [['Nube de Meraki', 'Con una clave de solo lectura del Dashboard. No se instala nada en el cliente.', 'ok', 'Nube'], ['Avisos de Meraki hacia Ondi', 'Meraki le avisa a Ondi en el momento en que un equipo se cae, sin esperar la próxima lectura.', 'prep', 'Avisos']],
-  sonoff: [['Nube de eWeLink', 'Se autoriza una vez la cuenta de eWeLink donde están los equipos. No se instala nada en el cliente.', 'prep', 'Nube'], AG('Lee los equipos por la red local (modo LAN o central iHost), para cuando no pueden salir a la nube.')],
-  tplink: [['Nube de Omada', 'Con el acceso de solo lectura del controlador en la nube. No se instala nada en el cliente.', 'prep', 'Nube'], AG('Lee el controlador local y los equipos por SNMP.')],
-  mikrotik: [['Latido desde el propio equipo', 'Una tarea de tres líneas en el MikroTik llama a Ondi cada minuto. No se instala nada ni se abre ningún puerto.', 'prep', 'Latido'], AG('Lee todo el detalle (interfaces, enlaces, carga) por la API de RouterOS 7.')],
-  cisco: [['Túnel desde el firewall del cliente', 'Su firewall arma un túnel cifrado hacia Ondi, limitado a la red de gestión. No se instala nada.', 'prep', 'Túnel'], AG('Lee switches y routers por SNMP v2c o v3.')],
-  hikvision: [['Avisos del propio equipo', 'El grabador le manda a Ondi sus eventos (cámara sin video, disco con falla) con su función de servidor de alarmas. No se instala nada.', 'prep', 'Avisos'], AG('Lee por ISAPI el estado de cada canal, los discos y la grabación.')],
+  meraki: [['Nube de Meraki', 'Con una clave de solo lectura del Dashboard. No se instala nada en el cliente.', 'ok', 'Nube'], ['Avisos de Meraki hacia Ondi', 'Meraki le avisa a Ondi en el momento en que un equipo se cae, sin esperar la próxima lectura.', 'srv', 'Avisos']],
+  sonoff: [['Nube de eWeLink', 'Se autoriza una vez la cuenta de eWeLink donde están los equipos. No se instala nada en el cliente.', 'cuenta', 'Nube'], AG('Lee los equipos por la red local (modo LAN o central iHost), para cuando no pueden salir a la nube.')],
+  tplink: [['Nube de Omada', 'Con el acceso de solo lectura del controlador en la nube. No se instala nada en el cliente.', 'srv', 'Nube'], AG('Lee el controlador local y los equipos por SNMP.')],
+  mikrotik: [['Latido desde el propio equipo', 'Una tarea de tres líneas en el MikroTik llama a Ondi cada minuto. No se instala nada ni se abre ningún puerto.', 'srv', 'Latido'], AG('Lee todo el detalle (interfaces, enlaces, carga) por la API de RouterOS 7.')],
+  cisco: [['Túnel desde el firewall del cliente', 'Su firewall arma un túnel cifrado hacia Ondi, limitado a la red de gestión. No se instala nada.', 'srv', 'Túnel'], AG('Lee switches y routers por SNMP v2c o v3.')],
+  hikvision: [['Avisos del propio equipo', 'El grabador le manda a Ondi sus eventos (cámara sin video, disco con falla) con su función de servidor de alarmas. No se instala nada.', 'srv', 'Avisos'], AG('Lee por ISAPI el estado de cada canal, los discos y la grabación.')],
   dahua: [AFUERA('el grabador'), AG('Lee por la API de Dahua y ONVIF el estado de cada canal, los discos y la grabación.')],
   intelbras: [AFUERA('el grabador'), AG('Lee por la API de Intelbras y ONVIF el estado de cada canal, los discos y la grabación.')],
   honeywell: [AFUERA('el equipo'), AG('Lee cámaras y grabadores por ONVIF y SNMP.')],
-  otra: [['Latido', 'Cualquier equipo o computadora de esa red llama a Ondi cada minuto; si deja de llamar, Ondi avisa. No se abre ningún puerto.', 'prep', 'Latido'], AFUERA('el equipo')]
+  otra: [['Latido', 'Cualquier equipo o computadora de esa red llama a Ondi cada minuto; si deja de llamar, Ondi avisa. No se abre ningún puerto.', 'srv', 'Latido'], AFUERA('el equipo')]
 };
-const solHtml = k => `<ol class="sols">${(SOL[k] || []).map(([t, d, e], i) => `<li><span class="soln">${i + 1}</span><div><b>${t}</b> <span class="pill ${e === 'ok' ? 'ok' : 'warn'}">${e === 'ok' ? 'Lista' : 'En preparación'}</span><p>${d}</p></div></li>`).join('')}</ol>`;
+// qué le falta a cada camino: nada, el Agente Ondi en el cliente, activarlo en el servidor o la cuenta de la marca
+const SOLE = { ok: ['ok', 'Funciona'], agente: ['info', 'Con el Agente Ondi'], srv: ['warn', 'Falta activarlo'], cuenta: ['warn', 'Falta la cuenta de la marca'] };
+const solHtml = k => `<ol class="sols">${(SOL[k] || []).map(([t, d, e], i) => `<li><span class="soln">${i ? 'Respaldo' : 'Principal'}</span><div><b>${t}</b> <span class="pill ${SOLE[e][0]}">${SOLE[e][1]}</span><p>${d}</p></div></li>`).join('')}</ol>`;
 const solVia = k => (SOL[k] || []).map(x => x[3]).join(' o ').toLowerCase();
 const BR = Object.fromEntries(BRANDS.map(b => [b.k, b]));
 const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
 const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
-const BASES = { motor: ['Maqueta del motor común (recomendada)', 'La misma maqueta de Olumi: terreno, calles, galpones, contenedores y equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], vacia: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos.'], plano: ['Desde un plano o una foto', 'Subís un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'El parque logístico completo de la demo, para mostrar cómo queda.'] };
+const BASES = { motor: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], plano: ['Desde un plano o una foto', 'Arrastrás a la maqueta un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'Un parque logístico completo, inventado, para mostrar cómo queda.'], vacia: ['Maqueta en blanco', ''] };
+// La maqueta es una sola, en el motor común. La de siempre quedó archivada (ondi/archivo/): se abre tapada, una sola vez por cliente, para convertir lo que tenía cargado.
+const MOTOR = '../../motor/?app=ondi&v=39', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
 let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
 const fmtD = d => d ? new Date(d).toLocaleString('es-UY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -370,6 +466,7 @@ const nfmt = n => n == null ? '—' : Number(n).toLocaleString('es-UY');
 const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'panel', tab: 'maqueta', atab: 'empresa', claves: null, auth: 'login', msg: '', info: '', falta: '',
   link: {}, sitiosUI: {}, sitiosOrg: {}, rep: {}, acc: null, code: undefined, eq: {}, man: {}, maqSave: '', armed: null, test: {}, org: null, team: null, ajustes: null, modal: null, manForm: null };
 const CODE = (new URLSearchParams(location.search).get('codigo') || '').toUpperCase();
+window.__ondiApp = { S, render: () => render() }; // para las pruebas de pantalla
 const staff = () => S.ctx && S.ctx.kind === 'org';
 const editor = () => staff() && ['owner', 'admin', 'encargado', 'tecnico'].includes(S.ctx.role);
 const siteEd = () => editor() || (S.ctx && S.ctx.kind === 'acc' && S.myRol === 'editar');
@@ -462,35 +559,42 @@ async function loadCtx() { S.ped = null; S.pedN = 0; S.act = undefined; S.myRol 
   if (S.ctx.kind === 'acc') { const mr = await SB.from('ondi_accesos').select('rol').eq('org_id', orgId()).eq('site_id', S.ctx.site).eq('user_id', S.user.id).maybeSingle(); S.myRol = (mr.data && mr.data.rol) || 'ver'; }
   else if (!S.falta12) loadPed();
   if (S.ctx.kind === 'acc' && S.sites[0]) { S.site = S.sites[0]; S.view = 'site'; }
-  else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last); if (st && location.hash === '#c') { S.site = st; S.view = 'site'; } }
+  else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last), m = /^#c(?:\/([a-z]+))?(?:\/(.+))?$/.exec(location.hash || ''), mv = /^#v\/([a-z]+)(?:\/([a-z]+))?$/.exec(location.hash || '');
+    // al recargar (F5) se vuelve a donde se estaba: cliente, pestaña y rack de la documentación; o la sección del menú
+    if (st && m) { S.site = st; S.view = 'site'; if (m[1]) S.tab = m[1]; if (m[2]) S.docIni = decodeURIComponent(m[2]); }
+    else if (mv && ['clientes', 'docs', 'sim', 'ajustes', 'pedidos', 'ayuda', 'super'].includes(mv[1])) { S.view = mv[1]; if (mv[1] === 'ajustes' && mv[2]) S.atab = mv[2]; } }
   render(); }
 async function loadClaves() { const r = await SB.rpc('ondi_claves', { o: orgId() }); S.claves = r.error ? [] : r.data || []; render(); }
 const claveDe = (sc, k = 'unifi') => (S.claves || []).find(c => c.scope === sc && c.kind === k);
 
 /* ---------- función del servidor ---------- */
 async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { body: { org: orgId(), ...body } });
-  if (r.error) { let m = ''; try { const j = await r.error.context.json(); m = j && j.error; } catch (e) {} if (!m && /Failed to send|not found|404/i.test(r.error.message || '')) m = 'Falta publicar la función ondi-unifi en Supabase.'; throw { message: m || r.error.message }; }
+  if (r.error) { let m = ''; try { const j = await r.error.context.json(); m = j && j.error; } catch (e) {} if (!m && /not found|404/i.test(r.error.message || '')) m = 'Falta publicar la función ondi-unifi en Supabase.'; if (!m && /Failed to send|Failed to fetch|network/i.test(r.error.message || '')) m = 'No se pudo llegar al servidor de Ondi. Revisá la conexión; se vuelve a intentar solo.'; throw { message: m || r.error.message }; }
   if (r.data && r.data.error) throw { message: r.data.error }; return r.data; }
 
 /* ---------- pantallas ---------- */
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
-  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
+  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['docs', 'Documentación', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>'], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
   if (S.super) navItems.push(['super', 'Unity Tech', IC.shield]);
   const cur = S.view === 'site' ? 'clientes' : S.view;
   const nav = navItems.map(([k, n, ic]) => `<button data-nav="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic}<span>${n}</span></button>`).join('');
   const who = staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
   const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
+  if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
+  S.docRe = false;
   if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
-  $('#root').innerHTML = `<div class="app"><aside class="side">${logo()}
-      <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav">${nav}</nav>
+  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15"/><path d="${S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'}"/></svg></button></div>
+      <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav"><span class="navpill" aria-hidden="true"></span>${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
-    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
+  navPill();
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
+  if (S.view === 'site' && S.tab === 'doc' && S.site && staff() && !S.falta) mountDoc();
   if (S.view === 'sim' && S.sim && staff() && !S.falta) mountSim();
   if (S.modal === 'newsite') { const f = $('#ns_name'); if (f) f.focus(); }
 }
@@ -577,7 +681,7 @@ function modalView() {
   if (S.modal === 'newsite') return `<div class="modal" data-closemodal><div role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">Nuevo cliente</h2>
     <form class="form" data-do-f="newsite"><div class="form2"><label class="fld full">Nombre del cliente<input id="ns_name" required maxlength="120" placeholder="Empresa o parque"></label>
       <label class="fld">Razón social <small>(opcional)</small><input id="ns_rs" maxlength="120"></label><label class="fld">Dirección <small>(opcional)</small><input id="ns_dir" maxlength="200"></label></div>
-      <div class="fld">Cómo empieza la maqueta<div class="bases">${Object.entries(BASES).map(([k, [n, d]], i) => `<label><input type="radio" name="base" value="${k}" ${i === 0 ? 'checked' : ''}><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
+      <div class="fld">Cómo empieza la maqueta<div class="bases">${Object.entries(BASES).filter(([k]) => k !== 'vacia').map(([k, [n, d]], i) => `<label><input type="radio" name="base" value="${k}" ${i === 0 ? 'checked' : ''}><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
       <div class="acts"><button class="btn pri" type="submit">Crear el cliente</button><button class="btn" type="button" data-do="closemodal">Cancelar</button></div></form></div></div>`;
   return ''; }
 
@@ -586,45 +690,92 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="acts"><button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button></div></div><div class="maq" id="maqbox"></div></div>`;
   return `<div class="wrap"><div class="head"><div><h1>Simulación</h1><p>Clientes inventados para mostrar Ondi o practicar. No son clientes tuyos, no usan equipos reales y lo que cambies no se guarda.</p></div></div>
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
-function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
-  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=40" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe>`; }
+async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
+  let g = null; try { g = await (await fetch(ESCENAS + 'sim-' + s.id + '.json')).json(); } catch (e) {} if (S.sim !== s.id || !$('#maqbox')) return; if (!g || !g.escena) { box.innerHTML = '<div class="empty">No se pudo abrir la simulación. Probá de nuevo.</div>'; return; }
+  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, save() {} };
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
-function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
+function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
   return `<div class="wrap wide"><div id="sitehead">${siteHead()}</div><div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${n}</button>`).join('')}</div>
-    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
+    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'doc' && staff() ? docView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
 
 /* maqueta */
 let MAQ = null, maqT = null;
 function maqBar() { return `<span class="save" id="savest">${siteEd() ? esc(S.maqSave || 'Los cambios se guardan solos.') : 'Solo lectura.'}</span><span class="grow"></span>
   ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}<button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button>`; }
+// varios en la misma maqueta: canal en tiempo real por cliente (Realtime de Supabase, sin tablas). Cada uno manda su posición
+// mientras camina y recibe la de los otros; la lista de conectados sale de la presencia del canal.
+function maqPresencia(st) { maqPresFin(); if (!SB.channel || !S.user) return null; const yo = S.user.id, nombre = docQuien() || 'Alguien', subs = new Set();
+  const ch = SB.channel('ondi-maq-' + st.id, { config: { presence: { key: yo }, broadcast: { self: false } } });
+  ch.on('broadcast', { event: 'pos' }, m => { const p = m && m.payload; if (p && p.id !== yo) for (const f of subs) f({ t: 'pos', ...p }); });
+  ch.on('presence', { event: 'sync' }, () => { const L = Object.values(ch.presenceState()).map(a => a && a[0]).filter(x => x && x.id && x.id !== yo); for (const f of subs) f({ t: 'lista', L }); });
+  ch.subscribe(async s2 => { if (s2 === 'SUBSCRIBED') { try { await ch.track({ id: yo, nombre }); } catch (e) {} } });
+  S.maqCh = ch; S.maqChSite = st.id; let ult = 0;
+  return { yo, nombre, enviar: (p, ya) => { const t = Date.now(); if (!ya && t - ult < 140) return; ult = t; try { ch.send({ type: 'broadcast', event: 'pos', payload: { id: yo, nombre, ...p } }); } catch (e) {} }, al: f => { subs.add(f); return () => subs.delete(f); }, prueba: m => { for (const f of subs) f(m); } }; }
+function maqPresFin() { if (S.maqCh) { try { SB.removeChannel(S.maqCh); } catch (e) {} } S.maqCh = null; S.maqChSite = null; }
 async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
   const base = (st.data && st.data.base) || 'vacia';
   const [r, pl] = await Promise.all([SB.from('ondi_maquetas').select('data,updated_at').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(),
     base === 'polo' ? Promise.resolve({ data: null }) : SB.from('ondi_planos').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle()]);
   if (S.site !== st || !$('#maqbox')) return;
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
-  const data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null;
+  let data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; data = docBase(st, data);
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
   MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
-    plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url),
+    plano: (pl && pl.data && pl.data.data) || null, start: null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url), leerPlano: siteEd() ? img => leerPlano(st, img) : null,
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
     equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
       return { at: E.at, errs: E.errs.map(x => BR[x.k].n + ': ' + x.m), list: [
         ...E.list.map(d => ({ uid: (d.marca || 'unifi') + ':' + (d.mac || d.id), marca: d.marca || 'unifi', nombre: d.nombre, modelo: d.modelo, linea: d.linea, ip: d.ip, mac: d.mac, estado: d.estado, version: d.version, consola: d.consola, actualizar: d.actualizar })),
         ...man.map(d => ({ uid: 'man:' + d.id, marca: d.marca, nombre: d.nombre, modelo: d.modelo, tipo: d.tipo, ip: d.ip, estado: d.estado }))] }; },
     crearEquipo: siteEd() ? async row => { const r = await SB.from('ondi_equipos').insert({ org_id: st.org_id, site_id: st.id, ...row }).select().single(); if (r.error) throw r.error; (S.man[st.id] = S.man[st.id] || []).push(r.data); delete S.eq[st.id]; return r.data; } : null,
+    ir: S.maqIr || null, indice: idx => docIndice(st, idx), presencia: maqPresencia(st), clave: o => pedirClave(o),
+    papelera: (id, cab, dev) => { const P = S.docPrev[st.id] = S.docPrev[st.id] || {}; P.papelera = [{ id, cab: docCl(cab) || { items: [], links: [], ports: {} }, pieza: null, dev: docCl(dev), cuando: Date.now(), quien: myName() }, ...docPap(P)].slice(0, 20); },
+    abrirDoc: staff() ? p => { S.docIni = p.id; if (S.doc && S.doc.site === st.id) { S.doc.cid = p.id; S.doc.hist = false; S.doc.caja = null; } S.tab = 'doc'; render(); } : null,
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
-  S.startPlano = false; window.__ondiMaqueta = MAQ;
-  const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo ? '../../motor/?app=ondi&v=5' : 'maqueta.html?v=40'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe>`;
+  S.maqIr = null; window.__ondiMaqueta = MAQ;
+  // siempre el motor común. Lo que un cliente tenía en el formato anterior se pasa una sola vez (maqPase) y, sin nada guardado, las bases con dibujo arrancan de una escena inventada
+  if (!(base === 'motor' || (data && data.motor === 1))) { let g = null;
+    if (data) g = await maqPase(st, data, base);
+    else if (base === 'generica' || base === 'polo') { try { g = await (await fetch(ESCENAS + (base === 'polo' ? 'sim-parque' : 'generica') + '.json')).json(); if (g && g.escena) g.escena.nombre = st.name; } catch (e) { g = null; } }
+    if (S.site !== st || !$('#maqbox')) return; window.__ondiMaqueta = MAQ; if (g === false) return; if (g && g.escena) { data = g; MAQ.state = g; } }
+  { const mb = $('#maqbar'); if (mb) mb.innerHTML = maqBar(); }
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${MOTOR}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
+// Pase al motor común de un cliente que tenía la maqueta de siempre. La página archivada arma lo que tenía cargado y su conversor lo devuelve en piezas del motor;
+// se le aplican los datos propios del sitio (planos, ajustes, suelo, retoques) y, si quien abre puede editar, queda guardado. Lo anterior no se pierde: va en «anterior».
+// Devuelve el estado nuevo, o false si no se pudo (y deja el aviso con el botón para reintentar).
+async function maqPase(st, data, base) { const box = $('#maqbox'), espera = ms => new Promise(z => setTimeout(z, ms)); if (!box) return false;
+  box.innerHTML = `<iframe id="maqvieja" src="${ARCH}" title="" aria-hidden="true" tabindex="-1"></iframe><div class="maqpase"><b>Pasando la maqueta al motor nuevo…</b><span>Es una sola vez por cliente y tarda unos segundos. Lo que estaba cargado se conserva.</span></div>`;
+  // la página archivada no guarda nada: solo arma la escena para convertirla
+  window.__ondiMaqueta = { ...MAQ, save() {}, savePlano() {}, presencia: null, leerPlano: null, abrirDoc: null, start: null }; const f = $('#maqvieja'); let r = null;
+  for (let i = 0; i < 280 && !r; i++) { await espera(250); if (S.site !== st || !f.isConnected) return false; try { const w = f.contentWindow; if (w && w.__aMotor && w.document.readyState === 'complete') { await espera(800); r = w.__aMotor(); if (!r || !r.escena || !Array.isArray(r.escena.piezas)) r = null; } } catch (e) { r = null; } }
+  // la página archivada se cierra acá, con el anfitrión mudo todavía puesto: al cerrarse intenta guardar y eso no puede pisar lo nuevo
+  try { f.remove(); } catch (e) {} await espera(60);
+  if (S.site !== st || !$('#maqbox')) return false;
+  if (!r) { box.innerHTML = '<div class="empty">No se pudo pasar la maqueta al motor nuevo. Lo que estaba cargado sigue guardado, sin cambios.<br><button class="btn sm pri" data-do="maqreintentar" style="margin-top:12px">Reintentar</button></div>'; return false; }
+  const D = st.data || {}; let np = 0; try { np = maqPlanos(r.escena, D.planos); maqAjustes(r.escena, D.ajustes); maqSuelo(r.escena, D.suelo); maqRetoques(r.escena, D.retoques, D.piezas); } catch (e) {}
+  r.escena.nombre = r.escena.nombre || st.name;
+  const g = { v: 1, motor: 1, escena: r.escena }; for (const k of ['ext', 'bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera', 'cabs', 'fibs']) if (data && data[k] !== undefined) g[k] = data[k];
+  if (data) g.anterior = { cuando: new Date().toISOString(), quien: myName(), base, datos: data };
+  const sin = Object.entries(r.sin || {}).map(([k, n]) => n + ' ' + k).join(', ');
+  if (siteEd()) { const u = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: g }, { onConflict: 'org_id,site_id' });
+    if (u.error) toast('La maqueta se pasó al motor nuevo, pero no se pudo guardar: ' + errTxt(u.error)); else { S.docPrev[st.id] = docCl(g); S.maqSave = 'Guardado recién'; toast(`Maqueta pasada al motor nuevo: ${r.escena.piezas.length} piezas. Lo anterior quedó archivado.${sin ? ' No pasaron: ' + sin + '.' : ''}`); } }
+  return g; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
-function queueSave(st, data) { if (!siteEd()) return; MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
+function queueSave(st, data) { if (!siteEd()) return; if (data && data.motor !== 1 && docMotor(S.docPrev[st.id])) return;   // una maqueta ya pasada al motor no se pisa con el formato anterior
+  data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
+// leer el plano con IA (función ondi-plano-ia): devuelve galpones y calles propuestos; la maqueta los muestra y se eligen
+async function leerPlano(st, img) { try { const r = await SB.functions.invoke('ondi-plano-ia', { body: { org: st.org_id, imagen: img } });
+    if (!r.error) return r.data || { error: 'La IA no devolvió nada.' }; const ctx = r.error.context; let m = '';
+    if (ctx && typeof ctx.json === 'function') { try { m = ((await ctx.json()) || {}).error || ''; } catch (e) {} }
+    if (!m && (/not found|404|Failed to send/i.test(String(r.error.message || r.error)) || (ctx && ctx.status === 404))) m = 'La lectura con IA todavía no está publicada en el servidor.';
+    return { error: m || 'No se pudo leer el plano: ' + (r.error.message || r.error) }; }
+  catch (e) { return { error: 'No se pudo leer el plano: ' + errTxt(e) }; } }
 async function savePlano(st, url) { if (!siteEd()) return; MAQ.plano = url; setSave('Guardando el plano…');
   const r = url ? await SB.from('ondi_planos').upsert({ org_id: st.org_id, site_id: st.id, data: url }, { onConflict: 'org_id,site_id' }) : await SB.from('ondi_planos').delete().eq('org_id', st.org_id).eq('site_id', st.id);
   setSave(r.error ? 'No se pudo guardar el plano: ' + errTxt(r.error) : url ? 'Plano guardado' : 'Plano quitado'); }
@@ -753,17 +904,52 @@ function datosView() { const st = S.site, d = st.data || {}, dis = editor() ? ''
       <form class="form" data-do-f="delsite"><label class="fld">Escribí el nombre para confirmar<input id="del_name" autocomplete="off" placeholder="${esc(st.name)}"></label><div><button class="btn danger" type="submit">Borrar ${esc(st.name)}</button></div></form></div>` : ''}</div>`; }
 
 /* ajustes */
+// ---------- clave de borrado (racks y gabinetes) ----------
+// La define un administrador en Ajustes. Se guarda su huella (PBKDF2-SHA256 con sal) en los ajustes de la empresa, nunca el número.
+// Es una traba contra borrar por error: se pide cada vez, en la documentación y en la maqueta. Lo borrado va además a la papelera (30 días).
+const CLV = { fallos: 0, hasta: 0, abierta: false };
+const b64 = u => btoa(String.fromCharCode(...u)), deB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function claveHuella(pin, sal, iter) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']); return b64(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: iter }, k, 256))); }
+async function claveGuardar(pin) { const sal = b64(crypto.getRandomValues(new Uint8Array(16))), clave = { sal, iter: 150000, hash: await claveHuella(pin, sal, 150000), por: myName(), cuando: new Date().toISOString() };
+  const data = { ...(S.ajustes || {}), clave }, r = await SB.from('ondi_ajustes').upsert({ org_id: orgId(), data }, { onConflict: 'org_id' }); if (r.error) throw r.error; S.ajustes = data; }
+// pide la clave y devuelve true si es la correcta. o: { titulo, detalle, boton, crear (definir una nueva) }
+async function pedirClave(o = {}) { if (CLV.abierta) return false; if (staff() && S.ajustes === null) { try { await loadAjustes(); } catch (e) {} }
+  const C = (S.ajustes || {}).clave, crear = o.crear || (!C && admin()), candado = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>';
+  if (!C && !crear) { toast(staff() ? 'Todavía no hay clave de borrado: un administrador la define en Ajustes → Empresa y equipo.' : 'Solo la instaladora puede sacar racks y gabinetes.'); return false; }
+  return new Promise(listo => { CLV.abierta = true; const m = document.createElement('div'); m.className = 'modal clv'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Clave de borrado');
+    const campo = (id, ph) => `<input id="${id}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="${ph}" aria-label="${ph}">`;
+    m.innerHTML = `<div><form style="display:grid;gap:10px"><h2>${candado}<span>${esc(crear && !o.crear ? 'Definí la clave de borrado' : o.titulo || 'Clave de borrado')}</span></h2>
+      <p>${esc(crear && !o.crear ? 'Todavía no hay clave. Elegí una de 4 a 8 números: se va a pedir cada vez que alguien quiera sacar un rack o un gabinete.' : o.detalle || 'Escribí la clave de borrado de la empresa.')}</p>
+      ${campo('clv1', crear ? 'Clave nueva' : 'Clave')}${crear ? campo('clv2', 'Repetila') : ''}<p class="clverr" role="alert"></p>
+      <div class="acts"><button class="btn" type="button" data-no>Cancelar</button><button class="btn ${crear ? 'pri' : 'danger'}" type="submit">${esc(crear ? 'Guardar la clave' : o.boton || 'Sacar')}</button></div></form></div>`;
+    document.body.appendChild(m); const i1 = m.querySelector('#clv1'), err = m.querySelector('.clverr'), fin = v => { CLV.abierta = false; removeEventListener('keydown', tecla, true); m.remove(); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(false); } };
+    addEventListener('keydown', tecla, true); m.addEventListener('pointerdown', e => { if (e.target === m) fin(false); }); m.querySelector('[data-no]').onclick = () => fin(false); setTimeout(() => i1.focus(), 30);
+    m.querySelector('form').addEventListener('submit', async e => { e.preventDefault(); const pin = i1.value.trim(), falta = Math.ceil((CLV.hasta - Date.now()) / 1000);
+      if (falta > 0) { err.textContent = `Demasiados intentos. Probá de nuevo en ${falta} segundos.`; return; }
+      if (crear) { if (!/^\d{4,8}$/.test(pin)) { err.textContent = 'Tienen que ser de 4 a 8 números.'; return; } if (pin !== m.querySelector('#clv2').value.trim()) { err.textContent = 'Las dos no coinciden.'; return; }
+        try { await claveGuardar(pin); toast('Clave de borrado guardada'); fin(true); } catch (er) { err.textContent = 'No se pudo guardar: ' + errTxt(er); } return; }
+      let ok = false; try { ok = (await claveHuella(pin, C.sal, C.iter)) === C.hash; } catch (er) {}
+      if (ok) { CLV.fallos = 0; fin(true); return; } CLV.fallos++; i1.value = ''; i1.focus();
+      if (CLV.fallos >= 5) { CLV.fallos = 0; CLV.hasta = Date.now() + 60000; err.textContent = 'Cinco intentos fallidos: se bloquea un minuto.'; } else err.textContent = 'Esa no es la clave.'; }); }); }
+// cambiarla (Ajustes): pide la actual y después la nueva
+async function claveCambiar() { if (!admin()) return; if ((S.ajustes || {}).clave && !(await pedirClave({ titulo: 'Cambiar la clave de borrado', detalle: 'Primero escribí la clave actual.', boton: 'Seguir' }))) return;
+  if (await pedirClave({ crear: true, titulo: 'Clave de borrado nueva', detalle: 'De 4 a 8 números. Se pide para sacar un rack o un gabinete.' })) render(); }
+function claveCard() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return ''; } const C = S.ajustes.clave;
+  return `<div class="card pad" style="grid-column:1/-1"><h2>Clave de borrado</h2><p class="muted" style="margin:6px 0 12px;font-size:14px">Para sacar un rack o un gabinete, de la documentación o de la maqueta, se pide esta clave. Lo que se saca queda 30 días en la papelera de la documentación.</p>
+    <p style="margin:0 0 12px">${C ? `Definida${C.por ? ' por ' + esc(C.por) : ''}${C.cuando ? ' el ' + new Date(C.cuando).toLocaleDateString('es-UY') : ''}.` : '<b>Todavía no está definida.</b>'}</p>${admin() ? `<button class="btn" data-clave="cambiar">${C ? 'Cambiar la clave' : 'Definir la clave'}</button>` : '<p class="muted" style="font-size:13px;margin:0">La cambia un administrador.</p>'}</div>`; }
+document.addEventListener('click', e => { if (e.target.closest('[data-clave=cambiar]')) claveCambiar(); });
+
 function ajustesView() { const t = S.atab;
-  const tabs = [['empresa', 'Empresa y equipo'], ['integraciones', 'Integraciones'], ['avisos', 'Avisos'], ...(admin() ? [['actividad', 'Actividad']] : []), ['cuenta', 'Mi cuenta']];
+  const tabs = [['empresa', 'Empresa y equipo'], ['roles', 'Roles y permisos'], ['clientes', 'Clientes'], ['integraciones', 'Integraciones'], ['avisos', 'Avisos'], ...(admin() ? [['actividad', 'Actividad']] : []), ['cuenta', 'Mi cuenta']];
   return `<div class="wrap"><div class="head"><div><h1>Ajustes</h1><p>${esc(S.ctx.name)} · ${esc(ROLN[S.ctx.role] || S.ctx.role)}</p></div></div>
     <div class="stabs">${tabs.map(([k, n]) => `<button data-atab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${falta11()}
-    ${t === 'empresa' ? empresaView() : t === 'integraciones' ? marcasView() : t === 'avisos' ? avisosView() : t === 'actividad' ? actividadView() : cuentaView()}</div>`; }
+    ${t === 'empresa' ? empresaView() : t === 'roles' ? rolesView() : t === 'clientes' ? clientesCfgView() : t === 'integraciones' ? marcasView() : t === 'avisos' ? avisosView() : t === 'actividad' ? actividadView() : cuentaView()}</div>`; }
 function empresaView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div class="card empty">Cargando…</div>'; }
   const o = S.org, T = S.team || [];
   return `<div class="grid2"><div class="card pad"><h2>${esc(o.name)}</h2><dl class="rows" style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:8px 0 0;font-size:14px"><dt class="muted">Plan de Ondi</dt><dd style="margin:0">${esc(S.ctx.plan || o.plan || '—')}</dd><dt class="muted">Clientes en Ondi</dt><dd style="margin:0">${S.sites.length}</dd><dt class="muted">Tu rol</dt><dd style="margin:0">${esc(ROLN[S.ctx.role] || S.ctx.role)}</dd></dl>
       ${admin() ? `<form class="form inline" data-do-f="orgname" style="margin-top:14px"><label class="fld">Nombre de la empresa<input id="o_name" value="${esc(o.name)}" maxlength="80" required></label><button class="btn" type="submit">Guardar</button></form>` : ''}
       ${o.join_code && admin() ? `<h3 style="margin:18px 0 6px;font-size:15px">Sumar a alguien de tu equipo</h3><p class="muted" style="margin:0 0 8px;font-size:14px">Le pasás este código: crea su cuenta en Ondi, elige "Tengo un código" y queda en tu empresa.</p><p><span class="code">${esc(o.join_code)}</span></p>` : ''}</div>
-    <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.nombre || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}${m.ultimo ? ' · entró ' + esc(ago(m.ultimo)) : ''}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div></div>`; }
+    <div class="card pad"><h2>Equipo</h2>${T.length ? `<div class="ppl">${T.map(m => `<div><span><b>${esc(m.display_name || m.nombre || m.email || 'Sin nombre')}</b><br><span class="muted" style="font-size:13px">${esc(m.email || '')}${m.ultimo ? ' · entró ' + esc(ago(m.ultimo)) : ''}</span></span><span class="tag">${esc(ROLN[m.role] || m.role)}</span></div>`).join('')}</div>` : '<p class="muted">No se pudo leer el equipo.</p>'}</div>${claveCard()}</div>`; }
 async function loadOrg() { const [o, t] = await Promise.all([SB.from('orgs').select('id,name,plan,join_code').eq('id', orgId()).maybeSingle(), SB.rpc('ondi_equipo', { o: orgId() }).then(r => r.error ? SB.from('members').select('user_id,role,display_name,email').eq('org_id', orgId()) : r)]);
   S.org = o.data || { name: S.ctx.name }; S.team = (t.data || []).filter(m => !['cliente', 'pendiente'].includes(m.role)); if (S.view === 'ajustes') render(); }
 /* sitios de la cuenta de la marca: a qué cliente de Ondi va cada uno */
@@ -802,21 +988,36 @@ function repartoBlock(h) { const R = S.rep[h], ed = admin();
   return head + sum + grupos + (ed ? `<div class="acts" style="margin-top:12px"><button class="btn" data-repsug="${esc(h)}">Volver a la propuesta</button><button class="btn pri" data-repsave="${esc(h)}">${R.saving ? 'Guardando…' : 'Guardar el reparto'}</button></div>` : '') + '</div>'; }
 function repInit(r) { const sel = {}, hay = r.equipos.some(d => d.asignado), cli = s => (r.sitios.find(x => x.siteId === s) || {}).cliente || '';
   r.equipos.forEach(d => { sel[d.mac] = hay ? d.asignado || '' : cli(d.sugerido); }); r.sel = sel; return r; }
-function marcasView() { return `<p class="muted" style="margin:0"><b>Cada marca tiene dos caminos para monitorearla</b>, y siempre uno que no necesita instalar nada en el cliente: si no nos dejan poner un equipo en su red, se usa el otro. Las claves quedan guardadas en el servidor: nadie las puede ver después, ni desde acá. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p>
-  <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k];
-    return `<div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${solVia(b.k)}</span></div></div>${b.ready ? (k ? '<span class="pill ok">Conectada</span>' : '<span class="pill off">Sin clave</span>') : '<span class="pill warn">En preparación</span>'}</header>
-      <p>${b.what}</p>${solHtml(b.k)}
+const BOPEN = (() => { try { return JSON.parse(localStorage.getItem('ondi.bopen') || 'null'); } catch (e) { return null; } })() || { unifi: 1, meraki: 1 };
+const bSave = () => { try { localStorage.setItem('ondi.bopen', JSON.stringify(BOPEN)); } catch (e) {} };
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-bk]')) { BOPEN[d.dataset.bk] = d.open ? 1 : 0; bSave(); } }, true);
+// estado de cada marca: qué está andando y qué falta, en una palabra
+function bEstado(b) { const k = claveDe('', b.k); if (b.ready) return k ? ['ok', 'Funcionando'] : ['off', 'Falta la clave']; if (b.k === 'sonoff') return ['warn', 'Falta la cuenta de eWeLink']; return ['info', 'Con el Agente Ondi']; }
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+function marcasView() { const filas = [...BRANDS.map(b => [b.k, b.n, b.c, b.ab]), ['otra', 'Cualquier otra marca', '#5B6670', '+']];
+  const est = k => k === 'otra' ? ['info', 'Latido o chequeo'] : bEstado(BR[k]), ok = BRANDS.filter(b => bEstado(b)[1] === 'Funcionando').length;
+  return `<div class="card pad mtab"><div class="mtab-h"><div><h2>Así monitorea Ondi cada marca</h2><p class="muted">Cada marca tiene un camino principal y uno de respaldo; siempre hay uno que no instala nada en el cliente. Las claves quedan guardadas en el servidor: nadie las puede ver después. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p></div>
+      <div class="mtab-k"><b>${ok}</b><span>${ok === 1 ? 'marca funcionando' : 'marcas funcionando'}</span></div></div>
+    <div class="tscroll"><table><thead><tr><th>Marca</th><th>Principal</th><th>Respaldo</th><th>Estado</th></tr></thead><tbody>${filas.map(([k, n, c, ab]) => { const S2 = SOL[k] || [], e = est(k);
+      return `<tr><td><a href="#br-${k}" data-bgo="${k}" class="mt-n"><span class="mark sm" style="--bc:${c};background:${c}">${ab}</span>${esc(n)}</a></td><td>${S2[0] ? esc(S2[0][0]) : '—'}</td><td class="muted">${S2[1] ? esc(S2[1][0]) : '—'}</td><td><span class="pill ${e[0]}">${e[1]}</span></td></tr>`; }).join('')}</tbody></table></div></div>
+  <div class="bacts"><button class="btn sm" data-ball="1">Abrir todas</button><button class="btn sm" data-ball="0">Cerrar todas</button></div>
+  <div class="brands">${BRANDS.map(b => { const k = claveDe('', b.k), T = S.test[b.k], e = bEstado(b);
+    const fu = S.bfull === b.k;
+    return `<details class="card brand${fu ? ' bfull' : ''}" id="br-${b.k}" data-bk="${b.k}" style="--bc:${b.c}" ${BOPEN[b.k] || fu ? 'open' : ''}><summary><div class="bhead"><span class="mark" style="background:${b.c}">${b.ab}</span><div><h3>${b.n}</h3><span class="via">${solVia(b.k)}</span></div></div><span class="bsum"><span class="pill ${e[0]}">${e[1]}</span>${fu ? `<button class="btn sm" data-bfull="">${DIC.chico}Cerrar</button>` : `<button class="btn sm" data-bfull="${b.k}">${DIC.grande}Configurar</button>${CHEV}`}</span></summary>
+      <div class="bbody"><p>${b.what}</p>${solHtml(b.k)}${fu ? probarHtml(b.k) : ''}
       ${b.ready ? `${k ? `<p>Clave cargada · termina en <span class="mono">${esc(k.hint)}</span> · ${esc(fmtD(k.updated_at))}</p>` : ''}
         ${admin() ? `<form class="inline" data-do-f="keyorg" data-k="${b.k}"><label class="fld">${k ? 'Cambiar la clave' : 'Pegá la clave de API'}<input id="ko-${b.k}" type="password" autocomplete="off" spellcheck="false"></label><button class="btn pri" type="submit">Guardar</button></form>
           <div class="acts">${k ? `<button class="btn" data-probar="${b.k}">${T === 'cargando' ? 'Probando…' : 'Probar la conexión'}</button><button class="btn danger ${S.armed === 'del:' + b.k ? 'arm' : ''}" data-delkey="${b.k}">${S.armed === 'del:' + b.k ? '¿Seguro? Tocá de nuevo' : 'Borrar la clave'}</button>` : ''}</div>
           ${k ? sitiosOrgBlock(b.k) : ''}
           ${T && T !== 'cargando' ? (T.error ? `<div class="err">${esc(T.error)}</div>` : `<div class="okmsg">Conectado: ${T.consolas} ${b.k === 'meraki' ? 'organizaci' + (T.consolas === 1 ? 'ón' : 'ones') : 'consola' + (T.consolas === 1 ? '' : 's')} y ${T.sitios} sitio${T.sitios === 1 ? '' : 's'}.</div>`) : ''}
           <details><summary class="muted" style="cursor:pointer;font-size:13.5px">Cómo sacar la clave</summary><ol class="how">${b.steps.map(x => `<li>${x}</li>`).join('')}</ol></details>` : '<p class="muted">Solo el dueño o un administrador puede cargarla.</p>'}`
-      : `<p class="muted" style="font-size:13px">${b.prep ? 'Con la cuenta de eWeLink enlazada se va a ver el estado en vivo (abierta o cerrada, batería, última señal). ' : ''}Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div>`; }).join('')}
-    <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:#5B6670">+</span><div><h3>Cualquier otra marca</h3><span class="via">${solVia('otra')}</span></div></div><span class="pill warn">En preparación</span></header>
-      <p>Para equipos que no tienen nube ni forma de leerlos: alcanza con saber si siguen prendidos y conectados.</p>${solHtml('otra')}</div>
-    <div class="card pad brand"><header><div class="bhead"><span class="mark" style="background:var(--accent)">AG</span><div><h3>Agente Ondi</h3><span class="via">En la red del cliente</span></div></div><span class="pill warn">En preparación</span></header>
-      <p>Un programa chico que va en una mini PC, una Raspberry o un servidor del cliente. Lee los equipos de la red local (SNMP, ONVIF, ISAPI, API de MikroTik y Dahua) y manda el estado a Ondi cada minuto, sin abrir puertos.</p></div></div>`; }
+      : `<p class="muted" style="font-size:13px">${b.prep ? 'Con la cuenta de eWeLink enlazada se va a ver el estado en vivo (abierta o cerrada, batería, última señal). ' : ''}Mientras tanto, cargá los equipos a mano en cada cliente (pestaña Integraciones) para tenerlos en la lista y en la maqueta.</p>`}</div></details>`; }).join('')}
+    <details class="card brand" id="br-otra" data-bk="otra" style="--bc:#5B6670" ${BOPEN.otra ? 'open' : ''}><summary><div class="bhead"><span class="mark" style="background:#5B6670">+</span><div><h3>Cualquier otra marca</h3><span class="via">${solVia('otra')}</span></div></div><span class="bsum"><span class="pill info">Latido o chequeo</span>${CHEV}</span></summary>
+      <div class="bbody"><p>Para equipos que no tienen nube ni forma de leerlos: alcanza con saber si siguen prendidos y conectados.</p>${solHtml('otra')}</div></details>
+    <details class="card brand" id="br-agente" data-bk="agente" style="--bc:var(--accent)" ${BOPEN.agente ? 'open' : ''}><summary><div class="bhead"><span class="mark" style="background:var(--accent)">AG</span><div><h3>Agente Ondi</h3><span class="via">En la red del cliente</span></div></div><span class="bsum"><span class="pill warn">Falta elegir el equipo</span>${CHEV}</span></summary>
+      <div class="bbody"><p>Un programa chico que va en una Raspberry Pi o una mini PC en el rack del cliente. Lee los equipos de la red local (SNMP, ONVIF, ISAPI, API de MikroTik y Dahua) y manda el estado a Ondi cada minuto. Solo sale hacia Ondi: no se abre ningún puerto en el cliente. Es el camino principal de Hikvision, Dahua, Intelbras, Honeywell, MikroTik, Cisco y TP-Link.</p>
+        <ol class="how"><li>Phitel deja el equipo configurado en el rack del cliente, con su clave de sitio.</li><li>El cliente solo da acceso a la red; las claves de las cámaras y grabadores las carga Phitel en el agente y no salen de ahí.</li><li>En Ondi aparece cada equipo con su estado, y las cámaras con su video en la maqueta.</li></ol></div></details></div>`; }
+
 function avisosView() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); return '<div class="card empty">Cargando…</div>'; }
   const A = (S.ajustes.avisos) || {}, ev = A.eventos || { caido: true, recupera: true, grabacion: true, firmware: false }, dis = admin() ? '' : 'disabled';
   return `<div class="grid2"><div class="card pad"><h2>Quién recibe los avisos</h2><p class="muted" style="margin-top:0">Por ahora los avisos son solo para tu empresa, no para el cliente.</p>
@@ -937,7 +1138,7 @@ document.addEventListener('change', async e => {
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-sidetog],[data-ball],[data-bgo],[data-bfull],[data-probar],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
   if (t.dataset.repopen) { const h = t.dataset.repopen; S.rep[h] = 'cargando'; render(); fn({ accion: 'consola', hostId: h }).then(r => { S.rep[h] = repInit(r); render(); }).catch(er => { S.rep[h] = { error: errTxt(er) }; render(); }); return; }
   if (t.dataset.repsug) { const R = S.rep[t.dataset.repsug], cli = s => (R.sitios.find(x => x.siteId === s) || {}).cliente || ''; R.equipos.forEach(d => { R.sel[d.mac] = cli(d.sugerido); }); render(); return; }
   if (t.dataset.repsave) { const h = t.dataset.repsave, R = S.rep[h]; if (!R || R.saving) return; const asig = {}; R.clientes.forEach(c => { asig[c.id] = []; }); R.equipos.forEach(d => { const v = R.sel[d.mac]; if (v && asig[v]) asig[v].push(d.mac); }); R.saving = true; render();
@@ -954,6 +1155,11 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
   if (t.dataset.site) return openSite(t.dataset.site, t.dataset.sitetab);
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.manForm = null; render(); return; }
   if (t.dataset.atab) { S.atab = t.dataset.atab; render(); return; }
+  if (t.dataset.bfull != null && t.closest('.brand, .brands')) { e.preventDefault(); S.bfull = t.dataset.bfull || null; document.documentElement.classList.toggle('bfullon', !!S.bfull); render(); return; }
+  if (t.dataset.probar) { e.preventDefault(); probar(t.dataset.probar); return; }
+  if (t.dataset.sidetog != null) { S.mini = !S.mini; try { localStorage.setItem('ondi.mini', S.mini ? '1' : ''); } catch (x) {} document.documentElement.classList.toggle('navmini', S.mini); render(); return; }
+  if (t.dataset.ball) { const on = t.dataset.ball === '1'; document.querySelectorAll('details[data-bk]').forEach(d => { d.open = on; BOPEN[d.dataset.bk] = on ? 1 : 0; }); bSave(); return; }
+  if (t.dataset.bgo) { e.preventDefault(); const d = document.getElementById('br-' + t.dataset.bgo); if (d) { d.open = true; d.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); } return; }
   if (t.dataset.goaj) { S.view = 'ajustes'; S.atab = t.dataset.goaj; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
   const st = S.site;
   try {
@@ -999,6 +1205,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (a === 'newcode') { const r = await SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: !!S.code }); if (r.error) throw r.error; S.code = r.data; toast('Código nuevo listo'); render(); }
     if (a === 'nocode') { const r = await SB.rpc('ondi_sin_codigo', { o: st.org_id, s: st.id }); if (r.error) throw r.error; S.code = null; toast('Código desactivado: los que ya entraron siguen hasta que los quites'); render(); }
     if (a === 'copylink') { const link = HERE + '?codigo=' + encodeURIComponent(S.code); try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch (er) { prompt('Copiá el enlace:', link); } }
+    if (a === 'maqreintentar') { mountMaq(); return; }
     if (a === 'maqfull') { const b = $('#maqbox'); if (!b) return; if (b.requestFullscreen && !document.fullscreenElement) b.requestFullscreen().catch(() => b.classList.toggle('full')); else if (document.fullscreenElement) document.exitFullscreen(); else b.classList.toggle('full'); }
     if (a === 'maqexport') { const blob = new Blob([JSON.stringify(MAQ && MAQ.state || {}, null, 1)], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'maqueta-' + st.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
     if (a === 'maqimport') { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!d || d.v !== 1) throw 0;
@@ -1009,7 +1216,7 @@ document.addEventListener('submit', async e => { const f = e.target.closest('[da
   try {
     if (k === 'newsite') { const base = (f.querySelector('input[name=base]:checked') || {}).value || 'vacia', data = { base }; if (v('ns_dir')) data.direccion = v('ns_dir'); if (v('ns_rs')) data.razon = v('ns_rs');
       const r = await SB.from('ondi_sites').insert({ org_id: orgId(), name: v('ns_name'), data }).select().single(); if (r.error) throw r.error; S.sites.push(r.data); S.sites.sort((a, b) => a.name.localeCompare(b.name, 'es')); S.modal = null;
-      S.startPlano = base === 'plano'; openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Subí el plano o la foto para empezar.' : 'Cliente creado'); }
+      openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Arrastrá el plano o la foto a la maqueta para empezar.' : 'Cliente creado'); }
     if (k === 'keyorg' || k === 'keysite') { const m = f.dataset.k, val = v((k === 'keyorg' ? 'ko-' : 'ks-') + m); if (!val) throw { message: 'clave_invalida' }; const sc = k === 'keyorg' ? '' : st.id;
       const r = await SB.rpc(m === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', m === 'unifi' ? { o: orgId(), alcance: sc, clave: val } : { o: orgId(), alcance: sc, marca: m, clave: val }); if (r.error) throw r.error;
       toast('Clave guardada en el servidor'); S.test[m] = null; delete S.sitiosOrg[m]; await loadClaves();
@@ -1040,6 +1247,370 @@ document.addEventListener('input', e => { if (e.target.id === 'sq') { S.sq = e.t
 
 if (SB) SB.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') showAuth('setpass'); if (ev === 'SIGNED_OUT' && !S.auth) location.reload(); });
 boot().catch(e => showAuth('login', errTxt(e)));
+
+/* ---------- documentación de conexiones (racks, gabinetes, bocas, cables y fibras) ----------
+   Los mismos datos y el mismo red.js que la maqueta: lo que se crea acá aparece en la maqueta («sin ubicar» hasta que lo arrastren)
+   y lo que se pone en la maqueta aparece acá. Cada cambio, venga de donde venga, queda anotado en el historial (data.bita). */
+const DOCK = { pw: 'equipo enchufado', fu: 'fuente', dev: 'equipo conectado', txt: 'otro destino', cab: 'etiqueta', m: 'metros', cat: 'categoría', col: 'color', cert: 'certificación', certf: 'fecha de medición', nota: 'nota', desc: 'descripción', vlan: 'VLAN', poe: 'PoE', vel: 'velocidad', fib: 'fibra', hilo: 'hilo', name: 'nombre', modelo: 'marca y modelo', serie: 'n.º de serie', mac: 'MAC', ip: 'IP', piel: 'color del frente', ext: 'equipo real' };
+const DOCV = ['dev', 'cab', 'vlan', 'cert', 'name', 'ip', 'cat'];
+const docMotor = d => !!(d && d.motor === 1);
+const docQuien = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || ((S.user && S.user.email) || '').split('@')[0];
+const docCl = o => o == null ? o : JSON.parse(JSON.stringify(o));
+try { S.mini = localStorage.getItem('ondi.mini') === '1'; document.documentElement.classList.toggle('navmini', S.mini); } catch (x) {}
+S.docPrev = {}; S.docT = {}; S.docIdx = {};
+// la maqueta abre con lo último guardado en esta sesión si es más nuevo que lo que trajo la base
+function docBase(st, data) { const L = S.docPrev[st.id]; if (L && S.docT[st.id] && Date.now() - S.docT[st.id] < 120000) return docCl(L); S.docPrev[st.id] = docCl(data); return data; }
+// la maqueta avisa sus racks y equipos (nombre y lugar); se guarda solo si cambió
+function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D.site === st.id) D.idx = idx;
+  const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
+// lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
+function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
+  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera', 'anterior'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  if (data.campoMq) { if (Array.isArray(data.campo)) data.campo = data.campo.map(x => { const m = data.campoMq[x.id]; return m && m.name && m.name !== x.nombre ? { ...x, nombre: m.name } : x; }); delete data.campoMq; } // nombres que se cambiaron en la maqueta
+  const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data), campoDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
+  S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
+  const D = S.doc; if (D && D.site === st.id) { if (D.saving) D.W.bita = data.bita; else S.doc = null; }
+  return data; }
+function docRacks(W, idx) { W = W || {}; const out = new Map();
+  if (docMotor(W)) for (const p of ((W.escena || {}).piezas || [])) { if (p.t === 'rack' || p.t === 'gabinete') out.set(p.id, { id: p.id, tipo: p.t === 'gabinete' ? 'gab' : 'wr', nombre: p.nombre || '', lugar: p.lugar || '', sin: !!p.sinUbicar }); }
+  else { const fuera = new Set(W.removed || []); for (const r of ((idx || W.docidx || {}).racks || [])) if (!fuera.has(r.id)) out.set(r.id, { ...r });
+    for (const d of (W.devs || [])) if (['gab', 'wr', 'rack'].includes(d.type)) out.set(d.id, { ...(out.get(d.id) || {}), id: d.id, tipo: d.type, nombre: d.name || '', lugar: (d.loc || '').split(' · ')[0], sin: !!d.sinUbicar });
+    for (const id of Object.keys(W.cabs || {})) if (!out.has(id)) out.set(id, { id, tipo: /^G/.test(id) ? 'gab' : 'wr', nombre: '', lugar: '' }); }
+  for (const r of out.values()) { const c = (W.cabs || {})[r.id]; if (c && c.nombre) r.nombre = c.nombre; if (c && c.lugar) r.lugar = c.lugar; r.cap = c ? c.cap : r.tipo === 'gab' ? 9 : 6; r.dim = c && c.dim; r.usoU = c ? c.items.reduce((a, it) => a + ((window.OndiRed && OndiRed.CAT[it.type]) || { U: 1 }).U, 0) : 0; r.links = c ? c.links.length : 0; }
+  return [...out.values()].sort((a, b) => (a.lugar || '~').localeCompare(b.lugar || '~', 'es') || a.id.localeCompare(b.id, 'es', { numeric: true })); }
+function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.cabs) || {}, CAT = (window.OndiRed && OndiRed.CAT) || {};
+  const itN = (c, iid) => { const it = c && c.items.find(x => x.iid === iid); return it ? (it.name || (CAT[it.type] || {}).n || it.type) : 'un equipo'; };
+  const pN = (c, e) => { const it = c && c.items.find(x => x.iid === e[0]), K = it ? CAT[it.type] || {} : {}; return itN(c, e[0]) + ', ' + (e[1][0] === 's' ? 'SFP ' : e[1][0] === 't' ? 'toma ' : K.pp || K.fo ? 'boca ' : 'puerto ') + e[1].slice(1); };
+  const lkK = l => [l[0].join(':'), l[1].join(':')].sort().join('|');
+  for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
+    if (!ca) { out.push({ r: id, m: `Creó ${id} (${cb.cap}U)` }); if (!cb.items.length) continue; }
+    if (!cb) { out.push({ r: id, m: `Sacó ${id}` }); continue; }
+    const c0 = ca || { cap: cb.cap, items: [], links: [], ports: {} };
+    if (ca && ca.cap !== cb.cap) out.push({ r: id, m: `Cambió ${id} a ${cb.cap}U` });
+    if (ca && (ca.nombre || '') !== (cb.nombre || '')) out.push({ r: id, m: cb.nombre ? `Le puso de nombre «${cb.nombre}» a ${id}` : `Le sacó el nombre a ${id}` });
+    if (ca) { const CF = { lugar: 'lugar', modelo: 'marca y modelo', prof: 'profundidad', nota: 'nota' }, ch = Object.keys(CF).filter(f => (ca[f] || '') !== (cb[f] || '')); if (ch.length) out.push({ r: id, m: `Anotó en ${id}: ` + ch.map(f => CF[f] + (cb[f] ? ' ' + String(cb[f]).slice(0, 30) : ' (borrado)')).join(', ') }); }
+    const ia = new Map(c0.items.map(x => [x.iid, x])), ib = new Map(cb.items.map(x => [x.iid, x]));
+    for (const [k, x] of ib) { const y = ia.get(k); if (!y) { out.push({ r: id, m: `Puso ${itN(cb, k)} en la U${x.u} de ${id}` }); continue; }
+      if (y.type !== x.type) out.push({ r: id, m: `Cambió ${(CAT[y.type] || {}).n || y.type} por ${(CAT[x.type] || {}).n || x.type} en la U${x.u} de ${id}` });
+      if (y.u !== x.u) out.push({ r: id, m: `Movió ${itN(cb, k)} de la U${y.u} a la U${x.u} en ${id}` });
+      const ch = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter(f => !['u', 'iid', 'type', ...(y.type !== x.type ? ['modelo'] : [])].includes(f) && JSON.stringify(x[f]) !== JSON.stringify(y[f]));
+      if (ch.length) out.push({ r: id, m: `Anotó en ${itN(cb, k)} de ${id}: ` + ch.map(f => (DOCK[f] || f) + (DOCV.includes(f) && x[f] ? ' ' + String(x[f]).slice(0, 30) : '')).join(', ') }); }
+    for (const [k] of ia) if (!ib.has(k)) out.push({ r: id, m: `Sacó ${itN(c0, k)} de ${id}` });
+    const la = new Map(c0.links.map(l => [lkK(l), l])), lb = new Map(cb.links.map(l => [lkK(l), l]));
+    for (const [k, l] of lb) { const o = la.get(k); if (!o) out.push({ r: id, m: `Conectó ${pN(cb, l[0])} con ${pN(cb, l[1])} en ${id}` }); else if (JSON.stringify(o[2] || {}) !== JSON.stringify(l[2] || {})) out.push({ r: id, m: `Anotó el patch cord de ${pN(cb, l[0])} en ${id}: ` + Object.keys({ ...(o[2] || {}), ...(l[2] || {}) }).map(f => DOCK[f] || f).join(', ') }); }
+    for (const [k, l] of la) if (!lb.has(k)) out.push({ r: id, m: `Desconectó ${pN(c0, l[0])} de ${pN(c0, l[1])} en ${id}` });
+    const pa = c0.ports || {}, pb = cb.ports || {};
+    for (const iid of new Set([...Object.keys(pa), ...Object.keys(pb)])) for (const pid of new Set([...Object.keys(pa[iid] || {}), ...Object.keys(pb[iid] || {})])) {
+      const x = (pb[iid] || {})[pid] || {}, y = (pa[iid] || {})[pid] || {}; if (JSON.stringify(x) === JSON.stringify(y)) continue;
+      const ch = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter(f => JSON.stringify(x[f]) !== JSON.stringify(y[f]));
+      out.push({ r: id, m: `Anotó en ${pN(cb, [iid, pid])} de ${id}: ` + ch.map(f => (DOCK[f] || f) + (DOCV.includes(f) && x[f] ? ' ' + String(x[f]).slice(0, 30) : x[f] == null ? ' (borrado)' : '')).join(', ') }); } }
+  const fa = new Map(((a && a.fibs) || []).map(f => [f.id, f])), fb = new Map(((b && b.fibs) || []).map(f => [f.id, f]));
+  for (const [k, f] of fb) { const o = fa.get(k); if (!o) out.push({ m: `Agregó la fibra ${k}` + (f.to ? ' hacia ' + f.to : '') }); else if (JSON.stringify(o) !== JSON.stringify(f)) { const ch = [...new Set([...Object.keys(o), ...Object.keys(f)])].filter(q => q !== 'pts' && q !== 'db' && JSON.stringify(o[q]) !== JSON.stringify(f[q])), FK = { from: 'desde', fromTxt: 'desde', to: 'hasta', toTxt: 'hasta', hilos: 'hilos', m: 'largo', nombre: 'nombre', tipo: 'tipo', con: 'conector', tend: 'tendido' };
+      if (JSON.stringify(o.pts) !== JSON.stringify(f.pts)) out.push({ m: `Cambió el recorrido de la fibra ${k}` }); if (JSON.stringify(o.db) !== JSON.stringify(f.db)) out.push({ m: `Anotó la medición de la fibra ${k}` });
+      if (ch.length) out.push({ m: `Anotó en la fibra ${k}: ` + [...new Set(ch.map(q => (FK[q] || q) + (['hilos', 'm', 'to', 'toTxt', 'from', 'fromTxt'].includes(q) && f[q] != null && f[q] !== '' ? ' ' + f[q] + (q === 'm' ? ' m' : '') : '')))].join(', ') }); } }
+  for (const k of fa.keys()) if (!fb.has(k)) out.push({ m: `Sacó la fibra ${k}` });
+  const sinA = new Set(((a && a.devs) || []).filter(d => d.sinUbicar).map(d => d.id));
+  for (const d of ((b && b.devs) || [])) if (sinA.has(d.id) && !d.sinUbicar) out.push({ r: d.id, m: `Ubicó ${d.id} en la maqueta` });
+  if (docMotor(b)) { const pz = W => new Map(((W && W.escena && W.escena.piezas) || []).filter(p => p.t === 'rack' || p.t === 'gabinete').map(p => [p.id, p])), qa = pz(a), qb = pz(b);
+    for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
+    for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
+  return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=23'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
+  await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
+  if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
+  const base = (st.data && st.data.base) || 'vacia';
+  if (!W) W = base === 'motor' ? { v: 1, motor: 1, escena: null, ext: [] } : { v: 1, rev: 4, devs: [], moved: {}, removed: [], naves: [], fibs: [], cabs: {}, inner: {}, meta: {}, roads: [], props: [], labels: [] };
+  W.cabs = W.cabs || {}; W.fibs = W.fibs || []; D.W = W; return D; }
+function docView() { return `<div id="docbox" data-docsite="${esc(S.site.id)}"><div class="card empty">Abriendo la documentación…</div></div>`; }
+async function mountDoc() { const st = S.site, box = $('#docbox'); if (!box) return;
+  if (!S.doc || S.doc.site !== st.id) { try { S.doc = await docLoad(st); if (S.docIni) { const v = S.docIni; S.docIni = null; if (v.startsWith('caja:')) S.doc.caja = v.slice(5); else S.doc.cid = v; } } catch (er) { box.innerHTML = `<div class="card empty"><b>No se pudo abrir la documentación</b><span>${esc(errTxt(er))}</span></div>`; return; } }
+  if (S.site !== st || !$('#docbox')) return; docPaint(); }
+function docH() { const D = S.doc, st = S.site, W = D.W, idx = D.idx || W.docidx || {};
+  return { cabs: W.cabs, fibs: W.fibs, editar: () => siteEd(), aviso: m => toast(m), cliente: () => (st.data && st.data.parque) || st.name,
+    devs: () => docMotor(W) ? (((W.escena || {}).piezas) || []).filter(p => ['camara', 'ap', 'wifi', 'sensor', 'nvr', 'grabador', 'router', 'switch', 'ups'].includes(p.t)).map(p => ({ id: p.id, nombre: p.nombre || '', lugar: '', estado: 'ok' })) : (idx.devs || []).map(d => ({ ...d, estado: 'ok' })),
+    reales: () => (((S.eq[st.id] || {}).list) || []).filter(x => !x.consola).map(x => ({ uid: (x.marca || 'unifi') + ':' + (x.mac || x.id), nombre: x.nombre, modelo: x.modelo, mac: x.mac, ip: x.ip, version: x.version, estado: VIVO.includes(x.estado) ? 'ok' : ['offline', 'caido'].includes(x.estado) ? 'crit' : 'warn' })),
+    guardar: () => docSave(), ir: id => docIr(id), cerrar: () => { D.cid = null; docPaint(); },
+    largo: F => Math.round((F.pts || []).reduce((s2, p, i, a) => i ? s2 + Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) : 0, 0)) || +F.largo || 0,
+    lugarDe: cid => (docRacks(W, D.idx).find(x => x.id === cid) || {}).lugar || '', sites: () => docRacks(W, D.idx).map(r => r.lugar).filter(Boolean),
+    titulo: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid) || { id: cid, tipo: 'wr' }, c = W.cabs[cid]; return { t: (r.tipo === 'gab' ? 'Gabinete ' : 'Rack ') + cid + (r.nombre ? ' · ' + r.nombre : ''), s: (c ? (c.dim ? 'Gabinete metálico ' + c.dim.replace('x', ' × ') + ' cm' : c.cap + 'U') : '') + (r.lugar ? ' · ' + r.lugar : '') + (r.sin ? ' · sin ubicar en la maqueta' : '') }; },
+    racks: () => docRacks(W, D.idx).map(r => [r.id, r.id]),
+    campo: () => (W.campo = W.campo || []), modelos: () => (W.modelos = W.modelos || []), modelosEd: true,
+    cajas: () => (W.cajas = W.cajas || {}), caja: id => { if (!(W.cajas || {})[id]) return; D.caja = id; D.cid = null; D.hist = false; docPaint(); },
+    puntas: () => [...docRacks(W, D.idx).map(r => [r.id, r.id]), ...Object.entries(W.cajas || {}).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0] + (x.nombre ? ' · ' + x.nombre : '')])],
+    acciones: cid => { const r = docRacks(W, D.idx).find(x => x.id === cid), full = $('#docbox') && $('#docbox').classList.contains('full');
+      return `<button class="red-b docback" data-r="acc" data-v="volver">${DIC.back}<span>Racks</span></button><button class="red-b ico" data-r="acc" data-v="full" title="${full ? 'Salir de pantalla completa (Esc)' : 'Pantalla completa'}" aria-label="${full ? 'Salir de pantalla completa' : 'Pantalla completa'}">${full ? DIC.chico : DIC.grande}</button>`
+        + (r && r.sin ? `<button class="red-b pri" data-r="acc" data-v="ir">Ubicar en la maqueta</button>` : `<button class="red-b" data-r="acc" data-v="ir">Ver en la maqueta</button>`); },
+    menu: () => siteEd() ? [['borrar', 'Sacar este rack de la documentación']] : [],
+    accion: (v, b) => { if (v === 'volver') { D.cid = null; docPaint(); } else if (v === 'ir') docIr(D.cid); else if (v === 'full') docFull(); else if (v === 'borrar') docPedirBorrar(D.cid); } }; }
+// pantalla completa: la documentación ocupa toda la pantalla (sin el menú de la app); Esc vuelve
+function docFull(on) { const box = $('#docbox'); if (!box) return; on = on == null ? !box.classList.contains('full') : on; box.classList.toggle('full', on); document.documentElement.classList.toggle('docfull', on);
+  try { if (on && !document.fullscreenElement && box.requestFullscreen) box.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} docPaint(); }
+document.addEventListener('fullscreenchange', () => { const box = $('#docbox'); if (!document.fullscreenElement && box && box.classList.contains('full')) docFull(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#docbox') && $('#docbox').classList.contains('full') && !document.fullscreenElement && !e.target.closest('input,textarea,select')) docFull(false); });
+function docSave() { const D = S.doc, st = S.site; if (!D || !siteEd()) return; D.saving = true; try { queueSave(st, docCl(D.W)); } finally { D.saving = false; } docList(); }
+function docIr(id) { S.maqIr = id; S.tab = 'maqueta'; render(); }
+const DIC = { gab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M17 10v4"/></svg>',
+  wr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>',
+  hist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  grande: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  chico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' };
+function docListHTML() { const D = S.doc, R = docRacks(D.W, D.idx), q = D.q.trim().toLowerCase(), F = R.filter(r => !q || [r.id, r.nombre, r.lugar].join(' ').toLowerCase().includes(q)), ed = siteEd();
+  const lugares = [...new Set(R.map(r => r.lugar).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  let h = `<div class="docbar"><input id="docq" type="search" placeholder="Buscar rack o site" value="${esc(D.q)}" aria-label="Buscar rack o site">${ed ? `<button class="btn sm pri" data-dk="nuevo" aria-label="Nuevo rack o gabinete">${IC.plus}Nuevo</button>` : ''}</div>
+    <button class="btn sm" data-dk="hist" aria-pressed="${D.hist}">${DIC.hist}Historial${(D.W.bita || []).length ? ' · ' + (D.W.bita || []).length : ''}</button>`;
+  if (D.nuevo) h += `<form class="docn" data-dk="crear"><b>Nuevo</b>
+      <label>Tipo<span class="seg seg-w">${[['gab', 'Gabinete'], ['wr', 'Rack'], ...Object.entries(CAJT).map(([k, v]) => [k, v[0]])].map(([k, t]) => `<button type="button" data-dk="tipo" data-v="${k}" aria-pressed="${D.nuevo.tipo === k}">${t}</button>`).join('')}</span></label>
+      ${CAJT[D.nuevo.tipo] ? `<label>Capacidad<select id="docU">${CAJT[D.nuevo.tipo][2].map(u => `<option value="${u}"${u === CAJT[D.nuevo.tipo][3] ? ' selected' : ''}>${u} ${D.nuevo.tipo === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>`
+        : D.nuevo.tipo === 'gab' ? `<label>Medida (alto × ancho)<select id="docU">${GABD.map(d => `<option value="${d}"${d === (D.nuevo.dim || '40x30') ? ' selected' : ''}>${d.replace('x', ' × ')} cm</option>`).join('')}</select></label>` : `<label>Tamaño<select id="docU">${[4, 6, 9, 12, 15, 18, 22, 24, 27, 32, 36, 42, 45].map(u => `<option value="${u}"${u === D.nuevo.u ? ' selected' : ''}>${u}U</option>`).join('')}</select></label>`}
+      <label>Nombre <input id="docN" maxlength="50" placeholder="Ej.: Gabinete de la portería"></label>
+      <label>Site <input id="docL" maxlength="50" list="docLL" placeholder="Ej.: Balanza, Galpón E3"><datalist id="docLL">${lugares.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+      <span class="acts"><button class="btn pri" type="submit">Crear y documentar</button><button class="btn" type="button" data-dk="cancelar">Cancelar</button></span>
+      <small class="muted">Aparece en la maqueta como «sin ubicar»: con el lápiz lo arrastrás a su lugar.</small></form>`;
+  if (!R.length && !Object.keys(D.W.cajas || {}).length && !D.nuevo) h += `<div class="card empty" style="padding:24px 14px"><b>Todavía no hay racks</b><span>${ed ? 'Creá el primero con «Nuevo», o ponelo en la maqueta con el lápiz: aparece acá solo.' : 'La instaladora todavía no documentó racks.'}</span></div>`;
+  const CJ = Object.entries(D.W.cajas || {}).filter(([id, c]) => !q || [id, c.nombre, c.lugar, CAJT[c.t][0]].join(' ').toLowerCase().includes(q));
+  const listaCajas = CJ.length ? `<div class="docg">Cajas y empalmes</div>` + CJ.map(([id, c]) => { const nf = (D.W.fibs || []).filter(f => f.from === id || f.to === id).length;
+    return `<button class="docr" data-dk="caja" data-v="${esc(id)}" aria-current="${D.caja === id && !D.hist}">${CAJI}<b>${esc(id)}${c.nombre ? ' · ' + esc(c.nombre) : ''}</b><span class="u">${(c.fus || []).length}/${c.cap}</span><small>${esc(CAJT[c.t][0])} · ${nf} ${nf === 1 ? 'fibra' : 'fibras'}${c.lugar ? ' · ' + esc(c.lugar) : ''}</small></button>`; }).join('') : '';
+  let g = null; for (const r of F) { const lg = r.lugar || 'Sin lugar anotado'; if (lg !== g) { g = lg; h += `<div class="docg">${esc(lg)}</div>`; }
+    h += `<button class="docr" data-dk="rack" data-v="${esc(r.id)}" aria-current="${D.cid === r.id && !D.hist}">${DIC[r.tipo === 'gab' ? 'gab' : 'wr']}<b>${esc(r.id)}${r.nombre ? ' · ' + esc(r.nombre) : ''}</b><span class="u">${r.dim ? r.dim.replace('x', '×') : r.usoU + '/' + r.cap + 'U'}</span>
+      <span class="docu" aria-hidden="true"><i style="width:${Math.min(100, Math.round(r.usoU / Math.max(1, r.cap) * 100))}%"></i></span><small>${r.links} ${r.links === 1 ? 'patch cord' : 'patch cords'}</small>
+      ${r.sin ? `<span class="docsin">Sin ubicar en la maqueta</span>` : ''}</button>`; }
+  h += listaCajas; if ((R.length || Object.keys(D.W.cajas || {}).length) && !F.length && !CJ.length) h += `<p class="muted" style="margin:6px 4px">No hay nada con «${esc(D.q)}».</p>`;
+  const P = docPap(D.W), hace = t => { const d = Math.floor((Date.now() - t) / 864e5); return d ? `hace ${d} día${d > 1 ? 's' : ''}` : 'hoy'; };
+  if (P.length && ed) h += `<div class="docpap"><button class="btn sm" data-dk="papelera" aria-expanded="${!!D.pap}">Papelera · ${P.length}</button>${D.pap ? P.map((x, i) => `<div><span><b>${esc(x.id)}</b><small>${(x.cab.items || []).length} equipos · sacado ${hace(x.cuando)}${x.quien ? ' por ' + esc(x.quien) : ''}</small></span><button class="btn sm" data-dk="recuperar" data-v="${i}">Recuperar</button></div>`).join('') : ''}</div>`;
+  return h; }
+function docList() { const l = $('#docl'); if (l) l.innerHTML = docListHTML(); }
+function docHistHTML() { const D = S.doc, all = D.W.bita || [], L = D.histR && D.cid ? all.filter(e => e.r === D.cid) : all;
+  let h = `<div class="doch"><button class="btn sm docback" data-dk="volver">${DIC.back}Racks</button><h2>Historial</h2><p class="muted" style="margin:0">Todo lo que se cambia en la documentación o en la maqueta queda anotado: quién, cuándo y qué.</p>
+    ${D.cid ? `<span class="seg" style="margin-top:8px"><button data-dk="histr" data-v="0" aria-pressed="${!D.histR}">Todo</button><button data-dk="histr" data-v="1" aria-pressed="${D.histR}">Solo ${esc(D.cid)}</button></span>` : ''}`;
+  if (!L.length) h += `<p class="muted">Todavía no hay cambios anotados${D.histR ? ' en ' + esc(D.cid) : ''}.</p>`;
+  let dia = ''; for (const e of L.slice(0, 300)) { const t = new Date(e.t), d = t.toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (d !== dia) { dia = d; h += `<div class="docd">${esc(d[0].toUpperCase() + d.slice(1))}</div>`; }
+    h += `<div class="doce"><time>${t.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false })}</time><div>${esc(e.m)}</div><span>${esc(e.q || '')}${e.r && e.r !== D.cid ? ` · <button data-dk="rack" data-v="${esc(e.r)}">Ver ${esc(e.r)}</button>` : ''}</span></div>`; }
+  return h + '</div>'; }
+function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) return; if (window.OndiRed && OndiRed.registrar) OndiRed.registrar(D.W.modelos); const R = docRacks(D.W, D.idx);
+  if (D.cid && !D.W.cabs[D.cid] && !R.some(r => r.id === D.cid)) D.cid = null;
+  if (!D.cid && !D.hist && !D.caja && R.length && innerWidth > 860) D.cid = R[0].id;
+  const r = R.find(x => x.id === D.cid);
+  if (D.caja && !(D.W.cajas || {})[D.caja]) D.caja = null; if (D.caja) D.cid = null;
+  const dw = docW(); box.innerHTML = `<div class="doc ${D.cid || D.hist || D.caja ? 'abierto' : ''}${dw ? '' : ' cerrada'}" style="--dw:${dw}px"><div class="docl" id="docl">${docListHTML()}</div><div class="docsplit" role="separator" aria-orientation="vertical" aria-label="Ancho de la lista" tabindex="0" title="Arrastrá para achicar o agrandar la lista"><button data-dk="lista" aria-label="${dw ? 'Esconder la lista' : 'Mostrar la lista'}" title="${dw ? 'Esconder la lista' : 'Mostrar la lista'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${dw ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}"/></svg></button></div><div class="docp">${D.hist ? docHistHTML() : D.caja ? cajaHTML() : D.cid ? `<div id="docred"></div>` : '<div class="card empty" style="border:0">Elegí un rack de la lista.</div>'}</div></div>`;
+  if (D.cid && !D.hist) { if (!D.W.cabs[D.cid]) D.W.cabs[D.cid] = { cap: r ? r.cap : 9, items: [], links: [], ports: {} }; D.V.cid = D.cid; OndiRed.pintar($('#docred'), docH(), D.V); } }
+function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }
+const GABD = ['30x25', '40x30', '50x40', '60x40', '70x50', '80x60', '100x60', '100x80'];
+function docCrear() { if (CAJT[S.doc.nuevo.tipo]) return cajaCrear(); const D = S.doc, st = S.site, W = D.W, gv = D.nuevo.tipo === 'gab' ? (($('#docU') || {}).value || '40x30') : '', [ga, gw] = gv ? gv.split('x').map(Number) : [0, 0], u = gv ? Math.max(4, Math.round((ga - 10) / 4.445)) : +($('#docU') || {}).value || D.nuevo.u, nom = (($('#docN') || {}).value || '').trim(), lug = (($('#docL') || {}).value || '').trim(), gab = D.nuevo.tipo === 'gab';
+  const home = ((D.idx || W.docidx || {}).home) || [0, 0], k = docRacks(W, D.idx).filter(r => r.sin).length * 2.5;
+  let id;
+  if (docMotor(W)) { if (!W.escena) { toast('Abrí la maqueta una vez para empezar el plano; después creá el rack acá.'); return; }
+    const ini = W.escena.inicio || {}; let n = 1; do id = (gab ? 'gab' : 'rac') + (n++).toString(36); while (W.escena.piezas.some(p => p.id === id));
+    W.escena.piezas.push(gab ? { id, t: 'gabinete', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, ancho: gw / 100, alto: ga / 100, fondo: ga >= 80 ? 0.3 : ga >= 60 ? 0.25 : 0.2, base: 1, rieles: true, color: '#D2D3CE', sinUbicar: true }
+      : { id, t: 'rack', nombre: nom || id, lugar: lug, x: (ini.tx || 0) + k, z: ini.tz || 0, r: 0, y: 0, alto: Math.min(2.4, u * 0.045 + 0.25), sinUbicar: true }); }
+  else { id = docNid(W, D, gab ? 'G-' : 'RK-'); const sz = gab ? (ga <= 40 ? 'S' : ga <= 70 ? 'M' : 'L') : u <= 6 ? 'S' : u <= 9 ? 'M' : 'L';
+    W.devs = W.devs || []; W.devs.push(Object.assign({ id, type: gab ? 'gab' : 'wr', status: 'ok', custom: true, cli: 0, hoy: 0, name: nom, loc: lug, x: home[0] + k, z: home[1], y: gab ? 0 : 1.3, sinUbicar: true }, gab ? { kind: 'Gabinete metálico ' + gv.replace('x', '×') + ' cm', size: sz } : { kind: `Rack de pared ${u}U`, u })); }
+  W.cabs[id] = Object.assign({ cap: u, items: [], links: [], ports: {} }, gv ? { dim: gv } : {}); D.nuevo = false; D.cid = id; D.hist = false; docSave(); docPaint(); toast((gab ? 'Gabinete ' : 'Rack ') + id + ' creado. Queda sin ubicar en la maqueta hasta que lo arrastres.'); }
+async function docPedirBorrar(id) { const W = S.doc.W, c = W.cabs[id]; if (!c || !siteEd()) return; const n = (c.items || []).length, l = (c.links || []).length;
+  if (await pedirClave({ titulo: 'Sacar ' + id, detalle: (n ? `Se sacan sus ${n} equipos anotados${l ? ' y ' + l + ' patch cords' : ''}. ` : '') + 'Queda 30 días en la papelera de la documentación.' })) docBorrar(id); }
+// planos de edificios del sitio (ondi_sites.data.planos): al armar la copia en el motor nuevo, el bloque de la maqueta de siempre se cambia por el
+// edificio con su plano por dentro, en el mismo lugar y con el mismo giro, y entran sus equipos. Los datos viven en la base, no en el código.
+// Ajustes de posición del sitio (dato privado): mueve en bloque lo que cae dentro de un recuadro, para corregir lo que en la maqueta de siempre quedó corrido.
+const maqAjustes = (escena, aj) => { let n = 0; for (const a of aj || []) { const [x0, z0, x1, z1] = a.caja || [], dx = +a.dx || 0, dz = +a.dz || 0; if (x1 == null || (!dx && !dz)) continue;
+    for (const q of escena.piezas) { if (q.id === 'predio') continue; const c = q.pts && q.pts.length ? [q.pts.reduce((s, p) => s + p[0], 0) / q.pts.length, q.pts.reduce((s, p) => s + p[1], 0) / q.pts.length] : [q.x, q.z]; if (!(c[0] >= x0 && c[0] <= x1 && c[1] >= z0 && c[1] <= z1)) continue;
+      if (q.pts) q.pts = q.pts.map(p => [Math.round((p[0] + dx) * 100) / 100, Math.round((p[1] + dz) * 100) / 100]); else { q.x = Math.round((q.x + dx) * 100) / 100; q.z = Math.round((q.z + dz) * 100) / 100; } q._mov = 1; n++; }
+    // con «puntos», también se corren las puntas de las líneas que terminan adentro del recuadro (una fibra que llega a un gabinete que se movió)
+    if (a.puntos) for (const q of escena.piezas) { if (!q.pts || q._mov || q.t !== 'fibra') continue; q.pts = q.pts.map(p => p[0] >= x0 && p[0] <= x1 && p[1] >= z0 && p[1] <= z1 ? [Math.round((p[0] + dx) * 100) / 100, Math.round((p[1] + dz) * 100) / 100] : p); }
+    for (const q of escena.piezas) delete q._mov; } return n; };
+// Suelo del plano oficial (dato privado del sitio, no va en el código): la calzada con sus huecos y los canteros con cordón reemplazan a las calles de trazo simple.
+// Las calles que caen sobre esa calzada quedan como guía: los camiones las siguen pero no se dibujan.
+const maqSuelo = (escena, su) => { if (!su || !su.asfalto || !su.asfalto.length) return 0; const dentro = (x, z, pp) => { let c = false; for (let i = 0, j = pp.length - 1; i < pp.length; j = i++) { const A = pp[i], B = pp[j]; if ((A[1] > z) !== (B[1] > z) && x < (B[0] - A[0]) * (z - A[1]) / (B[1] - A[1]) + A[0]) c = !c; } return c; }, enAsf = (x, z) => su.asfalto.some(a => dentro(x, z, a.pts));
+  let n = 0; const guias = Array.isArray(su.guias) && su.guias.length ? su.guias : null;
+  // con ejes del plano: las calles de trazo simple que el plano reemplaza se sacan (la lista viene con el dato) y los camiones siguen los ejes
+  if (guias) { const quita = new Set(su.quita || []), antes = escena.piezas.length; escena.piezas = escena.piezas.filter(q => !quita.has(q.id)); n = antes - escena.piezas.length; }
+  else for (const q of escena.piezas) { if (q.t === 'rotonda' && enAsf(q.x, q.z)) { q.guia = true; n++; } if (q.t !== 'calle' || q.tipo === 'ruta' || !q.pts) continue; let d = 0, t = 0;
+    for (let i = 1; i < q.pts.length; i++) { const A = q.pts[i - 1], B = q.pts[i], m = Math.max(2, Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 8)); for (let k = 0; k <= m; k++) { t++; if (enAsf(A[0] + (B[0] - A[0]) * k / m, A[1] + (B[1] - A[1]) * k / m)) d++; } } if (t && d / t > 0.5) { q.guia = true; n++; } }
+  escena.piezas = escena.piezas.filter(q => q.t !== 'senda' || su.asfalto.some(a => dentro(q.x, q.z, a.pts) && !(a.huecos || []).some(h => dentro(q.x, q.z, h))));
+  su.asfalto.forEach((a, i) => escena.piezas.push({ t: 'terreno', id: 'suelo-asf-' + i, nombre: 'Calzada (plano oficial)', mat: a.mat || 'asfalto', pts: a.pts, huecos: a.huecos || [], fijo: true }));
+  // canteros: puntos sueltos, [calzada, hueco] o { de: [calzada, hueco] | pts, borde, mat, nombre }
+  (su.canteros || []).forEach((c, i) => { const o = Array.isArray(c) ? (typeof c[0] === 'number' ? { de: c } : { pts: c }) : c || {}, pts = o.pts || (o.de ? ((su.asfalto[o.de[0]] || {}).huecos || [])[o.de[1]] : null);
+    if (pts && pts.length > 2) escena.piezas.push({ t: 'terreno', id: 'suelo-cant-' + i, nombre: o.nombre || 'Cantero', mat: o.mat || 'pasto', pts, cordon: o.cordon !== false, sobre: true, ...(o.borde ? { borde: o.borde } : {}), ...(o.flechas ? { flechas: o.flechas } : {}) }); });
+  (guias || []).forEach((g, i) => { if (g && g.pts && g.pts.length > 1) escena.piezas.push({ t: 'calle', id: 'eje-' + i, nombre: 'Eje de calle (plano oficial)', pts: g.pts, ancho: g.ancho || 8, tipo: 'asfalto', linea: 'no', borde: 'no', guia: true, mano: g.mano === 'unica' ? 'unica' : 'doble', fijo: true }); }); return n; };
+// Retoques del sitio (dato privado del sitio, no va en el código): cambios por id sobre la copia y piezas que la maqueta de siempre no tiene.
+// { id | ids, quita } saca · { set: {…} } cambia campos · { frente: m } corre la pared del frente de una nave (negativo = hacia adentro) · { hueco: [x, z, medio] } abre un portón en un cerco
+const maqRetoques = (escena, rt, extra) => { let n = 0; const r2 = v => Math.round(v * 100) / 100;
+  for (const r of rt || []) for (const id of [].concat(r.id || r.ids || [])) { const i = escena.piezas.findIndex(q => q.id === id); if (i < 0) continue; const q = escena.piezas[i]; n++;
+    if (r.quita) { escena.piezas.splice(i, 1); continue; } if (r.set) Object.assign(q, r.set);
+    if (r.frente && q.fondo && q.x != null) { const f = +r.frente, a = q.r || 0; q.fondo = Math.max(3, r2(q.fondo + f)); q.x = r2(q.x + Math.sin(a) * f / 2); q.z = r2(q.z + Math.cos(a) * f / 2); }
+    if (r.hueco && q.pts && q.pts.length > 1) { const [hx, hz, hm = 5] = r.hueco, P = q.pts, L = [0]; for (let k = 1; k < P.length; k++) L.push(L[k - 1] + Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]));
+      let mj = 1e9, s0 = 0; for (let k = 1; k < P.length; k++) { const A = P[k - 1], B = P[k], l2 = (B[0] - A[0]) ** 2 + (B[1] - A[1]) ** 2 || 1, t = Math.max(0, Math.min(1, ((hx - A[0]) * (B[0] - A[0]) + (hz - A[1]) * (B[1] - A[1])) / l2)), d = Math.hypot(A[0] + (B[0] - A[0]) * t - hx, A[1] + (B[1] - A[1]) * t - hz); if (d < mj) { mj = d; s0 = L[k - 1] + (L[k] - L[k - 1]) * t; } }
+      const en = s => { s = Math.max(0, Math.min(L[L.length - 1], s)); let k = 1; while (k < L.length - 1 && L[k] < s) k++; const t = (s - L[k - 1]) / Math.max(0.001, L[k] - L[k - 1]); return [r2(P[k - 1][0] + (P[k][0] - P[k - 1][0]) * t), r2(P[k - 1][1] + (P[k][1] - P[k - 1][1]) * t)]; };
+      if (mj < 30) { const a = [...P.filter((_, k) => L[k] < s0 - hm), en(s0 - hm)], b = [en(s0 + hm), ...P.filter((_, k) => L[k] > s0 + hm)]; if (a.length > 1 && b.length > 1) { q.pts = a; escena.piezas.push({ ...q, id: q.id + '-b', pts: b }); } else if (b.length > 1) q.pts = b; else if (a.length > 1) q.pts = a; } } }
+  for (const p of extra || []) if (p && p.t && p.id && !escena.piezas.some(q => q.id === p.id)) { escena.piezas.push(JSON.parse(JSON.stringify(p))); n++; } return n; };
+function maqPlanos(escena, planos) { let n = 0; if (!escena || !planos) return 0; const r2 = v => Math.round(v * 100) / 100;
+  for (const id of Object.keys(planos)) { const o = planos[id], i = escena.piezas.findIndex(p => p.id === id); if (i < 0 || !o || !o.pieza) continue;
+    const v = escena.piezas[i], r = v.r || 0, c = Math.cos(r), s = Math.sin(r), hay = new Set(escena.piezas.map(p => p.id));
+    escena.piezas[i] = { ...o.pieza, id, x: v.x, z: v.z, r, nombre: o.pieza.nombre || v.nombre || '' }; n++;
+    for (const e of o.equipos || []) if (!hay.has(e.id)) escena.piezas.push({ ...e, x: r2(v.x + e.x * c + e.z * s), z: r2(v.z - e.x * s + e.z * c), r: r2((e.r || 0) + r) }); }
+  return n; }
+// papelera: lo que se saca se guarda entero (el rack con sus equipos y cables, y su lugar en la maqueta) para poder volver atrás
+const docPap = W => (W.papelera || []).filter(x => Date.now() - x.cuando < 30 * 864e5);
+function docRecuperar(i) { const D = S.doc, W = D.W, L = docPap(W), x = L[i]; if (!x || !siteEd()) return; if (W.cabs[x.id]) { toast('Ya hay un rack con ese nombre'); return; }
+  W.cabs[x.id] = x.cab; if (x.pieza && W.escena && !W.escena.piezas.some(p => p.id === x.id)) W.escena.piezas.push(x.pieza); if (x.dev && !(W.devs || []).some(d => d.id === x.id)) (W.devs = W.devs || []).push(x.dev); W.removed = (W.removed || []).filter(r => r !== x.id);
+  W.papelera = L.filter(y => y !== x); D.cid = x.id; D.hist = false; docSave(); docPaint(); toast(x.id + ' recuperado, con todo lo que tenía'); }
+function docBorrar(id) { const D = S.doc, W = D.W, c = W.cabs[id]; if (!c) return;
+  W.papelera = [{ id, cab: c, pieza: ((W.escena || {}).piezas || []).find(p => p.id === id) || null, dev: (W.devs || []).find(d => d.id === id) || null, cuando: Date.now(), quien: myName() }, ...docPap(W)].slice(0, 20);
+  delete W.cabs[id]; if (docMotor(W) && W.escena) W.escena.piezas = W.escena.piezas.filter(p => p.id !== id); else { W.devs = (W.devs || []).filter(d => d.id !== id); if (!(W.removed || []).includes(id) && !(W.devs || []).some(d => d.id === id)) (W.removed = W.removed || []).push(id); }
+  D.cid = null; docSave(); docPaint(); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-dk]'); if (!b || !S.doc || b.tagName === 'FORM') return; const D = S.doc, k = b.dataset.dk, v = b.dataset.v;
+  if (k === 'lista') { const w = docW(); docW(w ? 0 : (S.docWant || 300)); if (w) S.docWant = w; docPaint(); return; }
+  if (k === 'caja') { D.caja = v; D.cid = null; D.hist = false; docPaint(); return; }
+  if (k === 'fusa') { const c = D.W.cajas[D.caja]; (c.fus = c.fus || []).push({ a: ['', 1], b: ['', 1] }); docSave(); docPaint(); return; }
+  if (k === 'fusx') { const c = D.W.cajas[D.caja]; c.fus.splice(+v, 1); docSave(); docPaint(); return; }
+  if (k === 'fus11') { const c = D.W.cajas[D.caja], a = ($('#cj-a') || {}).value, b = ($('#cj-b') || {}).value, Fa = D.W.fibs.find(f => f.id === a), Fb = D.W.fibs.find(f => f.id === b); if (!Fa || !Fb || a === b) { toast('Elegí dos fibras distintas'); return; }
+    c.fus = (c.fus || []).filter(x => !((x.a[0] === a || x.b[0] === a) && (x.a[0] === b || x.b[0] === b))); for (let h = 1; h <= Math.min(Fa.hilos, Fb.hilos); h++) c.fus.push({ a: [a, h], b: [b, h] }); docSave(); docPaint(); toast(`Empalmados ${Math.min(Fa.hilos, Fb.hilos)} hilos: ${a} con ${b}, hilo por hilo`); return; }
+  if (k === 'cjder') { const W = D.W, c = W.cajas[D.caja], dd = ($('#cj-dd') || {}).value || '', n = +(($('#cj-dh') || {}).value) || 12, fx = ($('#cj-df') || {}).value, h0 = +(($('#cj-dn') || {}).value) || 1, X = W.fibs.find(f => f.id === fx);
+    if (!X) { toast('Elegí de qué fibra salen los hilos'); return; } if (h0 + n - 1 > X.hilos) { toast(`${fx} tiene ${X.hilos} hilos: desde el ${h0} no entran ${n}. Elegí un hilo más bajo.`); return; }
+    let m = 1; while (W.fibs.some(f => f.id === 'FO-' + String(m).padStart(2, '0'))) m++; const id = 'FO-' + String(m).padStart(2, '0');
+    W.fibs.push({ id, from: D.caja, to: dd, hilos: n, tipo: n <= 2 ? 'drop' : X.tipo || 'os2', der: true, pts: [] });
+    const en = (e, h) => e[0] === fx && +e[1] >= h0 && +e[1] < h0 + n; c.fus = (c.fus || []).filter(x => !en(x.a) && !en(x.b)); for (let k2 = 0; k2 < n; k2++) c.fus.push({ a: [fx, h0 + k2], b: [id, k2 + 1] }); const ord = x => [x.a, x.b].find(e => e[0] === fx) || [x.a[0], 0]; c.fus.sort((x, y) => { const p1 = ord(x), p2 = ord(y); return p1[0] === p2[0] ? +p1[1] - +p2[1] : (p1[0] === fx ? -1 : p2[0] === fx ? 1 : 0); });
+    D.cjdf = fx; docSave(); docPaint(); toast(`${id}: ${n === 1 ? '1 hilo' : n + ' hilos'} de ${fx} (del ${h0} al ${h0 + n - 1}) hacia ${dd || 'otro lugar'}`); return; }
+  if (k === 'cjfib') { const c = D.W.cajas[D.caja], de = ($('#cj-de') || {}).value, hs = +(($('#cj-h') || {}).value) || 12; let n = 1; while (D.W.fibs.some(f => f.id === 'FO-' + String(n).padStart(2, '0'))) n++; const id = 'FO-' + String(n).padStart(2, '0');
+    D.W.fibs.push({ id, from: de || '', to: D.caja, hilos: hs, tipo: 'os2', pts: [] }); docSave(); docPaint(); toast('Fibra ' + id + ' creada hasta ' + D.caja); return; }
+  if (k === 'cjx') { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'Tocá de nuevo para sacarla'; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ''; b.textContent = 'Sacar la caja'; } }, 4000); return; } delete D.W.cajas[D.caja]; D.W.devs = (D.W.devs || []).filter(d => d.id !== D.caja); D.W.fibs.forEach(f => { if (f.to === D.caja) f.to = ''; if (f.from === D.caja) f.from = ''; }); D.caja = null; docSave(); docPaint(); return; }
+  if (k === 'rack') { D.caja = null; D.cid = v; D.hist = false; D.V = { tab: 'frente', q: '' }; docPaint(); }
+  else if (k === 'hist') { D.hist = !D.hist; docPaint(); }
+  else if (k === 'histr') { D.histR = v === '1'; docPaint(); }
+  else if (k === 'volver') { D.hist = false; D.cid = null; D.caja = null; docPaint(); }
+  else if (k === 'nuevo') { D.nuevo = D.nuevo ? false : { tipo: 'gab', u: 9 }; docList(); const n = $('#docN'); if (n) n.focus(); }
+  else if (k === 'tipo') { D.nuevo.tipo = v; D.nuevo.u = CAJT[v] ? CAJT[v][3] : v === 'gab' ? 9 : 12; if (v === 'gab') D.nuevo.dim = '40x30'; docList(); }
+  else if (k === 'cancelar') { D.nuevo = false; docList(); }
+  else if (k === 'ir') docIr(v);
+  else if (k === 'borrar') docPedirBorrar(v);
+  else if (k === 'papelera') { D.pap = !D.pap; docPaint(); }
+  else if (k === 'recuperar') docRecuperar(+v); });
+document.addEventListener('submit', e => { if (e.target.matches('form[data-dk="crear"]')) { e.preventDefault(); docCrear(); } });
+document.addEventListener('input', e => { if (e.target.id === 'docq' && S.doc) { S.doc.q = e.target.value; const pos = e.target.selectionStart; docList(); const n = $('#docq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } });
+
+/* ---------- roles y permisos: qué puede hacer cada rol de la empresa y cada acceso del cliente ---------- */
+const PERM = [ // [qué, roles de la instaladora que pueden]
+  ['Ver clientes, maquetas y equipos', ['owner', 'admin', 'encargado', 'tecnico', 'ventas', 'administracion', 'subcontratista', 'viewer']],
+  ['Editar maquetas y documentación de racks', ['owner', 'admin', 'encargado', 'tecnico']],
+  ['Cargar equipos a mano y enlazar clientes', ['owner', 'admin', 'encargado', 'tecnico']],
+  ['Dar de alta clientes', ['owner', 'admin']],
+  ['Cargar las claves de cada marca', ['owner', 'admin']],
+  ['Dar acceso al IT del cliente', ['owner', 'admin']],
+  ['Ver la actividad de la empresa', ['owner', 'admin']],
+  ['Cambiar el nombre de la empresa y sumar gente', ['owner', 'admin']]];
+const PERMC = [['Ver la maqueta y los equipos de su empresa', ['ver', 'pedir', 'editar']], ['Hacer pedidos a la instaladora', ['pedir', 'editar']], ['Editar la maqueta de su empresa', ['editar']]];
+const ROLD = { owner: 'Todo; es el titular de la cuenta', admin: 'Lo mismo que el dueño', encargado: 'Arma, documenta y enlaza clientes', tecnico: 'Instala, documenta y enlaza', ventas: 'Ve todo para mostrarlo, no cambia nada', administracion: 'Ve todo, no cambia nada', subcontratista: 'Ve todo, no cambia nada', viewer: 'Solo mira' };
+const SI = '<span class="ok-c" aria-label="Sí">✓</span>', NO = '<span class="muted" aria-label="No">—</span>';
+function rolesView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div class="card empty">Cargando…</div>'; } const T = S.team || [], R = Object.keys(ROLN), n = r => T.filter(m => m.role === r).length;
+  return `<div class="card pad"><h2>Roles de ${esc(S.ctx.name)}</h2><p class="muted">Qué puede hacer cada uno. El rol se cambia en «Empresa y equipo».</p>
+    <div class="rolk">${R.map(r => `<div class="${S.ctx.role === r ? 'yo' : ''}"><b>${esc(ROLN[r])}</b><span>${esc(ROLD[r] || '')}</span><i>${n(r)} ${n(r) === 1 ? 'persona' : 'personas'}</i></div>`).join('')}</div>
+    <div class="tscroll"><table class="perm"><thead><tr><th></th>${R.map(r => `<th>${esc(ROLN[r])}</th>`).join('')}</tr></thead><tbody>${PERM.map(([q, rs]) => `<tr><td>${q}</td>${R.map(r => `<td>${rs.includes(r) ? SI : NO}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
+  <div class="card pad" style="margin-top:14px"><h2>Accesos del IT de cada cliente</h2><p class="muted">Se dan desde la ficha del cliente, pestaña Accesos. Nunca ven a tus otros clientes.</p>
+    <div class="tscroll"><table class="perm"><thead><tr><th></th><th>Ver</th><th>Pedir</th><th>Editar</th></tr></thead><tbody>${PERMC.map(([q, rs]) => `<tr><td>${q}</td>${['ver', 'pedir', 'editar'].map(r => `<td>${rs.includes(r) ? SI : NO}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`; }
+/* ---------- clientes: la configuración de cada uno, en una sola lista ---------- */
+function clientesCfgView() { const L = S.sites || [], q = (S.cfgQ || '').trim().toLowerCase(), F = L.filter(st => !q || [st.name, st.data && st.data.direccion].join(' ').toLowerCase().includes(q));
+  const base = st => ({ motor: 'Motor común', generica: 'Galpón genérico', vacia: 'En blanco', plano: 'Desde un plano', polo: 'Ejemplo' })[(st.data && st.data.base) || 'vacia'] || '—';
+  const enl = L.filter(st => linksOf(st).length).length;
+  return `<div class="kpis"><div><b>${L.length}</b><span>clientes</span></div><div><b>${enl}</b><span>con monitoreo en vivo</span></div><div><b>${L.length - enl}</b><span>sin enlazar</span></div></div>
+    <div class="card"><div class="pad" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:8px"><h2 style="margin:0">Configuración de cada cliente</h2><span class="grow"></span><input id="cfgq" type="search" placeholder="Buscar cliente" value="${esc(S.cfgQ || '')}" aria-label="Buscar cliente" class="inq"></div>
+    <div class="tscroll"><table><thead><tr><th>Cliente</th><th>Monitoreo</th><th>Equipos</th><th>Maqueta</th><th></th></tr></thead><tbody>${F.map(st => { const l = linksOf(st), r = resumen(st);
+      return `<tr><td><b>${esc(st.name)}</b><br><span class="muted" style="font-size:12.5px">${esc((st.data && st.data.direccion) || '')}</span></td>
+        <td>${l.length ? l.map(k => `<span class="pill ok">${esc(BR[k].n)}</span>`).join(' ') : '<span class="pill off">Sin enlazar</span>'}</td>
+        <td>${r ? `${r.total}${r.caidos ? ` · <span style="color:var(--crit)">${r.caidos} caídos</span>` : ''}` : '—'}</td><td>${base(st)}</td>
+        <td><div class="cfga"><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="integ">Integraciones</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="accesos">Accesos</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="doc">Documentación</button><button class="btn sm" data-site="${esc(st.id)}" data-sitetab="datos">Datos</button></div></td></tr>`; }).join('') || '<tr><td colspan="5" class="muted">No hay clientes con ese nombre.</td></tr>'}</tbody></table></div></div>`; }
+document.addEventListener('input', e => { if (e.target.id === 'cfgq') { S.cfgQ = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#cfgq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } });
+
+// menú «Documentación»: se elige el cliente y se abre su documentación de racks, equipos y fibras
+function docsView() { const L = S.sites || [];
+  return `<div class="pagehead"><div><h1>Documentación</h1><p class="muted">Racks, gabinetes, equipos, patch cords y fibras de cada cliente. Elegí el cliente.</p></div></div>
+    ${L.length ? `<div class="docsg">${L.map(st => `<button class="card docsc" data-site="${esc(st.id)}" data-sitetab="doc"><b>${esc(st.name)}</b><span class="muted">${esc((st.data && st.data.direccion) || '')}</span><span class="docsa">Abrir documentación</span></button>`).join('')}</div>`
+      : '<div class="card empty"><b>Todavía no hay clientes</b><span>Creá un cliente y documentá sus racks.</span></div>'}`; }
+
+/* ---------- configurar una marca a pantalla completa, con la prueba de conexión desde afuera ---------- */
+const PRT = { unifi: [443, 8443], meraki: [443], hikvision: [80, 443, 554, 8000], dahua: [80, 443, 554, 37777], intelbras: [80, 554, 37777], honeywell: [80, 443, 554], mikrotik: [8291, 443, 80, 22], cisco: [22, 443], tplink: [80, 443], sonoff: [80, 8081] };
+function probarHtml(k) { const R = S.prb && S.prb.k === k ? S.prb : null;
+  return `<section class="prb"><h4>Probar conexión desde afuera</h4><p class="muted">Para un equipo con IP pública o DDNS (grabador, router, cámara publicada): Ondi intenta abrir sus puertos desde internet. Las IP privadas (172.16…, 192.168…) se prueban desde adentro, con el Agente Ondi.</p>
+    <div class="prb-f"><label>IP pública o DDNS<input id="prb-h" maxlength="253" placeholder="Ej.: cliente.ddns.net" value="${esc(R ? R.host : '')}"></label><label>Puertos<input id="prb-p" maxlength="40" value="${esc((R ? R.puertos : PRT[k] || [80, 443]).join(', '))}"></label><button class="btn pri" data-probar="${k}">Probar</button></div>
+    ${R ? R.cargando ? '<p class="muted">Probando…</p>' : R.error ? `<p class="prb-e">${esc(R.error)}</p>` : `<p class="muted">${esc(R.host)} → ${esc(R.ip)} · ${R.abiertos} de ${R.resultados.length} puertos responden</p><div class="prb-r">${R.resultados.map(x => `<span class="pill ${x.abierto ? 'ok' : 'off'}">${x.puerto} · ${x.abierto ? x.ms + ' ms' : esc(x.motivo)}</span>`).join('')}</div>` : ''}</section>`; }
+async function probar(k) { const host = (($('#prb-h') || {}).value || '').trim(), puertos = String(($('#prb-p') || {}).value || '').split(/[\s,;]+/).map(Number).filter(n => n > 0 && n < 65536).slice(0, 6);
+  if (!host) { toast('Escribí la IP pública o el DDNS'); return; } S.prb = { k, host, puertos, cargando: true }; render();
+  try { const r = await SB.functions.invoke('ondi-probar', { body: { org: orgId(), host, puertos } }); const d = r.data || {};
+    S.prb = Object.assign({ k, host, puertos }, r.error ? { error: (/not found|404|Failed to send/i.test(String(r.error.message || r.error)) || (r.error.context && r.error.context.status === 404)) ? 'La prueba desde afuera todavía no está publicada en el servidor.' : 'No se pudo probar: ' + (r.error.message || r.error) } : d); }
+  catch (er) { S.prb = { k, host, puertos, error: 'No se pudo probar: ' + errTxt(er) }; } render(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.bfull) { S.bfull = null; document.documentElement.classList.remove('bfullon'); render(); } });
+
+/* ---------- cajas de empalme, rosetas, cajas FTTH y cámaras de registro: dónde termina o se empalma cada fibra ---------- */
+// [nombre, prefijo, capacidades, capacidad por defecto]
+const CAJT = { ce: ['Caja de empalme', 'CE-', [12, 24, 48, 72, 96, 144], 24], ro: ['Roseta óptica', 'RO-', [2, 4, 8, 12], 4], ft: ['Caja FTTH', 'FT-', [1, 2, 4, 8, 16], 16], cr: ['Cámara de registro', 'CR-', [1, 2, 4, 6], 2] };
+const TIAC = [['azul', '#2F6FD6'], ['naranja', '#E07A1F'], ['verde', '#2E9E5B'], ['marrón', '#8A5A3C'], ['gris', '#8D979F'], ['blanco', '#EDEFF1'], ['rojo', '#D2474B'], ['negro', '#23272B'], ['amarillo', '#E6BE1E'], ['violeta', '#8E5BD0'], ['rosa', '#E58FB1'], ['aguamarina', '#35C2C1']];
+const CAJI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M1 12h3M20 12h3M9 12h6"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/></svg>';
+function cajaCrear() { const D = S.doc, W = D.W, t = D.nuevo.tipo, T = CAJT[t], ids = new Set([...Object.keys(W.cajas || {}), ...Object.keys(W.cabs)]); let n = 1, id; do id = T[1] + String(n++).padStart(2, '0'); while (ids.has(id));
+  W.cajas = W.cajas || {}; W.cajas[id] = { t, cap: +($('#docU') || {}).value || T[3], nombre: (($('#docN') || {}).value || '').trim(), lugar: (($('#docL') || {}).value || '').trim(), fus: [] };
+  D.nuevo = false; D.caja = id; D.cid = null; D.hist = false; docSave(); docPaint(); toast(T[0] + ' ' + id + ' creada. Ahora tirá las fibras que llegan y anotá los empalmes.'); }
+function cajaHTML() { const D = S.doc, W = D.W, id = D.caja, c = W.cajas[id], T = CAJT[c.t], ed = siteEd(), FI = W.fibs.filter(f => f.from === id || f.to === id), otra = f => f.from === id ? (f.to || f.toTxt || '?') : (f.from || f.fromTxt || '?');
+  const puntas = [...docRacks(W, D.idx).map(r => [r.id, r.id + (r.nombre ? ' · ' + r.nombre : '')]), ...Object.entries(W.cajas).filter(([k]) => k !== id).map(([k, x]) => [k, k + ' · ' + CAJT[x.t][0]])];
+  const hSel = (i, lado, fib, h) => { const F = W.fibs.find(f => f.id === fib); return `<select data-cf="${i}|${lado}|1" ${ed ? '' : 'disabled'}>${Array.from({ length: F ? F.hilos : 12 }, (_, k) => `<option value="${k + 1}"${k + 1 === +h ? ' selected' : ''}>${k + 1} · ${TIAC[k % 12][0]}${F && F.hilos > 12 ? ' · tubo ' + (Math.floor(k / 12) + 1) : ''}</option>`).join('')}</select>`; };
+  const fSel = (i, lado, fib) => `<select data-cf="${i}|${lado}|0" ${ed ? '' : 'disabled'}><option value="">Fibra…</option>${FI.map(f => `<option value="${esc(f.id)}"${f.id === fib ? ' selected' : ''}>${esc(f.id)} · ${f.hilos} h · ${esc(otra(f))}</option>`).join('')}</select>`;
+  const dot = (fib, h) => { const k = (+h - 1) % 12; return fib ? `<i class="cjd" style="background:${TIAC[k][1]}"></i>` : ''; };
+  return `<div class="cj">
+    <header class="cj-h"><div><small class="muted">${esc(T[0])}</small><h2>${esc(id)}${c.nombre ? ' · ' + esc(c.nombre) : ''}</h2></div><span class="grow"></span><button class="btn sm docback" data-dk="volver">${DIC.back}Lista</button>${ed ? `<button class="btn sm" data-dk="cjx">Sacar la caja</button>` : ''}</header>
+    <div class="cj-g">${['nombre', 'lugar'].map(k => `<label>${k === 'nombre' ? 'Nombre' : 'Lugar'}<input data-ck="${k}" value="${esc(c[k] || '')}" maxlength="60" ${ed ? '' : 'disabled'} placeholder="${k === 'nombre' ? 'Ej.: Empalme del portón' : 'Ej.: Poste 14, frente al galpón E3'}"></label>`).join('')}
+      <label>Tipo<select data-ck="t" ${ed ? '' : 'disabled'}>${Object.entries(CAJT).map(([k, v]) => `<option value="${k}"${k === c.t ? ' selected' : ''}>${v[0]}</option>`).join('')}</select></label>
+      <label>Capacidad<select data-ck="cap" ${ed ? '' : 'disabled'}>${T[2].concat(T[2].includes(+c.cap) ? [] : [+c.cap]).map(u => `<option value="${u}"${+u === +c.cap ? ' selected' : ''}>${u} ${c.t === 'cr' ? 'ductos' : 'hilos'}</option>`).join('')}</select></label>
+      <label class="w2">Nota<input data-ck="nota" value="${esc(c.nota || '')}" maxlength="120" ${ed ? '' : 'disabled'}></label></div>
+    <h3>Fibras que llegan <span class="muted">${FI.length}</span></h3>
+    ${FI.length ? `<ul class="cj-f">${FI.map(f => `<li><b>${esc(f.id)}</b><span>${f.hilos} hilos · ${f.from === id ? 'sale hacia' : 'viene de'} ${esc(otra(f))}${f.nombre ? ' · ' + esc(f.nombre) : ''}</span>${f.from && W.cabs[f.from] || f.to && W.cabs[f.to] ? `<button class="lnk" data-dk="rack" data-v="${esc(W.cabs[f.from] ? f.from : f.to)}">Ver el rack</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Todavía no llega ninguna fibra.</p>'}
+    ${ed ? `<div class="cj-n"><label>Nueva fibra desde<select id="cj-de"><option value="">Otro lugar</option>${puntas.map(([k, t]) => `<option value="${esc(k)}">${esc(t)}</option>`).join('')}</select></label><label>Hilos<select id="cj-h">${[1, 2, 4, 6, 8, 12, 24, 48, 72, 96, 144].map(n => `<option${n === 12 ? ' selected' : ''}>${n}</option>`).join('')}</select></label><button class="btn sm pri" data-dk="cjfib">Crear fibra hasta ${esc(id)}</button></div>` : ''}
+    ${ed && FI.length ? (() => { const tr = FI.filter(f => f.to === id && !f.der).concat(FI.filter(f => f.to !== id && !f.der)), X = W.fibs.find(f => f.id === D.cjdf) || tr[0] || FI[0], usa = (c.fus || []).filter(x => [x.a, x.b].some(e => e[0] === X.id) && [x.a, x.b].some(e => (W.fibs.find(f => f.id === e[0]) || {}).der)).map(x => +(x.a[0] === X.id ? x.a[1] : x.b[1])), h0 = Math.min(X.hilos, (usa.length ? Math.max(...usa) : 0) + 1);
+      return `<h3>Derivar hilos</h3><p class="muted cj-ay">Saca hilos de la troncal hacia otro rack o caja: esos hilos se cortan acá (dejan de pasar derecho) y se empalman con la fibra nueva. Para una cámara o un cliente, un drop de 2 hilos.</p>
+      <div class="cj-n"><label>Hacia<select id="cj-dd"><option value="">Otro lugar</option>${puntas.map(([k, t]) => `<option value="${esc(k)}">${esc(t)}</option>`).join('')}</select></label><label>Fibra nueva<select id="cj-dh">${[[12, '12 hilos'], [6, '6 hilos'], [24, '24 hilos'], [4, '4 hilos'], [2, 'Drop 2 hilos'], [1, 'Drop 1 hilo']].map(([n, t]) => `<option value="${n}">${t}</option>`).join('')}</select></label>
+        <label>Tomando de<select id="cj-df">${FI.map(f => `<option value="${esc(f.id)}"${f.id === X.id ? ' selected' : ''}>${esc(f.id)} · ${f.hilos} h · ${esc(otra(f))}</option>`).join('')}</select></label><label>Desde el hilo<select id="cj-dn">${Array.from({ length: X.hilos }, (_, k) => `<option value="${k + 1}"${k + 1 === h0 ? ' selected' : ''}>${k + 1} · ${TIAC[k % 12][0]}${X.hilos > 12 ? ' · tubo ' + (Math.floor(k / 12) + 1) : ''}</option>`).join('')}</select></label><button class="btn sm pri" data-dk="cjder">Derivar</button></div>`; })() : ''}
+    <h3>Empalmes <span class="muted">${(c.fus || []).length} de ${c.cap}</span></h3>
+    ${ed && FI.length > 1 ? `<div class="cj-n"><label>Empalmar todos los hilos de<select id="cj-a">${FI.map(f => `<option>${esc(f.id)}</option>`).join('')}</select></label><label>con<select id="cj-b">${FI.map((f, i) => `<option${i === 1 ? ' selected' : ''}>${esc(f.id)}</option>`).join('')}</select></label><button class="btn sm" data-dk="fus11">Empalmar 1 a 1</button></div>` : ''}
+    ${(c.fus || []).length ? `<div class="tscroll"><table class="cj-t"><thead><tr><th>#</th><th>Fibra</th><th>Hilo</th><th></th><th>Fibra</th><th>Hilo</th><th>Pérdida (dB)</th><th>Nota</th><th></th></tr></thead><tbody>${c.fus.map((x, i) => `<tr><td>${i + 1}</td><td>${fSel(i, 'a', x.a[0])}</td><td>${dot(x.a[0], x.a[1])}${hSel(i, 'a', x.a[0], x.a[1])}</td><td class="cj-x">⟷</td><td>${fSel(i, 'b', x.b[0])}</td><td>${dot(x.b[0], x.b[1])}${hSel(i, 'b', x.b[0], x.b[1])}</td>
+      <td><input data-cfx="${i}|db" value="${x.db != null ? String(x.db).replace('.', ',') : ''}" inputmode="decimal" maxlength="6" placeholder="0,05" ${ed ? '' : 'disabled'}></td><td><input data-cfx="${i}|nota" value="${esc(x.nota || '')}" maxlength="80" ${ed ? '' : 'disabled'}></td><td>${ed ? `<button class="lnk" data-dk="fusx" data-v="${i}" aria-label="Quitar el empalme ${i + 1}">Quitar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<p class="muted">${FI.length ? 'Todavía no hay empalmes anotados.' : 'Primero tirá las fibras que llegan a la caja.'}</p>`}
+    ${ed && FI.length ? `<button class="btn sm" data-dk="fusa">Agregar un empalme</button>` : ''}</div>`; }
+document.addEventListener('change', e => { const t = e.target, D = S.doc; if (!D || !D.caja || !siteEd()) return; const c = D.W.cajas[D.caja]; if (!c) return;
+  if (t.dataset.ck) { const k = t.dataset.ck, v = t.value.trim(); if (k === 'cap') c.cap = +v; else if (v) c[k] = v; else delete c[k]; docSave(); docPaint(); }
+  else if (t.id === 'cj-df') { D.cjdf = t.value; docPaint(); }
+  else if (t.dataset.cf) { const [i, lado, j] = t.dataset.cf.split('|'), x = c.fus[+i]; if (!x) return; x[lado][+j] = +j ? +t.value : t.value; if (!+j) x[lado][1] = 1; docSave(); docPaint(); }
+  else if (t.dataset.cfx) { const [i, k] = t.dataset.cfx.split('|'), x = c.fus[+i]; if (!x) return; const v = t.value.trim(); if (!v) delete x[k]; else x[k] = k === 'db' ? +v.replace(',', '.') : v; docSave(); } });
+// historial de las cajas
+// historial de los equipos de campo (cámaras, Wi-Fi, control de acceso…): altas, bajas y cambios de nombre o lugar
+function campoDiff(a, b) { const out = [], A = new Map(((a && a.campo) || []).map(x => [x.id, x])), B = new Map(((b && b.campo) || []).map(x => [x.id, x])), nom = x => x.id + (x.nombre ? ' (' + x.nombre + ')' : '');
+  for (const [id, x] of B) { const o = A.get(id); if (!o) out.push({ m: 'Agregó el equipo ' + nom(x) }); else { const ch = []; if ((o.nombre || '') !== (x.nombre || '')) ch.push('nombre ' + (x.nombre || 'sin nombre')); if ((o.lugar || '') !== (x.lugar || '')) ch.push('lugar ' + (x.lugar || 'sin lugar')); if ((o.ip || '') !== (x.ip || '')) ch.push('IP ' + (x.ip || 'sin IP')); if (o.t !== x.t) ch.push('tipo'); if (ch.length) out.push({ m: 'Anotó en ' + id + ': ' + ch.join(', ') }); } }
+  for (const [id, x] of A) if (!B.has(id)) out.push({ m: 'Borró el equipo ' + nom(x) });
+  return out; }
+function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.cajas) || {}, fk = x => x.a.join(':') + '|' + x.b.join(':'), lt = x => `${x.a[0] || '?'} hilo ${x.a[1]} con ${x.b[0] || '?'} hilo ${x.b[1]}`;
+  for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) { const ca = A[id], cb = B[id];
+    if (!ca) { out.push({ r: id, m: `Creó ${CAJT[cb.t] ? CAJT[cb.t][0].toLowerCase() : 'la caja'} ${id}` }); continue; } if (!cb) { out.push({ r: id, m: `Sacó la caja ${id}` }); continue; }
+    const fa = new Set((ca.fus || []).filter(x => x.a[0] && x.b[0]).map(fk)), fb = (cb.fus || []).filter(x => x.a[0] && x.b[0]);
+    const nuevos = fb.filter(x => !fa.has(fk(x))); if (nuevos.length > 3) out.push({ r: id, m: `Anotó ${nuevos.length} empalmes en ${id}` }); else nuevos.forEach(x => out.push({ r: id, m: `Empalmó ${lt(x)} en ${id}` }));
+    const fbs = new Set(fb.map(fk)), idos = (ca.fus || []).filter(x => x.a[0] && x.b[0] && !fbs.has(fk(x))); if (idos.length) out.push({ r: id, m: `Sacó ${idos.length === 1 ? 'el empalme ' + lt(idos[0]) : idos.length + ' empalmes'} en ${id}` });
+    const ch = ['nombre', 'lugar', 't', 'cap', 'nota'].filter(k => (ca[k] || '') !== (cb[k] || '')); if (ch.length) out.push({ r: id, m: `Anotó en ${id}: ` + ch.map(k => ({ nombre: 'nombre', lugar: 'lugar', t: 'tipo', cap: 'capacidad', nota: 'nota' })[k]).join(', ') }); }
+  return out; }
+
+// la pastilla del menú se estira hasta la opción elegida (el mismo movimiento que Olumi)
+function navPill() { const nav = document.querySelector('.side .nav'), pl = nav && nav.querySelector('.navpill'), b = nav && nav.querySelector('[aria-current="page"]'); if (!pl) return;
+  if (!b) { pl.style.opacity = 0; return; } const to = [b.offsetTop, b.offsetLeft, b.offsetWidth, b.offsetHeight], de = S.pill || to, quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pon = r => { pl.style.transform = `translate(${r[1]}px,${r[0]}px)`; pl.style.width = r[2] + 'px'; pl.style.height = r[3] + 'px'; };
+  pl.style.transition = 'none'; pon(de); pl.style.opacity = 1; void pl.offsetWidth; if (!quieto) pl.style.transition = ''; pon(to); S.pill = to; }
+
+// la lista de racks se achica o se agranda arrastrando el borde (o se esconde del todo con la flechita); se acuerda del ancho
+function docW(w) { if (w != null) { S.docW = w; try { localStorage.setItem('ondi.docw', String(w)); } catch (e) {} return w; } if (S.docW == null) { let v = 300; try { const x = localStorage.getItem('ondi.docw'); if (x != null && x !== '') v = +x; } catch (e) {} S.docW = isNaN(v) ? 300 : v; } return S.docW; }
+document.addEventListener('pointerdown', e => { const sp = e.target.closest && e.target.closest('.docsplit'); if (!sp || e.target.closest('button') || innerWidth <= 860) return; e.preventDefault(); const doc = sp.parentElement, x0 = e.clientX, w0 = docW();
+  doc.classList.add('arrastra'); const mv = ev => { const w = Math.max(0, Math.min(520, w0 + ev.clientX - x0)); doc.style.setProperty('--dw', (w < 140 ? 0 : w) + 'px'); doc.classList.toggle('cerrada', w < 140); };
+  const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); doc.classList.remove('arrastra'); const w = Math.max(0, Math.min(520, w0 + ev.clientX - x0)); docW(w < 140 ? 0 : Math.round(w)); if (w >= 140) S.docWant = Math.round(w); docPaint(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up); });
+document.addEventListener('keydown', e => { if (!e.target.classList || !e.target.classList.contains('docsplit') || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return; e.preventDefault(); const w = docW(); docW(Math.max(0, Math.min(520, (w || 140) + (e.key === 'ArrowRight' ? 20 : -20)))); if (docW() < 140) docW(0); docPaint(); const sp = document.querySelector('.docsplit'); if (sp) sp.focus(); });
+// la dirección guarda dónde se está parado, para que F5 vuelva al mismo lugar (#c/pestaña/rack o #v/sección)
+function navHash() { if (S.auth || !S.user || /type=recovery|access_token/.test(location.hash)) return; let h = '';
+  if (S.view === 'site' && S.site) { h = '#c/' + S.tab; const D = S.doc; if (S.tab === 'doc' && D && D.site === S.site.id) { if (D.cid) h += '/' + encodeURIComponent(D.cid); else if (D.caja) h += '/' + encodeURIComponent('caja:' + D.caja); } }
+  else if (S.view && S.view !== 'panel') h = '#v/' + S.view + (S.view === 'ajustes' && S.atab ? '/' + S.atab : '');
+  if ((location.hash || '') !== h) try { history.replaceState(null, '', location.pathname + location.search + h); } catch (e) {} }
+render = (o => function () { const r = o.apply(this, arguments); navHash(); if (S.maqCh && !(S.view === 'site' && S.tab === 'maqueta' && S.site && S.site.id === S.maqChSite)) maqPresFin(); return r; })(render);
+docPaint = (o => function () { const r = o.apply(this, arguments); navHash(); return r; })(docPaint);
 })();
 </script>
 <script>if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
