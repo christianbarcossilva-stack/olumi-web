@@ -1,6 +1,7 @@
 // Motor común · un solo juego de íconos para la maqueta (Ondi, Olumi y Kliva): grilla de 24, trazo de 1,8, puntas redondas, color del texto.
 // Si falta uno se dibuja acá, en este mismo estilo. Nada de emojis ni de íconos sueltos en otros archivos.
 export const IC = {
+  varias: '<rect x="3.5" y="3.5" width="11" height="11" rx="1.5" stroke-dasharray="2.3 2.3"/><path d="M11.5 10.5l9 3.4-3.7 1.5-1.5 3.7z"/>',
   mano: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12m0-1V4.5a1.5 1.5 0 0 1 3 0V12m0-1.5a1.5 1.5 0 0 1 3 0V12m0-.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-1.2a6 6 0 0 1-4.8-2.4L4.3 16a1.6 1.6 0 0 1 2.5-2l1.2 1.4"/>',
   maza: '<path d="M14 4l6 6-3 3-6-6zM11 7l-8 8 2 2 8-8M3 21h8"/>',
   gotero: '<path d="M14 4l6 6M16.5 2.5l5 5-3 3-5-5zM13.5 8.5 5 17l-1 4 4-1 8.5-8.5"/>',

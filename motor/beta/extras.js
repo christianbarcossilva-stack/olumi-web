@@ -40,7 +40,8 @@ export function extras(M) { const { motor, objs, raiz } = M, THREE = motor.THREE
     if (X.real) { horaReal(false); motor.ponerHora(L[0]); txt = motor.horas[0][1]; }
     else { const i = L.indexOf(motor.hora); if (i === L.length - 1) { horaReal(true); txt = 'Hora real · ahora ' + motor.horas.find(q => q[0] === motor.hora)[1].toLowerCase(); } else { motor.ponerHora(L[i + 1]); txt = motor.horas[i + 1][1]; } }
     try { localStorage.setItem('motor.tema', motor.tema); localStorage.setItem('motor.hora', X.real ? 'auto' : motor.hora); } catch (e) {} M.toast(txt); }
-  try { if (localStorage.getItem('motor.hora') === 'auto' && !M.temaFijo) horaReal(true); } catch (e) {}
+  // en las apps que lo piden (Ondi), si nadie eligió otra cosa la maqueta arranca con la hora y el tiempo de verdad
+  try { const h = localStorage.getItem('motor.hora'); if ((h === 'auto' || (h == null && M.real)) && !M.temaFijo) horaReal(true); } catch (e) {}
 
   // ---------- clima ----------
   // la lluvia son rayitas que caen dentro de una caja que sigue a lo que se mira (se dibujan todas juntas)
@@ -63,5 +64,5 @@ export function extras(M) { const { motor, objs, raiz } = M, THREE = motor.THREE
     if (k !== 'real') { aplicarClima(k); if (!callado) M.toast(nomClima(k)); return; }
     const pon = async (avisa) => { const c = await tiempoReal(); if (X.clima !== 'real') return; if (!c) { if (avisa) M.toast('No se pudo consultar el tiempo; queda como estaba'); return; } aplicarClima(c); if (avisa) M.toast('Tiempo real · ahora ' + nomClima(c).toLowerCase()); };
     await pon(!callado); X.tclima = setInterval(() => pon(false), 20 * 60000); }
-  X.clima = 'despejado'; try { const g = localStorage.getItem('motor.clima'); if (g && g !== 'despejado' && (g === 'real' || motor.climas.some(q => q[0] === g)) && !M.temaFijo) ponerClima(g, true); } catch (e) {}
+  X.clima = 'despejado'; try { const g = localStorage.getItem('motor.clima') || (M.real ? 'real' : null); if (g && g !== 'despejado' && (g === 'real' || motor.climas.some(q => q[0] === g)) && !M.temaFijo) ponerClima(g, true); } catch (e) {}
   return { presentar, verCamara, horaReal, siguienteHora, ponerClima, get clima() { return X.clima; }, get tour() { return !!X.tour; }, get camara() { return X.cam ? X.cam.p : null; } }; }
