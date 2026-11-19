@@ -18,7 +18,7 @@ import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=3';
 import { construir } from './construir.js?v=21';
-import { recorrer } from './recorrer.js?v=13';
+import { recorrer } from './recorrer.js?v=14';
 import { transito } from './transito.js?v=20';
 import { extras } from './extras.js?v=4';
 

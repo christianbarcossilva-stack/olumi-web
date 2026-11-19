@@ -98,14 +98,14 @@ export function recorrer(M) {
   // ---------- teclas, palanca y ayuda ----------
   document.body.insertAdjacentHTML('beforeend', `<div id="mmira" aria-hidden="true"></div><div id="mpaseo" role="status"><span class="tec"></span><button type="button" id="mpojos" aria-label="Cambiar la vista" title="Vista (V)">${M.svg('ojo', 16)}<span>3.ª persona</span></button><button type="button" id="mpsalir">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div><div id="musar" class="vidrio" hidden></div>`);
   // la ayuda de abajo: lo más importante primero; entra lo que da el ancho (la maqueta puede estar en un recuadro angosto dentro de la app)
-  const P = ' <i></i> ', largo = h => h.replace(/<[^>]+>/g, '').length + 3;
+  const P = ' <i></i> ', largo = h => h.replace(/<[^>]+>/g, '').length + 3 + 1.5 * (h.match(/<kbd>/g) || []).length;
   function ayudaTxt() { const el = $('#mpaseo .tec'); if (!el) return;
     const its = motor.mirando ? (motor.editando ? ['<b>Clic</b> pone, elige o agarra', '<b>Clic derecho</b> suelta', '<kbd>Esc</kbd> suelta el mouse', '<b>Rueda</b> gira', '<kbd>Tab</kbd> catálogo', '<kbd>1</kbd> a <kbd>9</kbd> herramientas']
         : R.vuelo ? ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> volar', '<kbd>Espacio</kbd> sube', '<kbd>Q</kbd> baja', '<kbd>Espacio</kbd> dos veces: bajar', '<kbd>Shift</kbd> rápido', '<kbd>F</kbd> editar']
-        : ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> caminar', '<kbd>Esc</kbd> suelta el mouse', '<kbd>Espacio</kbd> saltar, dos veces vuela', '<kbd>Shift</kbd> correr', '<kbd>F</kbd> editar', '<kbd>V</kbd> vista'])
+        : ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> caminar', '<kbd>F</kbd> editar', '<kbd>Espacio</kbd> saltar, dos veces vuela', '<kbd>Esc</kbd> suelta el mouse', '<kbd>Shift</kbd> correr', '<kbd>V</kbd> vista'])
       : puedeMira() ? ['<b>Clic en la maqueta</b> para mirar con el mouse', '<kbd>Esc</kbd> salir', '<kbd>W A S D</kbd> caminar']
       : ['<kbd>W A S D</kbd> caminar', '<kbd>Shift</kbd> correr', '<b>clic</b> ir ahí', '<b>arrastrar</b> mirar', '<kbd>V</kbd> vista'];
-    let cabe = Math.max(26, (Math.min(860, innerWidth - 230)) / 6.6), out = []; for (const h of its) { if (out.length && largo(h) > cabe) break; out.push(h); cabe -= largo(h); } el.innerHTML = out.join(P); }
+    let cabe = Math.max(26, (Math.min(980, innerWidth - 230)) / 7.5), out = []; for (const h of its) { if (out.length && largo(h) > cabe) break; out.push(h); cabe -= largo(h); } el.innerHTML = out.join(P); }
   ayudaTxt(); motor.alMira = () => { if (!R.on) return; if (!motor.mirando) R.k = {}; ayudaTxt(); ayuda(true); }; motor.alEditar = () => { if (R.on) { ayudaTxt(); ayuda(true); } };
   let ayT; function ayuda(ver) { const el = $('#mpaseo'); el.classList.toggle('corta', !ver); clearTimeout(ayT); if (ver) ayT = setTimeout(() => el.classList.add('corta'), 9000); }
   $('#mpsalir').onclick = () => paseo(false); $('#mpojos').onclick = vista; $('#mpaseo').addEventListener('pointerenter', () => ayuda(true));
