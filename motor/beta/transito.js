@@ -1,30 +1,23 @@
 // Motor común · tránsito: camiones que entran por la ruta, van a un andén, entran marcha atrás, se quedan un rato y salen.
 // Sale solo de lo que hay armado: las calles son la red y los andenes de las naves son los destinos. Es movimiento de ejemplo
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
-// Todos los camiones se dibujan juntos en una sola llamada (cajas instanciadas), así no pesa aunque haya muchos.
+// Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
+// El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
 import { THREE } from './nucleo.js?v=14';
-import { andenesDe } from './piezas.js?v=33';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=34';
 
-const PARTES = [ // centro (x, y, z), tamaño (x, y, z) y de qué color va: 0 oscuro, 1 caja, 2 cabina, 3 vidrio, 4 puertas, 5 faro, 6 luz de atrás, 7 metal
-  [0, 1.2, 0, 12.4, 0.3, 2.3, 0], [0, 2.74, 0, 12.3, 2.78, 2.5, 1], [-4.2, 1.0, 0, 3.0, 0.12, 2.5, 0], [7.75, 1.95, 0, 2.7, 2.9, 2.45, 2],
-  [9.12, 2.6, 0, 0.06, 1.0, 2.2, 3], [7.75, 3.52, 0, 2.2, 0.26, 2.3, 2], [6.0, 1.0, 0, 1.8, 0.4, 2.0, 0], [-6.17, 2.74, 0, 0.05, 2.55, 2.32, 4],
-  [7.7, 2.6, 1.235, 1.3, 0.8, 0.03, 3], [7.7, 2.6, -1.235, 1.3, 0.8, 0.03, 3], [9.12, 1.0, 0, 0.08, 0.7, 2.3, 0], [9.14, 1.1, 0.85, 0.06, 0.2, 0.42, 5], [9.14, 1.1, -0.85, 0.06, 0.2, 0.42, 5],
-  [-6.2, 1.05, 0.95, 0.06, 0.16, 0.4, 6], [-6.2, 1.05, -0.95, 0.06, 0.16, 0.4, 6], [-6.15, 0.75, 0, 0.1, 0.12, 2.4, 7], [-1.5, 0.85, 0, 0.5, 0.5, 2.3, 7], [8.9, 3.0, 1.42, 0.08, 0.42, 0.2, 0], [8.9, 3.0, -1.42, 0.08, 0.42, 0.2, 0]];
-// ruedas (cilindros acostados): posición a lo largo y de qué lado; las de atrás y las de tracción van de a dos
-const RUEDAS = [[-5.1, 1.05], [-5.1, -1.05], [-3.75, 1.05], [-3.75, -1.05], [-2.4, 1.05], [-2.4, -1.05], [6.6, 1.05], [6.6, -1.05], [8.6, 1.08], [8.6, -1.08]];
-const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#3b4b58', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
+const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 
 export function transito(M) { const { motor, mundo } = M, oscuro = () => document.documentElement.dataset.tema === 'oscuro';
-  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6, metalness: 0.15 }), MAX * PARTES.length);
-  im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.raycast = () => {}; im.count = 0; im.visible = false; mundo.add(im);
-  const ir = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.52, 0.52, 0.62, 14).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#17191c', roughness: 0.9 }), MAX * RUEDAS.length); ir.castShadow = true; ir.frustumCulled = false; ir.raycast = () => {}; ir.visible = false; mundo.add(ir);
+  const G = camionGeo(), MC = matCamion(), malla = (geo, m, so) => { const k = new THREE.InstancedMesh(geo, m, MAX); k.castShadow = so; k.receiveShadow = true; k.frustumCulled = false; k.raycast = () => {}; k.visible = false; mundo.add(k); return k; };
+  const im = malla(G.cabina, MC.t, true), ir = malla(G.tractor, MC.d, false), iL = malla(G.lisa, MC.t, true), iC = malla(G.contenedor, MC.t, true), iR = malla(G.remolque, MC.d, false), TODAS = [im, ir, iL, iC, iR];
   // de noche, la luz de los faros en el piso delante de cada camión que anda (un solo dibujo para todos)
   const cl = document.createElement('canvas'); cl.width = cl.height = 64; { const x = cl.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); }
   const il = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cl), color: '#ffe9bf', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 }), MAX); il.frustumCulled = false; il.raycast = () => {}; il.renderOrder = 2; il.visible = false; mundo.add(il);
-  const T = { on: true, firma: '', nodos: [], andenes: [], camiones: [], entradas: [], prox: 2, im, ir, il };
+  const T = { on: true, firma: '', nodos: [], andenes: [], camiones: [], entradas: [], prox: 2, im, ir, il, mallas: TODAS };
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), eu = new THREE.Euler(), v3 = new THREE.Vector3(), s3 = new THREE.Vector3(), col = new THREE.Color(), CERO = new THREE.Matrix4().makeScale(0, 0, 0);
-  for (let i = 0; i < MAX * PARTES.length; i++) { im.setMatrixAt(i, CERO); im.setColorAt(i, col.set('#ffffff')); } for (let i = 0; i < MAX * RUEDAS.length; i++) ir.setMatrixAt(i, CERO); for (let i = 0; i < MAX; i++) il.setMatrixAt(i, CERO);
+  for (let i = 0; i < MAX; i++) { for (const k of TODAS) k.setMatrixAt(i, CERO); for (const k of [im, iL, iC]) k.setColorAt(i, col.set('#ffffff')); il.setMatrixAt(i, CERO); }
   const rnd = (a, b) => a + Math.random() * (b - a), de = l => l[Math.floor(Math.random() * l.length)];
 
   // ---------- la red: un nodo cada pocos metros de cada calle; las calles que se tocan o se cruzan quedan unidas ----------
@@ -63,13 +56,13 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   const tramo = (pts, o = {}) => { const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, L, largo: L[L.length - 1], v: 5, atras: false, carril: false, ...o }; };
 
   // ---------- un camión: tramos a recorrer, estado y lugar en el dibujo ----------
-  function nuevoCamion() { const libre = new Set(T.camiones.map(c => c.i)); let i = 0; while (libre.has(i)) i++; if (i >= MAX) return null; const c = { i, x: 0, z: 0, h: 0, cola: [], s: 0, lado: 0, caja: de(CAJAS), cab: de(CABINAS), estado: '', t: 0, esc: 0 }; T.camiones.push(c); return c; }
-  function pintar(c) { const os = oscuro(), cs = [os ? '#15181b' : '#2a2f34', c.caja, c.cab, '#18232d', c.caja, os ? '#fff3c4' : '#f4f1e6', os ? '#ff4a3d' : '#b3261e', os ? '#59616a' : '#9aa3ab']; PARTES.forEach((p, k) => { col.set(cs[p[6]]); if (os && (p[6] === 1 || p[6] === 2 || p[6] === 4)) col.multiplyScalar(0.55); if (os && p[6] >= 5 && p[6] <= 6) col.multiplyScalar(2.2); if (p[6] === 4) col.multiplyScalar(0.86); im.setColorAt(c.i * PARTES.length + k, col); }); im.instanceColor.needsUpdate = true; }
-  function ubicar(c) { const cs = Math.cos(c.h), sn = Math.sin(c.h), e = c.esc; eu.set(0, c.h, 0); q4.setFromEuler(eu);
-    PARTES.forEach((p, k) => { v3.set(c.x + (p[0] * cs + p[2] * sn) * e, p[1] * e, c.z + (-p[0] * sn + p[2] * cs) * e); m4.compose(v3, q4, s3.set(p[3] * e, p[4] * e, p[5] * e)); im.setMatrixAt(c.i * PARTES.length + k, m4); }); im.instanceMatrix.needsUpdate = true;
-    RUEDAS.forEach((r, k) => { v3.set(c.x + (r[0] * cs + r[1] * sn) * e, 0.52 * e, c.z + (-r[0] * sn + r[1] * cs) * e); m4.compose(v3, q4, s3.set(e, e, e)); ir.setMatrixAt(c.i * RUEDAS.length + k, m4); }); ir.instanceMatrix.needsUpdate = true;
-    if (oscuro() && (c.estado === 'va' || c.estado === 'sale') && !(c.cola[0] && c.cola[0].atras)) { eu.set(0, c.h, 0); q4.setFromEuler(eu); m4.compose(v3.set(c.x + 17 * cs, 0.09, c.z - 17 * sn), q4, s3.set(22 * e, 1, 11 * e)); il.setMatrixAt(c.i, m4); } else il.setMatrixAt(c.i, CERO); il.instanceMatrix.needsUpdate = true; }
-  function sacar(c) { T.camiones.splice(T.camiones.indexOf(c), 1); for (let k = 0; k < PARTES.length; k++) im.setMatrixAt(c.i * PARTES.length + k, CERO); im.instanceMatrix.needsUpdate = true; for (let k = 0; k < RUEDAS.length; k++) ir.setMatrixAt(c.i * RUEDAS.length + k, CERO); ir.instanceMatrix.needsUpdate = true; il.setMatrixAt(c.i, CERO); il.instanceMatrix.needsUpdate = true; if (c.anden && c.anden.cam === c) c.anden.cam = null; }
+  function nuevoCamion() { const libre = new Set(T.camiones.map(c => c.i)); let i = 0; while (libre.has(i)) i++; if (i >= MAX) return null; const caja = de(CAJAS), c = { i, x: 0, z: 0, h: 0, art: 0, cola: [], s: 0, lado: 0, caja, lisa: /^#(F|E)/i.test(caja), cab: de(CABINAS), estado: '', t: 0, esc: 0 }; T.camiones.push(c); return c; }
+  function pintar(c) { const k = oscuro() ? 0.55 : 1; im.setColorAt(c.i, col.set(c.cab).multiplyScalar(k)); (c.lisa ? iL : iC).setColorAt(c.i, col.set(c.caja).multiplyScalar(k)); for (const m of [im, iL, iC]) m.instanceColor.needsUpdate = true; }
+  // el semirremolque va en el lugar y el rumbo del camión; el tractor, enganchado al perno y girado lo que venga doblando
+  function ubicar(c) { const e = c.esc, cs = Math.cos(c.h), sn = Math.sin(c.h), ht = c.h + (c.art || 0); eu.set(0, c.h, 0); q4.setFromEuler(eu); m4.compose(v3.set(c.x, 0, c.z), q4, s3.set(e, e, e)); iR.setMatrixAt(c.i, m4); (c.lisa ? iL : iC).setMatrixAt(c.i, m4); (c.lisa ? iC : iL).setMatrixAt(c.i, CERO);
+    const kx = c.x + PERNO * cs * e, kz = c.z - PERNO * sn * e; eu.set(0, ht, 0); q4.setFromEuler(eu); m4.compose(v3.set(kx - PERNO * Math.cos(ht) * e, 0, kz + PERNO * Math.sin(ht) * e), q4, s3.set(e, e, e)); im.setMatrixAt(c.i, m4); ir.setMatrixAt(c.i, m4); for (const k of TODAS) k.instanceMatrix.needsUpdate = true;
+    if (oscuro() && (c.estado === 'va' || c.estado === 'sale') && !(c.cola[0] && c.cola[0].atras)) { m4.compose(v3.set(kx + (17 - PERNO) * Math.cos(ht), 0.09, kz - (17 - PERNO) * Math.sin(ht)), q4, s3.set(22 * e, 1, 11 * e)); il.setMatrixAt(c.i, m4); } else il.setMatrixAt(c.i, CERO); il.instanceMatrix.needsUpdate = true; }
+  function sacar(c) { T.camiones.splice(T.camiones.indexOf(c), 1); for (const k of TODAS) { k.setMatrixAt(c.i, CERO); k.instanceMatrix.needsUpdate = true; } il.setMatrixAt(c.i, CERO); il.instanceMatrix.needsUpdate = true; if (c.anden && c.anden.cam === c) c.anden.cam = null; }
   const dirH = h => [Math.cos(h), -Math.sin(h)];
   // maniobra de entrada: pasa de largo unos metros y retrocede en curva hasta quedar de cola contra el andén
   function entrar(c, a, ruta) { const pts = ruta.map(n => [n.x, n.z]), k = pts[pts.length - 1], pv = pts[pts.length - 2] || [k[0] - a.nz, k[1] + a.nx]; let dx = k[0] - pv[0], dz = k[1] - pv[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
@@ -79,7 +72,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     const k = [ruta[0].x, ruta[0].z], sg = [ruta[1].x, ruta[1].z]; let dx = sg[0] - k[0], dz = sg[1] - k[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const D = [a.x, a.z], D2 = [a.x + a.nx * 9, a.z + a.nz * 9], cc = Math.min(20, Math.hypot(k[0] - D2[0], k[1] - D2[1]) * 0.55);
     c.cola = [tramo([D, ...curva(D2, [D2[0] + a.nx * cc, D2[1] + a.nz * cc], [k[0] - dx * cc, k[1] - dz * cc], k)], { v: 2.6 }), tramo(ruta.map(n => [n.x, n.z]), { carril: true, car: ruta.map(n => n.k) })]; c.s = 0; c.estado = 'sale'; }
 
-  function armar() { for (const c of T.camiones.slice()) sacar(c); red(); const con = T.andenes.filter(a => a.nodo); im.visible = ir.visible = il.visible = T.on && T.andenes.length > 0; im.count = MAX * PARTES.length;
+  function armar() { for (const c of T.camiones.slice()) sacar(c); red(); const con = T.andenes.filter(a => a.nodo); for (const k of [...TODAS, il]) k.visible = T.on && T.andenes.length > 0;
     // de entrada, cuatro de cada diez andenes ya tienen un camión
     for (const a of T.andenes) { if (Math.random() > 0.4) continue; const c = nuevoCamion(); if (!c) break; c.x = a.x; c.z = a.z; c.h = a.h; c.esc = 1; c.anden = a; a.cam = c; c.estado = 'anden'; c.t = a.nodo ? rnd(20, 240) : 1e9; pintar(c); ubicar(c); }
     T.con = con; T.prox = 1.5; avisar(); motor.dirty = true; }
@@ -102,19 +95,19 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     for (const c of T.camiones.slice()) {
       if (c.estado === 'anden') { c.t -= dt; if (c.t <= 0) salir(c); continue; }
       if (c.estado === 'chau') { c.t -= dt * 1.5; c.esc = Math.max(0, c.t); ubicar(c); movio = true; if (c.t <= 0) sacar(c); continue; }
-      const tr = c.cola[0]; if (!tr) { if (c.estado === 'va') { c.estado = 'anden'; c.t = rnd(45, 200); c.x = c.anden.x; c.z = c.anden.z; c.h = c.anden.h; c.lado = 0; ubicar(c); avisar(); } else { c.estado = 'chau'; c.t = 1; } movio = true; continue; }
+      const tr = c.cola[0]; if (!tr) { if (c.estado === 'va') { c.estado = 'anden'; c.t = rnd(45, 200); c.x = c.anden.x; c.z = c.anden.z; c.h = c.anden.h; c.lado = 0; c.art = 0; ubicar(c); avisar(); } else { c.estado = 'chau'; c.t = 1; } movio = true; continue; }
       if (c.esc < 1) c.esc = Math.min(1, c.esc + dt * 1.5);
       if (tapado(c, tr) && (c.esp = (c.esp || 0) + dt) < 25) continue; c.esp = 0;
       // velocidad: más despacio en las curvas y al llegar al final del tramo
       const queda = tr.largo - c.s, vmax = tr.atras ? tr.v : (tr.carril ? 6 : tr.v), v = Math.max(0.9, Math.min(vmax, queda * 0.6 + 0.9) * (c.gira > 0.25 ? 0.55 : 1)); c.s += v * dt;
       if (c.s >= tr.largo) { c.cola.shift(); c.s = 0; if (c.estado === 'sale' && !c.cola.length) { c.estado = 'chau'; c.t = 1; } if (c.cola[0] && c.estado === 'sale' && c.anden) { if (c.anden.cam === c) c.anden.cam = null; avisar(); } continue; }
       let i = 1; while (i < tr.L.length - 1 && tr.L[i] < c.s) i++; const a = tr.pts[i - 1], b = tr.pts[i], f = (c.s - tr.L[i - 1]) / Math.max(0.001, tr.L[i] - tr.L[i - 1]); let dx = b[0] - a[0], dz = b[1] - a[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-      const hObj = tr.atras ? Math.atan2(dz, -dx) : Math.atan2(-dz, dx), dif = ang(c.h, hObj); c.gira = Math.abs(dif); c.h += Math.max(-1.5 * dt, Math.min(1.5 * dt, dif)) * (tr.atras ? 1.2 : 1);
+      const hObj = tr.atras ? Math.atan2(dz, -dx) : Math.atan2(-dz, dx), dif = ang(c.h, hObj); c.gira = Math.abs(dif); c.art += (Math.max(-0.6, Math.min(0.6, tr.atras ? -dif * 0.9 : dif)) - c.art) * Math.min(1, dt * 2.5); c.h += Math.max(-1.5 * dt, Math.min(1.5 * dt, dif)) * (tr.atras ? 1.2 : 1);
       c.lado += ((tr.carril ? 1 : 0) - c.lado) * Math.min(1, dt * 0.8); const [hx, hz] = dirH(c.h), off = 2.1 * c.lado * (tr.car ? tr.car[i - 1] + (tr.car[i] - tr.car[i - 1]) * f : 1); c.x = a[0] + (b[0] - a[0]) * f - hz * off; c.z = a[1] + (b[1] - a[1]) * f + hx * off; ubicar(c); movio = true; }
     return movio; }
 
   motor.cada.push(paso); motor.alTema.push(() => { for (const c of T.camiones) { pintar(c); ubicar(c); } });
   // si cambian las calles o las naves (se editó), la red se arma de nuevo
   T.revisar = () => { const f = JSON.stringify(M.E.piezas.filter(p => p.t === 'calle' || (p.t === 'galpon' && p.estilo === 'logistico')).map(p => [p.id, p.x, p.z, p.r, p.ancho, p.fondo, p.pts, p.andenes, p.andenesEn, p.anexo, p.tipo, p.mano, p.libre])); if (f === T.firma) return; T.firma = f; armar(); };
-  T.ver = on => { T.on = !!on; im.visible = ir.visible = il.visible = T.on && T.andenes.length > 0; avisado = ''; avisar(); motor.dirty = true; };
+  T.ver = on => { T.on = !!on; for (const k of [...TODAS, il]) k.visible = T.on && T.andenes.length > 0; avisado = ''; avisar(); motor.dirty = true; };
   T.revisar(); return T; }

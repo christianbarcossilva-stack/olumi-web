@@ -477,16 +477,59 @@ function autito(t) { if (AUTITOS[t]) return AUTITOS[t]; const D = { hatch: [4.0,
   for (const sz of [-1, 1]) { bx(L / 2 - 0.03, L / 2 + 0.075, 0.66, 0.8, sz * (W / 2 - 0.5) - 0.2, sz * (W / 2 - 0.5) + 0.2, '#f6f2e4'); bx(-L / 2 - 0.075, -L / 2 + 0.03, 0.78, 0.92, sz * (W / 2 - 0.45) - 0.18, sz * (W / 2 - 0.45) + 0.18, '#b3261e'); }
   return (AUTITOS[t] = { cuerpo: cu, det: mergeGeometries(det) }); }
 
+// ---------- camión con semirremolque: una sola forma para los que andan, los que esperan en un andén y los estacionados ----------
+// Metros, largo sobre x (la cabina mira a +x), el centro en el medio del semirremolque. El tractor gira sobre el perno (x = PERNO).
+// Cada parte viene en dos mallas: la que toma el color de la pieza (chapa, con lo oscuro pintado encima) y los detalles con su color propio.
+export const PERNO = 4.9;
+let CAMION = null;
+export function camionGeo() { if (CAMION) return CAMION; const seg = FINO ? 18 : 10;
+  const junta = () => { const L = [], pon = (geo, hex, k = 1) => { const g2 = geo.index ? geo.toNonIndexed() : geo; g2.deleteAttribute('uv'); const n = g2.attributes.position.count, col = new Float32Array(n * 3), c = new THREE.Color(hex); for (let i = 0; i < n; i++) { col[i * 3] = c.r * k; col[i * 3 + 1] = c.g * k; col[i * 3 + 2] = c.b * k; } g2.setAttribute('color', new THREE.BufferAttribute(col, 3)); L.push(g2); };
+    const bx = (x0, x1, y0, y1, z0, z1, hex, k) => pon(new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), hex, k);
+    const cil = (x, y, z, r, l, eje, hex, k, sg = seg) => { const g = new THREE.CylinderGeometry(r, r, l, sg); if (eje === 'z') g.rotateX(Math.PI / 2); else if (eje === 'x') g.rotateZ(Math.PI / 2); pon(g.translate(x, y, z), hex, k); };
+    const perfil = (pts, ancho, bisel) => { const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(q => new THREE.Vector2(q[0], q[1]))), { depth: ancho - bisel * 2, bevelEnabled: true, bevelSize: bisel, bevelThickness: bisel, bevelSegments: FINO ? 2 : 1, curveSegments: 1 }); g.translate(0, 0, -(ancho - bisel * 2) / 2); return g; };
+    // rueda: cubierta, llanta clara hacia afuera y maza
+    const rueda = (x, z, an) => { const s = Math.sign(z); cil(x, 0.52, z, 0.52, an, 'z', '#15171a'); cil(x, 0.52, z + s * (an / 2 - 0.02), 0.31, 0.06, 'z', '#c3c8cd'); cil(x, 0.52, z + s * (an / 2 + 0.01), 0.11, 0.07, 'z', '#5d646b', 1, 8); };
+    return { pon, bx, cil, perfil, rueda, fin: () => mergeGeometries(L) }; };
+  const B = '#ffffff', OSC = '#101316', AL = '#aab1b8';
+  // ---- semirremolque: chasis, ejes, patas, paragolpes, luces ----
+  const R = junta(); R.bx(-6.05, 3.6, 0.98, 1.3, -0.56, -0.4, '#24282c'); R.bx(-6.05, 3.6, 0.98, 1.3, 0.4, 0.56, '#24282c'); R.bx(3.6, 6.1, 1.18, 1.3, -0.56, 0.56, '#24282c'); R.bx(-6.15, 6.15, 1.3, 1.38, -1.25, 1.25, '#2d3237');
+  for (const x of [-5.1, -3.8, -2.5]) { R.rueda(x, 0.98, 0.62); R.rueda(x, -0.98, 0.62); R.cil(x, 0.52, 0, 0.09, 1.6, 'z', '#3a4047', 1, 6); R.bx(x - 0.66, x + 0.66, 1.1, 1.15, 0.64, 1.3, '#1b1e22'); R.bx(x - 0.66, x + 0.66, 1.1, 1.15, -1.3, -0.64, '#1b1e22'); }
+  for (const z of [-1, 1]) { R.bx(-5.9, -5.86, 0.3, 1.0, z * 0.68, z * 1.28, '#16181b'); R.bx(-1.5, 3.1, 0.52, 0.6, z * 1.2 - 0.02, z * 1.2 + 0.02, AL); R.bx(-1.5, 3.1, 0.84, 0.92, z * 1.2 - 0.02, z * 1.2 + 0.02, AL); for (const x of [-1.45, 0.8, 3.05]) R.bx(x - 0.04, x + 0.04, 0.52, 1.3, z * 1.2 - 0.02, z * 1.2 + 0.02, AL);
+    R.bx(3.42, 3.56, 0.14, 1.0, z * 0.84, z * 0.98, AL); R.bx(3.32, 3.66, 0.08, 0.14, z * 0.76, z * 1.06, '#7e868d'); R.bx(-6.21, -6.15, 0.86, 1.02, z * 0.72, z * 1.16, '#ff2a1c', 2.6); R.bx(-6.21, -6.15, 0.86, 1.02, z * 0.56, z * 0.7, '#ff9d1c', 1.5); for (const x of [-4.4, -0.6, 2.2, 5.2]) R.bx(x - 0.07, x + 0.07, 1.31, 1.37, z * 1.25, z * 1.275, '#ff9d1c', 1.6); }
+  R.bx(-6.2, -6.1, 0.52, 0.68, -1.2, 1.2, '#c9ced2'); for (const z of [-0.85, -0.25, 0.35, 0.95]) R.bx(-6.21, -6.2, 0.53, 0.67, z - 0.14, z + 0.14, '#d7261e'); R.bx(-6.215, -6.2, 0.74, 0.86, -0.26, 0.26, '#f4f5f6'); R.bx(3.49, 3.5, 0.5, 0.56, -0.9, 0.9, AL); R.cil(PERNO, 1.14, 0, 0.42, 0.08, 'y', '#1b1e22'); R.bx(0.3, 1.9, 0.56, 1.0, -1.18, -0.5, '#3a4047');
+  // ---- caja lisa (furgón o frigorífico) y contenedor: toman el color de la pieza ----
+  const F = junta(); F.bx(-6.15, 6.15, 1.38, 4.13, -1.27, 1.27, B); for (const z of [-1, 1]) { F.bx(-6.17, 6.17, 1.36, 1.5, z * 1.27, z * 1.29, B, 0.55); F.bx(-6.17, 6.17, 4.02, 4.15, z * 1.27, z * 1.29, B, 0.7); for (let x = -4.92; x < 6; x += 1.23) F.bx(x - 0.012, x + 0.012, 1.5, 4.02, z * 1.27, z * 1.277, B, 0.78); }
+  F.bx(-6.19, -6.15, 1.38, 4.13, -1.27, 1.27, B, 0.8); F.bx(-6.2, -6.19, 1.5, 4.02, -0.012, 0.012, B, 0.4); for (const z of [-0.95, -0.35, 0.35, 0.95]) { F.cil(-6.22, 2.76, z, 0.028, 2.5, 'y', B, 0.45, 6); F.bx(-6.26, -6.19, 2.2, 2.26, z - 0.02, z + 0.14, B, 0.45); }
+  F.bx(6.15, 6.4, 2.45, 4.02, -0.85, 0.85, B, 0.92); F.bx(6.4, 6.42, 2.7, 3.7, -0.66, 0.66, OSC, 0.6); F.bx(6.4, 6.415, 2.5, 2.64, -0.3, 0.3, B, 0.6);
+  const C = junta(), paso = FINO ? 0.56 : 1.12; C.bx(-6.03, 6.03, 1.44, 3.93, -1.17, 1.17, B, 0.9); for (const z of [-1, 1]) { for (let x = -5.88; x < 5.9; x += paso) C.bx(x, x + paso * 0.5, 1.56, 3.83, z * 1.17, z * 1.192, B, 0.94); C.bx(-6.1, 6.1, 1.38, 1.56, z * 1.14, z * 1.22, B, 0.72); C.bx(-6.1, 6.1, 3.83, 3.97, z * 1.14, z * 1.22, B, 0.72);
+    for (const x of [-6.1, 5.94]) { C.bx(x, x + 0.16, 1.38, 3.97, z * 1.06, z * 1.22, B, 0.72); for (const y of [1.38, 3.8]) C.bx(x - 0.01, x + 0.17, y, y + 0.17, z * 1.05, z * 1.23, B, 0.45); } }
+  C.bx(-6.07, -6.03, 1.5, 3.9, -1.08, 1.08, B, 0.85); C.bx(-6.08, -6.07, 1.5, 3.9, -0.012, 0.012, B, 0.35); for (const z of [-0.8, -0.3, 0.3, 0.8]) { C.cil(-6.1, 2.7, z, 0.026, 2.36, 'y', B, 0.5, 6); C.bx(-6.14, -6.07, 2.3, 2.36, z - 0.02, z + 0.13, B, 0.5); } for (let y = 1.7; y < 3.8; y += 0.42) C.bx(6.03, 6.06, y, y + 0.21, -1.06, 1.06, B);
+  // ---- tractor: cabina (toma el color), vidrios y parrilla oscuros encima ----
+  const K = junta(); K.pon(K.perfil([[6.55, 1.1], [9.12, 1.1], [9.16, 1.9], [9.1, 2.25], [8.93, 3.35], [8.72, 3.72], [6.75, 3.78], [6.55, 3.6]], 2.5, 0.06), B); K.pon(K.perfil([[6.62, 3.8], [8.62, 3.8], [8.3, 4.03], [6.8, 4.3], [6.62, 4.3]], 2.36, 0.04), B);
+  K.pon(new THREE.BoxGeometry(0.04, 1.0, 2.16).rotateZ(0.153).translate(9.085, 2.82, 0), OSC, 0.5); for (const z of [-1, 1]) { K.bx(7.95, 8.86, 2.42, 3.2, z * 1.245, z * 1.262, OSC, 0.5); K.bx(7.38, 7.9, 2.42, 3.2, z * 1.245, z * 1.262, OSC, 0.5); K.bx(7.2, 7.215, 1.3, 3.5, z * 1.25, z * 1.258, B, 0.5); K.bx(7.5, 7.62, 1.95, 2.0, z * 1.25, z * 1.275, OSC); K.bx(7.72, 9.05, 1.1, 1.32, z * 1.0, z * 1.27, B, 0.8); }
+  K.bx(9.19, 9.235, 1.2, 2.06, -0.96, 0.96, OSC, 0.6); K.bx(8.98, 9.34, 3.37, 3.46, -1.22, 1.22, OSC, 0.9); K.bx(9.2, 9.24, 2.1, 2.2, -0.5, 0.5, B, 0.5);
+  const D = junta(); D.bx(3.85, 9.0, 0.78, 1.05, -0.5, -0.38, '#22262a'); D.bx(3.85, 9.0, 0.78, 1.05, 0.38, 0.5, '#22262a'); D.bx(3.85, 3.95, 0.78, 1.05, -0.5, 0.5, '#22262a'); D.bx(8.98, 9.3, 0.5, 1.1, -1.27, 1.27, '#2b3035'); D.bx(9.3, 9.315, 0.56, 0.7, -0.26, 0.26, '#f4f5f6');
+  for (const z of [-1, 1]) { D.rueda(8.35, z * 1.05, 0.36); D.rueda(PERNO, z * 0.98, 0.62); D.bx(4.2, 5.6, 1.08, 1.13, z * 0.64, z * 1.3, '#1b1e22'); D.bx(4.2, 4.25, 0.5, 1.08, z * 0.66, z * 1.28, '#16181b'); D.bx(9.3, 9.33, 0.74, 0.97, z * 0.72, z * 1.17, '#fff3d6', 3.2); D.bx(9.3, 9.33, 0.6, 0.69, z * 0.82, z * 1.12, '#ff9d1c', 1.5);
+    D.cil(6.55, 0.84, z * 0.96, 0.33, 1.5, 'x', '#b4bbc1'); D.bx(6.1, 6.16, 0.5, 1.18, z * 0.62, z * 1.3, '#2b3035'); D.bx(6.94, 7.0, 0.5, 1.18, z * 0.62, z * 1.3, '#2b3035'); D.bx(7.3, 7.75, 0.56, 0.62, z * 1.0, z * 1.26, AL); D.bx(7.3, 7.75, 0.84, 0.9, z * 1.0, z * 1.26, AL);
+    D.bx(9.0, 9.08, 2.5, 3.16, z * 1.4, z * 1.56, '#17191c'); D.bx(8.99, 9.03, 2.8, 2.86, z * 1.25, z * 1.42, '#17191c'); D.bx(3.86, 3.9, 0.82, 0.98, z * 0.58, z * 0.9, '#ff2a1c', 2.4); }
+  D.cil(6.44, 2.55, 1.1, 0.07, 2.9, 'y', '#aeb5bb', 1, 8); D.cil(PERNO, 1.09, 0, 0.5, 0.08, 'y', '#15171a'); for (const y of [1.36, 1.58, 1.8]) D.bx(9.235, 9.25, y, y + 0.05, -0.9, 0.9, '#c9ced2');
+  CAMION = { remolque: R.fin(), lisa: F.fin(), contenedor: C.fin(), cabina: K.fin(), tractor: D.fin() }; return CAMION; }
+// materiales compartidos: el que toma el color de cada pieza y el de los detalles
+const MAT_CAM = {};
+export function matCamion() { if (!MAT_CAM.t) { MAT_CAM.t = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.5, metalness: 0.22 }); MAT_CAM.d = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.62, metalness: 0.3 }); } return MAT_CAM; }
+// un camión o un semirremolque quieto, armado como pieza (color de carga vacío = chasis solo)
+function camionQuieto(g, carga, cabina) { const G = camionGeo(), M = matCamion(), pinta = hex => { const m = M.t.clone(); m.color.set(oscuro() ? mix(hex, '#000', 0.4) : hex); return m; }, pon = (geo, m, s = true) => { const k = new THREE.Mesh(geo, m); k.castShadow = s; k.receiveShadow = true; g.add(k); return k; };
+  pon(G.remolque, M.d); if (carga) pon(/^#(f|e|d)/i.test(carga) ? G.lisa : G.contenedor, pinta(carga)); if (cabina) { pon(G.cabina, pinta(cabina)); pon(G.tractor, M.d); } g.userData.sinAplanar = true; return g; }
+
 // estacionamiento de camiones: lugares largos (derechos o en ángulo) con sus líneas pintadas y semirremolques esperando. El fondo de cada lugar mira a +z.
 function estCamiones(p, g, os, C, R, po) { const LU = +p.lugar > 3.2 ? +p.lugar : 4, DP = 16.5, a = Math.max(-60, Math.min(60, +p.angulo || 0)) * Math.PI / 180, w = C * LU / 2, d = R * DP / 2, lg = DP / Math.cos(a), co = Math.abs(Math.tan(a)) * DP / 2, sn = Math.sin(a), cs = Math.cos(a);
   if (!p.sinPiso) { const ps = new THREE.Mesh(new THREE.PlaneGeometry(C * LU + co * 2 + 1, R * DP + 1).rotateX(-Math.PI / 2), calmo(matTex(texSuelo('asfalto'), os ? '#55595c' : '#ffffff', [(C * LU + co * 2 + 1) / METROS.asfalto, (R * DP + 1) / METROS.asfalto], { roughness: 0.94, ...po }), 0.38)); ps.position.y = 0.045; ps.receiveShadow = true; ps.userData.noChoca = true; g.add(ps); }
-  const lin = [], it = [], R0 = azar(semilla(p)), COL = os ? ['#7d858c', '#8b949c', '#6a727a', '#59463a', '#4e3b30', '#27405f'] : ['#eceff1', '#d9dde0', '#f4f5f6', '#c5cbd0', '#8a5a3c', '#7b4a32', '#eceff1', '#2f5f9e'], ne = os ? '#15181b' : '#2a2f34', me = os ? '#59616a' : '#9aa3ab';
+  const lin = [], lisos = [], conts = [], R0 = azar(semilla(p)), COL = os ? ['#9aa1a8', '#8b949c', '#a3a9ae', '#59463a', '#4e3b30', '#27405f', '#7a3230'] : ['#eceff1', '#f4f5f6', '#dfe3e6', '#f4f5f6', '#8a5a3c', '#7b4a32', '#2f5f9e', '#a8322b', '#3d6b4f'];
   for (let r = 0; r < R; r++) { const zc = -d + r * DP + DP / 2; for (let c = 0; c <= C; c++) lin.push([-w + c * LU, 0.054, zc, a, 0.14, 0.012, lg]);
-    for (let c = 0; c < C; c++) { if (R0() * 100 >= p.ocupacion) continue; const x = -w + (c + 0.5) * LU, z = zc + (R0() - 0.5) * 0.8, col = COL[(R0() * COL.length) | 0], en = (k, l) => [x + sn * k + cs * l, z + cs * k - sn * l];   // k a lo largo del lugar, l de costado
-      it.push([x, 2.74, z, a, 2.5, 2.78, 12.3, col], [x, 1.2, z, a, 2.3, 0.3, 12.4, ne]); const [rx, rz] = en(3.75, 0); it.push([rx, 0.52, rz, a, 2.5, 1.04, 3.7, '#17191c']); const [dx, dz] = en(6.17, 0); it.push([dx, 2.74, dz, a, 2.32, 2.55, 0.05, os ? '#3b4249' : '#aeb4ba']);
-      for (const l of [-0.95, 0.95]) { const [px, pz] = en(-3.9, l); it.push([px, 0.55, pz, a, 0.14, 1.1, 0.14, me]); } } }
+    for (let c = 0; c < C; c++) { if (R0() * 100 >= p.ocupacion) continue; const col = COL[(R0() * COL.length) | 0], k = (R0() - 0.5) * 0.9, it = [-w + (c + 0.5) * LU + sn * k, 0, zc + cs * k, a + Math.PI / 2, 1, 1, 1, col]; (/^#(f|e|d|9|a)/i.test(col) ? lisos : conts).push(it); } }
   const ll = lote(g, CAJA, mat(os ? '#9fb2c2' : '#f2f4f5', { roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -9, polygonOffsetUnits: -8 }), lin, false); if (ll) ll.userData.noChoca = true;
-  lote(g, CAJA, mat('#ffffff', { roughness: 0.6, metalness: 0.15 }), it); return g; }
+  // semirremolques esperando (sin tractor): los claros son furgones y los de color, contenedores
+  const G = camionGeo(), M = matCamion(); lote(g, G.remolque, M.d, [...lisos, ...conts].map(q => q.slice(0, 7))); lote(g, G.lisa, M.t, lisos); lote(g, G.contenedor, M.t, conts); return g; }
 
 export const TIPOS = {
   // terreno y caminos
@@ -793,12 +836,10 @@ export const TIPOS = {
           const b = new THREE.Mesh(CAJA, neon(a, 0.16)); b.position.copy(k.position); b.scale.set(Math.abs(u1 - u0) + 1.6, 0.04, Math.abs(v1 - v0) + 1.6); b.renderOrder = 2; g.add(b); } }
       g.userData.cuenta = its.length; return g; } },
   chasis: { n: 'Semirremolque', g: 'Logística', forma: 'punto', capa: 'logistica', def: { carga: '' }, campos: [F.nombre, { k: 'carga', n: 'Contenedor arriba (color)', t: 'color' }, F.r],
-    armar(p) { const g = new THREE.Group(), m = mat(oscuro() ? '#2c3136' : '#4a5057'); caja(g, -6.2, 1.05, -1.2, 6.2, 1.35, 1.2, m); caja(g, -6.2, 0.5, -0.9, -5.2, 1.05, 0.9, m);
-      lote(g, CILX, mat('#1e2226'), [3.4, 4.7].flatMap(x => [-1.05, 1.05].map(z => [x, 0.5, z, 0, 1, 1, 0.3])));
-      if (p.carga) caja(g, -6.1, 1.35, -1.22, 6.1, 3.94, 1.22, mat(p.carga, { roughness: 0.6, metalness: 0.15 })); return g; } },
+    armar(p) { return camionQuieto(new THREE.Group(), p.carga, ''); } },
   camion: { n: 'Camión con contenedor', g: 'Logística', forma: 'punto', capa: 'logistica', def: { carga: '#c2415b', cabina: '#f2f4f5' },
     campos: [F.nombre, { k: 'carga', n: 'Contenedor (color, vacío = sin carga)', t: 'color' }, { k: 'cabina', n: 'Cabina', t: 'color' }, F.r],
-    armar(p) { const g = TIPOS.chasis.armar({ carga: p.carga }); const c = mat(p.cabina, { roughness: 0.4, metalness: 0.3 }); caja(g, 6.4, 0.6, -1.25, 9.2, 3.4, 1.25, c); caja(g, 8.9, 1.9, -1.1, 9.25, 2.9, 1.1, mat('#22313f', { roughness: 0.1, metalness: 0.6 }), false); return g; } },
+    armar(p) { return camionQuieto(new THREE.Group(), p.carga, p.cabina || '#f2f4f5'); } },
   maquina: { n: 'Máquina de patio', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'apiladora', color: '#d8a31a' },
     campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
