@@ -93,7 +93,7 @@ kbd{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:2px 5px;
 html.mfull .mbar{opacity:.97}
 /* recorrer a pie: aviso de teclas y palanca para el dedo */
 #mpaseo{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:8px;padding:5px 6px 5px 13px;border-radius:999px;font-size:12px;color:var(--muted);border:1px solid var(--line);background:var(--vidrio-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);max-width:calc(100vw - 16px)}
-#mpaseo .tec{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;max-width:560px;transition:max-width .5s,opacity .4s}#mpaseo .tec b{color:var(--ink);font-weight:600}#mpaseo .tec i{width:3px;height:3px;border-radius:50%;background:var(--line);margin:0 3px}
+#mpaseo .tec{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;max-width:min(860px,calc(100vw - 230px));transition:max-width .5s,opacity .4s}#mpaseo .tec b{color:var(--ink);font-weight:600}#mpaseo .tec i{width:3px;height:3px;border-radius:50%;background:var(--line);margin:0 3px}
 #mpaseo.corta{padding-left:6px}#mpaseo.corta .tec{max-width:0;opacity:0}
 #mpaseo button{border:0;background:var(--ink);color:var(--bg,#fff);border-radius:999px;height:28px;padding:0 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:grid;place-items:center;flex:none}
 #mpaseo #mpojos{width:28px;padding:0;background:var(--fill);color:var(--ink)}#mpaseo #mpojos[aria-pressed=true]{background:var(--acc);color:var(--acc-ink)}
@@ -150,3 +150,12 @@ html.presenta .vidrio:not(#mpres),html.presenta #mlbl .metq.eq,html.presenta #mp
 html.vecamara #mlbl,html.vecamara #minfo{display:none}
 @media (prefers-reduced-motion:reduce){#mcamv .mcv-rec::before{animation:none}}
 @media (max-width:760px){#mcamv{padding:126px 12px 14px;font-size:12px}#mpres{border-radius:16px;bottom:16px}}
+/* la mira: con el mouse tomado (recorrer como en un juego) el centro de la pantalla es el puntero. Punto blanco con borde; se abre en anillo sobre lo que se puede tocar */
+#mmira{position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;z-index:5;pointer-events:none;display:none}
+#mmira::before{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
+#mmira::after{content:"";position:absolute;inset:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,0);transition:inset .12s,border-color .12s}
+html.mirando #mmira{display:block}html.mirando #m3d,html.mirando body.paseando #m3d{cursor:none}
+html.mirando:has(#m3d.sobre) #mmira::after,html.mirando:has(#m3d.lleva) #mmira::after{inset:1px;border-color:rgba(255,255,255,.95);box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+html.mirando.editando:has(#m3d[data-h=maza]) #mmira::before{background:#ff453a}html.mirando.editando:has(#m3d[data-h=gotero]) #mmira::before{background:#30d158}
+html.presenta #mmira{display:none}
+@media (prefers-reduced-motion:reduce){#mmira::after{transition:none}}

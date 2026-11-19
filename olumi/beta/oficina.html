@@ -278,17 +278,28 @@ html.en-app .ev[data-feed]{cursor:pointer}html.en-app .ev[data-feed]:hover{backg
     // las camionetas en su lugar del estacionamiento
     S.vans.forEach((v,i)=>{if(v.out||i>=nl)return;piezas.push({id:'veh_'+v.id,t:'vehiculo',nombre:(v.n||'Vehículo')+(v.plate?' · '+v.plate:''),modelo:MODELO_VEH(v),color:v.col||'',x:+SLOT(i).toFixed(2),z:+(Hb+3.6).toFixed(2),r:Math.PI/2})});
     return{nombre:S.name||'Oficina',piezas,inicio:innerWidth<640?{tx:W/2,tz:Hb/2-2,yaw:0.62,pitch:0.9,d:62}:{tx:W/2,tz:Hb/2+5,yaw:0.62,pitch:0.86,d:43}}};
-  // botón y pantalla del motor (encima de la oficina; «Volver» la cierra)
-  window.__oficinaMotorAbrir=function(D){const K='olumi.motor.prueba';let st=null;try{st=JSON.parse(localStorage.getItem(K)||'null')}catch(e){}
-    if(!st||!st.escena||D.rehacer||!st.ext||!st.ext.olumi||st.ext.olumi.v!==2)st={v:1,motor:1,escena:window.__oficinaAMotor(D),ext:{olumi:{v:2,hecha:Date.now()}}};
+  // La maqueta de la oficina en el motor común, encima de la de siempre («Volver a la oficina de siempre» la cierra).
+  // · Lo que cambia solo (quién está y qué vehículos hay) se arma de nuevo cada vez que se abre; lo demás queda como se haya dejado al editar.
+  // · Queda elegida: si se abrió la nueva, la próxima vez la oficina entra directo en la nueva (olumi.oficina.motor = '1'); «Volver» lo apaga.
+  // · Tocar una sala (sin estar editando ni recorriendo) abre su área de Olumi, igual que en la de siempre. Recorrer la pone a pantalla completa.
+  const KP='olumi.oficina.motor',pon=v=>{try{localStorage.setItem(KP,v)}catch(e){}},pausa=on=>{try{postMessage({ofiPausa:!!on},'*')}catch(e){}};
+  addEventListener('message',e=>{if(e.data&&e.data.ofiPausa===false&&document.getElementById('motorOv'))setTimeout(()=>pausa(true),0)});   // con la nueva abierta, la de siempre no dibuja abajo
+  window.__oficinaMotorAbrir=function(D){const K='olumi.motor.prueba',stage=document.getElementById('stage')||document.body;let st=null;try{st=JSON.parse(localStorage.getItem(K)||'null')}catch(e){}
+    const fresca=window.__oficinaAMotor(D),vivo=q=>/^(per_|veh_)/.test(q.id||'');
+    if(!st||!st.escena||D.rehacer||!st.ext||!st.ext.olumi||st.ext.olumi.v!==2)st={v:1,motor:1,escena:fresca,ext:{olumi:{v:2,hecha:Date.now()}}};
+    else st.escena.piezas=st.escena.piezas.filter(q=>!vivo(q)).concat(fresca.piezas.filter(vivo));
     const osc=()=>{try{return D.oscuro&&D.oscuro()?'oscuro':'claro'}catch(e){return 'claro'}};
-    window.__maquetaHost={state:st,role:'inst',tema:osc(),paredes:'corte',park:D.S.name||'Oficina',save:s=>{try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}},juego:on=>{try{parent.postMessage({ovFull:!!on},'*')}catch(e){}}};
+    const llena=on=>{stage.classList&&stage.classList.toggle('fullfake',!!on);try{if(parent!==window)parent.postMessage({ovFull:!!on},'*')}catch(e){}};
+    const tocar=(pz,pt)=>{if((pz&&pz.t==='persona')||!pt||!D.areaAt||!D.openArea)return false;let k=null;try{k=D.areaAt({x:pt[0],y:pt[1]})}catch(e){}if(!k)return false;D.openArea(k);return true};
+    window.__maquetaHost={state:st,role:'inst',tema:osc(),paredes:'corte',park:D.S.name||'Oficina',save:s=>{try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}},juego:llena,alTocar:tocar};
     let ov=document.getElementById('motorOv');if(ov)ov.remove();ov=document.createElement('div');ov.id='motorOv';
-    ov.innerHTML='<iframe title="La oficina en el motor nuevo" src="../../motor/beta/?app=olumi&v=1" allow="fullscreen"></iframe><div class="mo-bar"><span class="mo-tag">Motor nuevo · copia de prueba</span><button type="button" class="walkbtn" data-mo="rehacer" title="Volver a armar la copia con la oficina de ahora">Rehacer la copia</button><button type="button" class="walkbtn" data-mo="cerrar">Volver a la oficina de siempre</button></div>';
-    ov.addEventListener('click',e=>{const b=e.target.closest('[data-mo]');if(!b)return;if(b.dataset.mo==='cerrar'){ov.remove();window.__maquetaHost=null}else{try{localStorage.removeItem(K)}catch(e){}window.__oficinaMotorAbrir(Object.assign({},D,{rehacer:1}))}});
-    (document.getElementById('stage')||document.body).appendChild(ov);
+    ov.innerHTML='<iframe title="La oficina en el motor nuevo" src="../../motor/beta/?app=olumi&v=5" allow="fullscreen"></iframe><div class="mo-bar"><span class="mo-tag">Motor nuevo</span><button type="button" class="walkbtn" data-mo="rehacer" title="Volver a armar la maqueta nueva con la oficina de ahora (se pierde lo que se haya movido en la nueva)">Rehacer la copia</button><button type="button" class="walkbtn" data-mo="cerrar">Volver a la oficina de siempre</button></div>';
+    ov.addEventListener('click',e=>{const b=e.target.closest('[data-mo]');if(!b)return;if(b.dataset.mo==='cerrar'){ov.remove();window.__maquetaHost=null;llena(false);pausa(false);pon('0')}else{try{localStorage.removeItem(K)}catch(e){}window.__oficinaMotorAbrir(Object.assign({},D,{rehacer:1}))}});
+    stage.appendChild(ov);pon('1');pausa(true);
     // el día y la noche los decide Olumi (Modo noche): si cambia con la copia abierta, se lo pasa al motor
     let tm=osc();clearInterval(window.__motorTema);window.__motorTema=setInterval(()=>{if(!ov.isConnected){clearInterval(window.__motorTema);return}const t=osc();if(t!==tm){tm=t;const f=ov.querySelector('iframe');f&&f.contentWindow&&f.contentWindow.postMessage({tema:t},'*')}},800)};
+  // si la última vez se eligió la nueva, se abre sola cuando la oficina ya tiene su gente cargada (o a los 6 s)
+  window.__oficinaMotorAuto=function(abrir,listo){let v=null;try{v=localStorage.getItem(KP)}catch(e){}if(v!=='1'||/[?&]cine=/.test(location.search))return;const t0=Date.now(),t=setInterval(()=>{if(document.getElementById('motorOv')){clearInterval(t);return}if(listo()||Date.now()-t0>6000){clearInterval(t);abrir()}},300)};
 })();
 /* === fin 1.52l === */</script>
 <script type="module">
@@ -1860,7 +1871,7 @@ function deskIn(room){const d=S.desks.find(q=>q.room===room)||S.desks[0]||{x:3,y
 if(APP){S.people=[];S.vans=[];S.desks=[];S.built=1;BUILD=0;FIC['🎫']='ticket';ICO.ticket='<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M10 7v10" stroke-dasharray="2 2"/>'}
 addEventListener('resize',fit);try{new ResizeObserver(fit).observe(stage)}catch(e){}fit();renderBody();renderHud();BUILD=0;requestAnimationFrame(frame);
 if(!APP){setTimeout(evWa,1200);setTimeout(evMail,3200)}
-/* 1.52l */{const bm=document.getElementById('b_motor');if(bm&&window.__oficinaMotorAbrir){bm.hidden=false;bm.onclick=()=>window.__oficinaMotorAbrir({ROOMS,PART,OUTW,ZONES,LAY,S,rot,avPick:typeof avPick==='function'?avPick:null,W,Hb,CANT,LAMPS,TREES,SLOT,oscuro:()=>DARK})}}
+/* 1.52l */{const bm=document.getElementById('b_motor');if(bm&&window.__oficinaMotorAbrir){bm.hidden=false;bm.onclick=()=>window.__oficinaMotorAbrir({ROOMS,PART,OUTW,ZONES,LAY,S,rot,avPick:typeof avPick==='function'?avPick:null,W,Hb,CANT,LAMPS,TREES,SLOT,oscuro:()=>DARK,areaAt:typeof areaAt==='function'?areaAt:null,openArea:typeof openArea==='function'?openArea:null});window.__oficinaMotorAuto&&window.__oficinaMotorAuto(()=>bm.click(),()=>S.built&&S.people.length>0)}}
 })();
 </script>
 </body>

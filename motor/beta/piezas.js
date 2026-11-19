@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=13';
+import { THREE } from './nucleo.js?v=14';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=8';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=10';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=4';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -854,7 +854,7 @@ export const TIPOS = {
     variantes: MUEBLES.map(([modelo, n]) => ({ n, o: { modelo } })),
     armar(p, ctx) { const g = new THREE.Group(); g.userData.sinAplanar = true; const b = (MUEB.data && MUEB.data[p.modelo] && MUEB.data[p.modelo].b) || [0.8, 0.8, 0.6];
       const caja0 = new THREE.Mesh(CAJA, mat('#c9ced2', { transparent: true, opacity: 0.35 })); caja0.scale.set(b[0], b[1], b[2]); caja0.position.y = b[1] / 2 + (p.y || 0); g.add(caja0);
-      muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
+      muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; m.userData.dueño = caja0.userData.dueño; /* el modelo llega después: hereda de quién es, para que se pueda tocar y elegir */ g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
       return g; } },
 };
 export const GRUPOS = ['Terreno', 'Construcción', 'Muebles', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];

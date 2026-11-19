@@ -5,13 +5,16 @@
 // V cambia la vista: tercera persona (para andar lejos), por los ojos (para armar de cerca) y vuelo (la cámara se suelta del muñeco:
 // W A S D la llevan, E o Espacio suben, Q baja, Shift apura; al salir del vuelo el muñeco baja donde quedó la cámara).
 // Se puede editar mientras se recorre: el toque pone o elige, arrastrar mira.
+// En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
+// (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=13';
+import { THREE } from './nucleo.js?v=14';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
   const R = { on: false, x: 0, z: 0, y: 0, rumbo: 0, vx: 0, vz: 0, k: {}, joy: { x: 0, y: 0 }, dist: 7, ojos: false, cajas: [], piezas: [], edif: [], hash: new Map() };
-  const RADIO = 0.28, CAMINA = 1.8, CORRE = 5.2, v3 = new THREE.Vector3();
+  const RADIO = 0.28, CAMINA = 3, CORRE = 6.5, SALTO = 6.2, PESO = 20, v3 = new THREE.Vector3();
+  const puedeMira = () => !motor.sinMira && !motor.tactil && matchMedia('(pointer: fine)').matches;
 
   // ---------- lo que no se atraviesa ----------
   function obstaculos() { R.cajas = []; R.piezas = []; R.edif = []; R.hash = new Map();
@@ -37,6 +40,7 @@ export function recorrer(M) {
     for (const P of R.piezas) { if (x < P.b.min.x || x > P.b.max.x || z < P.b.min.z || z > P.b.max.z) continue; const oculto = P.g === R.dentro; v3.set(x, 0, z).applyMatrix4(P.inv);
       for (const s of P.segs) { if (oculto && (s[7] || 0) > R.piso) continue; if (y > s[5] - 0.1 && y < s[6] + 0.15 && aTramo(v3.x, v3.z, s) < s[4] + 0.15) return true; } }
     return false; }
+  function sobre(x, z, y) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8)); let m = 0; if (L) for (const b of L) if (b.max.y <= y + 0.3 && b.max.y > m && x > b.min.x - 0.05 && x < b.max.x + 0.05 && z > b.min.z - 0.05 && z < b.max.z + 0.05) m = b.max.y; return m; }
   // arranca donde mira la cámara; si ahí hay algo (un edificio, una pila), busca el lugar libre más cercano dando vueltas
   function libre(x, z) { if (!choca(x, z)) return [x, z]; for (let r = 1; r < 120; r += 1) for (let a = 0; a < 6.28; a += 0.9 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (!choca(px, pz)) return [px, pz]; } return [x, z]; }
   // pisos que se pisan (edificios por dentro): el más alto que queda a un paso (60 cm) de donde uno está; afuera, el suelo
@@ -76,23 +80,33 @@ export function recorrer(M) {
   function irA(x, z) { if (!R.on) return; const c = camino(R.x, R.z, x, z) || [[x, z]]; R.ruta = c; R.trabado = 0; const f = c[c.length - 1]; marca.position.set(f[0], R.y + 0.12, f[1]); marca.visible = true; motor.dirty = true; }
 
   // ---------- entrar y salir ----------
-  async function paseo(on, donde) { if (on === R.on) { if (on && donde) irA(donde[0], donde[1]); return; } R.on = on; motor.caminando = on; const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on);
+  async function paseo(on, donde) { if (on === R.on) { if (on && donde) irA(donde[0], donde[1]); return; } R.on = on; motor.caminando = on; if (on) { if (puedeMira()) { motor.mira(true); R.llena = !!M.completa && !M.llena(); if (R.llena) M.completa(true); } } else { motor.mira(false); if (R.llena) { R.llena = false; M.completa(false); } } const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on);
     document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); R.joy = { x: 0, y: 0 }; R.k = {}; R.ruta = null; marca.visible = false; joyKnob();
     if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; R.vuelo = false; adentro(null); R.afuera = null; R.y = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
     R.antes = { cam: { tx: C.tx, tz: C.tz, d: Math.max(30, C.d), pitch: Math.max(0.3, C.pitch) }, lim: { min: C.min, max: C.max, pmin: C.pmin } }; Object.assign(C, { min: 0.05, max: 60, pmin: 0.06 });
-    R.y = 0; R.vx = R.vz = 0; R.ojos = false; R.vuelo = false; R.dist = 7; obstaculos(); vistaTxt(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
+    R.y = 0; R.vx = R.vz = 0; R.vy = 0; R.ojos = false; R.vuelo = false; R.dist = motor.mirando || puedeMira() ? 4.2 : 7; obstaculos(); vistaTxt(); ayudaTxt(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
     const g = new THREE.Group(); g.position.set(R.x, 0, R.z); mundo.add(g); R.g = g; ayuda(true); R.ob = await M.avatar(g); motor.dirty = true; }
   // por los ojos (V): la cámara va a la cabeza y el muñeco no se dibuja
   function ojos(on) { if (!R.on) return; if (on && !R.ojos) R.tercera = Math.max(2.5, R.dist); R.dist = on ? 0.05 : R.tercera || 7; }
   // vuelo: la cámara se suelta del muñeco y vuela sin chocar; al salir, el muñeco baja donde quedó
-  function vuelo(on) { if (!R.on || on === !!R.vuelo) return; R.vuelo = on; if (on) { if (!R.ojos) R.tercera = Math.max(2.5, R.dist); R.fx = R.x; R.fz = R.z; R.fy = R.y + 1.62; R.ruta = null; marca.visible = false; C.pmin = -1.2; }
-    else { [R.x, R.z] = libre(R.fx, R.fz); R.y = alturaEn(R.x, R.z, Math.max(0, R.fy - 1.6)); R.vx = R.vz = 0; R.dist = R.tercera || 7; C.pmin = 0.06; if (C.pitch < 0.2) C.pitch = 0.36; R.viaje = 0; R.puesta = null; } vistaTxt(); motor.dirty = true; }
+  function vuelo(on, vuelve) { if (!R.on || on === !!R.vuelo) return; R.vuelo = on; R.vy = 0; if (on) { R.deOjos = R.ojos; if (!R.ojos) R.tercera = Math.max(2.5, R.dist); R.fx = R.x; R.fz = R.z; R.fy = R.y + 1.62; R.ruta = null; marca.visible = false; C.pmin = -1.2; }
+    else { [R.x, R.z] = libre(R.fx, R.fz); R.y = alturaEn(R.x, R.z, Math.max(0, R.fy - 1.6)); R.vx = R.vz = 0; const aOjos = vuelve && R.deOjos; R.dist = aOjos ? 0.05 : R.tercera || 7; R.ojos = !!aOjos; C.pmin = aOjos ? -1.2 : 0.06; if (!aOjos && C.pitch < 0.2) C.pitch = 0.36; R.viaje = 0; R.puesta = null; } vistaTxt(); motor.dirty = true; }
   // V pasa de tercera persona a los ojos, de los ojos al vuelo y vuelve
   function vista() { if (R.vuelo) vuelo(false); else if (R.ojos || R.dist < 0.9) { vuelo(true); } else ojos(true); vistaTxt(); }
   function vistaTxt() { const b = $('#mpojos'); if (!b) return; const n = R.vuelo ? 'Vuelo' : R.dist < 0.9 ? 'Ojos' : '3.ª persona'; b.querySelector('span').textContent = n; b.setAttribute('aria-pressed', n !== '3.ª persona'); b.title = `Vista: ${n}. Cambiar (V)`; }
 
   // ---------- teclas, palanca y ayuda ----------
-  document.body.insertAdjacentHTML('beforeend', `<div id="mpaseo" role="status"><span class="tec"><kbd>W A S D</kbd> caminar <i></i> <kbd>Shift</kbd> correr <i></i> <b>clic</b> ir ahí <i></i> <b>arrastrar</b> mirar <i></i> <kbd>V</kbd> vista</span><button type="button" id="mpojos" aria-label="Cambiar la vista" title="Vista (V)">${M.svg('ojo', 16)}<span>3.ª persona</span></button><button type="button" id="mpsalir">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div><div id="musar" class="vidrio" hidden></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div id="mmira" aria-hidden="true"></div><div id="mpaseo" role="status"><span class="tec"></span><button type="button" id="mpojos" aria-label="Cambiar la vista" title="Vista (V)">${M.svg('ojo', 16)}<span>3.ª persona</span></button><button type="button" id="mpsalir">Salir</button></div><div id="mjoy" aria-hidden="true"><i></i></div><div id="musar" class="vidrio" hidden></div>`);
+  // la ayuda de abajo: lo más importante primero; entra lo que da el ancho (la maqueta puede estar en un recuadro angosto dentro de la app)
+  const P = ' <i></i> ', largo = h => h.replace(/<[^>]+>/g, '').length + 3;
+  function ayudaTxt() { const el = $('#mpaseo .tec'); if (!el) return;
+    const its = motor.mirando ? (motor.editando ? ['<b>Clic</b> pone, elige o agarra', '<b>Clic derecho</b> suelta', '<kbd>Esc</kbd> suelta el mouse', '<b>Rueda</b> gira', '<kbd>Tab</kbd> catálogo', '<kbd>1</kbd> a <kbd>9</kbd> herramientas']
+        : R.vuelo ? ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> volar', '<kbd>Espacio</kbd> sube', '<kbd>Q</kbd> baja', '<kbd>Espacio</kbd> dos veces: bajar', '<kbd>Shift</kbd> rápido', '<kbd>F</kbd> editar']
+        : ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> caminar', '<kbd>Esc</kbd> suelta el mouse', '<kbd>Espacio</kbd> saltar, dos veces vuela', '<kbd>Shift</kbd> correr', '<kbd>F</kbd> editar', '<kbd>V</kbd> vista'])
+      : puedeMira() ? ['<b>Clic en la maqueta</b> para mirar con el mouse', '<kbd>Esc</kbd> salir', '<kbd>W A S D</kbd> caminar']
+      : ['<kbd>W A S D</kbd> caminar', '<kbd>Shift</kbd> correr', '<b>clic</b> ir ahí', '<b>arrastrar</b> mirar', '<kbd>V</kbd> vista'];
+    let cabe = Math.max(26, (Math.min(860, innerWidth - 230)) / 6.6), out = []; for (const h of its) { if (out.length && largo(h) > cabe) break; out.push(h); cabe -= largo(h); } el.innerHTML = out.join(P); }
+  ayudaTxt(); motor.alMira = () => { if (!R.on) return; if (!motor.mirando) R.k = {}; ayudaTxt(); ayuda(true); }; motor.alEditar = () => { if (R.on) { ayudaTxt(); ayuda(true); } };
   let ayT; function ayuda(ver) { const el = $('#mpaseo'); el.classList.toggle('corta', !ver); clearTimeout(ayT); if (ver) ayT = setTimeout(() => el.classList.add('corta'), 9000); }
   $('#mpsalir').onclick = () => paseo(false); $('#mpojos').onclick = vista; $('#mpaseo').addEventListener('pointerenter', () => ayuda(true));
   const joy = $('#mjoy'); function joyKnob() { const j = R.joy || { x: 0, y: 0 }; joy.firstChild.style.transform = `translate(${j.x * 36}px,${j.y * 36}px)`; }
@@ -102,9 +116,10 @@ export function recorrer(M) {
   const TECLAS = ['w', 'a', 's', 'd', 'q', 'e', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
   addEventListener('keydown', e => { if (!R.on || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase();
     if (k === 'escape') { if (motor.editando) return; e.stopImmediatePropagation(); if (R.vuelo) vuelo(false); else paseo(false); return; }   // editando, Esc primero cierra lo del editor
-    if (k === 'v') { vista(); return; } if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); return; }
+    if (k === 'v') { vista(); ayudaTxt(); return; } if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); motor.mira(false); return; }
+    if (k === ' ' && !e.repeat) { const ya = e.timeStamp || performance.now(); if (ya - (R.tEsp || 0) < 300) { R.tEsp = 0; vuelo(!R.vuelo, true); ayudaTxt(); if (!R.vuelo) { R.k[' '] = 0; R.saltado = 1; e.preventDefault(); return; } } else R.tEsp = ya; }
     if (TECLAS.includes(k)) { R.k[k] = 1; if (k !== 'shift') { R.ruta = null; marca.visible = false; } if (k.startsWith('arrow') || k === ' ') e.preventDefault(); } }, true);
-  addEventListener('keyup', e => { R.k[e.key.toLowerCase()] = 0; }); addEventListener('blur', () => { R.k = {}; });
+  addEventListener('keyup', e => { R.k[e.key.toLowerCase()] = 0; }); addEventListener('blur', () => { R.k = {}; }); addEventListener('resize', () => { if (R.on) ayudaTxt(); });
 
   // ---------- cada cuadro ----------
   let tCerca = 0;
@@ -123,19 +138,22 @@ export function recorrer(M) {
       if (choca(R.x, R.z) || !choca(nx, nz)) { R.x = nx; R.z = nz; } else if (!choca(nx, R.z)) { R.x = nx; R.vz *= 0.5; } else if (!choca(R.x, nz)) { R.z = nz; R.vx *= 0.5; } else { R.vx = R.vz = 0; }
       if (R.ruta) { R.trabado = Math.hypot(R.x - x0, R.z - z0) < vel * dt * 0.2 ? (R.trabado || 0) + dt : 0; if (R.trabado > 0.7) { R.ruta = null; marca.visible = false; } }
       const r = Math.atan2(R.vx, R.vz); let d = r - R.rumbo; d = Math.atan2(Math.sin(d), Math.cos(d)); R.rumbo += d * Math.min(1, dt * 10); } else R.vx = R.vz = 0;
-    const yo = alturaEn(R.x, R.z, R.y); R.y += (yo - R.y) * Math.min(1, dt * (yo < R.y - 0.6 ? 6 : 14)); if (Math.abs(yo - R.y) < 0.004) R.y = yo;
+    const yo = Math.max(alturaEn(R.x, R.z, R.y), sobre(R.x, R.z, R.y)); if (!K[' ']) R.saltado = 0; else if (!R.saltado && !R.vy && R.y - yo < 0.06) { R.vy = SALTO; R.saltado = 1; }
+    if (R.vy || R.y > yo + 0.5) { R.vy = (R.vy || 0) - PESO * dt; R.y += R.vy * dt; if (R.y <= yo) { R.y = yo; R.vy = 0; } }   // en el aire: sube y cae con su peso
+    else { R.y += (yo - R.y) * Math.min(1, dt * 14); if (Math.abs(yo - R.y) < 0.004) R.y = yo; }
     let dg = null, piso = 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, R.x, R.z), S = g.userData.suelos[0]; if (lx > S.x0 - 0.2 && lx < S.x1 + 0.2 && lz > S.z0 - 0.2 && lz < S.z1 + 0.2) { dg = g; piso = Math.max(0, Math.floor((R.y + 0.9) / g.userData.altoPiso)); break; } }
     const eraOjos = R.ojos; R.ojos = R.dist < 0.9; if (R.ojos !== eraOjos) { C.pmin = R.ojos ? -1.2 : 0.06; if (!R.ojos && C.pitch < 0.06) C.pitch = 0.2; vistaTxt(); }
     adentro(dg, piso); if (R.incl) { R.incl.t -= dt; if (!R.ojos) C.pitch += (R.incl.a - C.pitch) * Math.min(1, dt * 5); if (R.incl.t <= 0) R.incl = null; }
     // cámara: sigue al muñeco a la altura del pecho (o de los ojos) y se acerca si hay algo en el medio
-    const alt = R.y + (R.ojos ? 1.62 : 1.35), kk = Math.min(1, dt * 9); C.tx += (R.x - C.tx) * kk; C.tz += (R.z - C.tz) * kk; C.ty = (C.ty || 0) + (alt - (C.ty || 0)) * kk;
-    let quiere = R.dist; if (!R.ojos && R.viaje <= 0) { const cp = Math.cos(C.pitch), ux = cp * Math.sin(C.yaw), uy = Math.sin(C.pitch), uz = cp * Math.cos(C.yaw); for (let s = 0.5; s <= R.dist; s += 0.25) if (tapa(R.x + ux * s, alt + uy * s, R.z + uz * s)) { quiere = Math.max(0.6, s - 0.35); break; } }
+    const hom = motor.mirando && !R.ojos ? Math.min(0.5, C.d * 0.14) : 0, hx0 = Math.cos(C.yaw) * hom, hz0 = -Math.sin(C.yaw) * hom, hl = hom && !tapa(R.x + hx0, R.y + 1.5, R.z + hz0), hx = hl ? hx0 : 0, hz = hl ? hz0 : 0;
+    const alt = R.y + (R.ojos ? 1.62 : hom ? 1.55 : 1.35), kk = Math.min(1, dt * (R.ojos ? 28 : 9)); C.tx += (R.x + hx - C.tx) * kk; C.tz += (R.z + hz - C.tz) * kk; C.ty = (C.ty || 0) + (alt - (C.ty || 0)) * Math.min(1, dt * (R.ojos ? 22 : 9));
+    let quiere = R.dist; if (!R.ojos && R.viaje <= 0) { const cp = Math.cos(C.pitch), ux = cp * Math.sin(C.yaw), uy = Math.sin(C.pitch), uz = cp * Math.cos(C.yaw); for (let s = 0.5; s <= R.dist; s += 0.25) if (tapa(R.x + hx + ux * s, alt + uy * s, R.z + hz + uz * s)) { quiere = Math.max(0.6, s - 0.35); break; } }
     if (R.viaje <= 0) { C.d += (quiere - C.d) * Math.min(1, dt * (quiere < C.d ? 14 : 5)); R.puesta = C.d; }
     R.g.visible = !R.ojos && C.d > 0.85; R.g.position.set(R.x, R.y, R.z); R.g.rotation.y = R.rumbo;
     if (marca.visible) { marca.material.opacity = 0.55 + 0.35 * Math.sin(t * 0.008); marca.position.y = R.y + 0.12; }
-    if (R.ob) { const A = M.AVM(); A.avPose(R.ob, v > 0.25 ? 'walk' : 'idle', dt * (v > 3 ? 1.7 : 1), { x: R.x, y: R.z, t: t / 1000 }); R.ob.sync(); }
+    if (R.ob) { const A = M.AVM(); A.avPose(R.ob, v > 0.25 ? 'walk' : 'idle', dt * (v > 4.5 ? 2 : v > 2.4 ? 1.45 : 1), { x: R.x, y: R.z, t: t / 1000 }); R.ob.sync(); }
     // el equipo que queda a mano (a menos de 2,2 m y adelante): E o clic lo abre
     if (t - tCerca > 220) { tCerca = t; let mejor = null, md = 2.2; for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t].equipo) continue; const d = Math.hypot((p.x || 0) - R.x, (p.z || 0) - R.z); if (d < md && Math.abs((+p.piso || 0) - R.y) < 2) { md = d; mejor = p; } }
       if (mejor !== R.cerca) { R.cerca = mejor; const el = $('#musar'); el.hidden = !mejor || motor.tactil; if (mejor) el.innerHTML = `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}`; } }
     return true; });
-  return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca }; }
+  return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca, puedeMira, ayudaTxt }; }
