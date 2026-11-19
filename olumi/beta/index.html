@@ -892,6 +892,10 @@ html.d2[data-paleta] select:not([multiple]){-webkit-appearance:none;appearance:n
 /* el botón de achicar el menú no va en la pantalla de ingreso */
 body:has(#auth:not([hidden])) .d2x{display:none!important}
 /* fin 1.52m */
+/* 1.52n */
+.jarch:has(.jmenu:not([hidden])){z-index:20}
+.jmenu{scroll-margin:16px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 18px 44px rgb(0 0 0 / .26)}
+/* fin 1.52n */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -5786,6 +5790,12 @@ function obsEditHtml(id,o){return`<div class="obs-edit" hidden><div class="grid"
 // 1.52e · al salir de la Oficina con la maqueta en pantalla completa, la página quedaba sin poder moverse (overflow:hidden del html)
 (()=>{if(typeof render!=='function')return;const _r=render;render=function(){const r=_r.apply(this,arguments);try{const f=document.getElementById('ofiFrame');if(!(f&&f.classList.contains('ofiFull'))&&document.documentElement.style.overflow==='hidden')document.documentElement.style.overflow=''}catch(_){}return r}})();
 /* === fin 1.52e === */
+/* === 1.52n · menú a la vista === */
+// 1.52n · El menú del + (Fotos y planos) quedaba por debajo del bloque siguiente (Christian 19/11 16:57: «un menú queda por debajo del panel»).
+// Cada bloque de la ficha es su propia capa (vidrio), así que el que tiene el menú abierto se levanta entero (CSS) y, si el menú no entra, la ficha se corre hasta mostrarlo.
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-jmas]');if(!b)return;const a=b.closest('.jarch'),m=a&&a.querySelector('.jmenu');
+  if(m&&!m.hidden)requestAnimationFrame(()=>{try{m.scrollIntoView({block:'nearest'})}catch(x){}})});
+/* === fin 1.52n === */
 /* === 1.52f · editor de planos === */
 // 1.52f · Editor de planos y croquis como los programas que ya lo resolvieron (Christian 16/11 22:35: «cuando quiero mover un punto
 // puesto, termino moviendo la hoja… estas cosas hay que copiarlas de programas que ya lo tienen resuelto, como Canva… los botones clásicos
