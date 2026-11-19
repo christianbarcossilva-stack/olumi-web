@@ -17,10 +17,8 @@ Solo contiene archivos públicos (lo mismo que ve cualquiera que abre la página
 - La app tiene enlaces directos: `#panel`, `#clientes`, `#cliente-c1`, `#pantallas`, `#pantalla-p1` (abre el modo pantalla, para televisores), `#alertas`, `#ajustes`.
 - La versión pública (`ondi/app/`) se genera desde la demo privada sin nombres reales de clientes; no editarla a mano.
 
-## Darvi (vista previa; antes Estiba)
-- `darvi/`: página de Darvi (software de logística: andenes y patio, depósito, personal, autoelevadores y parque logístico), con calculadora de ahorro. Nombre provisorio.
-- `darvi/maqueta/`: maqueta 3D de Darvi con el motor completo de Ondi (editor con catálogo, barra 1–0, deshacer, planta 2D del galpón, caminar adentro, sacar el techo), sin nada informático: ni cámaras, ni Wi-Fi, ni sensores, ni gabinetes, ni fibra, ni tickets. Agrega alertas de operación, turnos de andén por nave, balanza, playa de espera y las ubicaciones con código de cada estantería (Nave-Estantería-Módulo-Nivel-Posición). Empresas y cifras de ejemplo, sin nombres reales ni foto aérea. Se arma con los scripts del proyecto Unity Tech (estiba-desde-ondi.py + estiba-capa.js + estiba-publica.py).
-- Está en vista previa: franja "Vista previa", `noindex` y sin link desde la portada. Se enlaza desde `index.html` recién cuando Christian lo apruebe.
+## Darvi (en pausa desde el 18/11)
+- Pedido de Christian: el proyecto queda en pausa, fuera de línea y sin vínculo con las otras apps. Se sacaron `darvi/`, `estiba/`, `nuevo/estiba/` e `img/estiba/`; están en la historia de git (commit `0bc2ad9`) y se recuperan con `git checkout 0bc2ad9 -- darvi estiba nuevo/estiba img/estiba`. Las tablas `estiba_*` siguen en Supabase con sus datos (`servidor/supabase/estiba-1.0.sql`).
 
 ## Kliva (vista previa)
 - `kliva/`: la web de Kliva (control de acceso multimarca: ZKTeco, Hikvision, Dahua e Intelbras en un solo panel). Cuenta una semana de trabajo y usa la demostración real como escenario: cada capítulo le pide una escena por mensaje (`demo/?cine=1`).

@@ -1,8 +1,8 @@
 // Motor común · el plano compartido entre las apps. Sin dependencias: lo usan el motor y la página de cada app.
-// Un plano guardado es { v: 1, motor: 1, escena: { nombre, piezas: [...] }, ext: [...] } y es el mismo en Ondi, Darvi y Olumi.
+// Un plano guardado es { v: 1, motor: 1, escena: { nombre, piezas: [...] }, ext: [...] } y es el mismo en Ondi y Olumi.
 // Cada pieza es de un dominio, y eso decide qué app la muestra y cuál es su dueña:
 //   base      → el predio: terreno, calles, construcciones, árboles, vehículos. Lo comparten todas.
-//   logistica → Darvi: filas de contenedores, semirremolques, camiones, máquinas de patio.
+//   logistica → patio: filas de contenedores, semirremolques, camiones, máquinas de patio.
 //   equipos   → Ondi: cámaras, Wi-Fi, switches, racks, grabadores, routers, sensores, UPS, fibra.
 //   acceso    → Kliva: puertas con control de acceso (puerta, portón, molinete, barrera), cada una enlazada a una puerta real.
 // Un tipo nuevo que no sea del predio se anota acá (una sola vez) y queda bien en las tres apps.
@@ -11,10 +11,9 @@ const DE = { fila: 'logistica', chasis: 'logistica', camion: 'logistica', maquin
 export const DOMINIOS = { base: 'el predio', logistica: 'logística', equipos: 'equipos', acceso: 'control de acceso' };
 export const dominio = p => DE[p && p.t] || 'base';
 // qué muestra cada app. Lo que no muestra no se pierde: queda guardado en el plano para la app que sí lo usa.
-export const VE = { darvi: ['base', 'logistica'], ondi: ['base', 'logistica', 'equipos', 'acceso'], olumi: ['base', 'logistica', 'equipos', 'acceso'], kliva: ['base', 'acceso'] };
+export const VE = { ondi: ['base', 'logistica', 'equipos', 'acceso'], olumi: ['base', 'logistica', 'equipos', 'acceso'], kliva: ['base', 'acceso'] };
 // lo propio de cada app: al traer un plano de otra, esto es lo que no se pisa
-export const MIO = { darvi: 'logistica', ondi: 'equipos', kliva: 'acceso' };
-VE.estiba = VE.darvi; MIO.estiba = MIO.darvi;   // nombre anterior de Darvi (13–14/11)
+export const MIO = { ondi: 'equipos', kliva: 'acceso' };
 export const ve = (app, p) => (VE[app] || VE.ondi).includes(dominio(p));
 export const esPlano = s => !!(s && s.v === 1 && s.motor === 1 && s.escena && Array.isArray(s.escena.piezas));
 export function cuenta(s) { const c = { base: 0, logistica: 0, equipos: 0, acceso: 0, total: 0 }; for (const p of (s && s.escena && s.escena.piezas) || []) { c[dominio(p)]++; c.total++; } return c; }

@@ -1,4 +1,4 @@
-// Motor 3D común de Unity Tech (Ondi, Olumi y Darvi) · núcleo: dibujo, luz, cámara y controles (mouse, trackpad, dedos y teclado).
+// Motor 3D común de Unity Tech (Ondi, Olumi y Kliva) · núcleo: dibujo, luz, cámara y controles (mouse, trackpad, dedos y teclado).
 // La escena no vive acá: son piezas en datos (piezas.js) que se editan con maqueta.js y construir.js.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/RoomEnvironment.js';

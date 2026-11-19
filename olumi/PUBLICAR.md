@@ -21,10 +21,10 @@
 - **unitytech.uy/ondi/beta/** → Ondi en pruebas anticipadas.
 - unitytech.uy/olumi/ y unitytech.uy/ondi/ siguen siendo las páginas de cada producto (ventas, planes, descargas).
 
-## Páginas web (unitytech.uy, /olumi/, /ondi/, /darvi/)
+## Páginas web (unitytech.uy, /olumi/, /ondi/)
 - Todas usan el estilo común `familia.css` + `familia.js` (raíz del sitio): letra del sistema, nav global "Unity Tech · Olumi · Ondi", nav de cada producto, botones píldora, modo claro/oscuro (sigue al equipo, con botón ◐ que se recuerda en `ut.theme`).
 - Cada producto define solo sus colores en su página: `--acc` (botón), `--acc-2` (acento en oscuro), `--acc-ink` (texto sobre el botón), `--acc-t` (acento para texto).
 - Si se cambia `familia.css`, subir el `?v=` en todas las páginas para que llegue enseguida.
 - La Oficina viva vive en `olumi/oficina/` y se embebe con `?embed=1` (recibe el tema y avisa su alto).
-- Darvi (antes Estiba; nombre elegido por Christian el 14/11) sigue en vista previa: `noindex`, sin enlaces desde las otras páginas.
+- Darvi (antes Estiba) está en pausa desde el 18/11: fuera de línea y sin vínculo con las otras apps (ver README).
 - Regla del sitio: nada de nombres reales de clientes en lo público.

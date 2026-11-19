@@ -88,7 +88,7 @@ export const azar = s => { let x = (Math.abs(s | 0) % 2147483646) + 1; return ()
 const semilla = p => { let h = 2166136261; for (const ch of String(p.id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) + (p.semilla | 0) * 7919; };
 const oscuro = () => document.documentElement.dataset.tema === 'oscuro';
 // noche con aire de tecnología: el color de cada app en neón, luces que brillan y charcos de luz en el piso
-const acento = () => ({ darvi: '#3ddc97', olumi: '#ffd23f', kliva: '#9d7cff' })[document.documentElement.dataset.app] || '#3fc6ea';
+const acento = () => ({ olumi: '#ffd23f', kliva: '#9d7cff' })[document.documentElement.dataset.app] || '#3fc6ea';
 let _halo = null; const halo = () => { if (_halo) return _halo; const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.18, 'rgba(255,255,255,.55)'); gr.addColorStop(0.5, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
   _halo = new THREE.CanvasTexture(c); _halo.colorSpace = THREE.SRGBColorSpace; return _halo; };

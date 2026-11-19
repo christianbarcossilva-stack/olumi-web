@@ -1,4 +1,4 @@
-// Motor 3D común de Unity Tech (Ondi, Olumi y Darvi) · núcleo: dibujo, luz, cámara con los controles de Los Sims 4 y medición.
+// Motor 3D común de Unity Tech (Ondi y Olumi) · núcleo: dibujo, luz, cámara con los controles de Los Sims 4 y medición.
 // La escena no vive acá: son piezas en datos (piezas.js) que cualquiera puede editar (editor.js).
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/RoomEnvironment.js';

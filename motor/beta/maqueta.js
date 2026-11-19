@@ -1,6 +1,6 @@
 // Motor común · la maqueta: arma las piezas, muestra etiquetas y capas, y trae el editor (comandos de Los Sims 4), el modo construcción
 // (construir.js: paredes, recintos, puertas y ventanas) y el recorrido a pie (recorrer.js).
-// La usan Ondi (equipos en vivo), Darvi (patio y contenedores) y Olumi (oficina). Cada app le pasa su "anfitrión" (host):
+// La usan Ondi (equipos en vivo) y Olumi (oficina). Cada app le pasa su "anfitrión" (host):
 //   host.state      lo guardado ({ v:1, motor:1, escena, ext })      host.save(state)   guarda
 //   host.role       'inst' edita, 'cli' solo mira                   host.equipos()     lista de equipos reales (Ondi)
 //   host.juego(on)  pantalla completa dentro de la app               host.park          nombre del lugar
@@ -25,7 +25,7 @@ const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').re
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
 // los equipos se prenden y apagan por clase: cámaras, Wi-Fi, racks y gabinetes, fibra, y el resto
 const CAPA_DE = { camara: 'camaras', ap: 'wifi', rack: 'racks', gabinete: 'racks', fibra: 'fibra' }, CAPAS_EQ = ['camaras', 'campos', 'wifi', 'racks', 'fibra', 'equipos'];
-const SIN_CAPA = { darvi: [...CAPAS_EQ, 'acceso'], kliva: ['logistica', ...CAPAS_EQ] };
+const SIN_CAPA = { kliva: ['logistica', ...CAPAS_EQ] };
 const EQ_DE = { cam: 'camara', ap: 'ap', sw: 'switch', gw: 'router', sen: 'sensor', otro: 'ups' };
 const ESTADO = e => ['online', 'en_linea', 'abierta', 'cerrada'].includes(e) ? 'ok' : ['offline', 'caido'].includes(e) ? 'crit' : ['alerting', 'atencion'].includes(e) ? 'warn' : 'off';
 const ESTX = { ok: 'En línea', crit: 'Caído', warn: 'Con alertas', off: 'Sin dato' };
@@ -36,11 +36,10 @@ const tipoReal = d => { if (/^sensor_/.test(d.tipo || '')) return 'sen'; if (d.t
 
 // el logo de cada app en la barra (el mismo dibujo que su ícono)
 const LOGO = {
-  darvi: '<svg class="mapp" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="var(--acc)"/><rect x="24" y="74" width="70" height="15" rx="4.5" fill="var(--acc-ink)"/><rect x="24" y="53" width="54" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".82"/><rect x="24" y="32" width="38" height="15" rx="4.5" fill="var(--acc-ink)" fill-opacity=".62"/><circle cx="87" cy="38" r="10.5" fill="#3ddc97"/></svg>'
 };
 LOGO.kliva = '<svg class="mapp" viewBox="0 0 38 38" aria-hidden="true"><rect width="38" height="38" rx="10" fill="#1E1F23"/><g fill="none" stroke="#F3F4F6" stroke-linecap="round"><path d="M12 9v20" stroke-width="3.2"/><path d="M14.5 19.5l9-8.3" stroke-width="2.4"/><path d="M16.5 21.5L25 29" stroke-width="1.4" stroke-dasharray="1.6 2.4" opacity=".6"/></g><circle cx="26.5" cy="9.5" r="2.8" fill="#9D7CFF"/></svg>';
-const BUSCA = { darvi: 'Buscar fila, galpón o máquina', olumi: 'Buscar sala, puesto o persona', kliva: 'Buscar puerta, galpón u oficina' };
-const SIN = { darvi: ['Equipos', 'Control de acceso'], kliva: ['Logística', 'Equipos', 'Personas y vehículos'] };   // Darvi es solo logística: lo informático es de Ondi
+const BUSCA = { olumi: 'Buscar sala, puesto o persona', kliva: 'Buscar puerta, galpón u oficina' };
+const SIN = { kliva: ['Logística', 'Equipos', 'Personas y vehículos'] };
 // barra de herramientas del editor: las teclas 1 a 8 las eligen en este orden
 const HERR = [['mano', 'Mano: elegir y mover', 'H'], ['pared', 'Pared: punto por punto', 'B'], ['recinto', 'Recinto: de esquina a esquina', 'N'], ['puerta', 'Puerta sobre una pared', ''], ['ventana', 'Ventana sobre una pared', ''], ['catalogo', 'Catálogo', 'Tab'], ['gotero', 'Gotero: copiar', 'E'], ['maza', 'Maza: sacar', 'K']];
 const ORDEN = [...GRUPOS]; ORDEN.splice(ORDEN.indexOf('Construcción') + 1, 0, 'Puertas y ventanas');
@@ -392,7 +391,7 @@ export async function abrirMaqueta(o) {
   $('#mmenu').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const it = $('#mmenu')._it[+b.dataset.i]; menu(null); it.f(); });
   motor.alMenu = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e), p = motor.enPiso(e.clientX, e.clientY), T = h && TIPOS[h.p.t], its = [];
     if (h) { elegir(h.p); its.push({ n: 'Enfocar', ic: 'enfocar', f: () => elegir(h.p, true) }); if (h.p.t === 'camara' && !RC.R.on) its.push({ n: 'Ver desde esta cámara', ic: 'ojo', f: () => XT.verCamara(h.p) }); if (T.protegido && host && host.abrirDoc) its.push({ n: 'Abrir documentación', ic: 'doc', f: () => host.abrirDoc(h.p) });
-      if (ED.on && h.p.t === 'columna' && app !== 'darvi') its.push({ n: 'Sumar una cámara a la columna', ic: 'ojo', f: () => adosar(h.p, 'camara') }, { n: 'Sumar Wi-Fi a la columna', ic: 'equipos', f: () => adosar(h.p, 'ap') }, '-');
+      if (ED.on && h.p.t === 'columna') its.push({ n: 'Sumar una cámara a la columna', ic: 'ojo', f: () => adosar(h.p, 'camara') }, { n: 'Sumar Wi-Fi a la columna', ic: 'equipos', f: () => adosar(h.p, 'ap') }, '-');
       if (ED.on) its.push({ n: 'Propiedades', ic: 'ajustes', f: () => { UI.abierta = true; info(); } }, { n: 'Duplicar', ic: 'duplicar', k: 'Ctrl D', f: duplicar }, { n: 'Girar 90°', ic: 'girar', k: 'R', f: () => girarSel(Math.PI / 2) }, '-', { n: 'Sacar', ic: T.protegido ? 'candado' : 'borrar', k: 'Supr', peligro: true, f: () => sacar(h.p) }); }
     else if (ED.on) { its.push({ n: 'Catálogo', ic: 'catalogo', k: 'Tab', f: () => catalogo(true) }); if (copia) its.push({ n: 'Pegar', ic: 'duplicar', k: 'Ctrl V', f: pegarCopia }); }
     if (p) its.push(...(its.length ? ['-'] : []), { n: 'Recorrer desde acá', ic: 'caminar', f: () => RC.paseo(true, [p.x, p.z]) });
