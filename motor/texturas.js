@@ -14,14 +14,14 @@ const SUELOS = {
   tierra:     { base: '#c2bba9', granos: 22000, g: 11, tam: [0.6, 1.6], manchas: 40, mv: 8 },
   hormigon:   { base: '#c9ccca', granos: 9000,  g: 8,  tam: [0.5, 1.2], manchas: 24, mv: 6, juntas: 4 },
   asfalto:    { base: '#6d7277', granos: 30000, g: 10, tam: [0.5, 1.3], manchas: 24, mv: 6 },
-  pasto:      { base: '#88a46e', granos: 34000, g: 10, tam: [0.8, 2], manchas: 0, mv: 7, verde: true },
+  pasto:      { base: '#7c9659', granos: 34000, g: 12, tam: [0.8, 2.2], manchas: 46, mv: 9, verde: true, seco: '#a39a6a' },
   monte:      { base: '#6f8a5e', granos: 26000, g: 10, tam: [0.8, 2.2], manchas: 0, mv: 8, verde: true }
 };
 export function suelo(k) { const key = 'suelo:' + k; if (CACHE.has(key)) return CACHE.get(key); const S = SUELOS[k] || SUELOS.tierra, N = 512, [cv, x] = lienzo(N), R = rnd(k.length * 131 + N);
   x.fillStyle = S.base; x.fillRect(0, 0, N, N); const b = new THREE.Color(S.base), c = new THREE.Color();
   // manchas grandes: se dibujan también corridas un lienzo para que la repetición no muestre costuras
-  for (let i = 0; i < S.manchas; i++) { const px = R() * N, py = R() * N, r = S.verde ? 30 + R() * 140 : 20 + R() * 90, d = (R() - 0.5) * S.mv / 100; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.03 : 0, 0, d);
-    for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { const gr = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); gr.addColorStop(0, `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${S.verde ? 0.16 : 0.35})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); } }
+  for (let i = 0; i < S.manchas; i++) { const px = R() * N, py = R() * N, r = S.verde ? 30 + R() * 140 : 20 + R() * 90, d = (R() - 0.5) * S.mv / 100; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.03 : 0, 0, d); if (S.seco && R() < 0.45) c.set(S.seco).offsetHSL(0, 0, (R() - 0.5) * 0.06);   // pasto seco o pisado
+    for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { const gr = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); gr.addColorStop(0, `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${S.verde ? 0.3 : 0.35})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); } }
   for (let i = 0; i < S.granos; i++) { const v = (R() - 0.5) * S.g; c.copy(b).offsetHSL(S.verde ? (R() - 0.5) * 0.05 : (R() - 0.5) * 0.01, S.verde ? (R() - 0.5) * 0.1 : 0, v / 100); x.fillStyle = '#' + c.getHexString();
     const t = S.tam[0] + R() * (S.tam[1] - S.tam[0]); x.fillRect(R() * N, R() * N, t, t); }
   if (S.juntas) { x.strokeStyle = 'rgba(70,72,72,.35)'; x.lineWidth = 1.2; for (let i = 0; i <= S.juntas; i++) { const p = i * N / S.juntas; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, N); x.moveTo(0, p); x.lineTo(N, p); x.stroke(); } }
