@@ -9,6 +9,8 @@ import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../te
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
 // { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
 const MUEB = { data: null, prom: null, geo: new Map(), mat: null };
+// de noche los muebles van un poco más oscuros: son casi blancos y con la luz de la sala encendida quedaban quemados y con resplandor
+const NOCHE_MUEBLE = 0.72, LUZ_PISO = 1.95, tonoMueble = () => { if (MUEB.mat) MUEB.mat.color.setScalar(oscuro() ? NOCHE_MUEBLE : 1); };
 const MUEB_URL = new URL('../../olumi/beta/3d/muebles.json', import.meta.url).href;
 export const MUEBLES = [['desk', 'Escritorio'], ['deskCorner', 'Escritorio en L'], ['chairDesk', 'Silla de escritorio'], ['computerScreen', 'Monitor'], ['laptop', 'Notebook'], ['table', 'Mesa'], ['tableCross', 'Mesa de reunión'], ['tableRound', 'Mesa redonda'], ['chair', 'Silla'], ['chairModernCushion', 'Silla moderna'], ['loungeSofa', 'Sofá'], ['loungeChair', 'Sillón'], ['tableCoffee', 'Mesa ratona'], ['bookcaseOpen', 'Estantería'], ['bookcaseClosedWide', 'Archivo ancho'], ['sideTableDrawers', 'Cajonera'], ['pottedPlant', 'Planta grande'], ['televisionModern', 'Televisor'], ['kitchenCabinet', 'Bajo mesada'], ['kitchenSink', 'Pileta de cocina'], ['kitchenFridge', 'Heladera'], ['kitchenCoffeeMachine', 'Cafetera'], ['kitchenBar', 'Barra'], ['stoolBar', 'Banqueta alta'], ['toiletSquare', 'Inodoro'], ['bathroomSinkSquare', 'Lavatorio'], ['trashcan', 'Papelera'], ['cardboardBoxClosed', 'Caja de cartón'], ['rugRectangle', 'Alfombra'], ['lampSquareFloor', 'Lámpara de pie']];
 function mueblesCargar() { if (!MUEB.prom) MUEB.prom = fetch(MUEB_URL).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { MUEB.data = j.m;
@@ -644,7 +646,13 @@ export const TIPOS = {
     armar(p, ctx) { const g = new THREE.Group(), segs = [], P = p.pts, n = P.length; if (n < 3) return g; const y = p.y || 0, alto = altoVista(p.alto, ctx, p), dentro = areaSig(P) > 0 ? 1 : -1;
       if (p.piso !== 'sin') area(g, P, y + 0.045, matPiso(p.piso));
       if (p.luz && oscuro()) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }   // de noche, la luz del ambiente encendida (cálida, como la de las luminarias)
-        const w = x1 - x0, d = z1 - z0, l = new THREE.PointLight('#ffd9a8', Math.min(30, w * d * 0.28) * (+p.luz > 0 && p.luz !== true ? +p.luz : 1), Math.max(w, d) * 1.6, 1.6); l.position.set((x0 + x1) / 2, y + 3.4, (z0 + z1) / 2); g.add(l); }
+        // Un foco que apunta al piso, alto (5,2 m) y con el cono justo para la sala. Alto, para que alumbre parejo: más bajo, lo que está más cerca
+        // (la tapa de un escritorio) recibía mucha más luz que el piso y quedaba quemado. Con cono, para que no se sume la luz de las salas vecinas
+        // (las luces no hacen sombra: una lámpara sin cono atravesaba las paredes y en el medio de la oficina se juntaban cuatro o cinco).
+        // En una sala alargada van dos o tres focos a lo largo. LUZ_H ** 1.6 pasa de «cuánta luz llega al piso» a la fuerza del foco.
+        const w = x1 - x0, d = z1 - z0, lg = Math.max(w, d), ch = Math.max(0.5, Math.min(w, d)), n = Math.max(1, Math.min(3, Math.round(lg / ch / 1.6))), LUZ_H = 5.2, radio = 0.5 * Math.max(ch, lg / n) * 1.45, f = +p.luz > 0 && p.luz !== true ? +p.luz : 1;
+        for (let i = 0; i < n; i++) { const u = (i + 0.5) / n, cx = w >= d ? x0 + w * u : (x0 + x1) / 2, cz = w >= d ? (z0 + z1) / 2 : z0 + d * u, l = new THREE.SpotLight('#ffd9a8', LUZ_PISO * LUZ_H ** 1.6 * f, LUZ_H * 2.4, Math.min(1.2, Math.atan(radio / LUZ_H)), 0.45, 1.6);
+          l.position.set(cx, y + LUZ_H, cz); l.target.position.set(cx, y, cz); g.add(l, l.target); } }
       else if (p.tipo === 'sin') area(g, P, y + 0.05, matZona());   // zona: sin paredes ni piso, nombra un sector (por ejemplo, sobre el plano del lugar)
       for (let i = 0; i < n; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[(i + 1) % n], { y, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, dentro, e0: true, e1: true }, (p.huecos || []).filter(h => h.s === i), segs); }
       g.userData.segs = segs; return g; } },
@@ -852,9 +860,9 @@ export const TIPOS = {
   mueble: { n: 'Mueble', g: 'Muebles', forma: 'punto', capa: 'base', etiqueta: () => '', def: { modelo: 'desk' },
     campos: [{ k: 'modelo', n: 'Qué es', t: 'sel', ops: MUEBLES }, { k: 'y', n: 'Altura sobre el piso (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r],
     variantes: MUEBLES.map(([modelo, n]) => ({ n, o: { modelo } })),
-    armar(p, ctx) { const g = new THREE.Group(); g.userData.sinAplanar = true; const b = (MUEB.data && MUEB.data[p.modelo] && MUEB.data[p.modelo].b) || [0.8, 0.8, 0.6];
+    armar(p, ctx) { const g = new THREE.Group(); g.userData.sinAplanar = true; tonoMueble(); const b = (MUEB.data && MUEB.data[p.modelo] && MUEB.data[p.modelo].b) || [0.8, 0.8, 0.6];
       const caja0 = new THREE.Mesh(CAJA, mat('#c9ced2', { transparent: true, opacity: 0.35 })); caja0.scale.set(b[0], b[1], b[2]); caja0.position.y = b[1] / 2 + (p.y || 0); g.add(caja0);
-      muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; m.userData.dueño = caja0.userData.dueño; /* el modelo llega después: hereda de quién es, para que se pueda tocar y elegir */ g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
+      muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); tonoMueble(); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; m.userData.dueño = caja0.userData.dueño; /* el modelo llega después: hereda de quién es, para que se pueda tocar y elegir */ g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
       return g; } },
 };
 export const GRUPOS = ['Terreno', 'Construcción', 'Muebles', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
