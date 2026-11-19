@@ -2083,7 +2083,7 @@ function handleErr(e){
 }
 const clean=o=>JSON.parse(JSON.stringify(o));
 async function put(col,id,data){
-  if(col==='oportunidades'&&data&&!data.numero)data={...data,numero:opNumNuevo()};
+  if(col==='oportunidades'&&data&&!data.numero){const t=typeof opNumTit==='function'?opNumTit(data,id):null;data=t?{...data,numero:t.n,titulo:t.t}:{...data,numero:opNumNuevo()}}
   if(mode==='loading'||(mode==='live'&&!liveCol(col).loaded)){toast('Esperá a que terminen de cargar los datos.');throw {code:'loading'}}
   if(mode==='live'&&(col==='presupuestos'||col==='facturas')&&!has(col)){toast(`${col==='facturas'?'Las facturas no están incluidas':'Los presupuestos no están incluidos'} en el plan ${PLAN.nombre} de tu empresa.`);throw {code:'loading'}}
   AV.touched.add(col+':'+id);AV.t=0;
@@ -3453,7 +3453,7 @@ function flujoPuede(o,k,id){const a=fjE(o),b=EK[k];if(!b||a.k===k)return'';
 const fjSig=o=>{const a=fjE(o),i=ETAPAS.indexOf(a);if(a.c==='p'||a.fijo)return null;return ETAPAS.slice(i+1).find(e=>e.c!=='p'&&(!a.sig||!a.sig.length||a.sig.includes(e.k)))||null};
 // número de la oportunidad: nace con ella (P1, P2…) y es el que después lleva el proyecto y sus presupuestos
 let FJ_N=0;
-function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0))}
+function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...arr('oportunidades').map(o=>Math.max(parseInt(String(o.numero||'').replace(/\D/g,''),10)||0,typeof opNumTitN==='function'?opNumTitN(o):0)))}
 function opNumPre(){const p=CRMC().numPre;return String(p==null?(pryPlano()?'':'P'):p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
 function opNumNuevo(){return opNumPre()+(FJ_N=opNumMax()+1)}
 function opNumSig(){return opNumPre()+(opNumMax()+1)}
@@ -5827,6 +5827,16 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 function fjFalta(F,i){const b=F[i],s=F[i+1];if(!b||!s||b.fijo||b.k==='per'||s.k==='per'||!(b.sig||[]).length||b.sig.includes(s.k))return'';
   return`<p class="hint fjw">${ic('alerta')}<span>Desde «${esc(b.n)}» no se puede pasar a «${esc(s.n)}», que es el bloque que sigue. Si tiene que poderse, marcalo en «Puede pasar a».</span></p>`}
 /* === fin 1.52o === */
+/* === 1.52r · número de Odoo === */
+// 1.52r · El número que la oportunidad ya trae en el título es su número (Christian 19/11 19:29: «si nosotros en Odoo tenemos un número de proyecto,
+// tenemos que respetarlo, no poner otro… generar números a partir del último número libre que esté en Odoo»). Las que vinieron de Odoo se llaman
+// «3626 - Control remoto»: al guardarlas, Olumi les ponía un número NUEVO (3658) porque no tenían el campo. Ahora toma el del título, lo saca del
+// título para que no se vea dos veces, y la numeración nueva nunca usa un número que ya esté en un título.
+const OP_NUM_RE=/^\s*[A-Za-zÑñ]{0,3}\s*(\d{3,6})\s*[-–·]\s*(.*)$/;
+const opNumTitN=o=>{const m=OP_NUM_RE.exec(String((o&&o.titulo)||''));return m?+m[1]:0};
+function opNumTit(d,id){const m=OP_NUM_RE.exec(String((d&&d.titulo)||''));if(!m)return null;const n=opNumPre()+m[1];
+  if(arr('oportunidades').some(o=>o.id!==id&&o.numero===n))return null;return{n,t:m[2].trim()||'(sin nombre)'}}
+/* === fin 1.52r === */
 /* === 1.52f · editor de planos === */
 // 1.52f · Editor de planos y croquis como los programas que ya lo resolvieron (Christian 16/11 22:35: «cuando quiero mover un punto
 // puesto, termino moviendo la hoja… estas cosas hay que copiarlas de programas que ya lo tienen resuelto, como Canva… los botones clásicos
