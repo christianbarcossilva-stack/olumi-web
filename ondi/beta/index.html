@@ -129,6 +129,10 @@ main{min-width:0;padding:26px 28px 56px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .maq{position:relative;height:calc(100vh - 250px);min-height:460px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--sunken)}
 .maq iframe{width:100%;height:100%;border:0;display:block}
+.maq #maqvieja{opacity:.01;pointer-events:none}
+.maqpase{position:absolute;inset:0;z-index:3;display:grid;place-content:center;gap:6px;text-align:center;padding:24px;background:var(--sunken);color:var(--ink)}
+.maqpase b{font-size:17px}
+.maqpase span{font-size:13.5px;color:var(--muted);max-width:44ch}
 .maq.full{position:fixed;inset:30px 0 0 0;height:auto;z-index:40;border-radius:0;border:0}
 .maqsalir{display:none;position:absolute;left:10px;top:46%;z-index:5;width:42px;height:42px;border-radius:13px;border:1px solid rgba(255,255,255,.22);background:rgba(16,22,30,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.28)}.maqsalir svg{width:20px;height:20px}.maq.full:not(.juego) .maqsalir{display:grid}.maqsalir:focus-visible{outline:2px solid #6cc7ff;outline-offset:2px} .maq.juego{inset:0;height:100dvh;z-index:90}
 .maqbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -403,7 +407,7 @@ const IC = {
   ref: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   sim: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg>'
 };
-// Simulación: clientes inventados (no son de nadie, no usan equipos reales y no se guardan). Sus maquetas se arman solas en maqueta.html.
+// Simulación: clientes inventados (no son de nadie, no usan equipos reales y no se guardan). Sus maquetas son escenas inventadas del motor (ondi/escenas/).
 const SIMS = [{ id: 'parque', n: 'Parque Logístico Norte', d: 'Ruta 1, km 24 · 8 galpones con andenes', r: 'Logística' },
   { id: 'frigorifico', n: 'Frigorífico del Este', d: 'Camino de las Tropas 4300 · planta de frío, despacho y depósito', r: 'Alimentos' },
   { id: 'barraca', n: 'Barraca Central', d: 'Av. de los Constructores 1820 · salón de ventas y depósito', r: 'Comercio' }];
@@ -445,7 +449,9 @@ const solVia = k => (SOL[k] || []).map(x => x[3]).join(' o ').toLowerCase();
 const BR = Object.fromEntries(BRANDS.map(b => [b.k, b]));
 const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
 const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
-const BASES = { motor: ['Maqueta del motor común (recomendada)', 'La misma maqueta de Olumi: terreno, calles, galpones, contenedores y equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], vacia: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos.'], plano: ['Desde un plano o una foto', 'Subís un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'El parque logístico completo de la demo, para mostrar cómo queda.'] };
+const BASES = { motor: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], plano: ['Desde un plano o una foto', 'Arrastrás a la maqueta un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'Un parque logístico completo, inventado, para mostrar cómo queda.'], vacia: ['Maqueta en blanco', ''] };
+// La maqueta es una sola, en el motor común. La de siempre quedó archivada (ondi/archivo/): se abre tapada, una sola vez por cliente, para convertir lo que tenía cargado.
+const MOTOR = '../../motor/beta/?app=ondi&v=39', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
 let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
 const fmtD = d => d ? new Date(d).toLocaleString('es-UY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -671,7 +677,7 @@ function modalView() {
   if (S.modal === 'newsite') return `<div class="modal" data-closemodal><div role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">Nuevo cliente</h2>
     <form class="form" data-do-f="newsite"><div class="form2"><label class="fld full">Nombre del cliente<input id="ns_name" required maxlength="120" placeholder="Empresa o parque"></label>
       <label class="fld">Razón social <small>(opcional)</small><input id="ns_rs" maxlength="120"></label><label class="fld">Dirección <small>(opcional)</small><input id="ns_dir" maxlength="200"></label></div>
-      <div class="fld">Cómo empieza la maqueta<div class="bases">${Object.entries(BASES).map(([k, [n, d]], i) => `<label><input type="radio" name="base" value="${k}" ${i === 0 ? 'checked' : ''}><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
+      <div class="fld">Cómo empieza la maqueta<div class="bases">${Object.entries(BASES).filter(([k]) => k !== 'vacia').map(([k, [n, d]], i) => `<label><input type="radio" name="base" value="${k}" ${i === 0 ? 'checked' : ''}><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
       <div class="acts"><button class="btn pri" type="submit">Crear el cliente</button><button class="btn" type="button" data-do="closemodal">Cancelar</button></div></form></div></div>`;
   return ''; }
 
@@ -680,9 +686,10 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="acts"><button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button></div></div><div class="maq" id="maqbox"></div></div>`;
   return `<div class="wrap"><div class="head"><div><h1>Simulación</h1><p>Clientes inventados para mostrar Ondi o practicar. No son clientes tuyos, no usan equipos reales y lo que cambies no se guarda.</p></div></div>
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
-function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return;
-  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: null, role: 'inst', park: s.n, installer: S.ctx.name, base: 'vacia', demo: s.id, canTicket: true, save() {}, savePlano() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="maqueta.html?v=66" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; }
+async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
+  let g = null; try { g = await (await fetch(ESCENAS + 'sim-' + s.id + '.json')).json(); } catch (e) {} if (S.sim !== s.id || !$('#maqbox')) return; if (!g || !g.escena) { box.innerHTML = '<div class="empty">No se pudo abrir la simulación. Probá de nuevo.</div>'; return; }
+  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, save() {} };
+  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; }
 function siteHead() { const st = S.site, l = linksOf(st);
   return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
@@ -692,9 +699,6 @@ function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos'
 /* maqueta */
 let MAQ = null, maqT = null;
 function maqBar() { return `<span class="save" id="savest">${siteEd() ? esc(S.maqSave || 'Los cambios se guardan solos.') : 'Solo lectura.'}</span><span class="grow"></span>
-  ${siteEd() && !['polo', 'motor'].includes((S.site.data && S.site.data.base) || 'vacia') ? `<button class="btn sm pri" data-do="maqplano" title="Una imagen o captura del plano del cliente: queda de fondo, con su escala, para dibujar encima">${IC.plano}Subir plano</button>` : ''}
-  ${staff() && S.maqVieja ? `<button class="btn sm" data-do="maqprobar" title="Abre una copia de esta maqueta en el motor nuevo, para compararlas. No cambia la maqueta real.">Probar en el motor nuevo</button>` : ''}
-  ${S.prueba && S.prueba.site === S.site.id ? `<span class="tag" title="Lo que cambies acá queda solo en este navegador">Copia de prueba · motor nuevo</span><button class="btn sm" data-do="maqprobarre" title="Vuelve a armar la copia desde la maqueta real (se pierde lo que cambiaste en la copia)">Rehacer la copia</button><button class="btn sm pri" data-do="maqprobarfin">Volver a la maqueta de siempre</button>` : ''}
   ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}<button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button>`; }
 // varios en la misma maqueta: canal en tiempo real por cliente (Realtime de Supabase, sin tablas). Cada uno manda su posición
 // mientras camina y recibe la de los otros; la lista de conectados sale de la presencia del canal.
@@ -715,7 +719,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
   let data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; data = docBase(st, data);
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
   MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
-    plano: (pl && pl.data && pl.data.data) || null, start: S.startPlano ? 'plano' : null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url), leerPlano: siteEd() ? img => leerPlano(st, img) : null,
+    plano: (pl && pl.data && pl.data.data) || null, start: null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url), leerPlano: siteEd() ? img => leerPlano(st, img) : null,
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
     equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
       return { at: E.at, errs: E.errs.map(x => BR[x.k].n + ': ' + x.m), list: [
@@ -726,17 +730,38 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     papelera: (id, cab, dev) => { const P = S.docPrev[st.id] = S.docPrev[st.id] || {}; P.papelera = [{ id, cab: docCl(cab) || { items: [], links: [], ports: {} }, pieza: null, dev: docCl(dev), cuando: Date.now(), quien: myName() }, ...docPap(P)].slice(0, 20); },
     abrirDoc: staff() ? p => { S.docIni = p.id; if (S.doc && S.doc.site === st.id) { S.doc.cid = p.id; S.doc.hist = false; S.doc.caja = null; } S.tab = 'doc'; render(); } : null,
     ticket: async t => { const r = await SB.rpc('ondi_pedir', { o: st.org_id, s: st.id, tp: t.tipo || 'problema', txt: t.texto, a_unity: false }); if (r.error) throw r.error; S.ped = null; return r.data; } };
-  S.startPlano = false; S.maqIr = null; window.__ondiMaqueta = MAQ;
-  const nuevo = base === 'motor' || !!(data && data.motor === 1);
-  // copia de prueba en el motor nuevo: sale de lo que arma la maqueta de siempre y se guarda solo en este navegador (la real no se toca)
-  const pr = !nuevo && S.prueba && S.prueba.site === st.id ? S.prueba : null;
-  if (pr) { let g = null; try { g = JSON.parse(localStorage.getItem('ondi.prueba.' + st.id) || 'null'); } catch (e) {} if (pr.nueva || !g || !g.escena) g = { v: 1, motor: 1, escena: pr.escena }; pr.nueva = false;
-    MAQ = { ...MAQ, state: g, presencia: null, abrirDoc: null, save: s2 => { try { localStorage.setItem('ondi.prueba.' + st.id, JSON.stringify(s2)); setSave('Copia de prueba: se guarda solo en este navegador.'); } catch (e) { setSave('No se pudo guardar la copia de prueba.'); } } }; window.__ondiMaqueta = MAQ; S.maqSave = 'Copia de prueba: se guarda solo en este navegador.'; }
-  S.maqVieja = !nuevo && !pr; { const mb = $('#maqbar'); if (mb) mb.innerHTML = maqBar(); }
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${nuevo || pr ? '../../motor/beta/?app=ondi&v=38' : 'maqueta.html?v=66'}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`;
+  S.maqIr = null; window.__ondiMaqueta = MAQ;
+  // siempre el motor común. Lo que un cliente tenía en el formato anterior se pasa una sola vez (maqPase) y, sin nada guardado, las bases con dibujo arrancan de una escena inventada
+  if (!(base === 'motor' || (data && data.motor === 1))) { let g = null;
+    if (data) g = await maqPase(st, data, base);
+    else if (base === 'generica' || base === 'polo') { try { g = await (await fetch(ESCENAS + (base === 'polo' ? 'sim-parque' : 'generica') + '.json')).json(); if (g && g.escena) g.escena.nombre = st.name; } catch (e) { g = null; } }
+    if (S.site !== st || !$('#maqbox')) return; window.__ondiMaqueta = MAQ; if (g === false) return; if (g && g.escena) { data = g; MAQ.state = g; } }
+  { const mb = $('#maqbar'); if (mb) mb.innerHTML = maqBar(); }
+  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${MOTOR}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`;
   const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
+// Pase al motor común de un cliente que tenía la maqueta de siempre. La página archivada arma lo que tenía cargado y su conversor lo devuelve en piezas del motor;
+// se le aplican los datos propios del sitio (planos, ajustes, suelo, retoques) y, si quien abre puede editar, queda guardado. Lo anterior no se pierde: va en «anterior».
+// Devuelve el estado nuevo, o false si no se pudo (y deja el aviso con el botón para reintentar).
+async function maqPase(st, data, base) { const box = $('#maqbox'), espera = ms => new Promise(z => setTimeout(z, ms)); if (!box) return false;
+  box.innerHTML = `<iframe id="maqvieja" src="${ARCH}" title="" aria-hidden="true" tabindex="-1"></iframe><div class="maqpase"><b>Pasando la maqueta al motor nuevo…</b><span>Es una sola vez por cliente y tarda unos segundos. Lo que estaba cargado se conserva.</span></div>`;
+  // la página archivada no guarda nada: solo arma la escena para convertirla
+  window.__ondiMaqueta = { ...MAQ, save() {}, savePlano() {}, presencia: null, leerPlano: null, abrirDoc: null, start: null }; const f = $('#maqvieja'); let r = null;
+  for (let i = 0; i < 280 && !r; i++) { await espera(250); if (S.site !== st || !f.isConnected) return false; try { const w = f.contentWindow; if (w && w.__aMotor && w.document.readyState === 'complete') { await espera(800); r = w.__aMotor(); if (!r || !r.escena || !Array.isArray(r.escena.piezas)) r = null; } } catch (e) { r = null; } }
+  // la página archivada se cierra acá, con el anfitrión mudo todavía puesto: al cerrarse intenta guardar y eso no puede pisar lo nuevo
+  try { f.remove(); } catch (e) {} await espera(60);
+  if (S.site !== st || !$('#maqbox')) return false;
+  if (!r) { box.innerHTML = '<div class="empty">No se pudo pasar la maqueta al motor nuevo. Lo que estaba cargado sigue guardado, sin cambios.<br><button class="btn sm pri" data-do="maqreintentar" style="margin-top:12px">Reintentar</button></div>'; return false; }
+  const D = st.data || {}; let np = 0; try { np = maqPlanos(r.escena, D.planos); maqAjustes(r.escena, D.ajustes); maqSuelo(r.escena, D.suelo); maqRetoques(r.escena, D.retoques, D.piezas); } catch (e) {}
+  r.escena.nombre = r.escena.nombre || st.name;
+  const g = { v: 1, motor: 1, escena: r.escena }; for (const k of ['ext', 'bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera', 'cabs', 'fibs']) if (data && data[k] !== undefined) g[k] = data[k];
+  if (data) g.anterior = { cuando: new Date().toISOString(), quien: myName(), base, datos: data };
+  const sin = Object.entries(r.sin || {}).map(([k, n]) => n + ' ' + k).join(', ');
+  if (siteEd()) { const u = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: g }, { onConflict: 'org_id,site_id' });
+    if (u.error) toast('La maqueta se pasó al motor nuevo, pero no se pudo guardar: ' + errTxt(u.error)); else { S.docPrev[st.id] = docCl(g); S.maqSave = 'Guardado recién'; toast(`Maqueta pasada al motor nuevo: ${r.escena.piezas.length} piezas. Lo anterior quedó archivado.${sin ? ' No pasaron: ' + sin + '.' : ''}`); } }
+  return g; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
-function queueSave(st, data) { if (!siteEd()) return; data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
+function queueSave(st, data) { if (!siteEd()) return; if (data && data.motor !== 1 && docMotor(S.docPrev[st.id])) return;   // una maqueta ya pasada al motor no se pisa con el formato anterior
+  data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
   clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
@@ -1176,13 +1201,9 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
     if (a === 'newcode') { const r = await SB.rpc('ondi_codigo', { o: st.org_id, s: st.id, renovar: !!S.code }); if (r.error) throw r.error; S.code = r.data; toast('Código nuevo listo'); render(); }
     if (a === 'nocode') { const r = await SB.rpc('ondi_sin_codigo', { o: st.org_id, s: st.id }); if (r.error) throw r.error; S.code = null; toast('Código desactivado: los que ya entraron siguen hasta que los quites'); render(); }
     if (a === 'copylink') { const link = HERE + '?codigo=' + encodeURIComponent(S.code); try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch (er) { prompt('Copiá el enlace:', link); } }
-    if (a === 'maqprobar' || a === 'maqprobarre') { let r = null; if (a === 'maqprobar') { try { r = $('#maqframe').contentWindow.__aMotor(); } catch (e) {} if (!r || !r.escena) { toast('No se pudo armar la copia. Esperá a que termine de cargar la maqueta y probá de nuevo.'); return; } const np = maqPlanos(r.escena, (S.site.data || {}).planos), na = maqAjustes(r.escena, (S.site.data || {}).ajustes), ns = maqSuelo(r.escena, (S.site.data || {}).suelo), nr = maqRetoques(r.escena, (S.site.data || {}).retoques, (S.site.data || {}).piezas); S.prueba = { site: S.site.id, escena: r.escena, nueva: true };
-        const f = Object.entries(r.sin || {}).map(([k, n]) => n + ' ' + k).join(', '); toast(`Copia de prueba armada: ${r.escena.piezas.length} piezas.${np ? ' ' + np + (np > 1 ? ' edificios entran' : ' edificio entra') + ' con su plano por dentro.' : ''}${ns ? ' Las calles internas salen del plano oficial.' : ''}${f ? ' Todavía no pasan: ' + f + '.' : ''}`); mountMaq(); }
-      else { S.prueba = null; try { localStorage.removeItem('ondi.prueba.' + S.site.id); } catch (e) {} S.maqSave = ''; await mountMaq(); toast('Cuando cargue la maqueta de siempre, tocá «Probar en el motor nuevo» para armar la copia otra vez.'); } return; }
-    if (a === 'maqprobarfin') { S.prueba = null; S.maqSave = ''; mountMaq(); return; }
+    if (a === 'maqreintentar') { mountMaq(); return; }
     if (a === 'maqfull') { const b = $('#maqbox'); if (!b) return; if (b.requestFullscreen && !document.fullscreenElement) b.requestFullscreen().catch(() => b.classList.toggle('full')); else if (document.fullscreenElement) document.exitFullscreen(); else b.classList.toggle('full'); }
     if (a === 'maqexport') { const blob = new Blob([JSON.stringify(MAQ && MAQ.state || {}, null, 1)], { type: 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'maqueta-' + st.name.replace(/[^\w-]+/g, '-').toLowerCase() + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
-    if (a === 'maqplano') { S.startPlano = true; mountMaq(); return; }
     if (a === 'maqimport') { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!d || d.v !== 1) throw 0;
         const cur = (MAQ && MAQ.state) || {}, merged = { ...cur, ...d, meta: { ...(cur.meta || {}), ...(d.meta || {}) } };
         const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: merged }, { onConflict: 'org_id,site_id' }); if (r.error) throw r.error; toast('Armado importado'); mountMaq(); } catch (er) { toast(er && er.message ? errTxt(er) : 'Ese archivo no es un armado de maqueta.'); } }; inp.click(); }
@@ -1191,7 +1212,7 @@ document.addEventListener('submit', async e => { const f = e.target.closest('[da
   try {
     if (k === 'newsite') { const base = (f.querySelector('input[name=base]:checked') || {}).value || 'vacia', data = { base }; if (v('ns_dir')) data.direccion = v('ns_dir'); if (v('ns_rs')) data.razon = v('ns_rs');
       const r = await SB.from('ondi_sites').insert({ org_id: orgId(), name: v('ns_name'), data }).select().single(); if (r.error) throw r.error; S.sites.push(r.data); S.sites.sort((a, b) => a.name.localeCompare(b.name, 'es')); S.modal = null;
-      S.startPlano = base === 'plano'; openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Subí el plano o la foto para empezar.' : 'Cliente creado'); }
+      openSite(r.data.id, 'maqueta'); toast(base === 'plano' ? 'Cliente creado. Arrastrá el plano o la foto a la maqueta para empezar.' : 'Cliente creado'); }
     if (k === 'keyorg' || k === 'keysite') { const m = f.dataset.k, val = v((k === 'keyorg' ? 'ko-' : 'ks-') + m); if (!val) throw { message: 'clave_invalida' }; const sc = k === 'keyorg' ? '' : st.id;
       const r = await SB.rpc(m === 'unifi' ? 'ondi_set_unifi' : 'ondi_set_clave', m === 'unifi' ? { o: orgId(), alcance: sc, clave: val } : { o: orgId(), alcance: sc, marca: m, clave: val }); if (r.error) throw r.error;
       toast('Clave guardada en el servidor'); S.test[m] = null; delete S.sitiosOrg[m]; await loadClaves();
@@ -1240,7 +1261,7 @@ function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D
   const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
-  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
+  for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera', 'anterior'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
   if (data.campoMq) { if (Array.isArray(data.campo)) data.campo = data.campo.map(x => { const m = data.campoMq[x.id]; return m && m.name && m.name !== x.nombre ? { ...x, nombre: m.name } : x; }); delete data.campoMq; } // nombres que se cambiaron en la maqueta
   const nuevos = docDiff(prev, data).concat(cajaDiff(prev, data), campoDiff(prev, data)); if (nuevos.length) { const t = new Date().toISOString(), q = docQuien(); data.bita = nuevos.map(x => ({ t, q, r: x.r || null, m: x.m })).reverse().concat(data.bita || []).slice(0, 800); }
   S.docPrev[st.id] = docCl(data); S.docT[st.id] = Date.now();
