@@ -90,7 +90,7 @@ a { color: inherit; }
 .i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ── Vidrio ────────────────────────────────────────────────────────────── */
-.glass, .card, .side, .top, .dock, .sheet-panel, .palette-box, .gate-card {
+.card, .side, .top, .dock, .sheet-panel, .palette-box, .gate-card {
   border: 1px solid transparent;
   background: linear-gradient(180deg, var(--sheen), transparent 46%) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box, var(--rim) border-box;
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat)); backdrop-filter: blur(var(--blur)) saturate(var(--sat));
@@ -196,7 +196,8 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .view { max-width: 1240px; padding: 30px 30px 72px; display: flex; flex-direction: column; gap: 20px; }
 .view-head { display: flex; align-items: flex-end; gap: 12px 16px; flex-wrap: wrap; }
 /* Plano: el motor común ocupa todo lo que queda de la pantalla; con pantalla completa, todo */
-.main.fixed { overflow: hidden; }
+.main.fixed { overflow: hidden; display: flex; flex-direction: column; }
+.main.fixed > .view.full { flex: 1; min-height: 0; height: auto; }
 .view.full { max-width: none; height: 100%; padding-bottom: 24px; }
 .plano { position: relative; flex: 1 1 auto; min-height: 360px; border-radius: 20px; overflow: hidden; border: 1px solid var(--line); background: var(--pop); }
 .plano iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
@@ -229,6 +230,8 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
   .top .btn.pri { width: 44px; min-width: 44px; padding: 0; }
   .top .btn.pri span { display: none; }
   .view { padding: 20px 16px 128px; gap: 16px; }
+  #alarm { padding: 10px 12px 0; }
+  #alarm:not(:empty) + .view { padding-top: 16px; }
   .view.full { padding: 14px 12px calc(86px + env(safe-area-inset-bottom)); gap: 12px; }
   .view.full .view-head .lede { display: none; }
   .plano { min-height: 300px; border-radius: 16px; }
@@ -255,6 +258,11 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .btn.danger[data-armed] { background: var(--deny); color: var(--bg); box-shadow: none; }
 .btn.go[data-armed] { --accent: var(--pass); --glow: transparent; color: var(--bg); }
 .btn.wide { width: 100%; min-height: 52px; font-size: 16px; }
+/* Elegir un archivo: el botón es la etiqueta; el campo del navegador queda debajo, invisible, para que siga andando con teclado */
+.btn.file { position: relative; justify-content: flex-start; overflow: hidden; }
+.btn.file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.btn.file span { overflow: hidden; text-overflow: ellipsis; }
+.btn.file:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn.sm { min-height: 36px; padding: 0 14px; font-size: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field > span { font-weight: 600; font-size: 14px; }
@@ -323,9 +331,34 @@ button.row:hover { background: var(--surface-2); }
 .result { padding: 11px 13px; border-radius: 12px; background: var(--surface-2); font-size: 14px; }
 .result[data-tone="pass"] { background: var(--pass-wash); color: var(--pass); }
 .result[data-tone="deny"] { background: var(--deny-wash); color: var(--deny); }
+.result[data-tone="warn"] { background: var(--warn-wash); color: var(--warn); }
+.card-tools { flex: none; display: flex; gap: 8px; }
+/* Repetición en el plano: el botón y, mientras corre, el reloj con su avance. */
+.replay { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.replay-now { display: grid; line-height: 1.15; }
+.replay-now b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.replay-now small { color: var(--muted); font-size: 12px; }
+.replay-line { display: block; width: 120px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.replay-line > i { display: block; width: 0; height: 100%; border-radius: 2px; background: var(--accent); }
+/* Un área en emergencia: se ve arriba de todo, en cualquier pantalla, hasta que vuelve a la normalidad. */
+#alarm:empty { display: none; }
+/* Una emergencia se ve siempre, aunque la pantalla se desplace: la franja queda pegada arriba del contenido. */
+#alarm { position: sticky; top: 0; z-index: 4; display: grid; gap: 8px; max-width: 1240px; padding: 14px 30px 0; }
+#alarm:not(:empty) + .view { padding-top: 22px; }
+.alarm { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; border-radius: 16px; text-align: left; font: inherit; background: linear-gradient(var(--deny-wash), var(--deny-wash)), var(--bg); color: var(--deny); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent); }
+.alarm[data-mode="locked"] { background: linear-gradient(var(--warn-wash), var(--warn-wash)), var(--bg); color: var(--warn); }
+.alarm > .i { flex: none; width: 24px; height: 24px; }
+.alarm > span:not(.btn, .go) { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.alarm b { font-size: 15.5px; }
+.alarm small { font-size: 13.5px; opacity: .9; }
+.alarm .btn { flex: none; color: var(--fg); }
+.alarm > .go { display: none; flex: none; opacity: .8; }
+.alarm > .go .i { display: block; width: 20px; height: 20px; }
+@media (max-width: 899px) { .alarm .btn, .alarm .by { display: none; } .alarm > .go { display: block; } }
 .qr { display: block; width: 188px; height: 188px; border-radius: 12px; }
 @media (max-width: 560px) {
   .row { flex-wrap: wrap; gap: 8px 12px; }
+  .row-main { flex-basis: 0; }
   .row-side { flex: 1 1 100%; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; padding-left: 54px; }
   .row.flat .row-side { padding-left: 0; }
   .form-row { grid-template-columns: 1fr; }
@@ -488,17 +521,17 @@ const nextDay = t => { const d = new Date(t); d.setDate(d.getDate() + 1); d.setH
 const atMinute = (day, minutes) => { const d = new Date(day); d.setHours(0, minutes, 0, 0); return d.getTime(); };
 const dateKey = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
-/** people: [{ id, schedule_id, since (desde cuándo cuenta: el alta o su primera pasada, lo que sea antes), … }] · schedules: Map id → { name, days: [0..6], start_min, end_min, tolerance } · passes: Map id persona → [ts ordenados]. */
-function attendanceReport({ people, schedules, passes, from, to, now = Date.now() }) {
+/** holidays: Map id de empresa → Set de días 'AAAA-MM-DD' · people: [{ id, company_id, schedule_id, since (desde cuándo cuenta: el alta o su primera pasada, lo que sea antes), … }] · schedules: Map id → { name, days: [0..6], start_min, end_min, tolerance } · passes: Map id persona → [ts ordenados]. */
+function attendanceReport({ people, schedules, passes, from, to, now = Date.now(), holidays = new Map() }) {
   const MIN = HORARIO_MIN, HOUR = HORARIO_HORA;
   const days = []; for (let d = new Date(from).setHours(0, 0, 0, 0); d < to; d = nextDay(d)) days.push(d);
   const rows = [], totals = [];
   for (const p of people) {
     const sch = schedules.get(p.schedule_id), mine = passes.get(p.id), used = new Set(), out = [];
-    const since = p.since ?? -Infinity;
+    const since = p.since ?? -Infinity, free = holidays.get(p.company_id);
     // primero los días con turno: la ventana va de 4 horas antes de la entrada a 6 después de la salida
     if (sch) for (const day of days) {
-      if (!sch.days.includes(new Date(day).getDay())) continue;
+      if (!sch.days.includes(new Date(day).getDay()) || free?.has(dateKey(day))) continue; // un feriado no se espera a nadie: si viene, es fuera de turno
       const start = atMinute(day, sch.start_min), end = sch.end_min > sch.start_min ? atMinute(day, sch.end_min) : atMinute(nextDay(day), sch.end_min), tol = sch.tolerance * MIN;
       const got = mine.filter((t, i) => !used.has(i) && t >= start - 4 * HOUR && t <= end + 6 * HOUR && used.add(i));
       // un turno que empezó antes de que la persona estuviera cargada, y sin pasadas, no es una falta
@@ -523,6 +556,54 @@ function attendanceReport({ people, schedules, passes, from, to, now = Date.now(
   }
   return { from, to, people: totals, days: rows };
 }
+
+/** Quién está adentro: recorre en orden las pasadas por las puertas que marcan horario. Por una de entrada queda adentro,
+ *  por una de salida afuera; si la puerta sirve para las dos cosas, cada pasada da vuelta el estado.
+ *  passes: [{ person_id, ts, site_id, door_name, dir }] ordenadas por hora → Map persona → { site_id, since, door } */
+function quienEstaAdentro(passes) {
+  const at = new Map();
+  for (const r of passes) {
+    const was = at.get(r.person_id), here = was?.site_id === r.site_id;
+    if (r.dir === 'in' || (r.dir !== 'out' && !here)) at.set(r.person_id, { site_id: r.site_id, since: here ? was.since : r.ts, door: r.door_name });
+    else at.delete(r.person_id);
+  }
+  return at;
+}
+
+// Lo que comparten el servidor y la beta de la web (scripts/build-web.js lo copia adentro de la página, sin los "export"):
+// cómo se llama cada tipo de evento y cada estado del horario, y las filas de las planillas que se descargan.
+const KIND = {
+  access_granted: 'Acceso', access_denied: 'Rechazo', remote_open: 'Apertura remota', exit_button: 'Botón de salida',
+  door_opened: 'Puerta abierta', door_closed: 'Puerta cerrada', door_forced: 'Puerta forzada', door_held: 'Puerta retenida',
+  duress: 'Aviso de coacción', tamper: 'Equipo manipulado', alarm: 'Alarma', emergency: 'Emergencia', other: 'Otro',
+};
+const ESTADO = {
+  ok: 'Bien', tarde: 'Llegó tarde', salio_antes: 'Salió antes', ausente: 'Faltó', en_curso: 'Adentro', sin_salida: 'Sin marca de salida',
+  pendiente: 'Todavía no empezó', extra: 'Fuera de turno', sin_turno: 'Sin turno',
+};
+const celda = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
+const hora = t => t ? new Date(t).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+/** Una planilla para Excel o Numbers: separada por punto y coma y con la marca que les hace leer bien los tildes. */
+const filas = lista => lista.map(f => f.map(celda).join(';') + '\r\n').join('');
+const planilla = (titulos, lista) => '\ufeff' + titulos.join(';') + '\r\n' + filas(lista);
+const PLANILLA_EVENTOS = ['Fecha', 'Hora', 'Tipo', 'Persona', 'Tarjeta', 'Método', 'Puerta', 'Área', 'Detalle', 'Operador'];
+const filaEvento = e => {
+  const d = new Date(e.ts);
+  return [d.toLocaleDateString('es-UY'), d.toLocaleTimeString('es-UY', { hour12: false }), KIND[e.kind] ?? e.kind, e.person_name, e.card, e.method, e.door_name, e.site_name, e.detail, e.actor];
+};
+const PLANILLA_HORARIO = ['Fecha', 'Legajo', 'Persona', 'Documento', 'Turno', 'Entrada esperada', 'Salida esperada', 'Entrada', 'Salida', 'Horas', 'Llegó tarde (min)', 'Salió antes (min)', 'Estado'];
+/** report: lo que devuelve attendanceReport (horario.js). */
+const filasHorario = ({ days, people }) => {
+  const porId = new Map(people.map(p => [p.id, p]));
+  return days.map(d => {
+    const p = porId.get(d.person_id);
+    return [d.date.split('-').reverse().join('/'), p.ref, p.name, p.document, p.schedule, hora(d.start), hora(d.end), hora(d.entry), hora(d.exit),
+      (d.minutes / 60).toFixed(2).replace('.', ','), d.late || '', d.early || '', ESTADO[d.state] ?? d.state];
+  });
+};
+/** La lista para una evacuación: quién está adentro, dónde y desde cuándo. sitios: Map id de área → nombre. */
+const PLANILLA_ADENTRO = ['Persona', 'Legajo', 'Documento', 'Área', 'Entró', 'Por', 'Tipo', 'Visita a', 'Empleador'];
+const filasAdentro = (lista, sitios) => lista.map(p => [p.name, p.ref, p.document, sitios.get(p.site_id) ?? '', hora(p.since), p.door, p.kind === 'visit' ? 'Visita' : 'Personal', p.host, p.company]);
 
 // Utilidades de la interfaz.
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -564,16 +645,11 @@ const initials = name => String(name).trim().split(/\s+/).slice(0, 2).map(w => w
 const toLocalInput = ms => { if (!ms) return ''; const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
 const fromLocalInput = text => text ? new Date(text).getTime() : null;
 
-const KIND = {
-  access_granted: 'Acceso', access_denied: 'Rechazo', remote_open: 'Apertura remota', exit_button: 'Botón de salida',
-  door_opened: 'Puerta abierta', door_closed: 'Puerta cerrada', door_forced: 'Puerta forzada', door_held: 'Puerta retenida',
-  duress: 'Aviso de coacción', tamper: 'Equipo manipulado', alarm: 'Alarma', other: 'Otro',
-};
 const METHOD = { card: 'tarjeta', face: 'rostro', fingerprint: 'huella', pin: 'clave', qr: 'código QR', remote: 'remoto', button: 'botón', mixed: 'doble factor' };
 const ROLE = { admin: 'Administrador', operator: 'Operador', viewer: 'Solo lectura' };
 const ALERT_KINDS = ['door_forced', 'door_held', 'duress', 'tamper', 'alarm'];
 const tone = kind => ['access_granted', 'remote_open', 'exit_button'].includes(kind) ? 'pass'
-  : kind === 'access_denied' ? 'deny' : ALERT_KINDS.includes(kind) ? 'alert' : 'quiet';
+  : kind === 'access_denied' ? 'deny' : ALERT_KINDS.includes(kind) || kind === 'emergency' ? 'alert' : 'quiet';
 
 // Un solo juego de íconos: grilla de 24, trazo 1,8, puntas redondas, color del texto. Si falta uno, se dibuja igual.
 const ICONS = {
@@ -601,12 +677,14 @@ const ICONS = {
   site: '<path d="M4 20V8l8-4 8 4v12M9 20v-6h6v6M4 20h16"/>',
   send: '<path d="M4 12l16-8-6 16-3-6z"/>',
   data: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
-  look: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z"/>',
-  clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
   servidor: '<rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/><path d="M8 7.5h.01M8 16.5h.01"/>',
+  candado: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  adentro: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.2a3 3 0 0 1 0 5.6M17.5 14.2a5.5 5.5 0 0 1 3 4.8"/>',
+  planilla: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.5h16M4 15h16M10 4v16"/>',
+  repetir: '<path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4.5 4v4h4"/><path d="M10.5 9.5v5l4-2.5z"/>',
+  alto: '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>',
   horario: '<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4M18.5 6l1.2-1.2"/>',
   empresa: '<path d="M4 20V6.5L11 4v16M11 9h9v11M2.5 20h19M7 9h1M7 13h1M7 16.5h1M14.5 13h2M14.5 16.5h2"/>',
-  tag: '<path d="M4 12V5a1 1 0 0 1 1-1h7l8 8-8 8z"/><path d="M8.5 8.5h.01"/>',
   right: '<path d="M10 6l6 6-6 6"/>',
 };
 const icon = name => raw(`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name].replace(/<(path|circle|rect|ellipse) /g, '<$1 pathLength="1" ')}</svg>`);
@@ -685,10 +763,10 @@ function liveApi(base = '') {
 function demoApi() {
   const H = 3600_000;
   const BRANDS = [
-    { brand: 'zkteco', label: 'ZKTeco', protocol: 'C3 / inBio (TCP 4370)', defaultPort: 4370, doors: 4, model: 'inBio460', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: false, cards: false, faces: false, pins: false } },
-    { brand: 'hikvision', label: 'Hikvision', protocol: 'ISAPI', defaultPort: 80, doors: 1, model: 'DS-K1T671TM-3XF', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true } },
-    { brand: 'dahua', label: 'Dahua', protocol: 'HTTP API (CGI)', defaultPort: 80, doors: 2, model: 'ASC2202C-S', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true } },
-    { brand: 'intelbras', label: 'Intelbras', protocol: 'API Bio-T (CGI)', defaultPort: 80, doors: 1, model: 'SS 3532 MF W', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true } },
+    { brand: 'zkteco', label: 'ZKTeco', protocol: 'C3 / inBio (TCP 4370)', defaultPort: 4370, doors: 4, model: 'inBio460', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: false, cards: false, faces: false, pins: false, history: false, readPeople: false, hold: true, lock: false } },
+    { brand: 'hikvision', label: 'Hikvision', protocol: 'ISAPI', defaultPort: 80, doors: 1, model: 'DS-K1T671TM-3XF', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'dahua', label: 'Dahua', protocol: 'HTTP API (CGI)', defaultPort: 80, doors: 2, model: 'ASC2202C-S', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'intelbras', label: 'Intelbras', protocol: 'API Bio-T (CGI)', defaultPort: 80, doors: 1, model: 'SS 3532 MF W', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
   ];
   const brandOf = brand => BRANDS.find(b => b.brand === brand);
   const me = { id: 'u1', name: 'Christian', email: 'christian@demo.uy', role: 'admin', mfa: false, company_id: null, areas: '' };
@@ -716,9 +794,9 @@ function demoApi() {
         email: 'personal@frigorifico.demo.uy', contact: 'Jefatura de planta', notes: 'Turno de noche en las cámaras de frío.', active: 1, created_at: now() - 60 * 24 * H }]),
     ],
     sites: [
-      { id: 's1', company_id: 'c1', name: 'Planta Ruta 5', address: 'Ruta 5 km 28, Canelones' },
-      { id: 's2', company_id: 'c1', name: 'Centro logístico Ruta 1', address: 'Ruta 1 km 22, Montevideo' },
-      ...(cine ? [] : [{ id: 's3', company_id: 'c2', name: 'Planta Ruta 8', address: 'Ruta 8 km 31, Pando' }]),
+      { id: 's1', company_id: 'c1', name: 'Planta Ruta 5', address: 'Ruta 5 km 28, Canelones', mode: 'normal', mode_at: 0, mode_by: '' },
+      { id: 's2', company_id: 'c1', name: 'Centro logístico Ruta 1', address: 'Ruta 1 km 22, Montevideo', mode: 'normal', mode_at: 0, mode_by: '' },
+      ...(cine ? [] : [{ id: 's3', company_id: 'c2', name: 'Planta Ruta 8', address: 'Ruta 8 km 31, Pando', mode: 'normal', mode_at: 0, mode_by: '' }]),
     ],
     schedules: [
       { id: 'sch1', company_id: 'c1', name: 'Planta, mañana', days: [1, 2, 3, 4, 5], start_min: 360, end_min: 840, tolerance: 10 },
@@ -728,7 +806,7 @@ function demoApi() {
         { id: 'sch4', company_id: 'c2', name: 'Faena, mañana', days: [1, 2, 3, 4, 5, 6], start_min: 300, end_min: 780, tolerance: 5 },
         { id: 'sch5', company_id: 'c2', name: 'Frío, noche', days: [0, 1, 2, 3, 4], start_min: 1320, end_min: 360, tolerance: 10 }]),
     ],
-    devices: [], doors: [], levels: [], people: [], events: [], sync: new Map(), keys: [], webhooks: [],
+    devices: [], doors: [], levels: [], people: [], events: [], sync: new Map(), keys: [], webhooks: [], holidays: [], adopted: new Set(),
     security: { require_2fa: false, idle_hours: 168, backups: true },
     backups: [0, 1, 2].map(n => ({ name: `kliva-demo-${n + 1}.db`, at: now() - (n * 24 + 5) * H, size: 4_300_000 - n * 21_000 })),
     users: [
@@ -749,7 +827,7 @@ function demoApi() {
     const d = { id: newId('d'), site_id, brand, name, host, port: brandOf(brand).defaultPort, secure: 0, username: brand === 'zkteco' ? '' : 'admin', enabled: 1,
       model, serial: `${model.replace(/\W/g, '').slice(0, 6).toUpperCase()}${20230000 + serial * 137}`, firmware, status, status_detail: detail, last_seen: status === 'online' ? now() : now() - 5 * H };
     db.devices.push(d);
-    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' ? 'closed' : 'unknown', state_at: now(), clock: Number(CLOCK.includes(name)) }));
+    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' ? 'closed' : 'unknown', state_at: now(), clock: Number(CLOCK.includes(name)), dir: /de entrada$/.test(name) ? 'in' : /de salida$/.test(name) ? 'out' : 'both' }));
     return d;
   };
   addDevice('s1', 'zkteco', 'Controladora de portería', '10.20.1.21', 'inBio460', 'AC Ver 5.0.9', ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Depósito de repuestos']);
@@ -843,6 +921,13 @@ function demoApi() {
       if (can && d.status === 'online') instant ? row.status = 'done' : setTimeout(done, 900 + Math.random() * 900);
     }
   }
+  // Dos visitas de hoy en la planta: una que sigue adentro y otra que ya se fue.
+  if (!cine) {
+    const until = (() => { const d = new Date(now()); d.setHours(18, 0, 0, 0); return d.getTime() > now() + H ? d.getTime() : now() + 4 * H; })();
+    [['Marcos Ferreira', 'Servicios Técnicos del Sur', 'Federico Viera', 1], ['Lorena Acuña', 'Auditoría externa', 'Mariana Cabrera', 0]].forEach(([name, company, host, active], i) => db.people.push({
+      id: newId('h'), ref: String(1901 + i), name, company, document: '', cards: [String(5559001 + i)], pin: '', face: '', hasFace: false, active, kind: 'visit', host,
+      valid_from: null, valid_to: active ? until : now() - 40 * 60_000, levels: [db.levels[2].id], created_at: now() - 3 * H, updated_at: now() - H, company_id: 'c1', site_id: 's1', schedule_id: null }));
+  }
   db.people.forEach(p => plan(p, true));
 
   const event = (ts, kind, door, person, extra = {}) => ({
@@ -857,6 +942,7 @@ function demoApi() {
     door.state = 'open'; door.state_at = now();
     emit('door', { id: door.id, state: 'open', state_at: door.state_at });
     setTimeout(() => {
+      if (site(device(door.device_id).site_id).mode === 'open') return; // en una evacuación quedan abiertas
       door.state = 'closed'; door.state_at = now();
       emit('door', { id: door.id, state: 'closed', state_at: door.state_at });
     }, ms);
@@ -864,7 +950,7 @@ function demoApi() {
 
   /** Una pasada verosímil: casi siempre alguien con permiso, a veces un rechazo. */
   function pass(ts, live) {
-    const person = pick(db.people.filter(p => p.active));
+    const person = pick(db.people.filter(p => p.active && p.kind !== 'visit')); // las visitas tienen su propia historia, más abajo
     const allowed = doorsOf(person), open = onlineDoors();
     // quien tiene turno marca al entrar y al salir (eso lo arma la historia de abajo); en el día pasa por las puertas de adentro
     const mine = open.filter(p => allowed.has(p.id) && !(person.schedule_id && p.clock)), roll = Math.random();
@@ -904,6 +990,11 @@ function demoApi() {
       if (exit < now()) db.events.push(event(exit, 'access_granted', byDoor(outName), person, { method, card: method === 'card' ? person.cards[0] ?? '' : '' }));
     }
   }
+  // las visitas de hoy: una entró y sigue adentro; la otra entró y ya salió
+  for (const [name, times] of [['Marcos Ferreira', [now() - 2 * H]], ['Lorena Acuña', [now() - 3 * H, now() - 45 * 60_000]]]) {
+    const v = db.people.find(p => p.name === name);
+    if (v) for (const ts of times) db.events.push(event(ts, 'access_granted', byDoor('Portería peatonal'), v, { method: 'card', card: v.cards[0] }));
+  }
   db.events.sort((a, b) => b.ts - a.ts);
   db.audit.push(
     { id: 'a2', ts: now() - 3 * H, user_name: 'Christian', action: 'Alta de persona', detail: 'Nicolás Silva' },
@@ -911,8 +1002,14 @@ function demoApi() {
   );
 
   let ticker = null, ticks = 0;
+  function expireVisits() {
+    const due = db.people.filter(p => p.kind === 'visit' && p.active && p.valid_to && p.valid_to < now());
+    for (const p of due) { p.active = 0; p.updated_at = now(); plan(p); }
+    if (due.length) emit('sync', {});
+  }
   function tick() {
     ticker = setTimeout(tick, 3200 + Math.random() * 3600);
+    expireVisits();
     const idle = onlineDoors().filter(p => p.state === 'closed');
     const e = ++ticks % 14 === 0 && idle.length
       ? (door => (swing(door, 7000), event(now(), 'door_held', door, null)))(pick(idle))
@@ -946,17 +1043,21 @@ function demoApi() {
   const listed = p => ({
     id: p.id, ref: p.ref, name: p.name, company: p.company, document: p.document, active: p.active, valid_from: p.valid_from, valid_to: p.valid_to,
     updated_at: p.updated_at, has_face: Number(p.hasFace), has_pin: Number(Boolean(p.pin)), cards: p.cards, levels: p.levels,
-    company_id: p.company_id, site_id: p.site_id, schedule_id: p.schedule_id,
+    company_id: p.company_id, site_id: p.site_id, schedule_id: p.schedule_id, kind: p.kind ?? 'staff', host: p.host ?? '', device_face: Number(Boolean(p.device_face)),
     sync: syncRows(p.ref).reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] ?? 0) + 1 }), {}),
   });
 
+  const newPerson = () => ({ id: newId('h'), ref: String(1001 + db.people.length + serial), name: '', company: '', document: '', cards: [], pin: '', face: '', hasFace: false,
+    active: 1, valid_from: null, valid_to: null, levels: [], created_at: now(), company_id: null, site_id: null, schedule_id: null, host: '' });
   function savePerson(person, input) {
     const company = person.company_id || companyFor(input.company_id);
     const area = (input.site_id === undefined ? person.site_id : input.site_id) || null, shift = (input.schedule_id === undefined ? person.schedule_id : input.schedule_id) || null;
     if (area && site(area)?.company_id !== company) throw fail(400, 'El área elegida es de otra empresa');
     if (shift && db.schedules.find(x => x.id === shift)?.company_id !== company) throw fail(400, 'Ese turno no es de la empresa de la persona');
-    input = { ...input, company_id: company, site_id: area, schedule_id: shift };
+    const kind = person.kind ?? (input.kind === 'visit' ? 'visit' : 'staff');
+    input = { ...input, kind, company_id: company, site_id: area, schedule_id: kind === 'visit' ? null : shift };
     const next = { ...person, ...input };
+    if (kind === 'visit' && !next.valid_to) throw fail(400, 'Indicá hasta cuándo vale la visita');
     next.name = String(next.name ?? '').trim();
     next.cards = [...new Set((next.cards ?? []).map(c => String(c).trim()).filter(Boolean))];
     if (!next.name) throw fail(400, 'Falta el nombre');
@@ -966,7 +1067,7 @@ function demoApi() {
       const owner = db.people.find(o => o.id !== person.id && o.cards.includes(c));
       if (owner) throw fail(400, `La tarjeta ${c} ya está asignada a ${owner.name}`);
     }
-    if (input.face !== undefined) { next.face = input.face ?? ''; next.hasFace = Boolean(next.face); }
+    if (input.face !== undefined) { next.face = input.face ?? ''; next.hasFace = Boolean(next.face); if (next.face) next.device_face = 0; }
     Object.assign(person, next, { active: Number(Boolean(next.active)), updated_at: now() });
     plan(person);
   }
@@ -1008,7 +1109,7 @@ function demoApi() {
   on('GET', '/api/sites', () => { const sc = scope(); return db.sites.filter(x => sc.sites.has(x.id)).map(s => ({ ...s, devices: db.devices.filter(d => d.site_id === s.id).length })); });
   on('POST', '/api/sites', ({ body }) => {
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del área');
-    const s = { id: newId('s'), company_id: companyFor(body.company_id), name: body.name.trim(), address: body.address ?? '' };
+    const s = { id: newId('s'), company_id: companyFor(body.company_id), name: body.name.trim(), address: body.address ?? '', mode: 'normal', mode_at: 0, mode_by: '' };
     log('Alta de área', s.name);
     db.sites.push(s);
     return s;
@@ -1021,6 +1122,36 @@ function demoApi() {
     let p = null; try { p = JSON.parse(saved.get(`kliva.demo.plano.${id}`) || 'null'); } catch { p = null; }
     return planos[id] = p || (site(id) ? planoEjemplo(site(id), doorByName) : null);
   };
+  // Emergencia en un área y quién está adentro: como en el servidor (store.setSiteMode, store.presence).
+  const MODES = { open: 'Evacuación: puertas abiertas', locked: 'Bloqueo: puertas cerradas', normal: 'Vuelta a la normalidad' };
+  on('POST', '/api/sites/:id/mode', ({ params, body }) => {
+    const s = site(params.id), mode = body.mode;
+    if (!MODES[mode]) throw fail(400, 'Ese modo no existe');
+    Object.assign(s, { mode, mode_at: now(), mode_by: me.name });
+    const failed = [];
+    for (const d of db.devices.filter(x => x.site_id === s.id)) {
+      if (d.status !== 'online') { if (mode !== 'normal') failed.push({ device: d.name, why: 'Sin conexión: se aplica sola cuando vuelva' }); continue; }
+      if (mode === 'locked' && d.brand === 'zkteco') { failed.push({ device: d.name, why: 'Este equipo no admite esa orden a distancia: hay que hacerlo en el lugar' }); continue; }
+      for (const p of db.doors.filter(x => x.device_id === d.id)) {
+        p.state = mode === 'open' ? 'open' : 'closed'; p.state_at = now();
+        emit('door', { id: p.id, state: p.state, state_at: p.state_at });
+      }
+    }
+    const e = { id: newId('e'), ts: now(), kind: 'emergency', device_id: null, door_id: null, person_id: null, site_id: s.id, site_name: s.name, door_name: '', person_name: '', card: '', method: '', detail: MODES[mode], actor: me.name };
+    db.events.unshift(e);
+    emit('event', e);
+    emit('site', { id: s.id, mode, mode_at: s.mode_at, mode_by: s.mode_by });
+    log(MODES[mode], s.name);
+    return { id: s.id, name: s.name, mode, mode_at: s.mode_at, mode_by: s.mode_by, failed };
+  });
+  function presence() {
+    const sc = scope(), doors = new Map(db.doors.map(p => [p.id, p]));
+    const passes = db.events.filter(e => e.kind === 'access_granted' && e.person_id && doors.get(e.door_id)?.clock && e.ts >= now() - 18 * H && e.ts <= now() && sc.sites.has(e.site_id))
+      .map(e => ({ person_id: e.person_id, ts: e.ts, site_id: e.site_id, door_name: e.door_name, dir: doors.get(e.door_id).dir })).sort((a, b) => a.ts - b.ts);
+    return [...quienEstaAdentro(passes)].map(([id, at]) => { const p = db.people.find(x => x.id === id); return p && { id, ref: p.ref, name: p.name, company: p.company, document: p.document, kind: p.kind ?? 'staff', host: p.host ?? '', company_id: p.company_id, ...at }; })
+      .filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }
+  on('GET', '/api/presence', presence);
   on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Esa área no existe'); return { plano: planoDe(params.id), updated_at: null }; });
   on('PUT', '/api/sites/:id/plano', ({ params, body }) => {
     if (me.role !== 'admin') throw fail(403, 'Tu usuario no tiene permiso para hacer esto');
@@ -1070,6 +1201,7 @@ function demoApi() {
   on('PATCH', '/api/doors/:id', ({ params, body }) => {
     const door = db.doors.find(p => p.id === params.id);
     if (body.clock !== undefined) door.clock = Number(Boolean(body.clock));
+    if (['in', 'out', 'both'].includes(body.dir)) door.dir = body.dir;
     if (body.name === undefined) return;
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre de la puerta');
     door.name = body.name.trim();
@@ -1090,14 +1222,58 @@ function demoApi() {
     const sc = scope();
     return db.people.filter(p => personIn(sc, p) && fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
   });
+  on('POST', '/api/people/import', ({ body }) => {
+    const rows = body.rows ?? [];
+    if (!rows.length) throw fail(400, 'La planilla no tiene filas');
+    const company = companyFor(body.company_id), out = { added: 0, errors: [] };
+    const find = (list, text, what) => { const k = fold(String(text ?? '').trim()); if (!k) return null; const hit = list.find(x => x.company_id === company && fold(x.name) === k); if (!hit) throw fail(400, `No existe ${what} "${String(text).trim()}"`); return hit.id; };
+    rows.forEach((r, i) => {
+      try {
+        const level = find(db.levels, r.level, 'el nivel'), p = newPerson();
+        savePerson(p, { name: r.name, document: r.document ?? '', company: r.employer ?? '', company_id: company, cards: String(r.cards ?? '').split(/[\s,/|]+/).filter(Boolean),
+          site_id: find(db.sites, r.area, 'el área'), schedule_id: find(db.schedules, r.schedule, 'el turno'), levels: level ? [level] : [] });
+        db.people.push(p);
+        out.added++;
+      } catch (e) { if (!e.status) throw e; out.errors.push({ row: i + 1, name: String(r.name ?? '').trim(), why: e.message }); }
+    });
+    log('Personas cargadas desde una planilla', `${rows.length} filas`);
+    return out;
+  });
+  // Lo que "ya está" en cada equipo: quienes Kliva le mandó, más dos personas inventadas que Kliva todavía no conoce.
+  const LOOSE = [['Rosario Techera', ['5552140'], true], ['Walter Acosta', [], true], ['Graciela Pintos', ['5552317'], false], ['Néstor Barboza', ['5552388'], true]];
+  const devicePeople = id => {
+    const d = device(id), n = db.devices.indexOf(d);
+    if (!brandOf(d.brand).capabilities.readPeople) throw fail(422, 'Este conector todavía no lee las personas del equipo');
+    if (d.status !== 'online') throw fail(409, `${d.name} está sin conexión`);
+    const mine = db.people.filter(p => db.sync.get(`${p.ref}|${id}`)?.status === 'done').map(p => ({ ref: p.ref, name: p.name, cards: p.cards, has_face: Boolean(p.hasFace || p.device_face), valid_to: p.valid_to, known: p.name }));
+    const loose = [LOOSE[n % 4], LOOSE[(n + 1) % 4]].map(([name, cards, has_face], i) => ({ ref: String(200 + n * 10 + i), name, cards, has_face, valid_to: null, known: null })).filter(x => !db.adopted.has(`${id}|${x.ref}`));
+    return [...loose, ...mine];
+  };
+  on('GET', '/api/devices/:id/people', ({ params }) => devicePeople(params.id));
+  on('POST', '/api/devices/:id/people', ({ params, body }) => {
+    const d = device(params.id), refs = new Set((body.refs ?? []).map(String)), name = `Personas de ${d.name}`.slice(0, 60), company = site(d.site_id).company_id;
+    let level = db.levels.find(l => l.company_id === company && l.name === name);
+    if (!level) db.levels.push(level = { id: newId('l'), company_id: company, name, doors: db.doors.filter(p => p.device_id === d.id).map(p => p.id) });
+    const out = { added: 0, skipped: [] };
+    for (const x of devicePeople(d.id).filter(x => refs.has(x.ref) && !x.known)) {
+      const p = { ...newPerson(), ref: x.ref, device_face: Number(x.has_face) };
+      savePerson(p, { name: x.name, cards: x.cards, company_id: company, site_id: d.site_id, levels: [level.id] });
+      db.people.push(p);
+      db.adopted.add(`${d.id}|${x.ref}`);
+      db.sync.set(`${p.ref}|${d.id}`, { person_ref: p.ref, device_id: d.id, device_name: d.name, brand: d.brand, op: 'upsert', status: 'done', error: '' });
+      out.added++;
+    }
+    log('Personas traídas de un equipo', `${out.added} de ${d.name}`);
+    emit('sync', {});
+    return out;
+  });
   on('GET', '/api/people/:id', ({ params }) => {
     const p = db.people.find(x => x.id === params.id);
     if (!p) throw fail(404, 'Esa persona ya no existe');
-    return { ...p, has_face: Number(p.hasFace), sync: syncRows(p.ref) };
+    return { ...p, kind: p.kind ?? 'staff', host: p.host ?? '', device_face: Number(Boolean(p.device_face)), has_face: Number(p.hasFace), sync: syncRows(p.ref) };
   });
   on('POST', '/api/people', ({ body }) => {
-    const p = { id: newId('h'), ref: String(1001 + db.people.length + serial), name: '', company: '', document: '', cards: [], pin: '', face: '', hasFace: false,
-      active: 1, valid_from: null, valid_to: null, levels: [], created_at: now(), company_id: null, site_id: null, schedule_id: null };
+    const p = newPerson();
     savePerson(p, body);
     db.people.push(p);
     log('Alta de persona', p.name);
@@ -1125,10 +1301,10 @@ function demoApi() {
   });
 
   on('GET', '/api/events', ({ query }) => {
-    const group = query.get('group'), before = Number(query.get('before')), door = query.get('door'), person = query.get('person');
+    const group = query.get('group'), before = Number(query.get('before')), from = Number(query.get('from')), door = query.get('door'), person = query.get('person');
     const kinds = { access: ['access_granted', 'access_denied'], denied: ['access_denied'], alerts: ALERT_KINDS }[group];
     const sc = scope();
-    return db.events.filter(e => sc.sites.has(e.site_id) && (!before || e.ts < before) && (!door || e.door_id === door) && (!person || e.person_id === person) && (!kinds || kinds.includes(e.kind)))
+    return db.events.filter(e => sc.sites.has(e.site_id) && (!before || e.ts < before) && (!from || e.ts >= from) && (!door || e.door_id === door) && (!person || e.person_id === person) && (!kinds || kinds.includes(e.kind)))
       .slice(0, Number(query.get('limit')) || 60);
   });
   on('GET', '/api/audit', () => db.audit);
@@ -1174,19 +1350,30 @@ function demoApi() {
     const sc = scope(), monday = new Date(now()); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
     const from = Number(query.get('from')) || monday.getTime(), to = Math.min(Number(query.get('to')) || now() + 1, now() + 1);
     if (to - from > 93 * 24 * H) throw fail(400, 'El período máximo es de tres meses');
-    const people = db.people.filter(p => p.active && personIn(sc, p)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => ({ ...p }));
+    const people = db.people.filter(p => p.active && (p.kind ?? 'staff') === 'staff' && personIn(sc, p)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => ({ ...p }));
     const clocks = new Set(db.doors.filter(p => p.clock).map(p => p.id)), passes = new Map(people.map(p => [p.id, []]));
     for (const e of db.events) if (e.kind === 'access_granted' && clocks.has(e.door_id) && passes.has(e.person_id) && e.ts >= from - 12 * H && e.ts < to + 18 * H) passes.get(e.person_id).push(e.ts);
     passes.forEach(list => list.sort((a, b) => a - b));
     const first = new Map();
     for (const e of db.events) if (e.kind === 'access_granted' && e.person_id && !(first.get(e.person_id) <= e.ts)) first.set(e.person_id, e.ts);
     for (const p of people) p.since = Math.min(p.created_at ?? Infinity, first.get(p.id) ?? Infinity);
-    return attendanceReport({ people, schedules: new Map(db.schedules.map(x => [x.id, x])), passes, from, to, now: now() });
+    const holidays = new Map();
+    for (const h of db.holidays) (holidays.get(h.company_id) ?? holidays.set(h.company_id, new Set()).get(h.company_id)).add(h.day);
+    return attendanceReport({ people, schedules: new Map(db.schedules.map(x => [x.id, x])), passes, from, to, now: now(), holidays });
   }
   on('GET', '/api/attendance', ({ query }) => attendance(query));
+  on('GET', '/api/holidays', () => { const sc = scope(); return db.holidays.filter(h => !sc.company || h.company_id === sc.company).sort((a, b) => a.day.localeCompare(b.day)); });
+  on('POST', '/api/holidays', ({ body }) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.day)) || Number.isNaN(Date.parse(body.day))) throw fail(400, 'Elegí el día del feriado');
+    const company_id = companyFor(body.company_id), old = db.holidays.find(h => h.company_id === company_id && h.day === body.day);
+    if (old) old.name = String(body.name ?? '').trim(); else db.holidays.push({ id: newId('f'), company_id, day: body.day, name: String(body.name ?? '').trim() });
+    return { id: (old ?? db.holidays.at(-1)).id };
+  });
+  on('DELETE', '/api/holidays/:id', ({ params }) => { db.holidays = db.holidays.filter(h => h.id !== params.id); });
 
   // Avisos, seguridad, datos e integraciones
   on('GET', '/api/alerts', () => [
+    ...db.sites.filter(s => s.mode && s.mode !== 'normal' && scope().sites.has(s.id)).map(s => ({ id: `mode-${s.id}`, kind: 'emergency', ts: s.mode_at, title: MODES[s.mode], detail: `${s.name}, por ${s.mode_by}`, site_id: s.id })),
     ...db.devices.filter(d => d.enabled && d.status === 'offline' && scope().sites.has(d.site_id)).map(d => ({ id: `dev-${d.id}`, kind: 'device_offline', ts: d.last_seen, title: d.name, detail: d.status_detail, device_id: d.id })),
     ...db.events.filter(e => ALERT_KINDS.includes(e.kind) && e.ts > now() - 24 * H && scope().sites.has(e.site_id)).slice(0, 20).map(e => ({ id: e.id, kind: e.kind, ts: e.ts, title: e.door_name, detail: e.site_name, door_id: e.door_id })),
   ].sort((a, b) => b.ts - a.ts));
@@ -1245,19 +1432,10 @@ function demoApi() {
         people: db.people.map(({ face, hasFace, ...p }) => ({ ...p, has_face: hasFace, ...(q.get('fotos') === '1' && face && { face }) })), operators: db.users, events: db.events.length };
       return saveBlob(new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' }), filename);
     }
-    const from = Number(q.get('from')) || 0, to = Number(q.get('to')) || now(), cell = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
-    if (route === '/api/attendance.csv') {
-      const { days, people } = attendance(q), byId = new Map(people.map(p => [p.id, p])), hm = t => t ? new Date(t).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-      const STATE = { ok: 'Bien', tarde: 'Llegó tarde', salio_antes: 'Salió antes', ausente: 'Faltó', en_curso: 'Adentro', sin_salida: 'Sin marca de salida', pendiente: 'Todavía no empezó', extra: 'Día fuera de turno', sin_turno: 'Sin turno' };
-      const rows = days.map(d => { const p = byId.get(d.person_id); return [d.date.split('-').reverse().join('/'), p.ref, p.name, p.document, p.schedule, hm(d.start), hm(d.end), hm(d.entry), hm(d.exit),
-        (d.minutes / 60).toFixed(2).replace('.', ','), d.late || '', d.early || '', STATE[d.state]].map(cell).join(';'); });
-      return saveBlob(new Blob(['\ufeff' + ['Fecha;Legajo;Persona;Documento;Turno;Entrada esperada;Salida esperada;Entrada;Salida;Horas;Llegó tarde (min);Salió antes (min);Estado', ...rows].join('\r\n')], { type: 'text/csv' }), filename);
-    }
-    const rows = db.events.filter(e => e.ts >= from && e.ts < to && inGroup(e, q.get('group') ?? 'all')).map(e => {
-      const d = new Date(e.ts);
-      return [d.toLocaleDateString('es-UY'), d.toLocaleTimeString('es-UY', { hour12: false }), KIND[e.kind], e.person_name, e.card, e.method, e.door_name, e.site_name, e.detail, e.actor].map(cell).join(';');
-    });
-    return saveBlob(new Blob(['﻿' + ['Fecha;Hora;Tipo;Persona;Tarjeta;Método;Puerta;Área;Detalle;Operador', ...rows].join('\r\n')], { type: 'text/csv' }), filename);
+    const text = route === '/api/presence.csv' ? planilla(PLANILLA_ADENTRO, filasAdentro(presence(), new Map(db.sites.map(s => [s.id, s.name]))))
+      : route === '/api/attendance.csv' ? planilla(PLANILLA_HORARIO, filasHorario(attendance(q)))
+      : planilla(PLANILLA_EVENTOS, db.events.filter(e => e.ts >= (Number(q.get('from')) || 0) && e.ts < (Number(q.get('to')) || now()) && scope().sites.has(e.site_id) && inGroup(e, q.get('group') ?? 'all')).map(filaEvento));
+    return saveBlob(new Blob([text], { type: 'text/csv' }), filename);
   }
 
   // ── La historia de la web (modo cine) ──────────────────────────────────────
@@ -1599,6 +1777,7 @@ const S = {
   overview: null, sites: [], devices: [], doors: [], levels: [], people: [], feed: [], events: [], notices: [],
   view: 'panel', peopleQ: '', eventGroup: 'main', settingsTab: 'empresa', lastPass: {}, doorAlert: {}, linkDown: false, draftFace: undefined, fresh: null,
   places: {}, planoSite: null, planoFocus: null, motorOk: undefined,
+  presence: [], holidays: [], peopleKind: 'staff', modeFailed: null, replay: null, importRows: null,
   companies: [], vista: { empresa: '', area: '' }, companyOpen: null, users: null, schedules: [], attendance: null, horarioPeriod: 'semana',
 };
 const root = document.documentElement, hostTheme = root.dataset.theme;
@@ -1612,7 +1791,7 @@ async function load(...keys) {
   const paths = {
     overview: '/api/overview', sites: '/api/sites', devices: '/api/devices', doors: '/api/doors', levels: '/api/levels', notices: '/api/alerts',
     people: `/api/people?q=${encodeURIComponent(S.peopleQ)}`, feed: '/api/events?group=main&limit=40',
-    events: `/api/events?group=${S.eventGroup}&limit=60`, places: '/api/places', companies: '/api/companies', schedules: '/api/schedules',
+    events: `/api/events?group=${S.eventGroup}&limit=60`, places: '/api/places', companies: '/api/companies', schedules: '/api/schedules', presence: '/api/presence', holidays: '/api/holidays',
     attendance: (r => `/api/attendance?from=${r.from}&to=${r.to}`)(periodRange()),
   };
   await Promise.all(keys.map(async key => { S[key] = await S.api.get(paths[key]); }));
@@ -1745,6 +1924,9 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => look
 // ── Puertas ──────────────────────────────────────────────────────────────────
 function doorLook(d) {
   const off = d.device_status !== 'online', alert = !off && S.doorAlert[d.id], last = S.lastPass[d.id];
+  const mode = !off && S.sites.find(s => s.id === d.site_id)?.mode;   // el área está en emergencia: manda sobre lo demás
+  if (mode === 'open') return { state: 'open', alert: false, sub: 'Abierta por evacuación' };
+  if (mode === 'locked') return { state: 'closed', alert: false, sub: 'Bloqueada' };
   const sub = off ? 'Sin conexión' : alert ? KIND[alert]
     : d.state === 'open' ? (last && Date.now() - last.at < 15_000 && last.name) || 'Abierta'
     : d.state === 'closed' ? 'Cerrada' : 'Sin sensor';
@@ -1771,7 +1953,8 @@ function patchDoor(id) {
 function eventRow(e, { fresh = false, long = false } = {}) {
   const who = e.person_name || (e.card ? `Tarjeta ${e.card}` : '');
   const title = e.kind === 'access_granted' ? who || 'Acceso' : e.kind === 'access_denied' ? who || 'Sin identificar' : KIND[e.kind] ?? 'Evento';
-  const how = e.kind === 'access_granted' ? METHOD[e.method] : e.kind === 'remote_open' && e.actor ? `por ${e.actor}` : e.kind !== 'access_denied' ? e.detail : '';
+  const how = e.kind === 'access_granted' ? METHOD[e.method] : e.kind === 'remote_open' && e.actor ? `por ${e.actor}`
+    : e.kind === 'emergency' ? `${e.detail}, por ${e.actor}` : e.kind !== 'access_denied' ? e.detail : '';
   const where = [e.door_name, e.site_name, how].filter(Boolean).join(', ');
   const dated = long || !isToday(e.ts); // con fecha cuando no es de hoy
   return html`<li class="ev ${fresh ? 'fresh' : ''} ${dated ? 'long' : ''}" data-tone="${tone(e.kind)}">
@@ -1804,6 +1987,7 @@ function statusText() {
       : off.length ? html`<b>${o.devices.online}</b> de <b>${o.devices.total}</b> equipos en línea. <span class="bad">Sin conexión: ${off.map(d => d.name).join(', ')}.</span>`
       : o.devices.total === 1 ? 'El equipo está en línea.' : html`Los <b>${o.devices.total}</b> equipos están en línea.`}
     ${o.doors.total ? (o.doors.open ? html`<b>${count(o.doors.open, 'puerta abierta', 'puertas abiertas')}</b> ahora.` : 'Ninguna puerta abierta.') : ''}
+    ${S.presence.length ? html`<b>${count(S.presence.length, 'persona', 'personas')}</b> adentro.` : ''}
     Hoy van <b>${count(o.today.granted, 'acceso', 'accesos')}</b> y <b>${count(o.today.denied, 'rechazo', 'rechazos')}</b>${o.today.alerts ? html`, con <span class="bad">${count(o.today.alerts, 'alerta', 'alertas')}</span>` : ''}.
     ${o.sync.error ? html`<span class="bad">${count(o.sync.error, 'alta falló', 'altas fallaron')} al enviarse a los equipos.</span>` : ''}
     ${o.sync.pending ? html`<span class="wait">${count(o.sync.pending, 'alta pendiente', 'altas pendientes')} de enviar.</span>` : ''}`;
@@ -1845,7 +2029,7 @@ function drawBell() {
   for (const el of $$('[data-bell]')) setHTML(el, n ? html`<span class="count">${n}</span>` : '');
 }
 actions.notices = () => {
-  sheet.open('Avisos', S.notices.length ? html`<ul class="rows">${S.notices.map(n => html`<li><button class="row" type="button" data-action="${n.door_id ? 'door' : n.device_id ? 'device-edit' : ''}" data-door="${n.door_id}" data-id="${n.device_id}">
+  sheet.open('Avisos', S.notices.length ? html`<ul class="rows">${S.notices.map(n => html`<li><button class="row" type="button" data-action="${n.kind === 'emergency' ? 'emergency' : n.door_id ? 'door' : n.device_id ? 'device-edit' : ''}" data-door="${n.door_id}" data-id="${n.kind === 'emergency' ? n.site_id : n.device_id}">
       <span class="badge">${icon(n.kind === 'device_offline' ? 'equipos' : n.kind === 'sync_error' ? 'send' : 'alert')}</span>
       <span class="row-main"><strong>${NOTICE[n.kind] ?? 'Aviso'}</strong><span>${[n.title, n.detail].filter(Boolean).join(', ')}</span></span>
       <span class="row-side">${when(n.ts)}</span></button></li>`)}</ul>`
@@ -1890,7 +2074,6 @@ const palette = {
 };
 actions.palette = () => palette.open();
 actions['palette-doors'] = () => palette.open('doors');
-actions['palette-close'] = () => palette.close();
 actions['palette-run'] = el => palette.run(Number(el.dataset.i));
 
 // Las vistas. Cada una devuelve su contenido; las acciones y formularios se registran por nombre.
@@ -1900,7 +2083,7 @@ const head = (title, lede, extra = '') => html`<header class="view-head"><div><h
 /** La acción principal de cada pantalla (va en la barra de arriba, con el color del punto). */
 const PRIMARY = {
   panel: () => canOperate() && ['Abrir puerta', 'palette-doors', 'panel'],
-  personas: () => canOperate() && ['Persona', 'person-new', 'plus'],
+  personas: () => canOperate() && (S.peopleKind === 'visit' ? ['Visita', 'visit-new', 'plus'] : ['Persona', 'person-new', 'plus']),
   niveles: () => isAdmin() && ['Nivel', 'level-new', 'plus'],
   equipos: () => isAdmin() && ['Equipo', 'device-new', 'plus'],
   eventos: () => ['Descargar', 'events-download', 'download'],
@@ -1924,7 +2107,10 @@ views.panel = () => html`
 
 function siteCard(site) {
   const doors = S.doors.filter(d => d.site_id === site.id);
-  return html`<section class="card"><div class="card-head"><h2>${site.name}<small>${areaSub(site)}</small></h2><span class="chip plain">${count(doors.length, 'puerta', 'puertas')}</span></div>
+  const inside = S.presence.filter(p => p.site_id === site.id).length;
+  return html`<section class="card"><div class="card-head"><h2>${site.name}<small>${[areaSub(site), count(doors.length, 'puerta', 'puertas')].filter(Boolean).join(', ')}</small></h2>
+      <div class="card-tools"><button class="btn sm" type="button" data-action="inside" data-id="${site.id}" title="Quién está adentro" aria-label="${count(inside, 'persona adentro', 'personas adentro')}">${icon('adentro')}<span>${inside}</span></button>
+        ${canOperate() ? html`<button class="btn sm" type="button" data-action="emergency" data-id="${site.id}" title="Emergencia" aria-label="Emergencia en ${site.name}">${icon('alert')}</button>` : ''}</div></div>
     ${doors.length ? html`<div class="wall">${doors.map(doorTile)}</div>` : html`<p class="empty">Esta área todavía no tiene puertas. Aparecen solas al agregar un equipo.</p>`}</section>`;
 }
 
@@ -1938,7 +2124,8 @@ actions.door = async el => {
     <button class="btn wide" type="button" data-action="door-plan" data-id="${d.id}">${icon('plano')}<span>Ver en el plano</span></button>
     <h3>Últimos movimientos</h3>
     ${recent.length ? html`<ol class="events">${recent.map(e => eventRow(e))}</ol>` : html`<p class="empty">Sin movimientos registrados.</p>`}
-    ${isAdmin() ? html`<ul class="rows" style="margin-top:6px"><li>${toggle('door-clock', d.clock, 'Marca horario', 'Pasar por esta puerta cuenta como entrada o salida en el control de horario.')}</li></ul>` : ''}
+    ${isAdmin() ? html`<ul class="rows" style="margin-top:6px"><li>${toggle('door-clock', d.clock, 'Marca horario', 'Pasar por esta puerta cuenta como entrada o salida: para el control de horario y para saber quién está adentro.')}</li></ul>
+      <div id="door-dir" ${d.clock ? '' : raw('hidden')}>${seg('door-dir', [['both', 'Entrada y salida'], ['in', 'Solo entrada'], ['out', 'Solo salida']], d.dir ?? 'both', 'Sentido de la puerta')}</div>` : ''}
     ${isAdmin() ? html`<form class="form" data-form="door-name" data-id="${d.id}">
       <label class="field"><span>Nombre de la puerta</span><input type="text" name="name" value="${d.name}" maxlength="60" required></label>
       <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Guardar nombre</button></div></form>` : ''}`);
@@ -1953,7 +2140,7 @@ actions['door-open'] = async el => {
 actions['door-clock'] = async el => {
   const d = S.doors.find(p => p.id === $('#sheet [data-form="door-name"]').dataset.id), on = !d.clock;
   el.setAttribute('aria-checked', String(on));
-  try { await S.api.patch(`/api/doors/${d.id}`, { clock: on }); d.clock = Number(on); toast(on ? 'Esta puerta marca horario' : 'Esta puerta deja de marcar horario'); }
+  try { await S.api.patch(`/api/doors/${d.id}`, { clock: on }); d.clock = Number(on); $('#door-dir').hidden = !on; toast(on ? 'Esta puerta marca horario' : 'Esta puerta deja de marcar horario'); refreshSoon('presence'); }
   catch (e) { el.setAttribute('aria-checked', String(!on)); toast(e.message, 'deny'); }
 };
 forms['door-name'] = async (form, v) => {
@@ -1990,14 +2177,19 @@ forms['events-csv'] = async (_form, v) => {
 // ── Personas ─────────────────────────────────────────────────────────────────
 views.personas = () => html`
   ${head('Personas', 'Cada persona se carga una vez. Kliva la lleva a los equipos de sus puertas, sea cual sea la marca.')}
-  ${areaBar()}
+  ${areaBar()}${seg('people-kind', PEOPLE_KINDS, S.peopleKind, 'Personal o visitas')}
   <section class="card flush">
     <label class="top-search" style="min-height:48px">${icon('search')}<input id="people-q" type="search" placeholder="Buscar por nombre, empresa, documento o tarjeta" value="${S.peopleQ}" autocomplete="off" aria-label="Buscar personas" style="background:none;box-shadow:none;padding:0;min-height:0"></label>
     <ul class="rows" id="people-list">${peopleRows()}</ul></section>`;
 
 function peopleRows() {
-  if (!S.people.length) return [html`<li class="empty">${S.peopleQ ? 'Nadie coincide con esa búsqueda.' : 'Todavía no hay personas cargadas.'}</li>`];
-  return S.people.map(p => {
+  const visits = S.peopleKind === 'visit', list = S.people.filter(p => ((p.kind ?? 'staff') === 'visit') === visits);
+  if (!list.length) return [html`<li class="empty">${S.peopleQ ? 'Nadie coincide con esa búsqueda.' : visits ? 'Sin visitas registradas. Una visita vale hasta la hora que le pongas y después se da de baja sola.' : 'Todavía no hay personas cargadas.'}</li>`];
+  if (visits) return list.sort((a, b) => b.active - a.active || (b.valid_to ?? 0) - (a.valid_to ?? 0)).map(p => html`<li><button class="row ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}">
+    <span class="avatar ${p.active ? '' : 'idle'}">${initials(p.name)}</span>
+    <span class="row-main"><strong>${p.name}</strong><span>${[p.host && `Visita a ${p.host}`, p.company, areaById(p.site_id)?.name].filter(Boolean).join(', ') || 'Visita'}</span></span>
+    <span class="row-side">${visitChip(p)}<span>${p.valid_to ? `Hasta ${when(p.valid_to)}` : ''}</span></span></button></li>`);
+  return list.map(p => {
     const creds = [p.cards.length && count(p.cards.length, 'tarjeta', 'tarjetas'), p.has_face && 'rostro', p.has_pin && 'clave'].filter(Boolean).join(', ');
     const levels = p.levels.map(id => S.levels.find(l => l.id === id)?.name).filter(Boolean).join(', ');
     const manual = p.sync.unsupported && (p.sync.done || p.sync.pending || p.sync.error);
@@ -2012,6 +2204,7 @@ function personSheet(p) {
   S.draftFace = undefined;
   const face = p?.face ? (p.face.startsWith('data:') ? p.face : `data:image/jpeg;base64,${p.face}`) : '';
   sheet.open(p ? p.name : 'Agregar persona', html`<form class="form" data-form="person" data-id="${p?.id ?? ''}">
+    ${!p && isAdmin() ? html`<div class="form-actions"><button class="btn sm" type="button" data-action="import-open">${icon('planilla')}<span>Cargar varias desde una planilla</span></button></div>` : ''}
     <label class="field"><span>Nombre y apellido</span><input type="text" name="name" value="${p?.name}" required ${p ? '' : raw('autofocus')}></label>
     <div class="form-row">
       <label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>
@@ -2027,7 +2220,7 @@ function personSheet(p) {
         <div class="form-actions"><button class="btn sm" type="button" data-action="face-pick">Elegir foto</button>
           <button class="btn sm" type="button" data-action="face-clear" id="face-clear" ${face || p?.has_face ? '' : raw('hidden')}>Quitar</button></div></div>
       <input type="file" id="face-file" accept="image/*" hidden>
-      <small id="face-hint">${p?.has_face && !face ? 'Tiene una foto cargada.' : 'De frente y con buena luz. Se ajusta sola al tamaño que aceptan los equipos y se guarda cifrada.'}</small></div>
+      <small id="face-hint">${p?.device_face && !face ? 'Su rostro está cargado en el equipo de donde se trajo. Si elegís una foto acá, la reemplaza.' : p?.has_face && !face ? 'Tiene una foto cargada.' : 'De frente y con buena luz. Se ajusta sola al tamaño que aceptan los equipos y se guarda cifrada.'}</small></div>
     <fieldset id="person-levels"><legend>Niveles de acceso</legend>${personLevels(personCompany(p), p)}</fieldset>
     <div class="form-row">
       <label class="field"><span>Vigente desde</span><input type="datetime-local" name="valid_from" value="${toLocalInput(p?.valid_from)}"></label>
@@ -2041,7 +2234,7 @@ function personSheet(p) {
       ${p ? html`<button class="btn danger push" type="button" data-action="person-delete" data-id="${p.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
 }
 actions['person-new'] = () => personSheet(null);
-actions['person-edit'] = async el => personSheet(await S.api.get(`/api/people/${el.dataset.id}`));
+actions['person-edit'] = async el => { const p = await S.api.get(`/api/people/${el.dataset.id}`); (p.kind === 'visit' ? visitSheet : personSheet)(p); };
 actions['face-pick'] = () => $('#face-file').click();
 actions['face-clear'] = () => {
   S.draftFace = '';
@@ -2135,6 +2328,13 @@ views.equipos = () => html`
   })}
   ${S.sites.length ? '' : html`<section class="card"><p class="empty">Antes de agregar equipos creá un área en Ajustes, en la ficha de la empresa: es el lugar donde están instalados.</p></section>`}`;
 
+/** Qué puede hacer Kliva con un equipo, dicho sin vueltas: es lo que mira el instalador antes de prometer algo. */
+function klivaPuede(c) {
+  const yes = [c.liveEvents && 'recibe los eventos', c.remoteOpen && 'abre a distancia', c.people && 'carga personas', c.history && 'recupera lo que pasó sin conexión',
+    c.readPeople && 'trae las personas ya cargadas', c.hold && 'abre todo en una evacuación', c.lock && 'bloquea las puertas'].filter(Boolean);
+  const no = [!c.people && 'cargar personas', !c.history && 'recuperar lo que pasó sin conexión', !c.readPeople && 'traer las personas ya cargadas', !c.lock && 'bloquear las puertas a distancia'].filter(Boolean);
+  return `${yes.join(', ').replace(/^./, x => x.toUpperCase())}.${no.length ? ` Todavía no: ${no.join(', ')}.` : ''}`;
+}
 const brandHint = b => b.capabilities.people
   ? `Con ${b.label}, Kliva recibe los eventos, abre puertas y carga personas con tarjeta, clave y rostro.`
   : `Con ${b.label}, Kliva recibe los eventos y abre puertas. El alta de personas en el panel todavía se hace con el software de la marca.`;
@@ -2144,7 +2344,7 @@ function deviceSheet(d) {
   sheet.open(d ? d.name : 'Agregar equipo', html`<form class="form" data-form="device" data-id="${d?.id ?? ''}">
     ${d ? html`<dl class="facts"><dt>Marca</dt><dd>${d.brand_label}, ${d.protocol}</dd><dt>Modelo</dt><dd>${d.model || 'Sin leer todavía'}</dd>
         <dt>Serie</dt><dd class="mono">${d.serial || 'Sin leer todavía'}</dd><dt>Firmware</dt><dd>${d.firmware || 'Sin leer todavía'}</dd>
-        ${d.status === 'offline' ? html`<dt>Problema</dt><dd>${d.status_detail}</dd>` : ''}</dl>`
+        ${d.status === 'offline' ? html`<dt>Problema</dt><dd>${d.status_detail}</dd>` : ''}<dt>Con Kliva</dt><dd>${klivaPuede(d.capabilities)}</dd></dl>`
       : html`<fieldset><legend>Marca</legend><div class="pick">${S.brands.map(b => html`<label>
           <input type="radio" name="brand" value="${b.brand}" ${b === first ? raw('checked') : ''}><strong>${b.label}</strong><small>${b.protocol}</small></label>`)}</div>
           <p class="hint" id="brand-hint" style="margin-top:8px">${brandHint(first)}</p></fieldset>`}
@@ -2165,7 +2365,9 @@ function deviceSheet(d) {
     <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       <button class="btn" type="button" data-action="device-test">Probar conexión</button>
       ${d ? html`<button class="btn danger push" type="button" data-action="device-delete" data-id="${d.id}">Eliminar</button>` : ''}</div>
-    ${d?.capabilities.people ? html`<div class="form-actions"><button class="btn sm" type="button" data-action="device-resync" data-id="${d.id}">Reenviar todas las personas a este equipo</button></div>` : ''}
+    ${d?.capabilities.people || d?.capabilities.readPeople ? html`<div class="form-actions">
+      ${d.capabilities.readPeople ? html`<button class="btn sm" type="button" data-action="device-people" data-id="${d.id}">${icon('adentro')}<span>Traer las personas de este equipo</span></button>` : ''}
+      ${d.capabilities.people ? html`<button class="btn sm" type="button" data-action="device-resync" data-id="${d.id}">Reenviar todas las personas a este equipo</button>` : ''}</div>` : ''}
   </form>`);
 }
 actions['device-new'] = () => S.sites.length ? deviceSheet(null) : toast('Primero creá un área en Ajustes', 'deny');
@@ -2471,7 +2673,7 @@ async function preparePlan() {
 /** Lo que llega en vivo, traducido para el motor: solo las puertas del sitio que se está mirando. */
 function planLive(type, data) {
   const host = window.__maquetaHost;
-  if (S.view !== 'plano' || !host) return;
+  if (S.view !== 'plano' || !host || S.replay) return; // durante una repetición, el plano muestra el pasado
   const ofSite = id => S.doors.find(d => d.id === id && d.site_id === S.planoSite);
   if (type === 'event' && data.door_id && ofSite(data.door_id)) {
     const d = ofSite(data.door_id);
@@ -2488,7 +2690,7 @@ views.plano = () => {
   const lede = isAdmin() ? 'Tocá Editar para subir el plano del lugar, ubicar cada puerta y nombrar los sectores.' : 'Cada puerta, en su lugar y en vivo.';
   return html`
     <header class="view-head"><div><h1>Plano</h1><p class="lede">${lede}</p></div>
-      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Área') : ''}</header>
+      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Área') : ''}${S.motorOk === false ? '' : html`<div class="replay" id="replay">${replayBar()}</div>`}</header>
     <div class="plano">${S.motorOk === false
       ? html`<p class="empty">El plano 3D se abre con Kliva instalado o en unitytech.uy/kliva/beta. Esta copia no trae los archivos del motor.</p>`
       : html`<iframe id="plano-frame" src="${MOTOR}&sitio=${site.id}" title="Plano de ${site.name}" allow="fullscreen"></iframe>`}</div>`;
@@ -2496,6 +2698,7 @@ views.plano = () => {
 
 actions['plano-site'] = async el => {
   if (el.dataset.id === S.planoSite) return;
+  stopReplay();
   S.planoSite = el.dataset.id; saved.set('kliva.plano.site', S.planoSite);
   await preparePlan(); render();
 };
@@ -2526,6 +2729,63 @@ function planTheme() {
   const tema = root.dataset.mode === 'dark' ? 'oscuro' : 'claro';
   if (host) host.tema = tema;
   if (M && M.motor.tema !== tema) M.motor.ponerTema(tema);
+}
+
+// ── Repetición: volver a ver en el plano lo que pasó ─────────────────────────
+// Las pasadas de un rato (una hora, cuatro, o todo el día) se vuelven a mostrar aceleradas sobre el plano: cada puerta
+// se abre con el nombre de quien pasó y el reloj corre arriba. Sirve para revisar un incidente sin leer un listado.
+const REPLAYS = [['La última hora', 3600_000], ['Las últimas 4 horas', 4 * 3600_000], ['Todo el día de hoy', 0]];
+const replayBar = () => S.replay
+  ? html`<button class="btn sm" type="button" data-action="replay-stop" aria-label="Detener la repetición" title="Detener">${icon('alto')}</button>
+      <span class="replay-now"><b id="replay-clock">${hourFormat.format(S.replay.from)}</b><small>${count(S.replay.total, 'pasada', 'pasadas')}</small></span><i class="replay-line"><i id="replay-fill"></i></i>`
+  : html`<button class="btn sm" type="button" data-action="replay" title="Volver a ver en el plano lo que pasó">${icon('repetir')}<span>Repetir</span></button>`;
+const drawReplay = () => { const box = $('#replay'); if (box) setHTML(box, replayBar()); };
+actions.replay = () => sheet.open('Repetir en el plano', html`<p class="hint">Las pasadas de ese rato se vuelven a ver sobre el plano, aceleradas, con el nombre de quien pasó por cada puerta.</p>
+  <ul class="rows">${REPLAYS.map(([label, ms]) => html`<li><button class="row" type="button" data-action="replay-play" data-ms="${ms}"><span class="badge">${icon('repetir')}</span><span class="row-main"><strong>${label}</strong></span></button></li>`)}</ul>`);
+actions['replay-stop'] = () => stopReplay();
+actions['replay-play'] = async el => {
+  const ms = Number(el.dataset.ms), to = Date.now(), from = ms ? to - ms : new Date().setHours(0, 0, 0, 0), host = window.__maquetaHost;
+  const doors = new Set(S.doors.filter(d => d.site_id === S.planoSite).map(d => d.id));
+  sheet.close();
+  let events = [];
+  try {
+    for (let before = to; events.length < 4000;) {
+      const page = await S.api.get(`/api/events?group=access&from=${from}&before=${before}&limit=1000`);
+      events.push(...page);
+      if (page.length < 1000) break;
+      before = page.at(-1).ts;
+    }
+  } catch (e) { return toast(e.message, 'deny'); }
+  events = events.filter(e => doors.has(e.door_id)).reverse();
+  if (!events.length || !host) return toast('No hubo pasadas en ese rato en esta área');
+  stopReplay();
+  const span = to - from, length = Math.min(45_000, Math.max(12_000, events.length * 400)); // dura entre 12 y 45 segundos, según cuánto pasó
+  const R = S.replay = { from, total: events.length, timers: [], started: performance.now() };
+  for (const id of doors) host.vivo({ puerta: id, estado: 'cerrada' });
+  drawReplay();
+  for (const e of events) R.timers.push(setTimeout(() => {
+    const granted = e.kind === 'access_granted';
+    host.vivo({ puerta: e.door_id, ev: granted ? 'pasa' : 'rechazo', quien: e.person_name || '', estado: granted ? 'abierta' : 'cerrada' });
+    if (granted) R.timers.push(setTimeout(() => host.vivo({ puerta: e.door_id, estado: 'cerrada' }), 1100));
+  }, (e.ts - from) / span * length));
+  const step = () => {
+    if (S.replay !== R) return;
+    const k = Math.min((performance.now() - R.started) / length, 1), clock = $('#replay-clock'), fill = $('#replay-fill');
+    if (clock) clock.textContent = hourFormat.format(from + k * span);
+    if (fill) fill.style.width = `${(k * 100).toFixed(1)}%`;
+    if (k < 1) R.frame = requestAnimationFrame(step); else setTimeout(() => S.replay === R && stopReplay(true), 1500);
+  };
+  step();
+};
+/** Corta la repetición y deja cada puerta como está de verdad ahora. */
+function stopReplay(finished = false) {
+  const R = S.replay, host = window.__maquetaHost;
+  if (!R) return;
+  R.timers.forEach(clearTimeout); cancelAnimationFrame(R.frame);
+  S.replay = null;
+  if (host) for (const d of S.doors.filter(x => x.site_id === S.planoSite)) host.vivo({ puerta: d.id, estado: doorPlanState(d) });
+  drawReplay();
+  if (finished) toast('Fin de la repetición: el plano vuelve a mostrar lo que pasa ahora');
 }
 
 // Empresas y áreas. Una instalación de Kliva atiende a varias empresas; cada empresa se divide en áreas
@@ -2600,7 +2860,7 @@ async function setVista(v) {
   S.vista = v;
   fixVista();
   saved.set('kliva.vista', JSON.stringify(S.vista));
-  try { await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules'); }
+  try { await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules', 'presence'); }
   catch (e) { return toast(e.message, 'deny'); }
   if (!S.sites.some(s => s.id === S.planoSite)) S.planoSite = null;
   S.stop?.();
@@ -2798,6 +3058,10 @@ function redrawForCompany(el) {
     setHTML($('#person-levels'), html`<legend>Niveles de acceso</legend>${personLevels(el.value, null)}`);
   }
   if (el.dataset.redraw === 'level') setHTML($('#level-doors'), levelDoors(el.value, null));
+  if (el.dataset.redraw === 'visit') {
+    setHTML($('#visit-area'), areaOptions(el.value, ''));
+    setHTML($('#person-levels'), html`<legend>Por dónde puede pasar</legend>${personLevels(el.value, null)}`);
+  }
 }
 
 // Control de horario: a qué hora entró y salió cada persona contra su turno, con las pasadas de las puertas que marcan horario.
@@ -2816,11 +3080,8 @@ function daysText(days) {
 }
 const scheduleText = x => `${daysText(x.days)}, ${hhmmText(x.start_min)} a ${hhmmText(x.end_min)}${x.end_min <= x.start_min ? ' del día siguiente' : ''}`;
 
-const STATE_LOOK = {
-  ok: ['Bien', 'pass'], tarde: ['Llegó tarde', 'warn'], salio_antes: ['Salió antes', 'warn'], ausente: ['Faltó', 'deny'], en_curso: ['Adentro', 'accent'],
-  sin_salida: ['Sin marca de salida', 'warn'], pendiente: ['Todavía no empezó', ''], extra: ['Fuera de turno', ''], sin_turno: ['Sin turno', ''],
-};
-const stateChip = state => { const [text, tone] = STATE_LOOK[state]; return html`<span class="chip" ${tone ? raw(`data-tone="${tone}"`) : ''}>${text}</span>`; };
+const ESTADO_TONO = { ok: 'pass', tarde: 'warn', salio_antes: 'warn', ausente: 'deny', en_curso: 'accent', sin_salida: 'warn' };
+const stateChip = state => html`<span class="chip" ${ESTADO_TONO[state] ? raw(`data-tone="${ESTADO_TONO[state]}"`) : ''}>${ESTADO[state]}</span>`;
 
 const PERIODS = [['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes']];
 function periodRange(id = S.horarioPeriod) {
@@ -2855,7 +3116,42 @@ views.horario = () => {
     <ul class="rows">${S.schedules.length ? S.schedules.map(x => html`<li><button class="row" type="button" data-action="schedule-edit" data-id="${x.id}">
       <span class="badge">${icon('horario')}</span><span class="row-main"><strong>${x.name}</strong><span>${[!viewCompany() && companyById(x.company_id)?.name, scheduleText(x)].filter(Boolean).join(': ')}</span></span>
       <span class="row-side"><span class="chip plain">${count(x.people, 'persona', 'personas')}</span><span>${x.tolerance ? `${x.tolerance} min de tolerancia` : 'Sin tolerancia'}</span></span></button></li>`)
-      : html`<li class="empty">Todavía no hay turnos.</li>`}</ul></section>`;
+      : html`<li class="empty">Todavía no hay turnos.</li>`}</ul></section>
+  <section class="card flush"><div class="card-head"><h2>Feriados<small>Días en que no se espera a nadie: no cuentan como falta</small></h2>
+    ${isAdmin() ? html`<button class="btn sm" type="button" data-action="holiday-new">Agregar feriado</button>` : ''}</div>
+    <ul class="rows">${holidaysAhead().length ? holidaysAhead().map(h => html`<li class="row flat">
+      <span class="badge">${icon('horario')}</span><span class="row-main"><strong>${dayLong(h.day)}</strong><span>${[!viewCompany() && companyById(h.company_id)?.name, h.name].filter(Boolean).join(': ') || 'Feriado'}</span></span>
+      ${isAdmin() ? html`<button class="btn sm" type="button" data-action="holiday-delete" data-id="${h.id}">Quitar</button>` : ''}</li>`)
+      : html`<li class="empty">Sin feriados cargados de acá en adelante.</li>`}</ul></section>`;
+};
+const dayLong = day => new Date(`${day}T12:00`).toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+/** Los feriados que importan: los del mes en curso en adelante. */
+const holidaysAhead = () => { const from = toLocalInput(Date.now()).slice(0, 8) + '01'; return S.holidays.filter(h => h.day >= from); };
+// Los feriados no laborables de Uruguay caen siempre en la misma fecha.
+const UY_NO_LABORABLES = [['01-01', 'Año Nuevo'], ['05-01', 'Día de los Trabajadores'], ['07-18', 'Jura de la Constitución'], ['08-25', 'Declaratoria de la Independencia'], ['12-25', 'Navidad']];
+actions['holiday-new'] = () => {
+  const pick = !viewCompany() && S.companies.length > 1, year = new Date().getFullYear();
+  sheet.open('Agregar feriado', html`<form class="form" data-form="holiday">
+    ${pick ? html`<label class="field"><span>Empresa</span><select name="company_id">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
+    <div class="form-row"><label class="field"><span>Día</span><input type="date" name="day" required></label>
+      <label class="field"><span>Nombre</span><input type="text" name="name" maxlength="60" placeholder="Asueto, paro, feriado local"></label></div>
+    <p class="form-error" role="alert"></p>
+    <div class="form-actions"><button class="btn pri" type="submit">Guardar</button></div>
+    <h3>De una vez</h3>
+    <div class="form-actions">${[year, year + 1].map(y => html`<button class="btn sm" type="button" data-action="holiday-uy" data-year="${y}">Los no laborables de Uruguay de ${y}</button>`)}</div>
+    <p class="hint">1 de enero, 1 de mayo, 18 de julio, 25 de agosto y 25 de diciembre.</p></form>`);
+};
+const holidayDone = async text => { await load('holidays', 'attendance'); sheet.close(); render(); toast(text); };
+forms.holiday = async (_form, v) => { await S.api.post('/api/holidays', { day: v.day, name: v.name, company_id: v.company_id || viewCompany()?.id }); await holidayDone('Feriado agregado'); };
+actions['holiday-uy'] = async el => {
+  const company_id = $('#sheet select[name="company_id"]')?.value || viewCompany()?.id;
+  try { for (const [day, name] of UY_NO_LABORABLES) await S.api.post('/api/holidays', { day: `${el.dataset.year}-${day}`, name, company_id }); }
+  catch (e) { return toast(e.message, 'deny'); }
+  await holidayDone(`Feriados de ${el.dataset.year} agregados`);
+};
+actions['holiday-delete'] = async el => {
+  try { await S.api.del(`/api/holidays/${el.dataset.id}`); } catch (e) { return toast(e.message, 'deny'); }
+  await load('holidays', 'attendance'); render(); toast('Feriado quitado');
 };
 actions['horario-period'] = async el => { S.horarioPeriod = el.dataset.id; await load('attendance'); render(); };
 
@@ -2990,6 +3286,210 @@ async function shareFile(blob, filename) {
   await Share.share({ title: filename, url: uri });
 }
 
+// Emergencias y quién está adentro. Un área entera queda con las puertas abiertas (evacuación) o cerradas (bloqueo)
+// hasta que alguien la vuelve a la normalidad; mientras tanto se ve arriba en toda la app. Y la lista de quién está
+// adentro, que es lo primero que se pregunta en una evacuación.
+const MODE = { open: ['Evacuación', 'puertas abiertas'], locked: ['Bloqueo', 'puertas cerradas'] };
+
+/** La franja de arriba: una por cada área en emergencia de las que se están mirando. */
+function drawAlarm() {
+  const box = $('#alarm');
+  if (box) setHTML(box, S.sites.filter(s => MODE[s.mode]).map(s => html`<button class="alarm" type="button" data-mode="${s.mode}" data-action="emergency" data-id="${s.id}" role="alert">${icon(s.mode === 'open' ? 'alert' : 'candado')}
+    <span><b>${MODE[s.mode][0]} en ${s.name}</b><small>${MODE[s.mode][1].replace('p', 'P')} desde las ${hourFormat.format(s.mode_at)}<span class="by">, por ${s.mode_by}</span></small></span>
+    <span class="btn sm">${canOperate() ? 'Resolver' : 'Ver'}</span><span class="go">${icon('right')}</span></button>`));
+}
+
+const insideRows = list => list.length ? html`<ul class="rows">${list.map(p => html`<li class="row flat">
+  <span class="avatar">${initials(p.name)}</span><span class="row-main"><strong>${p.name}</strong><span>${[p.kind === 'visit' && (p.host ? `Visita a ${p.host}` : 'Visita'), p.company].filter(Boolean).join(', ') || `Legajo ${p.ref}`}</span></span>
+  <span class="row-side">${p.kind === 'visit' ? html`<span class="chip" data-tone="warn">Visita</span>` : ''}<span>Desde las ${hourFormat.format(p.since)}, por ${p.door}</span></span></li>`)}</ul>`
+  : html`<p class="empty">Nadie adentro, según las últimas pasadas.</p>`;
+
+async function insideSheet(site, emergency) {
+  if (!site) return;
+  await load('presence').catch(() => {});
+  const list = S.presence.filter(p => p.site_id === site.id), failed = S.modeFailed?.site === site.id ? S.modeFailed.list : [];
+  sheet.open(emergency ? `Emergencia en ${site.name}` : `Adentro en ${site.name}`, html`
+    ${!emergency || !canOperate() ? '' : MODE[site.mode] ? html`
+      <p class="result" data-tone="${site.mode === 'open' ? 'deny' : 'warn'}"><b>${MODE[site.mode][0]}:</b> ${MODE[site.mode][1]} desde las ${hourFormat.format(site.mode_at)}, por ${site.mode_by}.</p>
+      <button class="btn pri wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="normal">Volver a la normalidad</button>`
+      : html`<button class="btn danger wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="open">${icon('alert')}<span>Evacuación: abrir todas las puertas</span></button>
+        <button class="btn wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="locked">${icon('candado')}<span>Bloqueo: cerrar todas las puertas</span></button>
+        <p class="hint">Las puertas quedan así hasta que alguien vuelva el área a la normalidad desde acá. Queda anotado quién lo hizo y a qué hora.</p>`}
+    ${failed.length ? html`<p class="result" data-tone="warn">${failed.map(f => `${f.device}: ${f.why}`).join('. ')}.</p>` : ''}
+    <h3>Adentro ahora (${list.length})</h3>
+    ${insideRows(list)}
+    ${list.length ? html`<div class="form-actions"><button class="btn sm" type="button" data-action="presence-download">${icon('download')}<span>Descargar la lista</span></button></div>` : ''}
+    <p class="hint">Cuenta la última pasada de cada persona por una puerta que marca horario, en las últimas 18 horas.</p>`);
+}
+actions.inside = el => insideSheet(S.sites.find(s => s.id === el.dataset.id), false);
+actions.emergency = el => insideSheet(S.sites.find(s => s.id === el.dataset.id), true);
+actions['mode-set'] = async el => {
+  if (!confirmed(el, 'Tocá de nuevo para confirmar')) return;
+  el.disabled = true;
+  try {
+    const site = S.sites.find(s => s.id === el.dataset.id), r = await S.api.post(`/api/sites/${site.id}/mode`, { mode: el.dataset.mode });
+    Object.assign(site, { mode: r.mode, mode_at: r.mode_at, mode_by: r.mode_by });
+    S.modeFailed = { site: site.id, list: r.failed ?? [] };
+    drawAlarm();
+    if (S.view === 'panel') for (const d of S.doors) if (d.site_id === site.id) patchDoor(d.id);
+    toast(r.mode === 'normal' ? `${site.name} volvió a la normalidad` : `${MODE[r.mode][0]} en ${site.name}`, r.mode === 'open' ? 'deny' : undefined);
+    await insideSheet(site, true);
+  } catch (e) { toast(e.message, 'deny'); el.disabled = false; disarm(el); }
+};
+actions['presence-download'] = () => S.api.download('/api/presence.csv', `kliva-adentro-${toLocalInput(Date.now()).replace(/[T:]/g, '-')}.csv`).then(() => toast('Lista descargada'), e => toast(e.message, 'deny'));
+actions['door-dir'] = async el => {
+  const d = S.doors.find(p => p.id === $('#sheet [data-form="door-name"]').dataset.id);
+  try { await S.api.patch(`/api/doors/${d.id}`, { dir: el.dataset.id }); d.dir = el.dataset.id; refreshSoon('presence'); }
+  catch (e) { toast(e.message, 'deny'); }
+};
+
+// Otras formas de cargar gente: las visitas (valen hasta una hora y se dan de baja solas), muchas personas de una vez
+// desde una planilla, y las que ya están cargadas en un equipo (para no tipear a todos de nuevo al reemplazar el programa de la marca).
+
+// ── Visitas ──────────────────────────────────────────────────────────────────
+const PEOPLE_KINDS = [['staff', 'Personal'], ['visit', 'Visitas']];
+actions['people-kind'] = el => { S.peopleKind = el.dataset.id; render(); };
+/** Por defecto una visita vale hasta las 18; si ya pasó esa hora, cuatro horas más. */
+const visitEnd = () => { const d = new Date(); d.setHours(18, 0, 0, 0); return d.getTime() > Date.now() + 3600_000 ? d.getTime() : Date.now() + 4 * 3600_000; };
+function visitChip(p) {
+  if (!p.active) return html`<span class="chip">Se fue</span>`;
+  if (p.valid_to && p.valid_to < Date.now()) return html`<span class="chip">Venció</span>`;
+  return S.presence.some(x => x.id === p.id) ? html`<span class="chip" data-tone="accent">Adentro</span>` : html`<span class="chip" data-tone="pass">Vigente</span>`;
+}
+const areaOptions = (cid, current) => html`<option value="">Ninguna en especial</option>${(companyById(cid)?.areas ?? []).map(a => html`<option value="${a.id}" ${a.id === current ? raw('selected') : ''}>${a.name}</option>`)}`;
+
+function visitSheet(p) {
+  const pick = !p && !viewCompany() && S.companies.length > 1, cid = personCompany(p);
+  const hosts = [...new Set(S.people.filter(x => (x.kind ?? 'staff') === 'staff' && x.active).map(x => x.name))];
+  sheet.open(p ? p.name : 'Registrar visita', html`<form class="form" data-form="visit" data-id="${p?.id ?? ''}">
+    <label class="field"><span>Nombre y apellido</span><input type="text" name="name" value="${p?.name}" required ${p ? '' : raw('autofocus')}></label>
+    <div class="form-row">
+      <label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>
+      <label class="field"><span>De dónde viene</span><input type="text" name="company" value="${p?.company}" placeholder="Empresa o motivo"></label>
+    </div>
+    <label class="field"><span>A quién visita</span><input type="text" name="host" value="${p?.host}" list="visit-hosts" autocomplete="off"><datalist id="visit-hosts">${hosts.map(n => html`<option value="${n}"></option>`)}</datalist></label>
+    ${pick ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="visit">${S.companies.map(c => html`<option value="${c.id}" ${c.id === cid ? raw('selected') : ''}>${c.name}</option>`)}</select></label>` : ''}
+    <div class="form-row">
+      <label class="field"><span>Área</span><select name="site_id" id="visit-area">${areaOptions(cid, p ? p.site_id : S.vista.area)}</select></label>
+      <label class="field"><span>Vale hasta</span><input type="datetime-local" name="valid_to" value="${toLocalInput(p?.valid_to ?? visitEnd())}" required></label>
+    </div>
+    <label class="field"><span>Tarjeta de visita</span><input type="text" name="cards" class="mono" value="${p?.cards.join(', ')}" inputmode="numeric" placeholder="Número de la tarjeta"></label>
+    <div class="field"><span>Clave para la puerta</span>
+      <div class="form-row"><input type="text" name="pin" class="mono" value="${p?.pin}" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Clave para la puerta"><button class="btn" type="button" data-action="pin-new">Generar</button></div>
+      <small>Se le dice a la visita. Deja de servir cuando vence.</small></div>
+    <fieldset id="person-levels"><legend>Por dónde puede pasar</legend>${personLevels(cid, p)}</fieldset>
+    ${p?.sync.length ? html`<h3>En los equipos</h3><ul class="rows">${p.sync.map(s => html`<li class="row flat">
+      <span class="row-main"><strong>${s.device_name}</strong><span>${s.op === 'remove' ? 'Baja pendiente' : s.status === 'error' ? `${SYNC_TEXT.error}: ${s.error}` : SYNC_TEXT[s.status]}</span></span></li>`)}</ul>` : ''}
+    <p class="form-error" role="alert"></p>
+    ${canOperate() ? html`<div class="form-actions"><button class="btn pri" type="submit">${p ? 'Guardar' : 'Registrar visita'}</button>
+      ${p?.active ? html`<button class="btn" type="button" data-action="visit-out" data-id="${p.id}">Dar salida</button>` : ''}
+      ${p ? html`<button class="btn danger push" type="button" data-action="person-delete" data-id="${p.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
+}
+actions['visit-new'] = () => visitSheet(null);
+actions['pin-new'] = () => { $('#sheet input[name="pin"]').value = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000); };
+actions['visit-out'] = async el => {
+  try { await S.api.patch(`/api/people/${el.dataset.id}`, { active: false }); } catch (e) { return toast(e.message, 'deny'); }
+  await load('people', 'overview');
+  sheet.close(); render(); toast('Salida registrada: se da de baja en los equipos');
+};
+forms.visit = async (form, v) => {
+  const id = form.dataset.id, body = { kind: 'visit', name: v.name, document: v.document, company: v.company, host: v.host, pin: v.pin, cards: v.cards.split(/[\s,;]+/).filter(Boolean),
+    company_id: v.company_id || personCompany(null), site_id: v.site_id || null, valid_to: fromLocalInput(v.valid_to), levels: v.levels ?? [], ...(id ? {} : { active: true }) };
+  if (id) await S.api.patch(`/api/people/${id}`, body); else S.fresh = (await S.api.post('/api/people', body)).id;
+  S.peopleKind = 'visit';
+  await load('people', 'overview');
+  sheet.close(); render(); toast(id ? 'Cambios guardados' : 'Visita registrada');
+};
+
+// ── Muchas personas desde una planilla ───────────────────────────────────────
+const IMPORT_COLS = [['name', 'Nombre', /^(nombre|apellido|persona)/], ['document', 'Documento', /^(documento|cedula|ci\b)/], ['cards', 'Tarjetas', /^tarjeta/], ['area', 'Área', /^area/],
+  ['schedule', 'Turno', /^(turno|horario)/], ['level', 'Nivel', /^nivel/], ['employer', 'Empleador', /^(empleador|contratista|empresa)/]];
+function cellsOf(line, sep) {
+  const out = []; let cur = '', quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) { if (ch !== '"') cur += ch; else if (line[i + 1] === '"') { cur += '"'; i++; } else quoted = false; }
+    else if (ch === '"') quoted = true;
+    else if (ch === sep) { out.push(cur); cur = ''; } else cur += ch;
+  }
+  return [...out, cur].map(c => c.trim());
+}
+/** El texto de una planilla (separada por punto y coma, coma o tabulación) → una fila por persona. */
+function parsePeopleSheet(text) {
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('La planilla tiene que traer los títulos en la primera fila y una persona en cada fila siguiente');
+  const sep = [';', '\t', ','].reduce((best, s) => lines[0].split(s).length > lines[0].split(best).length ? s : best);
+  const titles = cellsOf(lines[0], sep).map(fold), cols = IMPORT_COLS.map(([key, , re]) => [key, titles.findIndex(t => re.test(t))]).filter(([, i]) => i >= 0);
+  if (!cols.some(([key]) => key === 'name')) throw new Error('No encuentro la columna Nombre en la primera fila');
+  return lines.slice(1).map(l => { const c = cellsOf(l, sep); return Object.fromEntries(cols.map(([key, i]) => [key, c[i] ?? ''])); });
+}
+actions['import-open'] = () => {
+  S.importRows = null;
+  const pick = !viewCompany() && S.companies.length > 1;
+  sheet.open('Cargar desde una planilla', html`<form class="form" data-form="import">
+    <p class="hint">Una fila por persona y los títulos en la primera fila: Nombre, Documento, Tarjetas, Área, Turno, Nivel y Empleador. Solo el nombre es obligatorio. El área, el turno y el nivel van con el nombre que tienen en Kliva.</p>
+    <div class="form-actions"><button class="btn sm" type="button" data-action="import-template">${icon('download')}<span>Planilla modelo</span></button></div>
+    ${pick ? html`<label class="field"><span>Empresa</span><select name="company_id">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
+    <div class="field"><span>Planilla</span>
+      <label class="btn wide file"><input type="file" name="sheet" accept=".csv,.txt,text/csv,text/plain">${icon('planilla')}<span id="import-name">Elegir la planilla</span></label>
+      <small>En formato CSV. Desde Excel o Numbers: Archivo, Guardar como (o Exportar), CSV.</small></div>
+    <div id="import-preview"></div>
+    <p class="form-error" role="alert"></p>
+    <div class="form-actions"><button class="btn pri" type="submit" id="import-go" disabled>Cargar</button></div></form>`);
+};
+actions['import-template'] = () => {
+  const c = viewCompany() ?? S.companies[0], area = c?.areas[0]?.name ?? '', turno = S.schedules.find(x => x.company_id === c?.id)?.name ?? '', nivel = S.levels.find(l => l.company_id === c?.id)?.name ?? '';
+  saveBlob(new Blob([planilla(IMPORT_COLS.map(col => col[1]), [['María Ejemplo', '1.234.567-8', '5550123', area, turno, nivel, '']])], { type: 'text/csv' }), 'kliva-planilla-de-personas.csv');
+};
+async function importPreview(input) {
+  const box = $('#import-preview'), go = $('#import-go');
+  S.importRows = null; go.hidden = false; go.disabled = true; go.textContent = 'Cargar';
+  $('#import-name').textContent = input.files[0]?.name ?? 'Elegir la planilla';
+  if (!input.files[0]) return setHTML(box, '');
+  try {
+    const bytes = await input.files[0].arrayBuffer();
+    let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { text = new TextDecoder('windows-1252').decode(bytes); } // Excel en Windows no guarda en UTF-8
+    const rows = parsePeopleSheet(text), named = rows.filter(r => r.name);
+    S.importRows = rows;
+    go.disabled = !named.length; go.textContent = `Cargar ${count(named.length, 'persona', 'personas')}`;
+    setHTML(box, html`<p class="result" data-tone="pass">${count(rows.length, 'fila', 'filas')} en la planilla${rows.length > named.length ? `, ${rows.length - named.length} sin nombre` : ''}. Empieza con ${named.slice(0, 3).map(r => r.name).join(', ')}${named.length > 3 ? '…' : '.'}</p>`);
+  } catch (e) { setHTML(box, html`<p class="result" data-tone="deny">${e.message}</p>`); }
+}
+forms.import = async (form, v) => {
+  const r = await S.api.post('/api/people/import', { rows: S.importRows, company_id: v.company_id || viewCompany()?.id });
+  await load('people', 'overview');
+  render();
+  if (!r.errors.length) { sheet.close(); return toast(`${count(r.added, 'persona cargada', 'personas cargadas')}`); }
+  S.importRows = null; $('#import-go').hidden = true; // lo que entró ya está; para el resto hay que corregir la planilla y elegirla de nuevo
+  setHTML($('#import-preview'), html`<p class="result" data-tone="${r.added ? 'pass' : 'deny'}">${count(r.added, 'persona cargada', 'personas cargadas')}. ${count(r.errors.length, 'fila no entró', 'filas no entraron')}:</p>
+    <ul class="rows">${r.errors.map(e => html`<li class="row flat"><span class="row-main"><strong>Fila ${e.row + 1}${e.name ? `, ${e.name}` : ''}</strong><span>${e.why}</span></span></li>`)}</ul>
+    <p class="hint">Corregí esas filas en la planilla y volvé a cargar solo esas.</p>`);
+};
+
+// ── Las personas que ya están en un equipo ───────────────────────────────────
+actions['device-people'] = async el => {
+  const d = S.devices.find(x => x.id === el.dataset.id), title = `Personas en ${d.name}`;
+  sheet.open(title, html`<p class="empty">Leyendo el equipo…</p>`);
+  let list;
+  try { list = await S.api.get(`/api/devices/${d.id}/people`); } catch (e) { return sheet.open(title, html`<p class="result" data-tone="deny">${e.message}</p>`); }
+  const fresh = list.filter(p => !p.known);
+  sheet.open(title, html`<form class="form" data-form="device-people" data-id="${d.id}">
+    <p class="hint">${fresh.length ? `${count(fresh.length, 'persona de este equipo no está', 'personas de este equipo no están')} en Kliva. Al traerlas conservan su legajo, sus tarjetas y el paso por las puertas de este equipo. El rostro queda en el equipo, tal como está.`
+      : list.length ? 'Todas las personas de este equipo ya están en Kliva.' : 'El equipo no tiene personas cargadas.'}</p>
+    ${fresh.length ? html`<fieldset><legend>Para traer</legend>${fresh.map(p => html`<label class="check"><input type="checkbox" name="refs" data-list value="${p.ref}" checked>
+      <span>${p.name || 'Sin nombre'}<small>${[`Legajo ${p.ref}`, p.cards.length && count(p.cards.length, 'tarjeta', 'tarjetas'), p.has_face && 'rostro'].filter(Boolean).join(', ')}</small></span></label>`)}</fieldset>` : ''}
+    ${fresh.length && list.length > fresh.length ? html`<p class="hint">${count(list.length - fresh.length, 'persona más del equipo ya está', 'personas más del equipo ya están')} en Kliva.</p>` : ''}
+    <p class="form-error" role="alert"></p>
+    ${fresh.length ? html`<div class="form-actions"><button class="btn pri" type="submit">Traer a Kliva</button></div>` : ''}</form>`);
+};
+forms['device-people'] = async (form, v) => {
+  if (!v.refs?.length) throw new Error('Marcá al menos una persona');
+  const r = await S.api.post(`/api/devices/${form.dataset.id}/people`, { refs: v.refs });
+  await load('people', 'levels', 'overview');
+  sheet.close(); render();
+  toast(r.skipped.length ? `${count(r.added, 'persona traída', 'personas traídas')}; ${r.skipped.length} no: ${r.skipped[0].why}` : count(r.added, 'persona traída', 'personas traídas'), r.skipped.length ? 'deny' : undefined);
+};
+
 // Arranque, menú, ingreso, instalación y lo que llega en vivo.
 const NAV = [
   { id: 'panel', label: 'Panel' }, { id: 'plano', label: 'Plano' }, { id: 'eventos', label: 'Eventos' },
@@ -3016,7 +3516,7 @@ function shell() {
     <div class="stage">
       <header class="top">${MARK}<button class="top-search" type="button" data-action="palette">${icon('search')}<span>Buscar una puerta, una persona o un equipo</span></button>
         <button class="round" type="button" data-action="notices" aria-label="Avisos" title="Avisos">${icon('bell')}<span data-bell></span></button><span id="primary" style="display:contents"></span></header>
-      <main class="main" id="main"><div class="view" id="view"></div></main>
+      <main class="main" id="main"><div id="alarm"></div><div class="view" id="view"></div></main>
     </div>
     <nav class="dock" id="dock" aria-label="Secciones"><span class="pill"></span>
       ${DOCK.map(id => html`<a href="#${id}" data-nav="${id}">${icon(id)}<span>${label(id)}</span></a>`)}
@@ -3035,6 +3535,7 @@ function drawChrome() {
   setHTML($('#primary'), p ? html`<button class="btn pri" type="button" data-action="${p[1]}" aria-label="${p[0]}" title="${p[0]}">${icon(p[2])}<span>${p[0]}</span></button>` : '');
   $('[data-action="night"]')?.setAttribute('aria-checked', String(root.dataset.mode === 'dark'));
   drawBell();
+  drawAlarm();
 }
 
 function render() {
@@ -3055,10 +3556,10 @@ async function route() {
   try {
     if (S.view === 'eventos') await load('events');
     if (S.view === 'personas') await load('people', 'levels', 'schedules');
-    if (S.view === 'horario') await load('attendance', 'schedules');
+    if (S.view === 'horario') await load('attendance', 'schedules', 'holidays');
     if (S.view === 'integraciones') { S.integrations = isAdmin() ? await S.api.get('/api/integrations') : null; }
     if (S.view === 'plano') await preparePlan();
-    else root.classList.remove('plano-full');
+    else { root.classList.remove('plano-full'); stopReplay(); }
   } catch (e) { toast(e.message, 'deny'); }
   render();
   // La pantalla aterriza y el punto del logo late: solo al cambiar de pantalla, nunca por algo que llegó en vivo.
@@ -3130,6 +3631,7 @@ function onLive(type, data) {
 
 function handleLive(type, data) {
   const status = () => { if (S.view === 'panel') setHTML($('#status'), statusText()); };
+  if (type === 'event' && data.recovered) return refreshSoon('feed', 'overview', 'presence', ...(S.view === 'eventos' ? ['events'] : [])); // vino del historial de un equipo: va en su lugar, no arriba
   if (type === 'event') {
     S.feed.unshift(data);
     if (S.feed.length > 80) S.feed.length = 80;
@@ -3157,6 +3659,7 @@ function handleLive(type, data) {
       $('#event-list')?.insertAdjacentHTML('afterbegin', eventRow(data, { fresh: true, long: true }));
     }
     if (S.view === 'horario' && data.kind === 'access_granted' && data.person_id) refreshSoon('attendance');
+    if (data.kind === 'access_granted' && data.person_id) refreshSoon('presence');
   } else if (type === 'door') {
     const door = S.doors.find(p => p.id === data.id);
     if (!door) return refreshSoon('doors');
@@ -3164,6 +3667,11 @@ function handleLive(type, data) {
     if (data.state !== 'open') delete S.doorAlert[door.id];
     S.overview.doors.open = S.doors.filter(p => p.state === 'open').length;
     if (S.view === 'panel') { patchDoor(door.id); status(); }
+  } else if (type === 'site') {
+    Object.assign(S.sites.find(s => s.id === data.id) ?? {}, data);
+    drawAlarm();
+    if (S.view === 'panel') for (const d of S.doors) if (d.site_id === data.id) patchDoor(d.id);
+    refreshSoon('notices');
   } else if (type === 'device') {
     Object.assign(S.devices.find(d => d.id === data.id) ?? {}, data);
     if (data.status) for (const d of S.doors) if (d.device_id === data.id) d.device_status = data.status;
@@ -3281,7 +3789,7 @@ async function enter() {
   }
   try { S.vista = JSON.parse(saved.get('kliva.vista') || '{}'); } catch { S.vista = {}; }
   fixVista();
-  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules');
+  await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules', 'presence');
   S.planoSite = saved.get('kliva.plano.site');
   shell();
   await route();
@@ -3345,6 +3853,7 @@ document.addEventListener('change', async e => {
   const el = e.target;
   if (el.name === 'engine') $('#pg-url').hidden = el.value !== 'postgres';
   if (el.dataset.redraw) redrawForCompany(el);
+  if (el.name === 'sheet' && el.form?.dataset.form === 'import') importPreview(el);
   if (el.name === 'brand') {
     const b = S.brands.find(x => x.brand === el.value);
     el.form.elements.port.value = b.defaultPort;
