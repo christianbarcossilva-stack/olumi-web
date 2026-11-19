@@ -7,7 +7,7 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=13';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=27';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=28';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -138,7 +138,7 @@ export function construir(M) {
       return `<div class="mhead"><div><small>Abertura en ${M.esc(nombreDe(p))}</small><b>${ABERTURAS[h.k].n}</b></div>${cerrar}</div><div class="mform dos"><label><span>Tipo</span><select data-c="k">${Object.entries(ABERTURAS).map(([k, v]) => `<option value="${k}" ${k === h.k ? 'selected' : ''}>${v.n}</option>`).join('')}</select></label><label><span>Ancho (m)</span><input type="number" data-c="w" step="0.1" min="0.4" max="12" value="${anchoDe(h)}"></label></div>
         <div class="macts"><button class="mbtn peligro" data-c="borrar">${M.svg('borrar', 16)}Sacar</button></div><p class="mnota">Arrastrala para correrla a lo largo de la pared.</p>`; }
     const l = L[SUB.lado]; if (!l) return null; const o = (p.lados || {})[SUB.lado] || {}, len = Math.hypot(l[1][0] - l[0][0], l[1][1] - l[0][1]), tipo = o.tipo || p.tipo || TIPOS[p.t].def.tipo, color = o.color || p.color || TIPOS[p.t].def.color;
-    return `<div class="mhead"><div><small>Pared de ${M.esc(nombreDe(p))}</small><b>${fmt(len)} m</b></div>${cerrar}</div><div class="mform dos"><label><span>Tipo</span><select data-c="tipo">${PAREDES.slice(0, p.t === 'recinto' ? 5 : 4).map(([k, n]) => `<option value="${k}" ${k === tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label><span>Color</span><span class="mcol"><input type="color" data-c="color" value="${color}"></span></label></div>
+    return `<div class="mhead"><div><small>Pared de ${M.esc(nombreDe(p))}</small><b>${fmt(len)} m</b></div>${cerrar}</div><div class="mform dos"><label><span>Tipo</span><select data-c="tipo">${PAREDES.slice(0, p.t === 'recinto' ? 6 : 5).map(([k, n]) => `<option value="${k}" ${k === tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label><span>Color</span><span class="mcol"><input type="color" data-c="color" value="${color}"></span></label></div>
       <div class="macts">${['puerta', 'ventana', 'paso'].map(k => `<button class="mbtn" data-c="mas" data-k="${k}">${M.svg(k, 16)}${ABERTURAS[k].n.replace(' sin puerta', '')}</button>`).join('')}</div>
       <div class="macts"><button class="mbtn" data-c="todo">${M.svg('recinto', 16)}${p.t === 'recinto' ? 'Recinto entero' : 'Pared entera'}</button><button class="mbtn peligro" data-c="borrar">${M.svg('borrar', 16)}Sacar pared</button></div><p class="mnota">${p.t === 'recinto' ? 'Arrastrá la pared para agrandar o achicar el recinto.' : 'Arrastrá los puntos celestes para mover cada punta.'}</p>`; }
   // un campo de la ficha cambió (devuelve true si era de acá)

@@ -11,13 +11,14 @@
 //   host.alVivo(fn)  la app avisa al momento: fn({ puerta, estado?, ev?: 'pasa' | 'rechazo', quien? })
 //   host.abrir(id)   abre una puerta a distancia (promesa)
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
+//   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=13';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=27';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=28';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=2';
-import { construir } from './construir.js?v=17';
+import { construir } from './construir.js?v=18';
 import { recorrer } from './recorrer.js?v=11';
-import { transito } from './transito.js?v=16';
+import { transito } from './transito.js?v=17';
 import { extras } from './extras.js?v=3';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -92,7 +93,7 @@ export async function abrirMaqueta(o) {
     EQ.porUid = new Map(EQ.lista.map(d => [d.uid, d]));
     for (const p of E.piezas) if (p.uid && TIPOS[p.t] && TIPOS[p.t].equipo) { const d = EQ.porUid.get(p.uid), g = objs.get(p.id); if (d && d.nombre && p.nombre !== d.nombre) p.nombre = d.nombre; if (g && g.userData.estado !== ESTADO(d && d.estado)) rehacer(p); }
     if (!$('#meq').hidden) listaEquipos(); if (SEL) info(); }
-  const ctx = { paredes: 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, modelo: o.catalogo ? modeloBase : null, piezas: () => E.piezas, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p) };
+  const ctx = { paredes: (host && host.paredes) || 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, modelo: o.catalogo ? modeloBase : null, piezas: () => E.piezas, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p) };
   if (host && host.equipos) { leerEquipos(true); setInterval(() => leerEquipos(true), 60000); }
 
   // ---------- puertas con control de acceso (Kliva): estado en vivo y movimiento ----------
@@ -137,7 +138,7 @@ export async function abrirMaqueta(o) {
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
       if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('../avatar.js?v=1'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
-        if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; AVM.avPose(ob, 'idle', 0.016, { x: 0, y: 0, t: ob.semilla }); ob.sync(); ob.dueño = g; PERS.add(ob); }
+        if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
 
@@ -549,7 +550,7 @@ export async function abrirMaqueta(o) {
   TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, subtitulo }) : null; if (TR && capas.transito === false) TR.ver(false);
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
   motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
-    for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla }); ob.sync(); } return true; });
+    for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, ob.dueño.userData.pose === 'sentado' ? 'sit' : 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); } return true; });   // sentada: en su silla, con las manos en el teclado
   motor.cada.push((dt, t) => { let x = false; for (const p of E.piezas) { const g = objs.get(p.id); if (g && g.userData.estado === 'crit' && g.userData.aro) { g.userData.aro.material.opacity = 0.45 + 0.45 * Math.sin(t * 0.008); x = true; } } return x; });
   if (/[?&]medir=1/.test(location.search)) { const s = $('#mstats'); s.hidden = false; setInterval(() => { const m = motor.stats; s.textContent = `${m.fps} c/s · ${m.ms} ms · ${m.dibujos} dibujos · ${Math.round(m.triangulos / 1000)} mil triángulos`; }, 700); }
   addEventListener('message', e => { const d = e.data || {}; if (d.tema) motor.ponerTema(d.tema === 'dark' || d.tema === 'oscuro' ? 'oscuro' : 'claro'); });
