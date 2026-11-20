@@ -692,12 +692,12 @@ html.ofipan .btmenu{z-index:10005}
 }
 @media (max-width:699px) and (orientation:landscape){:root{--gl:max(16px, env(safe-area-inset-left,0px));--gr:max(16px, env(safe-area-inset-right,0px))}}
 /* el cartel de prueba: una etiqueta chica; tocándola se abre la explicación */
-#banner .beta-note.chip{display:inline-flex;align-items:center;gap:6px;width:auto;max-width:100%;margin:0;padding:4px 11px 4px 8px;font-size:12px;line-height:1.35;border-radius:999px;cursor:pointer;
+:is(#banner,#pie) .beta-note.chip{display:inline-flex;align-items:center;gap:6px;width:auto;max-width:100%;margin:0;padding:4px 11px 4px 8px;font-size:12px;line-height:1.35;border-radius:999px;cursor:pointer;
   background:color-mix(in srgb,#ffd60a 12%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,#ffd60a 32%,transparent);-webkit-tap-highlight-color:transparent;user-select:none}
-#banner .beta-note.chip .mas{display:none;font-weight:400;color:var(--muted)}
-#banner .beta-note.chip.abre{border-radius:12px;align-items:flex-start;padding:8px 12px}
-#banner .beta-note.chip.abre .mas{display:inline}
-#banner .beta-note.chip .med{display:block;margin-top:4px;font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--muted)}
+:is(#banner,#pie) .beta-note.chip .mas{display:none;font-weight:400;color:var(--muted)}
+:is(#banner,#pie) .beta-note.chip.abre{border-radius:12px;align-items:flex-start;padding:8px 12px}
+:is(#banner,#pie) .beta-note.chip.abre .mas{display:inline}
+:is(#banner,#pie) .beta-note.chip .med{display:block;margin-top:4px;font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--muted)}
 #banner:has(> .beta-note.chip:only-child){padding-block:8px 0}
 /* textos largos: barrita de edición (aparece al escribir) y cuadro que crece */
 .ted{display:none;align-items:center;gap:4px;margin:2px 0 6px}
@@ -899,7 +899,46 @@ body:has(#auth:not([hidden])) .d2x{display:none!important}
 /* 1.52o */
 .cv .hint.fjw{display:flex;gap:8px;align-items:flex-start;margin:8px 0 0;color:var(--warn)}
 .fjw .ic{width:18px;height:18px;flex:0 0 18px;margin-top:1px}
+/* la fila de abajo de la tarjeta del CRM: el monto no se parte en dos renglones y nada se sale de la tarjeta; si no entra todo, la persona y la flecha bajan juntas a la derecha */
+.cbot{flex-wrap:wrap;row-gap:6px;min-width:0}html .cbot .amt{white-space:nowrap;flex:none;margin-right:0}.cbot>.tag,.cbot>.badge{white-space:nowrap}.cbot>.av,.cbot>.cnext{flex:none}html .cbot>.av{margin-left:auto}
 /* fin 1.52o */
+/* 1.52s */
+/* 1.52s · barra de arriba compacta (Christian 19/11, por voz: «hay un espacio muerto arriba que necesitamos achicar… la barra larga se elimina,
+   queda una lupa a la derecha y el +… el título tiene que subir para que quede más tablero… lo de Prueba mandarlo abajo del todo»; en todas las pestañas) */
+.top .search{display:none!important}
+.top .ttl{flex:1 1 auto;min-width:0;margin:0;font-size:22px;font-weight:700;letter-spacing:-.022em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .tbi{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:rgb(127 127 127 / .12);color:var(--fg);display:grid;place-items:center;cursor:pointer;padding:0}
+.top .tbi svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.top .tbi:hover{background:rgb(127 127 127 / .2)}
+.top .tq{flex:none;display:inline-flex;align-items:center;gap:6px;max-width:42vw;height:34px;padding:0 6px 0 12px;border-radius:999px;border:0;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--fg);font:inherit;font-size:13.5px;cursor:pointer}
+.top .tq span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.top .tq i{font-style:normal;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgb(127 127 127 / .2);font-size:13px}
+.top .tq[hidden]{display:none}
+html .top .bell{width:38px;height:38px;border-radius:50%}
+html .top #topNew{flex:none;width:38px;height:38px;min-width:38px;padding:0;border-radius:50%;font-size:22px;font-weight:500;line-height:1;display:grid;place-items:center}
+html .top #topNew .lbl-long{display:none}
+#main .vhead h1.h1-arriba{display:none}
+#main .vhead:has(> div > h1.h1-arriba) > div:has(> h1.h1-arriba):not(:has(> :not(h1))){display:none}
+@media (min-width:900px){
+  html.d2 .top{padding:6px 8px 6px 20px;margin-top:10px;top:10px}
+  html.d2 main{padding-top:14px}
+  html.d2 #banner{padding-block:8px 0}
+}
+@media (max-width:899px){
+  .top .ttl{font-size:18px;letter-spacing:-.015em}
+  .top{gap:8px}
+  html.d2 main{padding-top:12px}
+  .top .tq{max-width:34vw}
+}
+/* «Prueba» abajo de todo */
+#pie{padding:6px var(--gr) 22px var(--gl)}#pie:empty{display:none}
+@media (min-width:900px){html.d2 #pie{padding-left:28px;padding-right:24px}}
+@media (max-width:899px){html.d2 #pie{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}html.d2 main:has(+ #pie:not(:empty)){padding-bottom:8px}}
+body.portal #topLupa,body.portal #topQ,body.portal .top .ttl{display:none!important}
+/* resultados del buscador: datos además de pantallas */
+.d2pal li .k{flex:none;font:600 11px/1 var(--f-mono,ui-monospace,monospace);padding:4px 6px;border-radius:7px;background:rgb(127 127 127 / .16);color:var(--d2-mut)}
+.d2pal li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d2pal li.sep{cursor:default;padding:10px 12px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--d2-mut);background:none!important;box-shadow:none!important}
+/* fin 1.52s */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -1202,7 +1241,7 @@ details.more[open] summary{margin-bottom:12px}
 .menu button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;text-align:left}
 .menu button b{font-family:var(--f-head);font-size:15px}
 .menu button span{font-size:12.5px;color:var(--muted)}
-.wa-box textarea{min-height:160px}
+
 .seg.tabs{margin-bottom:14px}
 .cobros .item{font-size:13.5px}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
@@ -1975,7 +2014,7 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
       <button class="btn pri" id="topNew" data-new="op">+ <span class="lbl-long">Oportunidad</span></button>
     </header>
     <div id="banner"></div>
-    <main id="main"></main>
+    <main id="main"></main><div id="pie"></div>
   </div>
 </div>
 <div id="sheetWrap" hidden><div class="backdrop" data-act="close"></div><div id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div></div>
@@ -2083,7 +2122,7 @@ function handleErr(e){
 }
 const clean=o=>JSON.parse(JSON.stringify(o));
 async function put(col,id,data){
-  if(col==='oportunidades'&&data&&!data.numero)data={...data,numero:opNumNuevo()};
+  if(col==='oportunidades'&&data&&!data.numero){const t=typeof opNumTit==='function'?opNumTit(data,id):null;data=t?{...data,numero:t.n,titulo:t.t}:{...data,numero:opNumNuevo()}}
   if(mode==='loading'||(mode==='live'&&!liveCol(col).loaded)){toast('Esperá a que terminen de cargar los datos.');throw {code:'loading'}}
   if(mode==='live'&&(col==='presupuestos'||col==='facturas')&&!has(col)){toast(`${col==='facturas'?'Las facturas no están incluidas':'Los presupuestos no están incluidos'} en el plan ${PLAN.nombre} de tu empresa.`);throw {code:'loading'}}
   AV.touched.add(col+':'+id);AV.t=0;
@@ -2152,7 +2191,7 @@ function render(){
   {const na=agOk()&&isLead()?aprobPend().length:0,pa=$('#navAg');if(pa){pa.hidden=!na;pa.textContent=na}}
   const fv=arr('facturas').filter(f=>factState(f)==='vencida').length,p3=$('#navFa');p3.hidden=!fv;p3.textContent=fv;
   const pm=$('#navMas');pm.hidden=!(ov+fv);pm.textContent=ov+fv;
-  setHTML($('#banner'),(BETA?`<p class="note beta-note chip beta-chip" role="button" aria-label="Versión de prueba">${ic('beta','in')}<span><b>Prueba</b><span class="mas"> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.<span class="med"></span></span></span></p>`:'')+(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner());
+  setHTML($('#pie'),(BETA?`<p class="note beta-note chip beta-chip" role="button" aria-label="Versión de prueba">${ic('beta','in')}<span><b>Prueba</b><span class="mas"> · lo que ves acá todavía no lo ven los clientes. Los datos son los reales de la empresa.<span class="med"></span></span></span></p>`:''));setHTML($('#banner'),(SOPORTE?`<p class="note" style="background:var(--warn-bg,#fff4d6)">${ic('herramienta','in')}<b>Soporte Unity Tech</b> en ${esc((ORGINFO&&ORGINFO.name)||'la empresa')}: entraste como administrador y todo lo que toques queda registrado para el cliente. <button class="btn ghost" data-act="sopsalir">Salir del soporte</button></p>`:'')+offBanner()+(OFF.stale?'':bannerHtml())+pendBanner()+segBanner()+gastoBanner()+setupBanner());
   setHTML($('#prodlist'),arr('productos').map(p=>`<option value="${esc(p.nombre)}"></option>`).join(''));
   const ready=mode==='local'||(mode==='live'&&(loaded.size>=NEED||slow));
   avBadge(ready);
@@ -2400,9 +2439,9 @@ function vTickets(){
   const open=all.filter(tkOpen);
   const head=`<div class="vhead"><div><h1>Tickets</h1><p class="sub">${pl(open.length,'abierto','abiertos')} · ${pl(open.filter(t=>t.tipo==='emergencia').length,'emergencia','emergencias')} · primero emergencias, el abono desempata</p></div>
     <div class="tools"><div class="seg" role="group" aria-label="Filtro">${[['abiertos','Abiertos'],['emergencias','Emergencias'],['todos','Todos'],...(arr('clientes').some(c=>n0(c.horasSoporte))?[['horas','Soporte']]:[])].map(([k,n])=>`<button class="${tkFilter===k?'on':''}" data-act="tkf:${k}">${n}</button>`).join('')}</div>
-    ${PLAN&&PLAN.whatsapp&&has('whatsapp')?'<span class="tag t-ok" title="Los mensajes que llegan a ese número se convierten en tickets solos">WhatsApp automático</span>':''}<button class="btn" data-act="wa">Pegar WhatsApp</button></div></div>`;
+    ${PLAN&&PLAN.whatsapp&&has('whatsapp')?'<span class="tag t-ok" title="Los mensajes que llegan a ese número se convierten en tickets solos">WhatsApp automático</span>':''}</div></div>`;
   if(tkFilter==='horas')return head+hsMonitor();
-  if(!all.length)return head+empty('Sin tickets','Cuando un cliente escriba por WhatsApp, tocá “Pegar WhatsApp” y pegá el mensaje: Claude arma el ticket con cliente, tipo y detalle. También lo podés cargar a mano.','tk','+ Nuevo ticket');
+  if(!all.length)return head+empty('Sin tickets','Cargá el pedido de un cliente con «+ Ticket». Si tenés WhatsApp conectado, los mensajes que llegan se convierten en tickets solos.','tk','+ Nuevo ticket');
   if(!l.length)return head+'<p class="muted">No hay tickets con este filtro.</p>';
   return head+`<div class="list">${l.map(tkRow).join('')}</div>`;
 }
@@ -2458,53 +2497,6 @@ async function saveTk(){
   const isNew=!SH.id,id=SH.id||uid();
   await put('tickets',id,t);toast(`Ticket ${t.numero} guardado`);await entLinkTicket(id,t);if(t.clienteId&&!base.clienteId&&tkContacto(t))await vincularContacto(t.clienteId,tkContacto(t));
   if(isNew){if(!D.tickets[id])D.tickets[id]=t;openSheet('tk',id)}else closeSheet();
-}
-
-/* WhatsApp pegado */
-function sheetWa(){
-  return sheetFrame('WhatsApp','Pegar mensaje del cliente',`<p class="hint">Copiá el mensaje (o varios) del chat de WhatsApp y pegalo acá. ${SAMPLE?'Claude reconoce al cliente, el tipo de pedido y arma el ticket para que lo revises antes de guardar.':'Se arma un ticket con el mensaje para que lo completes.'}</p>
-    <label class="fld full wa-box" for="wa_text"><span>Mensaje</span><textarea id="wa_text" placeholder="[3/11 09:12] Juan Pérez: Buenas, se cortó la cámara del portón y no graba desde anoche"></textarea></label>
-    <p class="busy" id="waBusy" hidden>Claude está leyendo el mensaje…</p><p class="err" id="shErr" hidden></p>`,{saveLabel:SAMPLE?'Armar ticket con Claude':'Armar ticket'});
-}
-async function saveWa(){
-  const txt=$('#wa_text').value.trim(),err=$('#shErr');
-  if(!txt){err.textContent='Pegá el mensaje del cliente.';err.hidden=false;return}
-  const draft={mensaje:txt,descripcion:txt,origen:'WhatsApp',tipo:'consulta',estado:'nuevo',responsable:ME||''};let newCli=null;
-  if(SAMPLE){
-    $('#waBusy').hidden=false;
-    const clis=arr('clientes').map(c=>({id:c.id,nombre:c.nombre||'',contacto:c.contacto||'',telefono:c.telefono||''}));
-    const prompt=`Sos el asistente de una empresa uruguaya de telecomunicaciones (fibra óptica, CCTV, cableado estructurado, control de acceso, redes). Leé este mensaje de WhatsApp de un cliente y armá un ticket de servicio.
-
-Clientes registrados (JSON): ${JSON.stringify(clis).slice(0,60000)}
-
-Mensaje:
-"""
-${txt.slice(0,8000)}
-"""
-
-Respondé solo con un objeto JSON con estas claves:
-{"clienteId": el id de un cliente registrado si el nombre, el contacto o el teléfono coinciden claramente; si no, null,
- "clienteNuevo": {"nombre": "...", "telefono": "..."} si no coincide con ninguno registrado (tomá nombre y teléfono del mensaje si aparecen), o null,
- "tipo": uno de "emergencia", "instalacion", "relevamiento", "mantenimiento", "consulta" (emergencia = algo dejó de funcionar y urge: cámaras caídas, sin internet, alarma, acceso trabado),
- "titulo": resumen de hasta 8 palabras,
- "descripcion": qué pasa o qué pide, en 1 a 3 oraciones,
- "obra": dirección o lugar si lo menciona, si no ""}`;
-    try{
-      const r=await SAMPLE.json(prompt,{modelTier:'quick'});
-      if(r&&typeof r==='object'){
-        if(r.clienteId&&D.clientes[r.clienteId])draft.clienteId=String(r.clienteId);
-        else if(r.clienteNuevo&&r.clienteNuevo.nombre)newCli={nombre:String(r.clienteNuevo.nombre),telefono:String(r.clienteNuevo.telefono||'')};
-        if(TKTK[r.tipo])draft.tipo=r.tipo;
-        if(r.titulo)draft.titulo=String(r.titulo).slice(0,120);
-        if(r.descripcion)draft.descripcion=String(r.descripcion);
-        if(r.obra)draft.obra=String(r.obra);
-      }
-    }catch(e){
-      if(e&&['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e.code))SAMPLE=null;
-      toast(e&&e.code==='rate_limited'?'Claude está ocupado. Completá el ticket a mano.':'No se pudo leer con Claude. Completá el ticket a mano.');
-    }
-  }
-  openSheet('tk',null,{draft,newCli});SH.dirty=true;toast('Revisá el ticket y guardalo');
 }
 
 /* ---------- trabajos, calendario y Mi día ---------- */
@@ -2864,7 +2856,7 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={fondo:sheetFondo,obs:sheetObs,crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,wa:sheetWa,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
+  const fns={fondo:sheetFondo,obs:sheetObs,crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
@@ -3113,7 +3105,6 @@ if(await planosAct(k,el,arg))return;
     case'campo':campoDay=+arg;sr();break;
     case'campoall':campoAll=!campoAll;sr();break;
     case'cal':{if(arg==='0'||+arg===0)calStart=monday(new Date());else if(/mes$/.test(String(arg))){const d=new Date(calStart);d.setDate(1);d.setMonth(d.getMonth()+(String(arg).startsWith('-')?-1:1));calStart=d}else{const d=new Date(calStart);d.setDate(d.getDate()+(+arg));calStart=d}sr();break}
-    case'wa':openSheet('wa');break;
     case'lb':{const lb=$('#lightbox');lb.querySelector('img').src=blobUrl(a.slice(3));lb.hidden=false;break}
     case'lbclose':$('#lightbox').hidden=true;$('#lightbox img').removeAttribute('src');break;
     case'jstate':await saveTrab(false,arg);break;
@@ -3143,7 +3134,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={fondo:saveFondo,obs:saveObs,op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,wa:saveWa,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={fondo:saveFondo,obs:saveObs,op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -3453,7 +3444,7 @@ function flujoPuede(o,k,id){const a=fjE(o),b=EK[k];if(!b||a.k===k)return'';
 const fjSig=o=>{const a=fjE(o),i=ETAPAS.indexOf(a);if(a.c==='p'||a.fijo)return null;return ETAPAS.slice(i+1).find(e=>e.c!=='p'&&(!a.sig||!a.sig.length||a.sig.includes(e.k)))||null};
 // número de la oportunidad: nace con ella (P1, P2…) y es el que después lleva el proyecto y sus presupuestos
 let FJ_N=0;
-function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...arr('oportunidades').map(o=>parseInt(String(o.numero||'').replace(/\D/g,''),10)||0))}
+function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...arr('oportunidades').map(o=>Math.max(parseInt(String(o.numero||'').replace(/\D/g,''),10)||0,typeof opNumTitN==='function'?opNumTitN(o):0)))}
 function opNumPre(){const p=CRMC().numPre;return String(p==null?(pryPlano()?'':'P'):p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
 function opNumNuevo(){return opNumPre()+(FJ_N=opNumMax()+1)}
 function opNumSig(){return opNumPre()+(opNumMax()+1)}
@@ -5687,7 +5678,7 @@ addEventListener('message',e=>{const d=e.data||{};if(d&&d.ovListo)tLog('oficina'
 /* === fin 1.52c === */
 /* === 1.52d · compacto === */
 // 1.52d · el cartel de prueba se abre y se cierra tocándolo. Abierto muestra también las medidas de la pantalla (para revisar márgenes en el iPhone).
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('#banner .beta-chip');if(!c)return;c.classList.toggle('abre');
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.beta-chip');if(!c)return;c.classList.toggle('abre');
   const m=c.querySelector('.med');if(!m||!c.classList.contains('abre'))return;try{const q=s=>document.querySelector(s),r=s=>{const x=q(s);return x?Math.round(x.getBoundingClientRect().left):'–'},
     cs=getComputedStyle(q('#main')||document.body);m.textContent=`pantalla ${innerWidth}×${innerHeight} · ${devicePixelRatio}x · título ${r('#main h1')} · margen ${cs.paddingLeft}/${cs.paddingRight} · app ${r('.app')}`}catch(x){}});
 // 1.52d · Textos largos (Christian 16/11 11:52, «Qué se hizo»: «este bloque se tiene que poder agrandar para poder escribir más cómodo y tiene
@@ -5827,6 +5818,56 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 function fjFalta(F,i){const b=F[i],s=F[i+1];if(!b||!s||b.fijo||b.k==='per'||s.k==='per'||!(b.sig||[]).length||b.sig.includes(s.k))return'';
   return`<p class="hint fjw">${ic('alerta')}<span>Desde «${esc(b.n)}» no se puede pasar a «${esc(s.n)}», que es el bloque que sigue. Si tiene que poderse, marcalo en «Puede pasar a».</span></p>`}
 /* === fin 1.52o === */
+/* === 1.52r · número de Odoo === */
+// 1.52r · El número que la oportunidad ya trae en el título es su número (Christian 19/11 19:29: «si nosotros en Odoo tenemos un número de proyecto,
+// tenemos que respetarlo, no poner otro… generar números a partir del último número libre que esté en Odoo»). Las que vinieron de Odoo se llaman
+// «3626 - Control remoto»: al guardarlas, Olumi les ponía un número NUEVO (3658) porque no tenían el campo. Ahora toma el del título, lo saca del
+// título para que no se vea dos veces, y la numeración nueva nunca usa un número que ya esté en un título.
+const OP_NUM_RE=/^\s*[A-Za-zÑñ]{0,3}\s*(\d{3,6})\s*[-–·]\s*(.*)$/;
+const opNumTitN=o=>{const m=OP_NUM_RE.exec(String((o&&o.titulo)||''));return m?+m[1]:0};
+function opNumTit(d,id){const m=OP_NUM_RE.exec(String((d&&d.titulo)||''));if(!m)return null;const n=opNumPre()+m[1];
+  if(arr('oportunidades').some(o=>o.id!==id&&o.numero===n))return null;return{n,t:m[2].trim()||'(sin nombre)'}}
+/* === fin 1.52r === */
+/* === 1.52s · barra compacta === */
+// 1.52s · barra de arriba compacta: el título de la pantalla sube a la barra, la búsqueda larga se va (queda una lupa que abre el buscador del
+// medio, el mismo de Ctrl+K, ahora con datos), el + sin palabra, y «Prueba» abajo de todo. En todas las pestañas.
+(()=>{const top=document.querySelector('header.top'),main=document.getElementById('main');if(!top||!main)return;
+  const nw=document.getElementById('topNew'),bell=document.getElementById('topBell');
+  const tt=document.createElement('h1');tt.className='ttl';tt.id='topTitle';const mb=top.querySelector('.mbrand');if(mb)mb.after(tt);else top.prepend(tt);
+  const tq=document.createElement('button');tq.type='button';tq.className='tq';tq.id='topQ';tq.hidden=true;tq.title='Quitar la búsqueda';tq.innerHTML='<span></span><i aria-hidden="true">✕</i>';
+  const lu=document.createElement('button');lu.type='button';lu.className='tbi';lu.id='topLupa';lu.setAttribute('aria-label','Buscar');lu.title='Buscar (Ctrl+K o /)';
+  lu.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+  (bell||nw).before(tq,lu);
+  lu.addEventListener('click',()=>{if(window.__palAbrir)window.__palAbrir()});
+  const qi=document.getElementById('q');
+  tq.addEventListener('click',()=>{if(!qi)return;qi.value='';qi.dispatchEvent(new Event('input',{bubbles:true}))});
+  addEventListener('keydown',e=>{if(e.key!=='/'||e.metaKey||e.ctrlKey||e.altKey)return;const a=document.activeElement;if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;if(document.getElementById('sheet')&&!document.getElementById('sheet').hidden)return;e.preventDefault();window.__palAbrir&&window.__palAbrir()});
+  const pone=()=>{const h=main.querySelector('.vhead h1');let t='';
+    main.querySelectorAll('h1.h1-arriba').forEach(x=>{if(x!==h)x.classList.remove('h1-arriba')});
+    if(h){h.classList.add('h1-arriba');t=h.textContent.trim()}
+    else{const b=document.querySelector('.nav [aria-current="page"] .lbl,.nav button.on .lbl');t=b?b.textContent.trim():''}
+    if(tt.textContent!==t)tt.textContent=t;
+    if(nw){const l=(nw.querySelector('.lbl-long')||{}).textContent||'';const a=l?'Nuevo: '+l:'Nuevo';if(nw.getAttribute('aria-label')!==a){nw.setAttribute('aria-label',a);nw.title=a}}
+    const v=qi?qi.value.trim():'';tq.hidden=!v;const s=tq.querySelector('span');if(s.textContent!=='“'+v+'”')s.textContent='“'+v+'”'};
+  new MutationObserver(pone).observe(main,{childList:true,subtree:true});if(qi)qi.addEventListener('input',()=>setTimeout(pone,200));pone();
+})();
+// lo que el buscador del medio encuentra en los datos (además de las pantallas): número, nombre o cliente
+function spotBuscar(q){const n=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''),Q=n(q).trim();if(Q.length<2)return[];
+  const hit=a=>n(a.filter(Boolean).join(' ')).includes(Q),ex=x=>n(x)===Q||n(x).replace(/\D/g,'')===Q,out=[];
+  const add=(sec,l,f)=>{const r=l.filter(f.h).sort((a,b)=>(ex(f.num(b))?1:0)-(ex(f.num(a))?1:0)).slice(0,4);if(r.length)out.push({sep:sec});r.forEach(x=>out.push({k:f.num(x)||'',t:f.t(x),sec:f.s(x),open:f.o+':'+x.id}))};
+  try{
+    add('Oportunidades',arr('oportunidades'),{h:o=>hit([o.numero,o.titulo,cliName(o.clienteId),o.obra]),num:o=>o.numero,t:o=>o.titulo||'Oportunidad',s:o=>cliName(o.clienteId),o:'op'});
+    add('Proyectos',arr('proyectos'),{h:p=>hit([p.numero,p.nombre,cliName(p.clienteId)]),num:p=>p.numero,t:p=>p.nombre||'Proyecto',s:p=>cliName(p.clienteId),o:'pry'});
+    add('Presupuestos',arr('presupuestos'),{h:p=>{const o=typeof opp==='function'?opp(p.oportunidadId):null;return hit([p.numero,p.titulo,cliName(p.clienteId),o&&o.numero,o&&o.titulo])},num:p=>p.numero,t:p=>p.titulo||(typeof opp==='function'&&opp(p.oportunidadId)||{}).titulo||'Presupuesto',s:p=>cliName(p.clienteId),o:'pres'});
+    add('Clientes',arr('clientes'),{h:c=>hit([c.nombre,c.contacto,c.rut,c.telefono]),num:()=>'',t:c=>c.nombre||'Cliente',s:c=>[c.contacto,c.telefono].filter(Boolean).join(' · '),o:'cli'});
+    add('Tickets',arr('tickets'),{h:t=>hit([t.numero,t.titulo,cliName(t.clienteId)]),num:t=>t.numero,t:t=>t.titulo||'Ticket',s:t=>cliName(t.clienteId),o:'tk'});
+    add('Trabajos',arr('trabajos'),{h:j=>hit([j.numero,j.titulo,typeof jCli==='function'?jCli(j):cliName(j.clienteId),j.obra]),num:j=>j.numero,t:j=>j.titulo||'Trabajo',s:j=>typeof jCli==='function'?jCli(j):cliName(j.clienteId),o:'trab'});
+  }catch(e){}
+  return out}
+
+// el buscador del medio vive en otro <script> (d2js): se le pasan la búsqueda y cómo abrir una ficha
+window.__spotBuscar=spotBuscar;window.__abrirFicha=(t,i)=>openSheet(t,i);
+/* === fin 1.52s === */
 /* === 1.52f · editor de planos === */
 // 1.52f · Editor de planos y croquis como los programas que ya lo resolvieron (Christian 16/11 22:35: «cuando quiero mover un punto
 // puesto, termino moviendo la hoja… estas cosas hay que copiarlas de programas que ya lo tienen resuelto, como Canva… los botones clásicos
@@ -10035,22 +10076,22 @@ let pal=null,items=[],cur=0;
 function views(){let sec='';const out=[];[...nav.children].forEach(n=>{if(n.classList.contains('navsec'))sec=n.textContent.trim();
   else if(n.matches('button[data-view]')&&!n.hidden&&!n.classList.contains('mob'))out.push({b:n,t:lbl(n),sec,ic:(n.querySelector('svg')||{}).outerHTML||''})});return out}
 function palDraw(){const q=pal.querySelector('input').value.trim(),Q=qn(q),ul=pal.querySelector('ul');
-  items=views().filter(v=>!Q||qn(v.t+' '+v.sec).includes(Q));
+  items=(window.__spotBuscar?window.__spotBuscar(q):[]);const vs=views().filter(v=>!Q||qn(v.t+' '+v.sec).includes(Q));if(vs.length&&items.length)items.push({sep:'Pantallas'});items.push(...vs);
   if(q)items.push({t:`Buscar “${q}” en ${lbl(nav.querySelector('[aria-current="page"]'))||'esta pantalla'}`,ic:SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),q});
-  cur=Math.min(cur,items.length-1);if(cur<0)cur=0;
-  ul.innerHTML=items.map((v,i)=>`<li role="option" data-i="${i}" aria-selected="${i===cur}">${v.ic}<span></span><small></small></li>`).join('');
-  [...ul.children].forEach((li,i)=>{li.querySelector('span').textContent=items[i].t;li.querySelector('small').textContent=items[i].sec||(items[i].q?'Enter':'')});
+  cur=Math.min(cur,items.length-1);if(cur<0)cur=0;while(items[cur]&&items[cur].sep&&cur<items.length-1)cur++;
+  ul.innerHTML=items.map((v,i)=>v.sep?`<li class="sep" role="presentation"></li>`:`<li role="option" data-i="${i}" aria-selected="${i===cur}">${v.open?(v.k?'<b class="k"></b>':''):v.ic}<span></span><small></small></li>`).join('');
+  [...ul.children].forEach((li,i)=>{const v=items[i];if(v.sep){li.textContent=v.sep;return}const k=li.querySelector('.k');if(k)k.textContent=v.k;li.querySelector('span').textContent=v.t;li.querySelector('small').textContent=v.sec||(v.q?'Enter':'')});
   const a=ul.children[cur];if(a)a.scrollIntoView({block:'nearest'})}
-function palGo(i){const v=items[i];if(!v)return;palClose();if(v.q!=null){const s=document.getElementById('q');if(s){s.value=v.q;s.dispatchEvent(new Event('input',{bubbles:true}));s.focus()}}else v.b.click()}
+function palGo(i){const v=items[i];if(!v||v.sep)return;palClose();if(v.open){const[ty,id]=v.open.split(':');if(window.__abrirFicha)window.__abrirFicha(ty,id);return}if(v.q!=null){const s=document.getElementById('q');if(s){s.value=v.q;s.dispatchEvent(new Event('input',{bubbles:true}));s.focus()}}else v.b.click()}
 function palOpen(){if(pal)return;pal=document.createElement('div');pal.className='d2pal';pal.setAttribute('role','dialog');pal.setAttribute('aria-label','Buscar');
-  pal.innerHTML=`<div class="box"><label>${SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>')}<input type="text" placeholder="Ir a una pantalla o buscar…" autocomplete="off" spellcheck="false" aria-label="Buscar"></label><ul role="listbox"></ul></div>`;
+  pal.innerHTML=`<div class="box"><label>${SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>')}<input type="text" placeholder="Buscar número, oportunidad, cliente… o ir a una pantalla" autocomplete="off" spellcheck="false" aria-label="Buscar"></label><ul role="listbox"></ul></div>`;
   document.body.append(pal);cur=0;palDraw();requestAnimationFrame(()=>pal.classList.add('on'));const inp=pal.querySelector('input');inp.focus();
   inp.addEventListener('input',()=>{cur=0;palDraw()});
-  inp.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();cur=(cur+(e.key==='ArrowDown'?1:-1)+items.length)%Math.max(1,items.length);palDraw()}else if(e.key==='Enter'){e.preventDefault();palGo(cur)}else if(e.key==='Escape'){e.preventDefault();palClose()}});
+  inp.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const d=e.key==='ArrowDown'?1:-1;let n=items.length;do{cur=(cur+d+items.length)%Math.max(1,items.length)}while(items[cur]&&items[cur].sep&&--n>0);palDraw()}else if(e.key==='Enter'){e.preventDefault();palGo(cur)}else if(e.key==='Escape'){e.preventDefault();palClose()}});
   pal.addEventListener('click',e=>{const li=e.target.closest('li');if(li)return palGo(+li.dataset.i);if(e.target===pal)palClose()});
   pal.addEventListener('pointermove',e=>{const li=e.target.closest('li');if(li&&+li.dataset.i!==cur){cur=+li.dataset.i;pal.querySelectorAll('li').forEach((l,i)=>l.setAttribute('aria-selected',i===cur))}})}
 function palClose(){if(!pal)return;const p=pal;pal=null;p.classList.remove('on');setTimeout(()=>p.remove(),200)}
-k.addEventListener('click',palOpen);
+k.addEventListener('click',palOpen);window.__palAbrir=palOpen;
 addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&!e.altKey&&e.key.toLowerCase()==='k'){e.preventDefault();pal?palClose():palOpen()}else if(e.key==='Escape'&&menu)closeMenu()});
 })();
 
