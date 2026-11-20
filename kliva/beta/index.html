@@ -119,8 +119,6 @@ a { color: inherit; }
 .side-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 2px; }
 .side-head .brand { flex: 1 1 auto; }
 .fold { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--muted); transition: transform var(--t3) var(--mo); }
-.side-search { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 10px 0 12px; border: 0; border-radius: 16px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); text-align: left; }
-.side-search span { flex: 1 1 auto; }
 kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .menu { position: relative; flex: 1 0 auto; display: flex; flex-direction: column; gap: 2px; }
 .menu-label { margin: 14px 0 4px; padding: 12px 12px 0; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
@@ -178,17 +176,25 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 [aria-checked="true"] > .switch::after, [aria-pressed="true"] > .switch::after { transform: translateX(16px); }
 
 .app[data-nav="mini"] .side { width: 68px; padding-inline: 10px; }
-.app[data-nav="mini"] :is(.brand > span:not(.mark), .side-search span, kbd, .nav > span, .menu-label, .me > span:nth-child(2), .me > .i, .nav .switch) { display: none; }
+.app[data-nav="mini"] :is(.brand > span:not(.mark), kbd, .nav > span, .menu-label, .me > span:nth-child(2), .me > .i, .nav .switch) { display: none; }
 .app[data-nav="mini"] .side-head { flex-direction: column; gap: 10px; padding: 0; }
 /* Plegado, el logo de Kliva se queda arriba, como en Olumi */
 .app[data-nav="mini"] .side-head .brand { flex: none; gap: 0; }
 .app[data-nav="mini"] .fold { transform: rotate(180deg); }
-.app[data-nav="mini"] :is(.nav, .side-search, .me) { justify-content: center; padding-inline: 0; gap: 0; }
+.app[data-nav="mini"] :is(.nav, .me) { justify-content: center; padding-inline: 0; gap: 0; }
 .app[data-nav="mini"] .menu-label { display: block; height: 0; margin: 8px 6px; padding: 0; overflow: hidden; }
 
 .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .top { display: flex; align-items: center; gap: 10px; margin: 14px 16px 0; padding: 8px; border-radius: 26px; }
 .top .mark { display: none; }
+/* Barra de arriba como la de Olumi: el título de la pantalla, la búsqueda que quedó puesta y una lupa */
+.top-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 6px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.top-q { flex: 0 1 auto; min-width: 0; display: flex; }
+.top:has(.top-chip) .top-title { flex: 0 1 auto; }
+.view-head.plain > div:first-child > h1 { display: none; }
+.top-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 0 8px 0 14px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); color: var(--fg); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.top-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-chip .i { flex: none; width: 18px; height: 18px; color: var(--muted); }
 .top-search { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--muted); text-align: left; }
 .top-search span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .round { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); transition: transform var(--t1) var(--mo), background var(--t2); }
@@ -225,6 +231,13 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 }
 
 @media (max-width: 899px) {
+  /* En el celular el título va en la barra (como en Olumi) y la explicación de cada pantalla no ocupa lugar arriba */
+  .top-title { padding-left: 0; font-size: 19px; }
+  /* con una búsqueda puesta, la búsqueda ocupa el lugar del título (la pantalla ya se ve abajo, marcada) */
+  .top:has(.top-chip) .top-title { display: none; }
+  .top-q { flex: 1 1 auto; }
+  .view-head.plain > div:first-child { display: none; }
+  .view-head.plain:not(:has(> :nth-child(2))) { display: none; }
   .app { grid-template-columns: minmax(0, 1fr); }
   .side { display: none; }
   .top { margin: 0; padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; background: var(--bar); }
@@ -304,6 +317,7 @@ legend { padding: 0; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
 .card-head > :first-child { flex: 1 1 auto; min-width: 0; }
 .back { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 6px -4px; padding: 4px 8px 4px 2px; border: 0; border-radius: 999px; background: none; color: var(--accent-ink, var(--accent)); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
 .back .i { width: 18px; height: 18px; }
+@media (max-width: 899px) { .back { min-height: 44px; margin-block: -6px 0; } }
 .back:hover { background: var(--surface-2); }
 /* Ficha de cliente (instaladora mirando todas las empresas): la ficha entera se toca */
 .card.client { width: 100%; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; gap: 10px; transition: transform var(--t2) var(--mo); }
@@ -454,6 +468,8 @@ button.row:hover { background: var(--surface-2); }
 .palette-field input:focus-visible { box-shadow: none; }
 .palette-list { overflow-y: auto; padding: 8px; }
 .palette-list .group { padding: 10px 12px 4px; color: var(--faint); font-size: 12px; font-weight: 600; }
+/* El número (legajo) va en una pastilla, como en Olumi: es lo que la gente reconoce */
+.palette-list .opt .key { flex: none; min-width: 40px; padding: 5px 8px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
 .opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 12px; border: 0; border-radius: 16px; background: none; text-align: left; }
 .opt[aria-selected="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 60%, transparent); }
 .opt span { flex: 1 1 auto; min-width: 0; }
@@ -520,7 +536,7 @@ button.row:hover { background: var(--surface-2); }
   <div class="backdrop" data-action="palette-close"></div>
   <div class="palette-box" role="dialog" aria-modal="true" aria-label="Buscar">
     <label class="palette-field"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-      <input id="palette-q" type="search" placeholder="Buscar una puerta, una persona o un equipo" autocomplete="off" spellcheck="false" aria-label="Buscar" aria-controls="palette-list"></label>
+      <input id="palette-q" type="search" placeholder="Nombre, número, tarjeta, puerta o equipo" autocomplete="off" spellcheck="false" aria-label="Buscar" aria-controls="palette-list"></label>
     <ul class="palette-list" id="palette-list" role="listbox"></ul>
   </div>
 </div>
@@ -681,6 +697,7 @@ const ICONS = {
   integraciones: '<path d="M9 15l6-6M10.5 6.5l1-1a4.2 4.2 0 0 1 6 6l-1 1M13.5 17.5l-1 1a4.2 4.2 0 0 1-6-6l1-1"/>',
   ajustes: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   left: '<path d="M14 6l-6 6 6 6"/>',
@@ -1239,7 +1256,7 @@ function demoApi() {
   on('GET', '/api/people', ({ query }) => {
     const q = fold(query.get('q') ?? '');
     const sc = scope();
-    return db.people.filter(p => personIn(sc, p) && fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
+    return db.people.filter(p => personIn(sc, p) && (fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q) || p.ref === q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
   });
   on('POST', '/api/people/import', ({ body }) => {
     const rows = body.rows ?? [];
@@ -2057,31 +2074,56 @@ actions.notices = () => {
   drawBell();
 };
 
-// ── Buscador (Ctrl K): ir a una sección, una puerta, una persona o un equipo ──
+// ── Buscador (lupa, Ctrl K o /), igual que el de Olumi: abre al medio, encuentra datos además de pantallas
+// y busca por número (legajo, tarjeta, documento, dirección del equipo). Lo que coincide exacto con el número va primero.
 const palette = {
   items: [], index: 0, mode: 'all',
   open(mode = 'all') {
     this.mode = mode;
     $('#palette').hidden = false;
-    Object.assign($('#palette-q'), { value: '', placeholder: mode === 'doors' ? '¿Qué puerta abrimos?' : 'Buscar una puerta, una persona o un equipo' }).focus();
+    Object.assign($('#palette-q'), { value: '', placeholder: mode === 'doors' ? '¿Qué puerta abrimos?' : 'Nombre, número, tarjeta, puerta o equipo' }).focus();
     this.render();
   },
   close() { $('#palette').hidden = true; },
   get isOpen() { return !$('#palette').hidden; },
   render() {
-    const q = fold($('#palette-q').value.trim()), hit = text => !q || fold(text).includes(q), groups = [];
-    const add = (label, list) => { if (list.length) groups.push([label, list.slice(0, q ? 8 : 6)]); };
-    if (this.mode === 'all') add('Secciones', NAV.filter(n => n.id && hit(n.label)).map(n => ({ icon: n.id, title: n.label, run: () => { location.hash = n.id; } })));
-    add('Puertas', S.doors.filter(d => hit(`${d.name} ${d.site_name} ${d.device_name}`)).map(d => ({ icon: 'panel', title: d.name, sub: `${d.site_name}, ${doorLook(d).sub.toLowerCase()}`, run: () => actions.door({ dataset: { door: d.id } }) })));
-    if (this.mode === 'all') {
-      add('Personas', S.people.filter(p => hit(`${p.name} ${p.company} ${p.document} ${p.cards.join(' ')}`)).map(p => ({ icon: 'personas', title: p.name, sub: p.company, run: () => actions['person-edit']({ dataset: { id: p.id } }) })));
-      add('Equipos', S.devices.filter(d => hit(`${d.name} ${d.brand_label} ${d.host} ${d.model}`)).map(d => ({ icon: 'equipos', title: d.name, sub: `${d.brand_label}, ${d.site_name}`, run: () => { location.hash = 'equipos'; if (isAdmin()) actions['device-edit']({ dataset: { id: d.id } }); } })));
+    const raw = $('#palette-q').value.trim(), q = fold(raw), num = raw.replace(/\D/g, '');
+    const hit = (...parts) => !q || fold(parts.filter(Boolean).join(' ')).includes(q);
+    const same = (...nums) => num.length > 0 && nums.some(n => n && String(n).replace(/\D/g, '') === num);
+    const groups = [], all = this.mode === 'all';
+    const add = (label, list, max = q ? 6 : 5) => {
+      if (!list.length) return;
+      list.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0));
+      groups.push([label, list.slice(0, max)]);
+    };
+    const screens = () => add(q ? 'Pantallas' : 'Ir a', NAV.filter(n => n.id && hit(n.label)).map(n => ({ icon: n.id, title: n.label, run: () => { location.hash = n.id; } })), q ? 4 : 9);
+    if (all && !q) screens();
+    if (all && q) {
+      const staff = [], visits = [];
+      for (const p of S.people) {
+        const card = num && p.cards.find(c => String(c).replace(/\D/g, '') === num);
+        if (!hit(p.name, p.company, p.document, p.ref, p.host, ...p.cards)) continue;
+        (p.kind === 'visit' ? visits : staff).push({ key: p.ref, title: p.name, exact: same(p.ref, p.document, ...p.cards),
+          sub: [p.kind === 'visit' ? (p.host ? `Visita a ${p.host}` : 'Visita') : p.company, card ? `tarjeta ${card}` : '', p.document && same(p.document) ? `documento ${p.document}` : ''].filter(Boolean).join(', '),
+          run: () => actions['person-edit']({ dataset: { id: p.id } }) });
+      }
+      add('Personas', staff); add('Visitas', visits);
+    }
+    add('Puertas', S.doors.filter(d => hit(d.name, d.site_name, d.device_name)).map(d => ({ icon: 'panel', title: d.name, sub: `${d.site_name}, ${doorLook(d).sub.toLowerCase()}`, run: () => actions.door({ dataset: { door: d.id } }) })));
+    if (all && q) {
+      add('Equipos', S.devices.filter(d => hit(d.name, d.brand_label, d.host, d.model, d.serial)).map(d => ({ icon: 'equipos', title: d.name, sub: [d.brand_label, d.site_name, d.host].filter(Boolean).join(', '), exact: same(d.host, d.serial),
+        run: () => { location.hash = 'equipos'; if (isAdmin()) actions['device-edit']({ dataset: { id: d.id } }); } })));
+      if (isGlobal() && S.companies.length > 1) add('Empresas', S.companies.filter(c => hit(c.name, c.legal_name, c.tax_id, ...c.areas.map(a => a.name))).map(c => ({ icon: 'empresa', title: c.name, exact: same(c.tax_id),
+        sub: c.areas.map(a => a.name).join(', ') || 'Sin áreas', run: () => { location.hash = 'panel'; setVista({ empresa: c.id, area: '' }); } })));
+      screens();
+      // como en Olumi: la búsqueda también se puede dejar puesta en la lista de personas
+      groups.push(['', [{ icon: 'search', title: `Buscar «${raw}» en Personas`, run: () => { S.peopleQ = raw; if (S.view === 'personas') { const f = $('#people-q'); if (f) f.value = raw; load('people').then(() => { setHTML($('#people-list'), peopleRows()); drawChrome(); }); } else location.hash = 'personas'; } }]]);
     }
     this.items = groups.flatMap(([, list]) => list);
     this.index = 0;
     let i = 0;
-    $('#palette-list').innerHTML = groups.length ? groups.map(([label, list]) => html`<li class="group" role="presentation">${label}</li>${list.map(item => html`<li role="presentation">
-      <button class="opt" type="button" role="option" data-action="palette-run" data-i="${i}" aria-selected="${String(i++ === 0)}">${icon(item.icon)}<span><b>${item.title}</b>${item.sub ? html`<small>${item.sub}</small>` : ''}</span></button></li>`)}`).join('')
+    $('#palette-list').innerHTML = this.items.length ? groups.map(([label, list]) => html`${label ? html`<li class="group" role="presentation">${label}</li>` : ''}${list.map(item => html`<li role="presentation">
+      <button class="opt" type="button" role="option" data-action="palette-run" data-i="${i}" aria-selected="${String(i++ === 0)}">${item.key ? html`<span class="key">${item.key}</span>` : icon(item.icon ?? 'personas')}<span><b>${item.title}</b>${item.sub ? html`<small>${item.sub}</small>` : ''}</span></button></li>`)}`).join('')
       : html`<li class="empty" style="padding:16px">Nada coincide con esa búsqueda.</li>`;
   },
   move(step) {
@@ -2098,7 +2140,7 @@ actions['palette-run'] = el => palette.run(Number(el.dataset.i));
 // Las vistas. Cada una devuelve su contenido; las acciones y formularios se registran por nombre.
 const views = {};
 const demoNote = () => S.api.demo ? html`<span class="note">Demostración con datos inventados</span>` : '';
-const head = (title, lede, extra = '') => html`<header class="view-head"><div><h1>${title}</h1>${lede ? html`<p class="lede">${lede}</p>` : ''}</div>${extra}</header>`;
+const head = (title, lede, extra = '') => html`<header class="view-head plain"><div><h1>${title}</h1>${lede ? html`<p class="lede">${lede}</p>` : ''}</div>${extra}</header>`;
 /** La acción principal de cada pantalla (va en la barra de arriba, con el color del punto). */
 const PRIMARY = {
   panel: () => canOperate() && ['Abrir puerta', 'palette-doors', 'panel'],
@@ -2586,7 +2628,7 @@ const settings = {
   datos: () => html`
     <section class="card"><div class="card-head"><h2>Dónde están<small>Se eligió en la primera instalación y queda en el archivo config.json del servidor</small></h2></div>
       <dl class="facts"><dt>Base de datos</dt><dd>${S.engine === 'postgres' ? 'PostgreSQL, en el servidor que eligió la empresa' : 'Local, en este mismo servidor'}</dd><dt>Versión</dt><dd>Kliva ${S.version}</dd></dl>
-      ${S.api.demo ? html`<div class="form-actions"><button class="btn" type="button" data-action="wizard-preview">Ver el asistente de primera instalación</button></div>` : ''}</section>
+      ${S.api.demo && !isApp() ? html`<div class="form-actions"><button class="btn" type="button" data-action="wizard-preview">Ver el asistente de primera instalación</button></div>` : ''}</section>
     <section class="card"><div class="card-head"><h2>Tus datos son tuyos<small>Una copia completa para guardar o para llevarte</small></h2></div>
       <p class="muted">Empresas, áreas, equipos, puertas, niveles, turnos, personas con sus tarjetas y usuarios, en un archivo. Nunca incluye contraseñas ni claves.</p>
       <label class="check"><input type="checkbox" id="export-faces"><span>Incluir las fotos de rostro<small>Son datos biométricos: guardá ese archivo con cuidado.</small></span></label>
@@ -2975,8 +3017,8 @@ settings.instalacion = () => { const l = S.license; return html`
   <section class="card"><div class="card-head"><h2>Licencia</h2>${l.valid ? html`<span class="chip" data-tone="pass">${l.plan}</span>` : html`<span class="chip" data-tone="warn">${l.plan}</span>`}</div>
     <dl class="facts">${l.customer ? html`<dt>Cliente</dt><dd>${l.customer}</dd>` : ''}<dt>Equipos</dt><dd>${S.devices.length} en uso de ${l.maxDevices} permitidos</dd>
       ${l.expires ? html`<dt>Vence</dt><dd>${dateFormat.format(l.expires)}</dd>` : ''}${l.valid ? '' : html`<dt>Estado</dt><dd>${l.note}</dd>`}</dl>
-    <form class="form" data-form="license"><label class="field"><span>Cargar una licencia</span><textarea name="key" class="mono" placeholder="Pegá acá la clave que recibiste" required></textarea></label>
-      <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Cargar licencia</button></div></form></section>`; };
+    ${isApp() ? '' : html`<form class="form" data-form="license"><label class="field"><span>Cargar una licencia</span><textarea name="key" class="mono" placeholder="Pegá acá la clave que recibiste" required></textarea></label>
+      <p class="form-error" role="alert"></p><div class="form-actions"><button class="btn" type="submit">Cargar licencia</button></div></form>`}</section>`; };
 
 actions['company-open'] = el => { S.companyOpen = el.dataset.id; render(); $('#main').scrollTop = 0; };
 actions['company-back'] = () => { S.companyOpen = null; render(); };
@@ -3559,7 +3601,6 @@ function shell() {
     <aside class="side">
       <div class="side-head">${brand(isGlobal() ? S.org : viewCompany()?.name ?? S.org, 'con Kliva')}<button class="fold" type="button" data-action="fold" aria-label="Plegar o desplegar el menú">${icon('left')}</button></div>
       <div id="scope">${scopeSwitch()}</div>
-      <button class="side-search" type="button" data-action="palette" aria-label="Buscar" title="Buscar">${icon('search')}<span>Buscar</span><kbd>${isMac ? '⌘K' : 'Ctrl K'}</kbd></button>
       <nav class="menu" id="menu" aria-label="Secciones"><span class="pill"></span>
         ${NAV.map(n => n.group ? html`<p class="menu-label">${n.group}</p>` : html`<a class="nav" href="#${n.id}" data-nav="${n.id}" title="${n.label}">${icon(n.id)}<span>${n.label}</span></a>`)}</nav>
       <div class="side-foot">
@@ -3568,7 +3609,8 @@ function shell() {
       </div>
     </aside>
     <div class="stage">
-      <header class="top">${MARK}<button class="top-search" type="button" data-action="palette">${icon('search')}<span>Buscar una puerta, una persona o un equipo</span></button>
+      <header class="top">${MARK}<b class="top-title" id="top-title"></b><span class="top-q" id="top-q"></span>
+        <button class="round top-lupa" type="button" data-action="palette" aria-label="Buscar" title="Buscar (${isMac ? '⌘K' : 'Ctrl K'} o /)">${icon('search')}</button>
         <button class="round" type="button" data-action="notices" aria-label="Avisos" title="Avisos">${icon('bell')}<span data-bell></span></button><span id="primary" style="display:contents"></span></header>
       <main class="main" id="main"><div id="alarm"></div><div class="view" id="view"></div></main>
     </div>
@@ -3578,8 +3620,21 @@ function shell() {
   </div>`;
 }
 
+/** La búsqueda que quedó puesta en la lista de personas se ve arriba y se saca con la cruz (como en Olumi). */
+function drawTopQuery() {
+  const el = $('#top-q'); if (!el) return;
+  const q = S.view === 'personas' ? S.peopleQ.trim() : '';
+  setHTML(el, q ? html`<button class="top-chip" type="button" data-action="people-q-clear" title="Quitar la búsqueda"><span>«${q}»</span>${icon('close')}</button>` : '');
+}
+actions['people-q-clear'] = async () => {
+  S.peopleQ = ''; const f = $('#people-q'); if (f) f.value = '';
+  await load('people'); setHTML($('#people-list'), peopleRows()); drawTopQuery();
+};
+
 /** Lo que rodea a la vista: dónde estás (la pastilla), la acción principal, la campana y el modo noche. */
 function drawChrome() {
+  const title = $('#top-title'); if (title) title.textContent = label(S.view);
+  drawTopQuery();
   for (const link of $$('[data-nav]')) { if (link.dataset.nav === S.view) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); }
   const more = $('[data-more]');
   if (more) { if (DOCK.includes(S.view)) more.removeAttribute('aria-current'); else more.setAttribute('aria-current', 'page'); }
@@ -3885,6 +3940,8 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && S.me) { e.preventDefault(); return palette.isOpen ? palette.close() : palette.open(); }
+  // «/» abre el buscador, como en Olumi, salvo que se esté escribiendo en un campo
+  if (e.key === '/' && S.me && !palette.isOpen && !sheet.isOpen && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '') && !document.activeElement?.isContentEditable) { e.preventDefault(); return palette.open(); }
   if (palette.isOpen) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); palette.move(e.key === 'ArrowDown' ? 1 : -1); }
     else if (e.key === 'Enter') { e.preventDefault(); palette.run(); }
@@ -3900,6 +3957,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'look-custom') { const c = e.target.value.toUpperCase(); return look.set({ accent: c, fg: look.ink(c) }); }
   if (e.target.id !== 'people-q') return;
   S.peopleQ = e.target.value;
+  drawTopQuery();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => { await load('people'); setHTML($('#people-list'), peopleRows()); }, 220);
 });
