@@ -118,7 +118,7 @@ main{min-width:0;padding:26px 28px 56px}
 .empty{padding:40px 20px;text-align:center;color:var(--muted);display:grid;gap:12px;justify-items:center}
 .empty b{color:var(--ink);font-size:16px}
 
-.clist{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.clist{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
 .cl{display:grid;gap:10px;text-align:left;padding:16px 18px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r)}
 .cl:hover{border-color:var(--accent)}
 .cl b{font-size:16px} .cl .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -395,6 +395,66 @@ html.bfullon body::after{content:"";position:fixed;inset:0;background:rgba(0,0,0
 .clv p{margin:0;color:var(--muted);font-size:14px}.clv input{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--fill);padding:0 14px;font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.35em;-webkit-text-security:disc;outline:none}
 .clv input::placeholder{letter-spacing:0;font:500 15px/1 var(--f-text,system-ui)}.clv input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}.clv .clverr{color:var(--crit);min-height:18px;font-size:13px}.clv .acts{display:flex;gap:8px;justify-content:flex-end}
 .docpap{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px}.docpap > button{justify-self:start}.docpap div{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:4px 2px}.docpap small{color:var(--muted);display:block}
+
+/* ===== estética 19/11: el armado de Kliva (menú flotante, flecha arriba, modo noche, usuario abajo) con el vidrio y el movimiento de Olumi, en el azul y la letra de Ondi ===== */
+:root{--mv:cubic-bezier(.22,1,.36,1);--rim:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,.42) 24%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.32) 78%,rgba(255,255,255,.9));--surface2:rgba(255,255,255,.5)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rim:linear-gradient(135deg,rgba(255,255,255,.3),rgba(255,255,255,.08) 26%,rgba(255,255,255,.02) 52%,rgba(255,255,255,.06) 78%,rgba(255,255,255,.2));--surface2:rgba(255,255,255,.05)}}
+:root[data-theme="dark"]{--rim:linear-gradient(135deg,rgba(255,255,255,.3),rgba(255,255,255,.08) 26%,rgba(255,255,255,.02) 52%,rgba(255,255,255,.06) 78%,rgba(255,255,255,.2));--surface2:rgba(255,255,255,.05)}
+/* vidrio con borde de luz (más fuerte arriba a la izquierda y abajo a la derecha) */
+.side,.card,.cl,.kpis > div,.modal > div,.authcard{border-color:transparent!important}
+.side::after,.card::after,.cl::after,.kpis > div::after,.modal > div::after,.authcard::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:var(--rim);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:2}
+.card,.cl,.kpis > div,.modal > div,.authcard{position:relative}
+.card .card::after,.card .cl::after{display:none}
+/* forma: chapitas 8 · campos 12 · piezas 16 · tarjetas 20 · botones cápsula · menú 26 */
+.card,.cl,.kpis > div,.maq,.docp,.docr{border-radius:20px}.modal > div{border-radius:26px}
+.btn,.btn.sm,.seg button,.stabs button,.eqtabs button,.mnav button,.volver{border-radius:999px}
+.tag,.pill{border-radius:8px}
+.fld input,.fld select,.fld textarea,.orgsel select,.docbar input{border-radius:12px}
+.btn{transition:background .2s,border-color .2s,transform .2s var(--mv)}.btn:active{transform:scale(.97)}
+/* menú: tarjeta flotante */
+.app{grid-template-columns:276px minmax(0,1fr)}
+.side{margin:14px 0 14px 14px;top:44px;height:calc(100vh - 58px);height:calc(100dvh - 58px);border-radius:26px;padding:16px 12px 12px;gap:14px;overflow:hidden;box-shadow:inset 0 1px 0 var(--brillo),var(--sombra)}
+.side::before{left:22px;right:22px;top:0;height:2px;border-radius:0 0 2px 2px;opacity:.9}
+.sidehead{padding:2px 2px 0 6px}
+.sidetog{width:32px;height:32px;border-radius:999px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);color:var(--ink)}
+.sidetog:hover{background:var(--accent-soft);color:var(--accent-ink)}.sidetog svg{transition:transform .35s var(--mv)}
+.orgsel{padding:0}.orgsel label{padding-left:8px}
+.orgsel select{appearance:none;-webkit-appearance:none;height:46px;padding:0 36px 0 14px;font-weight:600;background:var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 9l5-5 5 5M7 15l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center;border:1px solid var(--line);color:var(--ink);cursor:pointer}
+.nav button{border-radius:999px;padding:10px 14px;min-height:42px}
+.navpill{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 92%,#fff),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 24px -10px var(--accent);transition:none!important}
+.side .nav button[aria-current="page"],.side .nav button[aria-current="page"] svg{color:#fff!important}
+.side-foot{margin-top:auto;padding:8px 0 0;background:none!important;border:0!important;border-top:1px solid var(--line)!important;border-radius:0!important;display:grid;gap:4px}
+.tema{display:flex;align-items:center;gap:11px;width:100%;border:0;background:none;color:var(--muted);padding:9px 12px;border-radius:999px;font:inherit;font-weight:500;cursor:pointer;text-align:left}
+.tema:hover{background:var(--sunken);color:var(--ink)}.tema svg{width:19px;height:19px;flex:none}.tema span{flex:1}
+.sw{width:38px;height:22px;border-radius:999px;background:color-mix(in srgb,var(--ink) 16%,transparent);position:relative;flex:none;transition:background .25s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .3s var(--mv)}
+.tema[aria-checked="true"] .sw{background:var(--accent)}.tema[aria-checked="true"] .sw::after{transform:translateX(16px)}
+.yo{display:flex;align-items:center;gap:10px;padding:8px 6px 4px 8px;min-width:0}
+.av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent)}
+.yo-t{min-width:0;flex:1;display:grid;line-height:1.25}.yo-t b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.yo-t small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.salir{flex:none;width:34px;height:34px;border-radius:999px;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}.salir:hover{background:var(--crit-soft);color:var(--crit)}.salir svg{width:18px;height:18px}
+/* menú achicado: íconos con el nombre abajo */
+html.navmini .app{grid-template-columns:104px minmax(0,1fr)}
+html.navmini .side{padding:14px 8px 10px}
+html.navmini .sidehead{flex-direction:column;gap:10px;padding:0}
+html.navmini .tema{justify-content:center;padding:9px 0}html.navmini .tema span,html.navmini .tema .sw,html.navmini .yo-t,html.navmini .yo .salir{display:none}
+html.navmini .side .side-foot{display:grid}html.navmini .yo{justify-content:center;padding:6px 0 2px}
+/* tablero de clientes: tarjetas que se acomodan arrastrando */
+.clist{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.cl{padding:16px 18px 14px;gap:8px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:pan-y;transition:box-shadow .25s,transform .25s var(--mv)}
+.cl:hover{box-shadow:inset 0 1px 0 var(--brillo),0 18px 40px -18px rgba(11,40,90,.45)}
+.cl .clh{display:flex;align-items:center;gap:10px}.cl .clh b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px}
+.cl .dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--muted);opacity:.6}.cl .dot.ok{background:var(--ok);opacity:1;box-shadow:0 0 0 4px var(--ok-soft)}
+.cl .ir{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);color:var(--ink);transition:transform .3s var(--mv),background .2s}
+.cl:hover .ir{transform:rotate(-45deg);background:var(--accent);color:#fff;box-shadow:none}.cl .ir svg{width:15px;height:15px}
+.cl .agarre{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:34px;height:4px;border-radius:4px;background:color-mix(in srgb,var(--ink) 18%,transparent);opacity:0;transition:opacity .2s}
+.cl:hover .agarre,.cl:focus-visible .agarre{opacity:1}
+.cl.arrastra{z-index:20;cursor:grabbing;box-shadow:0 30px 60px -20px rgba(0,0,0,.45);transition:box-shadow .2s;scale:1.03}
+.clist.ordenando .cl:not(.arrastra){transition:transform .28s var(--mv)}
+.ordnota{font-size:13px;color:var(--muted);margin:-6px 0 0}
+@media (hover:none){.cl .agarre{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.cl,.cl .ir,.sw::after,.sidetog svg{transition:none}.cl.arrastra{scale:1}}
+@media (max-width:860px){.mtop{margin:10px 12px 0;border-radius:20px;top:40px;border:0}.mtop select{border-radius:999px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);padding:0 12px;font-weight:600}.mnav .tema{width:auto;flex:none;gap:8px;border:1px solid var(--line);background:var(--surface);padding:5px 8px 5px 12px;font-size:13.5px;color:var(--ink)}.mnav .tema svg{width:16px;height:16px}.mnav .tema span{flex:none}.mnav .tema .sw{width:32px;height:18px}.mnav .tema .sw::after{width:12px;height:12px}.mnav .tema[aria-checked="true"] .sw::after{transform:translateX(14px)}.side{display:none}.app{grid-template-columns:minmax(0,1fr)}html.navmini .app{grid-template-columns:minmax(0,1fr)}.clist{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -600,10 +660,10 @@ function render() {
   if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
   S.docRe = false;
   if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
-  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-expanded="${!S.mini}" aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15"/><path d="${S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'}"/></svg></button></div>
+  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-expanded="${!S.mini}" aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${S.mini ? 'M10 7l5 5-5 5' : 'M14 7l-5 5 5 5'}"/></svg></button></div>
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav"><span class="navpill" aria-hidden="true"></span>${nav}</nav>
-      ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
-    <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
+      ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot">${temaBtn()}<div class="yo" title="${esc(S.user.email)} · ${who}"><span class="av" aria-hidden="true">${esc(inicial())}</span><span class="yo-t"><b>${esc(nombreYo())}</b><small>${who}</small></span><button class="salir" data-a="logout" aria-label="Salir" title="Salir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg></button></div></div></aside>
+    <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}${temaBtn()}<button data-a="logout">Salir</button></div>
     <main id="main" class="${S.view === 'site' && S.site && !S.falta ? 'msitio' : ''}">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   navPill();
@@ -685,12 +745,12 @@ function panelView() { const tot = S.sites.length, linked = S.sites.filter(st =>
 /* clientes */
 function sitesView() {
   if (!staff()) return `<div class="wrap"><div class="empty card"><b>Todavía no hay datos de tu sitio</b><span>Avisale a la instaladora.</span></div></div>`;
-  const list = S.sites.map(st => { const l = linksOf(st), b = (st.data && st.data.base) || 'vacia';
-    return `<button class="cl" data-site="${esc(st.id)}"><b>${esc(st.name)}</b><span class="muted" style="font-size:13.5px">${esc((st.data && st.data.direccion) || 'Sin dirección')}</span>
+  const list = ordenSitios(S.sites).map(st => { const l = linksOf(st), b = (st.data && st.data.base) || 'vacia';
+    return `<button class="cl" data-site="${esc(st.id)}" data-ord="${esc(st.id)}" aria-roledescription="tarjeta que se puede mover" aria-describedby="ordnota"><i class="agarre" aria-hidden="true"></i><span class="clh"><i class="dot${l.length ? ' ok' : ''}" aria-hidden="true"></i><b>${esc(st.name)}</b><i class="ir" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i></span><span class="muted" style="font-size:13.5px">${esc((st.data && st.data.direccion) || 'Sin dirección')}</span>
       <span class="row">${l.length ? l.map(k => `<span class="pill ok">${BR[k].n.split(' ').pop()}</span>`).join('') : '<span class="pill off">Sin enlazar</span>'}<span class="tag">${BASES[b] ? BASES[b][0] : 'Maqueta'}</span></span></button>`; }).join('');
   return `<div class="wrap"><div class="head"><div><h1>Clientes</h1><p>Cada cliente tiene su maqueta, sus equipos y el acceso para su gente de IT.</p></div>
     <div class="acts">${admin() ? `<button class="btn pri" data-do="newsite">${IC.plus}Nuevo cliente</button>` : ''}</div></div>${falta11()}
-    ${S.sites.length ? `<div class="clist">${list}</div>` : `<div class="card empty"><b>Todavía no hay clientes</b><span>${admin() ? 'Creá el primero con "Nuevo cliente".' : 'Un administrador de la empresa tiene que crearlos.'}</span></div>`}</div>`; }
+    ${S.sites.length > 1 ? `<p class="ordnota" id="ordnota">Acomodá las tarjetas a tu gusto: arrastralas${matchMedia('(hover: none)').matches ? ' manteniéndolas apretadas' : ''}, o con el teclado Alt y las flechas. El orden es solo tuyo.</p>` : ''}${S.sites.length ? `<div class="clist">${list}</div>` : `<div class="card empty"><b>Todavía no hay clientes</b><span>${admin() ? 'Creá el primero con "Nuevo cliente".' : 'Un administrador de la empresa tiene que crearlos.'}</span></div>`}</div>`; }
 function modalView() {
   if (S.modal === 'newsite') return `<div class="modal" data-closemodal><div role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">Nuevo cliente</h2>
     <form class="form" data-do-f="newsite"><div class="form2"><label class="fld full">Nombre del cliente<input id="ns_name" required maxlength="120" placeholder="Empresa o parque"></label>
@@ -1156,7 +1216,7 @@ document.addEventListener('change', async e => {
 });
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-sidetog],[data-ball],[data-bgo],[data-bfull],[data-probar],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-sidetog],[data-tema],[data-ball],[data-bgo],[data-bfull],[data-probar],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
   if (t.dataset.repopen) { const h = t.dataset.repopen; S.rep[h] = 'cargando'; render(); fn({ accion: 'consola', hostId: h }).then(r => { S.rep[h] = repInit(r); render(); }).catch(er => { S.rep[h] = { error: errTxt(er) }; render(); }); return; }
   if (t.dataset.repsug) { const R = S.rep[t.dataset.repsug], cli = s => (R.sitios.find(x => x.siteId === s) || {}).cliente || ''; R.equipos.forEach(d => { R.sel[d.mac] = cli(d.sugerido); }); render(); return; }
   if (t.dataset.repsave) { const h = t.dataset.repsave, R = S.rep[h]; if (!R || R.saving) return; const asig = {}; R.clientes.forEach(c => { asig[c.id] = []; }); R.equipos.forEach(d => { const v = R.sel[d.mac]; if (v && asig[v]) asig[v].push(d.mac); }); R.saving = true; render();
@@ -1176,6 +1236,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
   if (t.dataset.bfull != null && t.closest('.brand, .brands')) { e.preventDefault(); S.bfull = t.dataset.bfull || null; document.documentElement.classList.toggle('bfullon', !!S.bfull); render(); return; }
   if (t.dataset.probar) { e.preventDefault(); probar(t.dataset.probar); return; }
   if (t.dataset.sidetog != null) { sideTog(); return; }
+  if (t.dataset.tema != null) { temaPoner(temaOscuro() ? 'light' : 'dark'); return; }
   if (t.dataset.ball) { const on = t.dataset.ball === '1'; document.querySelectorAll('details[data-bk]').forEach(d => { d.open = on; BOPEN[d.dataset.bk] = on ? 1 : 0; }); bSave(); return; }
   if (t.dataset.bgo) { e.preventDefault(); const d = document.getElementById('br-' + t.dataset.bgo); if (d) { d.open = true; d.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); } return; }
   if (t.dataset.goaj) { S.view = 'ajustes'; S.atab = t.dataset.goaj; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
@@ -1274,7 +1335,7 @@ const DOCV = ['dev', 'cab', 'vlan', 'cert', 'name', 'ip', 'cat'];
 const docMotor = d => !!(d && d.motor === 1);
 const docQuien = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || ((S.user && S.user.email) || '').split('@')[0];
 const docCl = o => o == null ? o : JSON.parse(JSON.stringify(o));
-try { S.mini = localStorage.getItem('ondi.mini') === '1'; document.documentElement.classList.toggle('navmini', S.mini); } catch (x) {}
+try { S.mini = localStorage.getItem('ondi.mini') === '1'; document.documentElement.classList.toggle('navmini', S.mini); const t = localStorage.getItem('ondi.tema'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch (x) {}
 S.docPrev = {}; S.docT = {}; S.docIdx = {};
 // la maqueta abre con lo último guardado en esta sesión si es más nuevo que lo que trajo la base
 function docBase(st, data) { const L = S.docPrev[st.id]; if (L && S.docT[st.id] && Date.now() - S.docT[st.id] < 120000) return docCl(L); S.docPrev[st.id] = docCl(data); return data; }
@@ -1611,12 +1672,49 @@ function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.
 
 // la pastilla del menú se estira hasta la opción elegida (el mismo movimiento que Olumi)
 function sideTog() { S.mini = !S.mini; try { localStorage.setItem('ondi.mini', S.mini ? '1' : ''); } catch (x) {} const R = document.documentElement; R.classList.add('navcambia'); R.classList.toggle('navmini', S.mini);
-  const b = document.querySelector('[data-sidetog]'); if (b) { const t = S.mini ? 'Agrandar el menú' : 'Achicar el menú'; b.setAttribute('aria-label', t); b.title = t; b.setAttribute('aria-expanded', String(!S.mini)); const pa = b.querySelectorAll('path')[1]; if (pa) pa.setAttribute('d', S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'); }
+  const b = document.querySelector('[data-sidetog]'); if (b) { const t = S.mini ? 'Agrandar el menú' : 'Achicar el menú'; b.setAttribute('aria-label', t); b.title = t; b.setAttribute('aria-expanded', String(!S.mini)); const pa = b.querySelector('path'); if (pa) pa.setAttribute('d', S.mini ? 'M10 7l5 5-5 5' : 'M14 7l-5 5 5 5'); }
   S.pill = null; navPill(); requestAnimationFrame(() => { S.pill = null; navPill(); setTimeout(() => R.classList.remove('navcambia'), 260); }); }
+
+// ---------- tablero de clientes: cada persona acomoda las tarjetas a su gusto (se guarda en su cuenta, así lo ve igual en cualquier equipo) ----------
+function ordClave() { return (S.ctx && (S.ctx.key || S.ctx.org)) || 'x'; }
+function ordGet() { const m = (S.user && S.user.user_metadata && S.user.user_metadata.ondi_orden) || {}; if (Array.isArray(m[ordClave()])) return m[ordClave()]; try { return JSON.parse(localStorage.getItem('ondi.orden.' + ordClave()) || '[]'); } catch (e) { return []; } }
+function ordenSitios(l) { const o = ordGet(); if (!o.length) return l; const ix = new Map(o.map((id, i) => [id, i])), pos = st => ix.has(st.id) ? ix.get(st.id) : 1e6 + l.indexOf(st); return [...l].sort((a, b) => pos(a) - pos(b)); }
+let ordT = 0;
+function ordSet(ids) { const k = ordClave(); try { localStorage.setItem('ondi.orden.' + k, JSON.stringify(ids)); } catch (e) {} if (!S.user) return; const md = S.user.user_metadata = S.user.user_metadata || {}; md.ondi_orden = { ...(md.ondi_orden || {}), [k]: ids };
+  clearTimeout(ordT); ordT = setTimeout(async () => { try { const r = await SB.auth.updateUser({ data: { ondi_orden: md.ondi_orden } }); if (r.error) throw r.error; } catch (e) { toast('No se pudo guardar el orden en tu cuenta; queda guardado en este equipo.'); } }, 700); }
+function ordGuardar(box) { ordSet([...box.querySelectorAll('[data-ord]')].map(c => c.dataset.ord)); }
+// mover una tarjeta adentro de la grilla animando a las demás (FLIP)
+function ordMover(box, c, antes) { const otras = [...box.children].filter(x => x !== c), r0 = new Map(otras.map(x => [x, x.getBoundingClientRect()])); box.insertBefore(c, antes);
+  for (const x of otras) { const a = r0.get(x), b = x.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top; if (!dx && !dy) continue; x.style.transition = 'none'; x.style.transform = `translate(${dx}px,${dy}px)`; void x.offsetWidth; x.style.transition = ''; x.style.transform = ''; } }
+let DR = null;
+document.addEventListener('pointerdown', e => { const c = e.target.closest('.clist .cl'); if (!c || e.button) return; const r = c.getBoundingClientRect();
+  DR = { c, box: c.parentElement, x: e.clientX, y: e.clientY, gx: e.clientX - r.left, gy: e.clientY - r.top, id: e.pointerId, on: false, t: 0 };
+  if (e.pointerType === 'touch') DR.t = setTimeout(() => { if (DR && !DR.on) ordEmpieza(); }, 380); });
+function ordEmpieza() { DR.on = true; DR.box.classList.add('ordenando'); DR.c.classList.add('arrastra'); try { DR.c.setPointerCapture(DR.id); } catch (e) {} if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {} }
+function ordSigue(px, py) { const { c, box } = DR, p = box.getBoundingClientRect(); c.style.transform = `translate(${px - DR.gx - (p.left + c.offsetLeft)}px,${py - DR.gy - (p.top + c.offsetTop)}px)`;
+  const lx = px - p.left, ly = py - p.top, bajo = [...box.children].find(x => x !== c && lx > x.offsetLeft && lx < x.offsetLeft + x.offsetWidth && ly > x.offsetTop && ly < x.offsetTop + x.offsetHeight); // con el lugar de cada tarjeta en la grilla, no con donde se ve mientras se anima
+  if (!bajo) return; const lista = [...box.children], i = lista.indexOf(c), j = lista.indexOf(bajo); ordMover(box, c, j > i ? bajo.nextSibling : bajo); c.style.transition = 'none'; c.style.transform = `translate(${px - DR.gx - (p.left + c.offsetLeft)}px,${py - DR.gy - (p.top + c.offsetTop)}px)`; }
+document.addEventListener('pointermove', e => { if (!DR || e.pointerId !== DR.id) return; const d = Math.hypot(e.clientX - DR.x, e.clientY - DR.y);
+  if (!DR.on) { if (DR.t) { if (d > 8) { clearTimeout(DR.t); DR = null; } return; } if (d < 6) return; ordEmpieza(); } e.preventDefault(); ordSigue(e.clientX, e.clientY); });
+document.addEventListener('touchmove', e => { if (DR && DR.on) e.preventDefault(); }, { passive: false });
+const ordFin = e => { if (!DR || (e && e.pointerId !== DR.id)) return; clearTimeout(DR.t); const { c, box, on } = DR; DR = null; if (!on) return;
+  S.sinClic = true; setTimeout(() => { S.sinClic = false; }, 60); c.classList.remove('arrastra'); c.style.transition = ''; c.style.transform = ''; setTimeout(() => box.classList.remove('ordenando'), 300); ordGuardar(box); };
+document.addEventListener('pointerup', ordFin); document.addEventListener('pointercancel', ordFin);
+document.addEventListener('click', e => { if (S.sinClic) { S.sinClic = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+document.addEventListener('keydown', e => { const c = e.target.closest && e.target.closest('.clist .cl'); if (!c || !e.altKey || !/^Arrow/.test(e.key)) return; e.preventDefault(); const box = c.parentElement, l = [...box.children], i = l.indexOf(c), atras = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
+  if (atras && i > 0) ordMover(box, c, l[i - 1]); else if (!atras && i < l.length - 1) ordMover(box, c, l[i + 1].nextSibling); else return; c.focus(); ordGuardar(box); });
 function navPill() { const nav = document.querySelector('.side .nav'), pl = nav && nav.querySelector('.navpill'), b = nav && nav.querySelector('[aria-current="page"]'); if (!pl) return;
   if (!b) { pl.style.opacity = 0; return; } const to = [b.offsetTop, b.offsetLeft, b.offsetWidth, b.offsetHeight], de = S.pill || to, quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pon = r => { pl.style.transform = `translate(${r[1]}px,${r[0]}px)`; pl.style.width = r[2] + 'px'; pl.style.height = r[3] + 'px'; };
-  pl.style.transition = 'none'; pon(de); pl.style.opacity = 1; void pl.offsetWidth; if (!quieto) pl.style.transition = ''; pon(to); S.pill = to; }
+  pl.style.opacity = 1; pon(to); S.pill = to; if (quieto || (de[0] === to[0] && de[1] === to[1]) || !pl.animate) return;
+  const baja = to[0] > de[0], a0 = de[0], a1 = de[0] + de[3], b0 = to[0], b1 = to[0] + to[3], m0 = baja ? a0 + (b0 - a0) * 0.45 : b0, m1 = baja ? b1 : a1 + (b1 - a1) * 0.45, k = (y, h, x, w) => ({ transform: `translate(${x}px,${y}px)`, height: h + 'px', width: w + 'px' });
+  pl.animate([k(a0, de[3], de[1], de[2]), { ...k(m0, m1 - m0, to[1], to[2]), offset: 0.62 }, k(b0, to[3], to[1], to[2])], { duration: 550, easing: 'cubic-bezier(.22,1,.36,1)' }); }
+// modo noche: el interruptor de abajo del menú; sin elegir, sigue a la computadora
+function temaOscuro() { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; }
+function temaBtn() { const on = temaOscuro(); return `<button class="tema" data-tema role="switch" aria-checked="${on}" title="Modo noche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Modo noche</span><i class="sw" aria-hidden="true"></i></button>`; }
+function temaPoner(t) { const R = document.documentElement; if (t) R.dataset.theme = t; else delete R.dataset.theme; try { localStorage.setItem('ondi.tema', t || ''); } catch (x) {} document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-checked', String(temaOscuro()))); }
+function nombreYo() { const m = (S.user && S.user.user_metadata) || {}; return m.name || m.full_name || ((S.user && S.user.email) || '').split('@')[0]; }
+function inicial() { return (nombreYo().trim()[0] || '?').toUpperCase(); }
 
 // la lista de racks se achica o se agranda arrastrando el borde (o se esconde del todo con la flechita); se acuerda del ancho
 function docW(w) { if (w != null) { S.docW = w; try { localStorage.setItem('ondi.docw', String(w)); } catch (e) {} return w; } if (S.docW == null) { let v = 300; try { const x = localStorage.getItem('ondi.docw'); if (x != null && x !== '') v = +x; } catch (e) {} S.docW = isNaN(v) ? 300 : v; } return S.docW; }
