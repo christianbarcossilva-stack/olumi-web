@@ -8,7 +8,7 @@
 // En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
 // (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=f7fc1519';
+import { THREE } from './nucleo.js?v=8d9e6df2';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
@@ -100,13 +100,14 @@ export function recorrer(M) {
   // la ayuda de abajo: lo más importante primero; entra lo que da el ancho (la maqueta puede estar en un recuadro angosto dentro de la app)
   const P = ' <i></i> ', largo = h => h.replace(/<[^>]+>/g, '').length + 3 + 1.5 * (h.match(/<kbd>/g) || []).length;
   function ayudaTxt() { const el = $('#mpaseo .tec'); if (!el) return;
-    const its = motor.mirando ? (motor.editando ? ['<b>Clic</b> pone, elige o agarra', '<b>Clic derecho</b> suelta', '<kbd>Esc</kbd> suelta el mouse', '<b>Rueda</b> gira', '<kbd>Tab</kbd> catálogo', '<kbd>1</kbd> a <kbd>9</kbd> herramientas']
-        : R.vuelo ? ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> volar', '<kbd>Espacio</kbd> sube', '<kbd>Q</kbd> baja', '<kbd>Espacio</kbd> dos veces: bajar', '<kbd>Shift</kbd> rápido', '<kbd>F</kbd> editar']
-        : ['<b>Mouse</b> mirar', '<kbd>W A S D</kbd> caminar', '<kbd>F</kbd> editar', '<kbd>Espacio</kbd> saltar, dos veces vuela', '<kbd>Esc</kbd> suelta el mouse', '<kbd>Shift</kbd> correr', '<kbd>V</kbd> vista'])
-      : puedeMira() ? ['<b>Clic en la maqueta</b> para mirar con el mouse', '<kbd>Esc</kbd> salir', '<kbd>W A S D</kbd> caminar']
-      : ['<kbd>W A S D</kbd> caminar', '<kbd>Shift</kbd> correr', '<b>clic</b> ir ahí', '<b>arrastrar</b> mirar', '<kbd>V</kbd> vista'];
+    const N = a => motor.nomTecla(motor.teclaDe(a)), andar = `<kbd>${N('adelante')} ${N('izq')} ${N('atras')} ${N('der')}</kbd>`;
+    const its = motor.mirando ? (motor.editando ? ['<b>Clic</b> pone, elige o agarra', '<b>Clic derecho</b> suelta o deja como estaba', '<kbd>1</kbd> a <kbd>0</kbd> barra rápida', `<kbd>${N('inventario')}</kbd> inventario`, '<b>Rueda</b> gira', '<kbd>Esc</kbd> menú']
+        : R.vuelo ? ['<b>Mouse</b> mirar', `${andar} volar`, `<kbd>${N('saltar')}</kbd> sube`, `<kbd>${N('bajar')}</kbd> baja`, `<kbd>${N('saltar')}</kbd> dos veces: bajar`, `<kbd>${N('correr')}</kbd> rápido`, `<kbd>${N('editar')}</kbd> editar`, '<kbd>Esc</kbd> menú']
+        : ['<b>Mouse</b> mirar', `${andar} caminar`, `<kbd>${N('editar')}</kbd> editar`, `<kbd>${N('saltar')}</kbd> saltar, dos veces vuela`, '<kbd>Esc</kbd> menú', `<kbd>${N('correr')}</kbd> correr`, `<kbd>${N('vista')}</kbd> vista`])
+      : puedeMira() ? ['<b>Clic en la maqueta</b> para mirar con el mouse', '<kbd>Esc</kbd> menú', `${andar} caminar`]
+      : [`${andar} caminar`, `<kbd>${N('correr')}</kbd> correr`, '<b>clic</b> ir ahí', '<b>arrastrar</b> mirar', `<kbd>${N('vista')}</kbd> vista`, '<kbd>Esc</kbd> menú'];
     let cabe = Math.max(26, (Math.min(980, innerWidth - 230)) / 7.5), out = []; for (const h of its) { if (out.length && largo(h) > cabe) break; out.push(h); cabe -= largo(h); } el.innerHTML = out.join(P); }
-  ayudaTxt(); motor.alMira = () => { if (!R.on) return; if (!motor.mirando) R.k = {}; ayudaTxt(); ayuda(true); }; motor.alEditar = () => { if (R.on) { ayudaTxt(); ayuda(true); } };
+  ayudaTxt(); motor.alAjustes = () => { R.k = {}; ayudaTxt(); }; motor.alMira = () => { if (!R.on) return; if (!motor.mirando) R.k = {}; ayudaTxt(); ayuda(true); }; motor.alEditar = () => { if (R.on) { ayudaTxt(); ayuda(true); } };
   let ayT; function ayuda(ver) { const el = $('#mpaseo'); el.classList.toggle('corta', !ver); clearTimeout(ayT); if (ver) ayT = setTimeout(() => el.classList.add('corta'), 9000); }
   $('#mpsalir').onclick = () => paseo(false); $('#mpojos').onclick = vista; $('#mpaseo').addEventListener('pointerenter', () => ayuda(true));
   const joy = $('#mjoy'); function joyKnob() { const j = R.joy || { x: 0, y: 0 }; joy.firstChild.style.transform = `translate(${j.x * 36}px,${j.y * 36}px)`; }
@@ -114,12 +115,12 @@ export function recorrer(M) {
   joy.addEventListener('pointerdown', e => { joy.setPointerCapture(e.pointerId); R.jp = e.pointerId; mueveJoy(e); e.stopPropagation(); }); joy.addEventListener('pointermove', mueveJoy);
   const sueltaJoy = () => { R.jp = null; R.joy = { x: 0, y: 0 }; joyKnob(); }; joy.addEventListener('pointerup', sueltaJoy); joy.addEventListener('pointercancel', sueltaJoy);
   const TECLAS = ['w', 'a', 's', 'd', 'q', 'e', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
-  addEventListener('keydown', e => { if (!R.on || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; const k = e.key.toLowerCase();
-    if (k === 'escape') { if (motor.editando) return; e.stopImmediatePropagation(); if (R.vuelo) vuelo(false); else paseo(false); return; }   // editando, Esc primero cierra lo del editor
+  addEventListener('keydown', e => { if (!R.on || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; const k = motor.canon(e.key.toLowerCase());   // cada tecla pasa por las que eligió el jugador (Ajustes)
+    if (k === 'escape') return;   // Esc ya no saca del recorrido: cierra lo que haya abierto y, si no hay nada, abre el menú de pausa (maqueta.js)
     if (k === 'v') { vista(); ayudaTxt(); return; } if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); motor.mira(false); return; }
     if (k === ' ' && !e.repeat) { const ya = e.timeStamp || performance.now(); if (ya - (R.tEsp || 0) < 300) { R.tEsp = 0; vuelo(!R.vuelo, true); ayudaTxt(); if (!R.vuelo) { R.k[' '] = 0; R.saltado = 1; e.preventDefault(); return; } } else R.tEsp = ya; }
     if (TECLAS.includes(k)) { R.k[k] = 1; if (k !== 'shift') { R.ruta = null; marca.visible = false; } if (k.startsWith('arrow') || k === ' ') e.preventDefault(); } }, true);
-  addEventListener('keyup', e => { R.k[e.key.toLowerCase()] = 0; }); addEventListener('blur', () => { R.k = {}; }); addEventListener('resize', () => { if (R.on) ayudaTxt(); });
+  addEventListener('keyup', e => { R.k[motor.canon(e.key.toLowerCase())] = 0; }); addEventListener('blur', () => { R.k = {}; }); addEventListener('resize', () => { if (R.on) ayudaTxt(); });
 
   // ---------- cada cuadro ----------
   let tCerca = 0;

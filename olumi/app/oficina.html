@@ -298,15 +298,18 @@ html.en-app .ev[data-feed]{cursor:pointer}html.en-app .ev[data-feed]:hover{backg
     const osc=()=>{try{return D.oscuro&&D.oscuro()?'oscuro':'claro'}catch(e){return 'claro'}};
     const llena=on=>{stage.classList&&stage.classList.toggle('fullfake',!!on);try{if(parent!==window)parent.postMessage({ovFull:!!on},'*')}catch(e){}};
     const tocar=(pz,pt)=>{if((pz&&pz.t==='persona')||!pt||!D.areaAt||!D.openArea)return false;let k=null;try{k=D.areaAt({x:pt[0],y:pt[1]})}catch(e){}if(!k)return false;D.openArea(k);return true};
-    window.__maquetaHost={state:st,role:BETA?'inst':'cli',tema:osc(),paredes:'corte',park:D.S.name||'Oficina',save:s=>{if(BETA)try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}},juego:llena,alTocar:tocar};
+    // quien recorre se ve con su personaje de Olumi (Mi perfil → Mi personaje); «Salir de la maqueta» (menú de pausa del motor) devuelve la app como estaba
+    let miAv='';{const yo=D.S.me&&D.S.people.find(p=>p.id===D.S.me);if(yo){try{miAv=D.avPick&&D.avPick(yo)||''}catch(e){}if(!miAv||(miAv==='tec-h-epp'&&yo.role!=='tecnico'))miAv=yo.role==='tecnico'?'tec-h':/a$/i.test((yo.n||'').trim().split(' ')[0])?'of-m':'of-h'}}
+    window.__maquetaHost={state:st,role:BETA?'inst':'cli',tema:osc(),paredes:'corte',park:D.S.name||'Oficina',save:s=>{if(BETA)try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}},juego:llena,alTocar:tocar,salir:()=>llena(false),personaje:miAv||undefined};
     let ov=document.getElementById('motorOv');if(ov)ov.remove();ov=document.createElement('div');ov.id='motorOv';
-    ov.innerHTML='<iframe title="La oficina" src="motor/index.html?app=olumi&v=f7fc1519" allow="fullscreen"></iframe><div class="mo-bar">'+(BETA?'<span class="mo-tag">Motor nuevo</span><button type="button" class="walkbtn" data-mo="rehacer" title="Volver a armar la maqueta nueva con la oficina de ahora (se pierde lo que se haya movido en la nueva)">Rehacer la copia</button>':'')+'<button type="button" class="walkbtn" data-mo="cerrar" title="Volver a la oficina de siempre (ahí se edita)">Oficina de siempre</button></div>';
+    ov.innerHTML='<iframe title="La oficina" src="motor/index.html?app=olumi&v=8d9e6df2" allow="fullscreen"></iframe><div class="mo-bar">'+(BETA?'<span class="mo-tag">Motor nuevo</span><button type="button" class="walkbtn" data-mo="rehacer" title="Volver a armar la maqueta nueva con la oficina de ahora (se pierde lo que se haya movido en la nueva)">Rehacer la copia</button>':'')+'<button type="button" class="walkbtn" data-mo="cerrar" title="Volver a la oficina de siempre (ahí se edita)">Oficina de siempre</button></div>';
     ov.addEventListener('click',e=>{const b=e.target.closest('[data-mo]');if(!b)return;if(b.dataset.mo==='cerrar'){cierra();pon('0');sinCuenta()}else{try{localStorage.removeItem(K)}catch(e){}window.__oficinaMotorAbrir(Object.assign({},D,{rehacer:1}))}});
     const cierra=()=>{ov.remove();espera(false);window.__maquetaHost=null;llena(false);pausa(false)};
     stage.appendChild(ov);pon('1');pausa(true);
     // Guarda para un equipo que no puede con la maqueta nueva: cada apertura suma uno a la cuenta y la cuenta se borra cuando la maqueta lleva
     // 5 s andando. Si no llega a armarse en 40 s se vuelve sola a la oficina de siempre. Con dos aperturas seguidas sin terminar, no abre más sola.
     try{localStorage.setItem(KI,String((+localStorage.getItem(KI)||0)+1))}catch(e){}
+    ov.querySelector('iframe').addEventListener('load',()=>llena(false));   // una maqueta recién cargada nunca está a pantalla completa (si se recargó recorriendo, no queda tapando la app)
     {const f=ov.querySelector('iframe'),t0=Date.now();let ok0=0;const tk=setInterval(()=>{if(!ov.isConnected){clearInterval(tk);return}let lista=false;try{lista=!!(f.contentWindow&&f.contentWindow.__maqueta)}catch(e){}
       if(lista&&!ok0){ok0=Date.now();espera(false)}
       if(ok0&&Date.now()-ok0>5000){clearInterval(tk);sinCuenta()}else if(!ok0&&Date.now()-t0>40000){clearInterval(tk);cierra()}},500)}

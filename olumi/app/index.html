@@ -939,6 +939,68 @@ body.portal #topLupa,body.portal #topQ,body.portal .top .ttl{display:none!import
 .d2pal li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .d2pal li.sep{cursor:default;padding:10px 12px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--d2-mut);background:none!important;box-shadow:none!important}
 /* fin 1.52s */
+/* 1.52u */
+/* Christian 19/11 22:31, con capturas: «tenemos 2 botones mal posicionados». En Clientes, el de exportar caía solo al renglón de abajo;
+   en Inventario, el de la cámara quedaba suelto debajo de una barra de búsqueda de todo el ancho. */
+/* las herramientas de la cabecera ocupan lo que sobra del renglón y se arriman a la derecha: no dependen de cómo mide cada navegador */
+@media(min-width:900px){#main .vhead>div:has(>:not(h1.h1-arriba))+.tools{flex:1 1 320px;min-width:0;justify-content:flex-end}
+  #main .vhead>.tools .tfq,#main .vhead>.tools .clibus{max-width:380px}}
+/* Inventario: búsqueda corta con su lupa y, al lado, la cámara; en el mismo renglón que los filtros cuando entra */
+.invtop{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
+.invq{display:flex;align-items:center;gap:8px;flex:1 1 280px;max-width:440px;margin:0 0 12px}
+.invtop .invq,.invtop .invfil{margin:0}
+.invq .clibus{flex:1 1 auto;max-width:none;min-width:0}.invq .tfq{margin:0;width:100%}
+/* el botón de la cámara es redondo, como los demás botones de un solo ícono */
+.btn.ico.scanb{flex:none;width:40px;height:40px;padding:0;border-radius:50%;display:inline-grid;place-items:center}
+@media(max-width:640px){.invq{max-width:none}.btn.ico.scanb{width:44px;height:44px}}
+@media(pointer:coarse){.btn.ico.scanb{width:44px;height:44px}}
+/* fin 1.52u */
+/* 1.52w */
+/* 1.52w · Christian 20/11 08:41 (captura del CRM): «que se muevan todos al scrolear juntos y eliminar que sea separado; si voy bajando, que se mantengan
+   en pantalla los títulos (Oportunidad…) con la barra del buscador; el buscador que ocupe un tramo en el centro de la pantalla, está bien que comparta con el título». */
+@media (min-width:900px){
+  /* Christian 20/11 09:23: «el scroll del CRM solo tiene que ser el de la ventana, no adentro del CRM». El tablero no se desplaza solo: baja la página
+     entera. Las columnas se reparten el ancho (nunca hace falta correr de costado) y todas miden lo que la más larga (lo mide tablero.js),
+     así los títulos quedan pegados debajo de la barra de arriba mientras se baja. */
+  #main .board{overflow:visible;max-height:none;align-items:flex-start;padding-bottom:0;scroll-snap-type:none}
+  #main .board .col{flex:1 1 0;min-width:0;max-width:none;max-height:none!important;min-height:var(--colmin,0)}
+  #main .board .cards{overflow:visible}
+  /* los títulos de las columnas quedan a la vista, justo debajo de la barra */
+  #main .board .colh{position:sticky;top:var(--toph,76px);z-index:3;border-radius:var(--rc,12px) var(--rc,12px) 0 0;background:linear-gradient(var(--surface-2),var(--surface-2)),var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+  html .top{z-index:20}
+  /* el buscador: un tramo en el centro de la barra, al lado del título */
+  html .top{position:sticky}
+  html .top #topLupa{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:clamp(220px,30vw,440px);height:38px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;justify-content:flex-start;color:var(--muted);font:inherit;font-size:14px;background:linear-gradient(rgb(127 127 127 / .1),rgb(127 127 127 / .1)),var(--bg);box-shadow:inset 0 0 0 1px var(--line)}   /* fondo propio: la barra es de vidrio y abajo puede pasar algo oscuro (En vivo) */
+  html .top #topLupa:hover{background:linear-gradient(rgb(127 127 127 / .18),rgb(127 127 127 / .18)),var(--bg);color:var(--fg)}
+  html .top #topLupa .tl{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html .top #topLupa kbd{flex:none;font:600 11px/1 var(--f-mono,ui-monospace,monospace);padding:5px 7px;border-radius:7px;background:rgb(127 127 127 / .16);color:var(--muted)}
+  html .top .ttl{max-width:calc(50% - clamp(110px,15vw,220px) - 28px);margin-right:auto}   /* el título empuja la campana y el + a la derecha */
+  html .top:has(#topQ:not([hidden])) #topLupa{display:none}
+}
+@media (max-width:899px){#topLupa .tl,#topLupa kbd{display:none}}
+/* fin 1.52w */
+/* 1.52x */
+.opnumok{margin:-4px 0 2px;grid-column:1/-1;font-size:12.5px}.opnumok.bad{color:var(--danger,#d93025);font-weight:600}.opnumok.good{color:var(--ok,#1e8e3e)}[aria-invalid=true]#f_numero{box-shadow:0 0 0 2px var(--danger,#d93025)}#f_numero{font-family:var(--f-mono,ui-monospace,monospace);font-weight:600;letter-spacing:.02em}
+/* fin 1.52x */
+/* 1.52y */
+.colh{position:relative}.colpl{position:absolute;top:8px;right:6px;width:28px;height:28px;border:0;border-radius:50%;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.colpl:hover{background:rgb(127 127 127 / .14);color:var(--fg)}.colpl svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.colh:has(.colpl) .cnt{margin-right:26px}
+.board .col.plegada{flex:0 0 56px!important;min-width:56px!important;max-width:56px!important;cursor:pointer}
+.board .col.plegada .cards{display:none}.board .col.plegada .colh{grid-template-columns:1fr;justify-items:center;align-content:start;gap:10px;padding:12px 4px;border-bottom:0;box-sizing:border-box;background:none;border-radius:0}
+.board .col.plegada .colh .tot{display:none}.board .col.plegada .colh .dot{margin-top:30px}.board .col.plegada .colh h2{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.board .col.plegada .colh .cnt{margin:0;order:3}.board .col.plegada .colpl{inset:0;width:auto;height:auto;border-radius:inherit;place-items:start center;padding-top:8px}.board .col.plegada .colpl svg{transform:rotate(-90deg)}
+@media (prefers-reduced-motion:reduce){.colpl svg{transition:none}}
+/* fin 1.52y */
+/* 1.52z */
+.qtpl{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:0 0 12px}.qtpl .fld{flex:1 1 260px;margin:0}.qtpl .btn{flex:none}
+.qb{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line-2);border-radius:12px;margin-bottom:8px}.qbh{display:flex;gap:6px;align-items:center}.qbh input{flex:1;min-width:0;font-weight:650}
+.qb textarea{min-height:64px;resize:vertical}.qb .rm{flex:none}.qb .rm svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.qb .rm:disabled{opacity:.3}
+.qf{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;border:1px dashed var(--line);border-radius:12px;background:#fff}.qf img{max-width:260px;max-height:90px;object-fit:contain}
+.qf input{max-width:340px;text-align:center;background:#fff;color:#18202c}.qf .muted{color:#5a6676}
+.qtplcomo{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.qtplcomo input{flex:1 1 220px;min-width:0}
+.opcot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.opcot .chipc{font-size:13px;color:var(--muted)}
+/* fin 1.52z */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -994,6 +1056,10 @@ var OLUMI_IDIOMAS=[['es','Español'],['en','English'],['pt','Português'],['fr',
 /* === fin 1.52i === */</script>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
+<script>/* 1.53a */(function(){var W='https://unitytech.uy/olumi/app/',f='';
+  var c=window.OLUMI_CONFIG||{};if(!c.supabaseUrl||!c.supabaseAnonKey||/TU-PROYECTO/.test(c.supabaseUrl)){window.OLUMI_CONFIG=Object.assign({},c,{supabaseUrl:'https://pgriavmcmscchxdnfglv.supabase.co',supabaseAnonKey:'sb_publishable_7BaLiTTgbcPaVBA735CMLA_CQDDlPaB'});f+='config '}
+  if(!window.supabase){f+='libreria ';if(location.host!=='unitytech.uy')document.write('<script src="'+W+'vendor/supabase.js"><\/script>')}
+  window.__olumiFalta=f;})();/* fin 1.53a */</script>
 <title>Olumi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2038,7 +2104,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos','estados'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','plantillas','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos','estados'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -2108,6 +2174,25 @@ const ARRC=new Map();let ARRV=0;const arrDirty=()=>{ARRV++};
 const arr=col=>{const o=D[col];if(!o)return[];const c=ARRC.get(col);if(c&&c.o===o&&c.v===ARRV)return c.a.slice();const a=Object.entries(o).map(([id,x])=>({...x,id}));ARRC.set(col,{o,a,v:ARRV});return a.slice()};
 const cliName=id=>D.clientes[id]?.nombre||'';
 const opp=id=>D.oportunidades[id];
+/* === 1.52v · exportar oportunidades con número y proyecto === */
+// Christian 20/11 08:34: «cuando se exporta y descarga dice oportunidad y no aparecen los números de los proyectos». El CSV no traía el número
+// (desde la carga de Odoo el número va en su campo y el título quedó limpio) ni el proyecto. Ahora: número primero, ordenado del más nuevo
+// al más viejo, y al final el proyecto (número y nombre) y los presupuestos de cada oportunidad.
+function opCsv(lista){
+  const prys={},pres={};
+  arr('proyectos').forEach(p=>{if(p.oportunidadId)(prys[p.oportunidadId]=prys[p.oportunidadId]||[]).push(p)});
+  arr('presupuestos').forEach(p=>{if(p.oportunidadId)(pres[p.oportunidadId]=pres[p.oportunidadId]||[]).push(p)});
+  const porNum={};arr('proyectos').forEach(p=>{const n=String(pryNumOf(p)||'').trim();if(n)(porNum[n]=porNum[n]||[]).push(p)});
+  const num=o=>String(o.numero||'').trim(),nN=o=>parseInt(num(o).replace(/\D/g,''),10)||0;
+  const filas=lista.slice().sort((a,b)=>nN(b)-nN(a)||(a.titulo||'').localeCompare(b.titulo||'','es')).map(o=>{
+    const ps=prys[o.id]||(num(o)&&porNum[num(o)])||[];
+    return[num(o),o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida,
+      ps.map(p=>pryNumOf(p)||'').filter(Boolean).join(', '),ps.map(p=>pryTitulo(p)).join(' · '),(pres[o.id]||[]).map(p=>p.numero||'').filter(Boolean).join(', ')]});
+  return csv([['Número','Oportunidad','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida','Nº de proyecto','Proyecto','Presupuestos'],...filas]);
+}
+const opEtiq=o=>o?(String(o.numero||'').trim()&&!String(o.titulo||'').trim().startsWith(String(o.numero).trim())?o.numero+' - ':'')+(o.titulo||''):'';
+window.__opCsvTodo=()=>opCsv(arr('oportunidades'));window.__opEtiqDe=id=>opEtiq(opp(id));   // para las pruebas
+/* === fin 1.52v === */
 const isOpen=o=>!(EK[o.etapa||'nuevo']||{}).c;
 function waLink(tel){const d=String(tel||'').replace(/\D/g,'');if(d.length<8)return'';const n=d.startsWith('598')?d:'598'+d.replace(/^0/,'');return'https://wa.me/'+n}
 
@@ -2275,8 +2360,9 @@ function vPipeline(){
     let cs=ops.filter(o=>(o.etapa||'nuevo')===e.k).sort((a,b)=>n0(b.prioridad)-n0(a.prioridad)||(a.cierre||'9').localeCompare(b.cierre||'9'));
     const tot=sum(cs,o=>conv(o.monto,o.moneda,repMon));let older=0;
     if(e.k==='gan'||e.k==='per'){const f=e.k==='gan'?'ganadoEn':'perdidoEn';const rec=cs.filter(o=>!o[f]||o[f]>=cutoff);older=cs.length-rec.length;cs=rec.sort((a,b)=>(b[f]||'').localeCompare(a[f]||''))}
-    return`<section class="col" data-stage="${e.k}" style="--sc:var(--s-${e.k})" aria-label="${e.n}">
-      <header class="colh"><span class="dot"></span><h2>${e.n}</h2><span class="cnt">${cs.length+older}</span><span class="tot">${money(tot,repMon)}</span></header>
+    const pl=colPlegada(e,st);
+    return`<section class="col${pl?' plegada':''}" data-stage="${e.k}" style="--sc:var(--s-${e.k})" aria-label="${e.n}">
+      <header class="colh"><span class="dot"></span><h2>${e.n}</h2><span class="cnt">${cs.length+older}</span><span class="tot">${money(tot,repMon)}</span><button type="button" class="colpl" data-colpl="${e.k}" aria-expanded="${!pl}" aria-label="${pl?'Mostrar':'Plegar'} ${e.n}" title="${pl?'Mostrar':'Plegar'} ${e.n}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></header>
       <div class="cards">${cs.map(card).join('')||(older?'':'<p class="nocards">Sin oportunidades en esta etapa.</p>')}${older?`<button class="addq" data-act="pview:list" style="padding:4px 2px">+ ${older} de hace más de 60 días, ver en la lista</button>`:''}</div>
 </section>`}).join('')}</div>`;
 }
@@ -2856,11 +2942,11 @@ function sheetFrame(kind,title,body,{del=false,extra='',saveLabel='Guardar'}={})
 }
 function openSheet(type,id,preset={}){
   SH={type,id:id||null,preset};armed=null;
-  const fns={fondo:sheetFondo,obs:sheetObs,crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
+  const fns={fondo:sheetFondo,obs:sheetObs,crmseg:sheetSeg,crmper:sheetCrmPer,op:sheetOp,cli:sheetCli,act:sheetAct,prod:sheetProd,pres:sheetPres,tk:sheetTk,trab:sheetTrab,fact:sheetFact,org:sheetOrg,pry:sheetPry,ptk:sheetPtk,rel:sheetRel,tec:sheetTec,dep:sheetDep,mov:sheetMov,ing:sheetIng,ent:sheetEnt,eq:sheetEq,stk:sheetStk,tar:sheetTar,cua:sheetCua,kit:sheetKit,cotpl:sheetCotpl,cotpls:sheetCotpls,chk:sheetChk,oc:sheetOc,av:sheetAv,gasto:sheetGasto,per:sheetPer,onb:sheetOnb,agcfg:sheetAgcfg,tabs:sheetTabs,rep:sheetRep,ev:sheetEv,calimp:sheetCalImp,calet:sheetCalEt};
   if(!fns[type])return;
   $('#sheet').innerHTML=fns[type](id,preset);shWideApply();
   $('#sheetWrap').hidden=false;document.body.style.overflow='hidden';
-  const first=$('#sheet .sh-b input:not([type=hidden]):not([type=file]):not([type=checkbox]),#sheet .sh-b select,#sheet .sh-b textarea');if(first&&!id)first.focus();else $('#sheet .x').focus();
+  const first=(!id&&(type==='op'||type==='pry')&&($('#sheet .sh-b #f_titulo')||$('#sheet .sh-b #f_nombre')))||$('#sheet .sh-b input:not([type=hidden]):not([type=file]):not([type=checkbox]),#sheet .sh-b select,#sheet .sh-b textarea');if(first&&!id)first.focus();else $('#sheet .x').focus();
 }
 function closeSheet(){$('#sheetWrap').hidden=true;document.body.style.overflow='';SH=null;QE=null;armed=null}
 
@@ -2870,7 +2956,8 @@ function sheetOp(id,p){
   const stepper=`<div class="stepper" role="group" aria-label="Etapa">${ETAPAS.map(e=>`<button type="button" class="step${(o.etapa||'nuevo')===e.k?' on':''}" data-act="step:${e.k}" style="--sc:var(--s-${e.k})" aria-pressed="${(o.etapa||'nuevo')===e.k}">${e.n}</button>`).join('')}</div>`;
   const f=OPF();const cl=D.clientes[o.clienteId];
   const strip=id&&cl&&(cl.telefono||cl.email)?`<div class="contact"><strong>${esc(cl.contacto||cl.nombre)}</strong>${cl.telefono?`<span class="num">${esc(cl.telefono)}</span>${waLink(cl.telefono)?`<a href="${waLink(cl.telefono)}" target="_blank" rel="noopener">WhatsApp</a>`:''}`:''}${cl.email?`<span>${esc(cl.email)}</span>`:''}</div>`:'';
-  let body=strip+(id?opSmart(id,o)+fjCarpHtml(o):'')+stepper+`<div class="grid">${f.map(x=>fldv(x,o)).join('')}${!id?fld({k:'nuevoCli',l:'…o escribí un cliente nuevo',w:'full',ph:'Se crea al guardar'},''):''}</div><p class="err" id="shErr" hidden></p>`;
+  const ncot=id?arr('presupuestos').filter(q=>q.oportunidadId===id).length:0;
+  let body=strip+(id&&!readonly&&canMoney()?`<div class="opcot"><button class="btn pri" data-new="pres" data-op="${id}">Nueva cotización</button><span class="chipc">${ncot?pl(ncot,'cotización','cotizaciones'):'Sin cotizaciones todavía'}</span></div>`:'')+(id?opSmart(id,o)+fjCarpHtml(o):'')+stepper+`<div class="grid">${!id?opNumFld():''}${f.map(x=>fldv(x,o)).join('')}${!id?fld({k:'nuevoCli',l:'…o escribí un cliente nuevo',w:'full',ph:'Se crea al guardar'},''):''}</div><p class="err" id="shErr" hidden></p>`;
   if(id){
     body+=`<section class="rel"><h3>Actividades</h3><div id="opActs">${opActsHtml(id)}</div>
       <div class="mini"><select id="na_tipo" aria-label="Tipo">${opts(TIPOS,'visita')}</select><input type="datetime-local" id="na_fecha" value="${tomorrow9()}" aria-label="Fecha">
@@ -2889,6 +2976,7 @@ function opActsHtml(id){
 async function saveOp(){
   const v=readForm(OPF());const err=$('#shErr');
   if(!v.titulo){err.textContent='Poné un título para la oportunidad.';err.hidden=false;$('#f_titulo').focus();return}
+  if(!SH.id&&$('#f_numero')){const n=$('#f_numero').value.trim(),e=opNumError(n,null);if(e){err.textContent=e;err.hidden=false;$('#f_numero').focus();return}v.numero=n}
   const nc=($('#f_nuevoCli')?.value||'').trim();
   if(nc){const ya=arr('clientes').find(c=>qn(c.nombre).trim()===qn(nc));if(ya){v.clienteId=ya.id;toast(`Ya existía ${ya.nombre}: usé ese cliente`)}else{const cid=uid();await put('clientes',cid,{nombre:nc,creado:Date.now()});v.clienteId=cid}}
   if(CRMC().oblig&&!SH.id){const f=!(v.clienteId||nc)?'el cliente':!(n0(v.monto)>0)?'el monto estimado':v.prob===''||v.prob==null?'la probabilidad':!(v.implementacion||v.cierre)?'la fecha estimada':'';if(f){err.textContent=`Falta ${f}: es un dato obligatorio para abrir la oportunidad.`;err.hidden=false;return}}
@@ -2964,13 +3052,13 @@ function sheetProd(id){const p=id?D.productos[id]:{unidad:'unidad',moneda:defMon
 async function saveProd(){const v=readForm(prodF());if('mantCada' in v)v.mantCada=n0(v.mantCada);if(!v.nombre){const e=$('#shErr');e.textContent='Poné un nombre.';e.hidden=false;return}const pid=SH.id||uid();const prev=SH.id?D.productos[SH.id]:{};await put('productos',pid,{...prev,...v,...(PRODFOTO===false?{foto:null}:PRODFOTO&&PRODFOTO.id?{foto:{id:PRODFOTO.id,type:PRODFOTO.type}}:{})});PRODFOTO=null;toast('Guardado en el catálogo');if(ING_BACK&&ING){ING_BACK=null;closeSheet();openSheet('ing',null,{resume:true});ingAdd({...(D.productos[pid]||v),id:pid});return}closeSheet()}
 
 /* presupuesto */
-function nextNum(){const m=Math.max(0,...arr('presupuestos').filter(p=>!/\.S\d+$/.test(String(p.numero||''))).map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
+function nextNum(){const m=Math.max(0,...arr('presupuestos').filter(p=>!/\.S?\d+$/.test(String(p.numero||''))).map(p=>parseInt(String(p.numero||'').replace(/\D/g,''),10)||0));return'P-'+String(m+1).padStart(4,'0')}
 function sheetPres(id,p){
   if(id)QE=JSON.parse(JSON.stringify(D.presupuestos[id]));
   else if(p.copy)QE=p.copy;
   else{const o=opp(p.op);QE={numero:'',oportunidadId:p.op||'',proyectoId:p.pry||'',clienteId:o?.clienteId||p.cli||'',fecha:today(),validez:15,moneda:o?.moneda||defMon(),estado:'borrador',iva:true,descuento:0,lineas:[{desc:'',cant:1,unidad:'unidad',precio:0}],condiciones:CFG.condiciones||''}}
-  const q=QE;
-  const body=`<div class="grid">
+  const q=QE;qbNorm(q);
+  const body=`${qTplHtml()}<div class="grid">
     <label class="fld" for="q_clienteId"><span>Cliente</span><select id="q_clienteId" data-q="clienteId">${opts(cliOpts(),q.clienteId)}</select></label>
     <label class="fld" for="q_oportunidadId"><span>Oportunidad</span><select id="q_oportunidadId" data-q="oportunidadId">${opts(opOpts(q.clienteId),q.oportunidadId)}</select></label>
     <label class="fld" for="q_proyectoId"><span>Proyecto</span><select id="q_proyectoId" data-q="proyectoId">${opts(pryOpts(q.clienteId),q.proyectoId||'')}</select></label>
@@ -2984,13 +3072,13 @@ function sheetPres(id,p){
     <div class="grid" style="margin-top:4px"><label class="fld" for="q_descuento"><span>Descuento (%)</span><input type="number" id="q_descuento" data-q="descuento" min="0" max="100" step="any" value="${esc(q.descuento)}"></label>
     <label class="fld chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="q_iva" data-q="iva"${q.iva?' checked':''}><span>Sumar IVA 22 %</span></label></div>
     <div class="totals" id="qtot">${qTotHtml()}</div></section>
-  <label class="fld" for="q_condiciones"><span>Condiciones y observaciones</span><textarea id="q_condiciones" data-q="condiciones">${esc(q.condiciones)}</textarea></label>
+  ${qPieHtml(true)}
   <div id="copyBox" hidden><p class="muted" style="margin:0 0 6px">Seleccioná el texto y copialo:</p><textarea id="copyFallback" readonly></textarea></div>
   <p class="err" id="shErr" hidden></p>
   ${id&&q.estado!=='aceptado'?`<div class="actions"><button class="btn" data-act="qaccept" style="white-space:normal;text-align:left">Cliente aceptó: crear la obra${q.oportunidadId?' y ganar la oportunidad':''}</button></div>`:''}
   ${id&&q.estado==='aceptado'&&!(q.obraId&&D.proyectos[q.obraId])?`<div><button class="btn" data-act="q2obra:${id}">Crear la obra con etapas y tareas</button></div>`:''}${id&&q.obraId&&D.proyectos[q.obraId]?`<div><button class="btn ghost" data-open="pry:${q.obraId}">Ver la obra</button></div>`:''}
   ${id&&q.estado==='aceptado'&&has('facturas')?qFactHtml(id,q):''}`;
-  return sheetFrame('Presupuesto '+(q.numero||'nuevo'),cliName(q.clienteId)||'Sin cliente',body,{del:!!id,extra:`${id?'<button class="btn" data-act="qdup">Duplicar</button>':''}<button class="btn" data-act="qcopy">Copiar texto</button><button class="btn" data-act="qdl">Descargar PDF</button>`});
+  return sheetFrame('Presupuesto '+(q.numero||qNumOp(q)||'nuevo'),cliName(q.clienteId)||'Sin cliente',body,{del:!!id,extra:`${id?'<button class="btn" data-act="qdup">Duplicar</button>':''}<button class="btn" data-act="qcopy">Copiar texto</button><button class="btn" data-act="qdl">Descargar PDF</button>`});
 }
 function qLinesHtml(){return QE.lineas.map((l,i)=>`<div class="ql">
   <input class="d" type="text" list="prodlist" id="ql_d_${i}" data-li="${i}" data-lf="desc" value="${esc(l.desc)}" placeholder="Material o mano de obra" aria-label="Descripción">
@@ -3006,6 +3094,7 @@ async function saveQ(close=true){
   if(!qValid())return null;
   if(!QE.numero)QE.numero=await fjNumPres(QE)||nextNum();
   QE.lineas=QE.lineas.filter(l=>l.desc||n0(l.precio));
+  if(Array.isArray(QE.bloques)){QE.bloques=QE.bloques.filter(b=>(b.t||'').trim()||(b.x||'').trim());QE.condiciones=qbTexto(QE)}
   const id=SH.id||uid();SH.id=id;
   await put('presupuestos',id,{...QE,actualizado:Date.now()});
   const o=opp(QE.oportunidadId);
@@ -3039,7 +3128,7 @@ td{padding:9px 8px;border-bottom:1px solid #e6ebf1}.n{text-align:right;font-vari
 <div class="cli"><span class="k">Cliente</span><div><strong>${esc(c.nombre||'')}</strong>${c.rut?' · RUT/CI '+esc(c.rut):''}</div><div>${[esc(c.contacto||''),esc(c.telefono||''),esc(c.email||''),esc(c.direccion||''),esc(c.departamento||'')].filter(Boolean).join(' · ')}</div>${opp(q.oportunidadId)?.obra?`<div>Obra: ${esc(opp(q.oportunidadId).obra)}</div>`:''}</div>
 <table><thead><tr><th>Descripción</th><th class="n">Cantidad</th><th class="n">Precio unitario</th><th class="n">Importe</th></tr></thead><tbody>${rows}</tbody></table>
 <div class="tot"><div><span>Subtotal</span><span class="n">${money(t.sub,m,2)}</span></div>${t.desc?`<div><span>Descuento ${qty(q.descuento)} %</span><span class="n">− ${money(t.desc,m,2)}</span></div>`:''}${q.iva?`<div><span>IVA 22 %</span><span class="n">${money(t.iva,m,2)}</span></div>`:''}<div class="g"><span>Total</span><span class="n">${money(t.total,m,2)}</span></div>${isF&&pag?`<div><span>Cobrado</span><span class="n">${money(pag,m,2)}</span></div><div><b>Saldo</b><b class="n">${money(Math.max(0,t.total-pag),m,2)}</b></div>`:''}</div>
-${!isF&&q.condiciones?`<div class="cond"><span class="k">Condiciones</span><br>${esc(q.condiciones)}</div>`:''}${isF&&q.notas?`<div class="cond">${esc(q.notas)}</div>`:''}
+${!isF&&Array.isArray(q.bloques)&&q.bloques.length?q.bloques.filter(b=>(b.t||'').trim()||(b.x||'').trim()).map(b=>`<div class="cond">${(b.t||'').trim()?`<b style="color:#18202c">${esc(b.t.trim())}</b><br>`:''}${esc((b.x||'').trim())}</div>`).join(''):!isF&&q.condiciones?`<div class="cond"><span class="k">Condiciones</span><br>${esc(q.condiciones)}</div>`:''}${!isF&&q.firma&&(q.firma.img||q.firma.nombre)?`<div style="margin-top:34px;text-align:center">${q.firma.img?`<img src="${q.firma.img}" alt="" style="max-height:70px;max-width:220px"><br>`:''}${esc(q.firma.nombre||'')}</div>`:''}${isF&&q.notas?`<div class="cond">${esc(q.notas)}</div>`:''}
 <footer>Importes en ${m==='USD'?'dólares estadounidenses':'pesos uruguayos'}${q.iva?', IVA incluido en el total':', sin IVA'}.${isF?(q.cfe?` Comprobante fiscal: CFE ${esc(q.cfe)}.`:' Este detalle no es un comprobante fiscal.'):''}</footer></body></html>`;
 }
 async function pdfOrHtml(name,pdfFn,htmlFn){let u8=null;try{u8=await pdfFn()}catch(e){console.error('pdf',e)}if(u8){await savePdf(name,u8);return}await saveFile(name.replace(/\.html?$/i,'')+'.html',await htmlFn())}
@@ -3134,7 +3223,7 @@ if(await planosAct(k,el,arg))return;
       await put('actividades',arg,{...x,fecha:localISO(d).slice(0,10)+'T'+t});toast('Pasada a mañana');break}
     case'qdup':{const copy={...clean(QE),numero:'',estado:'borrador',fecha:today()};delete copy.actualizado;delete copy.obraId;delete copy.respuestaPortal;delete copy.creado;delete copy.proyectoId;
       openSheet('pres',null,{copy});SH.dirty=true;toast('Copia lista. Ajustala y guardala.');break}
-    case'save':{const f={fondo:saveFondo,obs:saveObs,op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,tk:saveTk,trab:saveTrab,fact:saveFact,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
+    case'save':{const f={fondo:saveFondo,obs:saveObs,op:saveOp,cli:saveCli,act:saveAct,prod:saveProd,pres:saveQ,cotpl:saveCotpl,cotpls:saveCotpls,tk:saveTk,trab:saveTrab,fact:saveFact,org:saveOrg,pry:savePry,ptk:savePtk,rel:saveRel,tec:saveTec,dep:saveDep,mov:saveMov,eq:saveEq,stk:async()=>closeSheet(),tar:saveTar,cua:saveCua,kit:saveKit,chk:saveChk,oc:saveOc,ing:saveIng,ent:saveEnt,gasto:saveGasto,per:savePer,onb:saveOnb,agcfg:saveAgcfg,tabs:saveTabs,rep:saveRep,ev:saveEv,calimp:saveCalImp,calet:saveCalEt}[SH.type];el.disabled=true;try{await f()}finally{el.disabled=false}break}
     case'del':{
       if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.classList.add('arm');
         const nOps=SH.type==='cli'?arr('oportunidades').filter(o=>o.clienteId===SH.id).length:0;
@@ -3183,8 +3272,8 @@ if(await planosAct(k,el,arg))return;
     case'savecfg':{const v=readForm(CFGF,'s_');await saveCfg({...CFG,...v});CFGDRAFT=null;toast('Ajustes guardados');sr();break}
     case'respaldo':{if(!isBoss())break;const out={app:'Olumi',version:'1.52',empresa:CFG.nombre||'',fecha:new Date().toISOString(),datos:{}};COLS.forEach(c=>out.datos[c]=D[c]||{});out.datos.config={empresa:CFG};saveFile(`Olumi respaldo ${(CFG.nombre||'empresa').replace(/[\\/:*?"<>|]/g,'')} ${today()}.json`,JSON.stringify(out));break}
     case'csvcli':if(!canMoney())break;saveFile(`Clientes ${today()}.csv`,csv([['Nombre','RUT','Contacto','Teléfono','Email','Dirección','Departamento','Notas'],...arr('clientes').map(c=>[c.nombre,c.rut,c.contacto,c.telefono,c.email,c.direccion,c.departamento,c.notas])]));break;
-    case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));break;
-    case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opp(a.oportunidadId)?.titulo,cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
+    case'csvop':if(!canMoney())break;saveFile(`Oportunidades ${today()}.csv`,opCsv(arr('oportunidades')));break;
+    case'csvact':if(!canMoney())break;saveFile(`Actividades ${today()}.csv`,csv([['Tipo','Título','Fecha','Oportunidad','Cliente','Responsable','Hecha'],...arr('actividades').map(a=>[TK[a.tipo],a.titulo,(a.fecha||'').replace('T',' '),opEtiq(opp(a.oportunidadId)),cliName(a.clienteId),personName(a.responsable),a.hecha?'Sí':'No'])]));break;
   }}catch(e){if(e&&e.code!=='loading')handleErr(e)}
 }
 
@@ -3405,7 +3494,7 @@ async function crmAct(k,el,arg){
   if(k==='bsel'){if(arg==='*'){const all=CLST.length&&CLST.every(i=>CSEL.has(i));CLST.forEach(i=>all?CSEL.delete(i):CSEL.add(i))}else if(CSEL.has(arg))CSEL.delete(arg);else CSEL.add(arg);sr();return true}
   if(k==='bclr'){CSEL.clear();sr();return true}
   if(k==='bper'){if(CSEL.size)openSheet('crmper',[...CSEL][0],{ids:[...CSEL]});return true}
-  if(k==='bcsv'){if(!canMoney())return true;saveFile(`Oportunidades seleccionadas ${today()}.csv`,csv([['Título','Cliente','Servicio','Etapa','Monto','Moneda','Probabilidad','Cierre esperado','Origen','Obra','Responsable','Ganada el','Motivo de pérdida'],...arr('oportunidades').filter(o=>CSEL.has(o.id)).map(o=>[o.titulo,cliName(o.clienteId),o.servicio,(EK[o.etapa]||EK.nuevo).n,n0(o.monto).toString().replace('.',','),o.moneda,o.prob,o.cierre,o.origen,o.obra,personName(o.responsable),o.ganadoEn,o.motivoPerdida])]));return true}
+  if(k==='bcsv'){if(!canMoney())return true;saveFile(`Oportunidades seleccionadas ${today()}.csv`,opCsv(arr('oportunidades').filter(o=>CSEL.has(o.id))));return true}
   if(k==='crmsave'){if(!isBoss()||readonly)return true;const mv=fjAntes();await saveCfg({...CFG,crm:CRMD||CRMC()});CRMD=null;applyEtapas();await fjDespues(mv);toast(CRMAJ?'Ajustes del CRM guardados':'Ajustes de ventas guardados');sr();return true}
   return false}
 /* === fin CRM 1.48 === */
@@ -3448,9 +3537,127 @@ function opNumMax(){return Math.max(FJ_N,n0(CRMC().numDesde)-1,pryNumMax(),...ar
 function opNumPre(){const p=CRMC().numPre;return String(p==null?(pryPlano()?'':'P'):p).replace(/[^A-Za-zÑñ\-_.]/g,'').toUpperCase().slice(0,6)}
 function opNumNuevo(){return opNumPre()+(FJ_N=opNumMax()+1)}
 function opNumSig(){return opNumPre()+(opNumMax()+1)}
-async function fjNumPres(q){try{if(!CRMC().cotNum||!q.oportunidadId)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
+/* === 1.52x · número de la oportunidad nueva, a la vista y editable === */
+// Giancarlo/Christian 20/11 08:47: «cuando se genera una nueva oportunidad (botón +) debe figurar un cuadro con el nuevo número (con el secuencial que se viene
+// generando), dando la posibilidad de cambiarlo. Si el usuario lo cambia, el sistema debe verificar si está disponible o ya está utilizado; si está utilizado
+// no acepta el cambio, indicando el error.» Se compara contra todas las oportunidades (también perdidas) y contra los proyectos, que heredan el número.
+const opNumKey=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9Ñ]/g,''),opNumDig=s=>String(s||'').replace(/\D/g,'').replace(/^0+/,'');
+function opNumUso(n,id){const k=opNumKey(n),d=opNumDig(n);if(!k)return null;const igual=x=>{const kx=opNumKey(x);return!!kx&&(kx===k||(!!d&&opNumDig(x)===d))};
+  const o=arr('oportunidades').find(o=>o.id!==id&&(igual(o.numero)||(typeof opNumTitN==='function'&&!o.numero&&d&&String(opNumTitN(o))===d)));if(o)return'la oportunidad «'+(o.titulo||'sin nombre')+'»';
+  const p=arr('proyectos').find(p=>p.oportunidadId!==id&&igual(pryNumOf(p)));if(p)return'el proyecto «'+pryTitulo(p)+'»';return null}
+function opNumError(n,id){n=String(n||'').trim();if(!n)return'Poné el número de la oportunidad.';if(!/\d/.test(n))return'El número tiene que tener cifras (por ejemplo, '+opNumSig()+').';
+  if(n.length>14)return'El número es demasiado largo.';const u=opNumUso(n,id);return u?`El número ${n} ya está usado por ${u}. Elegí otro.`:''}
+function opNumFld(){return fld({k:'numero',l:'Número de oportunidad',ph:opNumSig()},opNumSig()).replace('<input ','<input inputmode="text" autocomplete="off" aria-describedby="opNumOk" ')+`<p class="hint opnumok" id="opNumOk" aria-live="polite">Es el que sigue. Podés cambiarlo si ya tiene uno.</p>`}
+document.addEventListener('input',e=>{if(!e.target||e.target.id!=='f_numero'||!SH||SH.type!=='op'||SH.id)return;const v=e.target.value.trim(),er=opNumError(v,null),h=$('#opNumOk');
+  e.target.setAttribute('aria-invalid',er?'true':'false');if(h){h.textContent=er||(v===opNumSig()?'Es el que sigue. Podés cambiarlo si ya tiene uno.':'Disponible.');h.classList.toggle('bad',!!er);h.classList.toggle('good',!er)}
+  const t=document.querySelector('#shTitle .kind');if(t&&/^Oportunidad/.test(t.textContent))t.textContent='Oportunidad'+(v?' '+v:'')});
+window.__opNumError=opNumError;   // para las pruebas
+/* === fin 1.52x === */
+/* === 1.52y · columnas plegables, cursor en el título, Tab que deja escribir === */
+// Christian 20/11 09:26: «en CRM la parte de Finalizado tiene que aparecer por defecto como plegado; cuando se abre un nuevo proyecto, el cursor tiene que
+// estar en título; cuando usás tabulador estando en el campo título no puedo escribir».
+// Plegada de fábrica: una etapa ganada que viene después de otra ganada (en Phitel, «Finalizado» después de «Ganado»). Cada persona la abre o la pliega
+// tocando la flecha del título, y queda recordado en el equipo.
+function colPlegada(e,st){let m={};try{m=JSON.parse(lsGet('crm.plegadas')||'{}')||{}}catch(_){}if(e.k in m)return!!m[e.k];
+  const i=st.indexOf(e);return e.c==='g'&&st.slice(0,i).some(x=>x.c==='g')}
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-colpl]');if(!b)return;ev.preventDefault();ev.stopPropagation();let m={};try{m=JSON.parse(lsGet('crm.plegadas')||'{}')||{}}catch(_){}
+  m[b.dataset.colpl]=b.getAttribute('aria-expanded')==='true';lsSet('crm.plegadas',JSON.stringify(m));sr()},true);
+// la lista con buscador (cliente, proyecto…) es un botón: al llegar con Tab y escribir, se abre y la letra va al buscador
+document.addEventListener('keydown',ev=>{const b=ev.target;if(!b||!b.classList||!b.classList.contains('cpk-b')||ev.ctrlKey||ev.metaKey||ev.altKey||b.disabled)return;
+  const k=ev.key;if(!(k.length===1&&k!==' ')&&k!=='ArrowDown')return;const sel=b.nextElementSibling;if(!sel||sel.tagName!=='SELECT')return;ev.preventDefault();cpkAbre(sel);
+  const q=CPK&&CPK.box&&CPK.box.querySelector('input');if(q&&k.length===1){q.value=k;q.dispatchEvent(new Event('input',{bubbles:true}))}},true);
+/* === fin 1.52y === */
+/* === 1.52z · plantillas de cotización, botón «Nueva cotización» y número 3665.01 === */
+// Giancarlo y Christian, 20/11 09:29 a 09:32 (con capturas de Odoo): «plantillas de cotización pre armadas, tenemos que poder armar varias para que sea más
+// fácil cotizar» · «al ingresar a la oportunidad debería aparecer un botón para generar una nueva cotización; se puede seleccionar plantillas previamente
+// generadas» · «ej. de plantilla, que ya incluye la firma» · «las cotizaciones se identifican con un número único, que incluya el número de oportunidad
+// separado por un punto, ejemplo 3665.01».
+// Una plantilla guarda lo que se repite: líneas, bloques de texto con título (Servicios, Notas, Condiciones comerciales…), la firma, moneda, IVA y validez.
+// Se elige arriba del presupuesto; se arma desde cero o con «Guardar como plantilla» desde un presupuesto que salió bien.
+const cotTpls=()=>arr('plantillas').sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+const QB_DEF=()=>[{t:'Condiciones comerciales',x:CFG.condiciones||''}];
+function qbNorm(q){if(!q)return[];if(!Array.isArray(q.bloques))q.bloques=q.condiciones?[{t:'Condiciones',x:q.condiciones}]:QB_DEF();return q.bloques}
+const qbTexto=q=>(q.bloques||[]).filter(b=>(b.t||'').trim()||(b.x||'').trim()).map(b=>[(b.t||'').trim(),(b.x||'').trim()].filter(Boolean).join('\n')).join('\n\n');
+function qbList(){const bs=qbNorm(QE);return`<div id="qbloques">${bs.map((b,i)=>`<div class="qb"><div class="qbh"><input type="text" data-qb="${i}:t" value="${esc(b.t||'')}" placeholder="Título del bloque (ej.: Servicios, Notas, Condiciones comerciales)" aria-label="Título del bloque ${i+1}">
+  <button type="button" class="rm" data-qp="qbup:${i}" aria-label="Subir el bloque"${i?'':' disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button type="button" class="rm" data-qp="qbrm:${i}" aria-label="Quitar el bloque">${ic('x')}</button></div>
+  <textarea data-qb="${i}:x" rows="${Math.min(10,Math.max(3,String(b.x||'').split('\n').length+1))}" placeholder="Texto del bloque" aria-label="Texto del bloque ${i+1}">${esc(b.x||'')}</textarea></div>`).join('')}</div>`}
+const qbHtml=(como)=>qbList()+`<div class="actions"><button type="button" class="btn" data-qp="qbadd">+ Bloque de texto</button>${como?'<button type="button" class="btn ghost" data-qp="tplcomo">Guardar como plantilla</button>':''}</div>
+  ${como?'<div class="qtplcomo" id="qtplcomo" hidden><input type="text" id="qtplcomo_n" placeholder="Nombre de la plantilla (ej.: Servicios)" aria-label="Nombre de la plantilla"><button type="button" class="btn pri" data-qp="tplcomook">Guardar plantilla</button></div>':''}`;
+function qfHtml(){const f=QE.firma;return`<div id="qfirma">${f&&(f.img||f.nombre)?`<div class="qf">${f.img?`<img src="${esc(f.img)}" alt="Firma">`:'<span class="muted">Sin imagen de la firma</span>'}
+  <input type="text" data-qf="nombre" value="${esc(f.nombre||'')}" placeholder="Debajo de la firma (ej.: Ing. Giancarlo Federico)" aria-label="Nombre debajo de la firma"></div>
+  <div class="actions"><label class="btn">${f.img?'Cambiar la imagen':'Subir la imagen de la firma'}<input type="file" accept="image/*" data-qfimg hidden></label><button type="button" class="btn ghost" data-qp="qfdel">Quitar la firma</button></div>`
+  :`<p class="muted" style="margin:0">Sin firma.</p><div class="actions"><label class="btn">Agregar una firma<input type="file" accept="image/*" data-qfimg hidden></label></div>`}</div>`}
+// la parte de abajo del presupuesto (y de la plantilla): bloques de texto y firma
+const qPieHtml=(como)=>`<section class="rel"><h3>Textos</h3><p class="hint">Salen debajo del total, cada uno con su título en negrita.</p>${qbHtml(como)}</section><section class="rel"><h3>Firma</h3>${qfHtml()}</section>`;
+// plantilla arriba del presupuesto
+function qTplHtml(){const l=cotTpls();return`<div class="qtpl"><label class="fld" for="q_tpl"><span>Plantilla de cotización</span><select id="q_tpl" data-qtpl><option value="">${l.length?'Sin plantilla':'Todavía no hay plantillas'}</option>${l.map(t=>`<option value="${esc(t.id)}"${QE.plantillaId===t.id?' selected':''}>${esc(t.nombre)}</option>`).join('')}</select></label>
+  <button type="button" class="btn ghost" data-qp="tpls">${l.length?'Editar plantillas':'Crear una plantilla'}</button></div>`}
+function qTplAplica(t){if(!t||!QE)return;const tieneL=QE.lineas.some(l=>l.desc||n0(l.precio));
+  const lin=(t.lineas||[]).filter(l=>l.desc).map(l=>{const p=n0(l.precio)?null:arr('productos').find(p=>qn(p.nombre)===qn(l.desc));return{desc:l.desc,cant:n0(l.cant)||1,unidad:l.unidad||p?.unidad||'unidad',precio:n0(l.precio)?r2(conv(l.precio,t.moneda||QE.moneda,QE.moneda)):p?r2(conv(p.precio,p.moneda,QE.moneda)):0}});
+  QE.plantillaId=t.id;QE.lineas=lin.length?lin:QE.lineas;QE.bloques=JSON.parse(JSON.stringify(t.bloques||[]));QE.firma=t.firma?{...t.firma}:null;
+  if(t.validez!=null&&t.validez!=='')QE.validez=n0(t.validez);if(typeof t.iva==='boolean')QE.iva=t.iva;
+  const set=(id,v,ch)=>{const e=$(id);if(e){if(ch)e.checked=!!v;else e.value=v}};set('#q_validez',QE.validez);set('#q_iva',QE.iva,1);
+  $('#qlines').innerHTML=qLinesHtml();$('#qbloques').outerHTML=qbList();$('#qfirma').outerHTML=qfHtml();qRefresh();SH.dirty=true;
+  toast(`Plantilla «${t.nombre}» aplicada${tieneL&&lin.length?': se reemplazaron las líneas':''}`)}
+// número 3665.01: el de la oportunidad, un punto y dos cifras que siguen
+function qNumOp(q){const o=q&&D.oportunidades[q.oportunidadId];const n=o&&String(o.numero||'').trim();if(!n)return'';
+  const re=new RegExp('^'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\.S?(\\d+)$');
+  const m=Math.max(0,...arr('presupuestos').map(x=>{const r=re.exec(String(x.numero||''));return r?+r[1]:0}));return n+'.'+String(m+1).padStart(2,'0')}
+// sacar la firma de una imagen: se achica (hasta 600 × 200) y queda en PNG, con su fondo transparente si lo tiene
+function qfLeer(file){return new Promise((ok,no)=>{const fr=new FileReader();fr.onerror=no;fr.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{const s=Math.min(1,600/im.width,200/im.height),w=Math.max(1,Math.round(im.width*s)),h=Math.max(1,Math.round(im.height*s));
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);ok(c.toDataURL('image/png'))};im.src=fr.result};fr.readAsDataURL(file)})}
+document.addEventListener('input',e=>{const t=e.target;if(!QE||!t||!t.dataset)return;
+  if(t.dataset.qb){const [i,k]=t.dataset.qb.split(':');const b=qbNorm(QE)[+i];if(b){b[k]=t.value;SH.dirty=true}return}
+  if(t.dataset.qf){QE.firma={...(QE.firma||{}),[t.dataset.qf]:t.value};SH.dirty=true;return}
+  if(t.id==='tp_n'){QE.nombre=t.value;SH.dirty=true}},true);
+document.addEventListener('change',async e=>{const t=e.target;if(!QE||!t||!t.dataset)return;
+  if(t.dataset.qtpl!=null){const tp=D.plantillas&&D.plantillas[t.value];if(tp)qTplAplica(tp);else{QE.plantillaId='';SH.dirty=true}return}
+  if(t.dataset.qfimg!=null&&t.files&&t.files[0]){try{const u=await qfLeer(t.files[0]);QE.firma={...(QE.firma||{}),img:u};$('#qfirma').outerHTML=qfHtml();SH.dirty=true}catch(_){toast('No se pudo leer la imagen.')}}},true);
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-qp]');if(!b||!QE)return;e.preventDefault();e.stopPropagation();const [k,a]=b.dataset.qp.split(':');const bs=qbNorm(QE);
+  const repinta=()=>{const box=$('#qbloques');if(box)box.outerHTML=qbList()};
+  if(k==='qbadd'){bs.push({t:'',x:''});repinta();SH.dirty=true;const ts=document.querySelectorAll('#qbloques [data-qb$=":t"]');ts[ts.length-1]?.focus();return}
+  if(k==='qbrm'){bs.splice(+a,1);repinta();SH.dirty=true;return}
+  if(k==='qbup'){const i=+a;if(i>0){[bs[i-1],bs[i]]=[bs[i],bs[i-1]];repinta();SH.dirty=true}return}
+  if(k==='qfdel'){QE.firma=null;$('#qfirma').outerHTML=qfHtml();SH.dirty=true;return}
+  if(k==='tpls'){if(SH.dirty&&!SH.warned){SH.warned=true;toast('Tenés cambios sin guardar. Tocá de nuevo para dejarlos y ver las plantillas.');return}openSheet('cotpls',null);return}
+  if(k==='tplcomo'){const box=$('#qtplcomo');if(box){box.hidden=!box.hidden;if(!box.hidden)$('#qtplcomo_n').focus()}return}
+  if(k==='tplcomook'){const n=($('#qtplcomo_n').value||'').trim();if(!n){$('#qtplcomo_n').focus();return}
+    const ya=cotTpls().find(t=>qn(t.nombre)===qn(n));const id=ya?ya.id:uid();
+    await put('plantillas',id,{...(ya||{creado:Date.now()}),nombre:n,moneda:QE.moneda,validez:QE.validez,iva:!!QE.iva,lineas:QE.lineas.filter(l=>l.desc).map(l=>({desc:l.desc,cant:n0(l.cant)||1,unidad:l.unidad||'unidad',precio:n0(l.precio)})),bloques:JSON.parse(JSON.stringify(qbNorm(QE))),firma:QE.firma?{...QE.firma}:null,actualizado:Date.now()});
+    QE.plantillaId=id;$('#qtplcomo').hidden=true;const s=$('#q_tpl');if(s)s.outerHTML=qTplHtml().match(/<select[\s\S]*?<\/select>/)[0];toast(ya?`Plantilla «${n}» actualizada`:`Plantilla «${n}» guardada`);return}
+},true);
+// --- la hoja de una plantilla (mismo editor de líneas que el presupuesto) ---
+function sheetCotpl(id,p){const t=id?D.plantillas[id]:null;
+  QE=t?JSON.parse(JSON.stringify(t)):{nombre:'',moneda:defMon(),validez:15,iva:true,lineas:[{desc:'',cant:1,unidad:'unidad',precio:0}],bloques:[{t:'Servicios',x:''},{t:'Notas',x:''},{t:'Condiciones comerciales',x:CFG.condiciones||''}],firma:null};
+  if(!QE.lineas||!QE.lineas.length)QE.lineas=[{desc:'',cant:1,unidad:'unidad',precio:0}];qbNorm(QE);
+  const body=`<div class="grid"><label class="fld full" for="tp_n"><span>Nombre de la plantilla</span><input id="tp_n" type="text" value="${esc(QE.nombre||'')}" placeholder="Ej.: Servicios, Cotización cableado, Mantenimiento CCTV"></label>
+    <label class="fld" for="q_moneda"><span>Moneda</span><select id="q_moneda" data-q="moneda">${opts([['UYU','$ Pesos'],['USD','US$ Dólares']],QE.moneda)}</select></label>
+    <label class="fld" for="q_validez"><span>Validez (días)</span><input type="number" id="q_validez" data-q="validez" min="0" value="${esc(QE.validez)}"></label>
+    <label class="fld chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="q_iva" data-q="iva"${QE.iva?' checked':''}><span>Sumar IVA 22 %</span></label></div>
+  <section class="rel"><h3>Líneas</h3><p class="hint">Las que se repiten. Con el precio en cero, toma el del catálogo si el nombre coincide.</p><div class="qlh" aria-hidden="true"><span>Descripción</span><span>Cant.</span><span>Unidad</span><span>Precio u.</span><span>Importe</span><span></span></div>
+    <div class="qlines" id="qlines">${qLinesHtml()}</div><div class="actions"><button class="btn" data-act="addline">+ Línea</button>${kitPickHtml()}</div><div class="totals" id="qtot">${qTotHtml()}</div></section>
+  ${qPieHtml()}<p class="err" id="shErr" hidden></p>${id?'<div class="actions"><button type="button" class="btn ghost danger" data-qp2="tpldel">Eliminar la plantilla</button></div>':''}`;
+  setTimeout(()=>{if(!id)$('#tp_n')?.focus()},40);
+  return sheetFrame('Plantilla de cotización',id?(t.nombre||'Plantilla'):'Nueva plantilla',body,{saveLabel:'Guardar plantilla'})}
+async function saveCotpl(){const n=String(QE.nombre||$('#tp_n')?.value||'').trim(),e=$('#shErr');if(!n){e.textContent='Poné un nombre a la plantilla.';e.hidden=false;$('#tp_n').focus();return}
+  const ya=cotTpls().find(t=>t.id!==SH.id&&qn(t.nombre)===qn(n));if(ya){e.textContent=`Ya hay una plantilla «${ya.nombre}». Elegí otro nombre.`;e.hidden=false;return}
+  const id=SH.id||uid();await put('plantillas',id,{...(SH.id?D.plantillas[SH.id]:{creado:Date.now()}),nombre:n,moneda:QE.moneda,validez:n0(QE.validez),iva:!!QE.iva,
+    lineas:QE.lineas.filter(l=>l.desc).map(l=>({desc:l.desc,cant:n0(l.cant)||1,unidad:l.unidad||'unidad',precio:n0(l.precio)})),bloques:qbNorm(QE).filter(b=>(b.t||'').trim()||(b.x||'').trim()),firma:QE.firma&&(QE.firma.img||QE.firma.nombre)?{...QE.firma}:null,actualizado:Date.now()});
+  toast('Plantilla guardada');openSheet('cotpls',null)}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-qp2="tpldel"]');if(!b||!SH||SH.type!=='cotpl'||!SH.id)return;e.preventDefault();e.stopPropagation();
+  if(b.dataset.arm!=='1'){b.dataset.arm='1';b.textContent='¿Eliminar la plantilla? Tocá de nuevo';return}
+  try{await remove('plantillas',SH.id)}catch(_){toast('No se pudo eliminar.');return}toast('Plantilla eliminada');openSheet('cotpls',null)},true);
+function sheetCotpls(){const l=cotTpls();QE=null;
+  const body=`<p class="hint" style="margin-top:0">Una plantilla guarda lo que se repite en una cotización: líneas, textos (Servicios, Notas, Condiciones comerciales) y la firma. Se elige arriba del presupuesto.</p>
+  ${l.length?`<div class="list">${l.map(t=>`<div class="item link" role="button" tabindex="0" data-open="cotpl:${esc(t.id)}"><span class="grow"><b>${esc(t.nombre)}</b><br><span class="muted">${pl((t.lineas||[]).length,'línea','líneas')} · ${pl((t.bloques||[]).length,'texto','textos')}${t.firma&&t.firma.img?' · con firma':''}</span></span><span class="num">${t.moneda==='USD'?'US$':'$'}</span></div>`).join('')}</div>`:'<p class="muted">Todavía no hay plantillas.</p>'}
+  <div class="actions"><button class="btn pri" data-new="cotpl">+ Nueva plantilla</button></div>`;
+  return sheetFrame('Cotizaciones','Plantillas',body,{saveLabel:'Listo'})}
+async function saveCotpls(){closeSheet()}
+window.__qNumOp=q=>qNumOp(q);window.__cotTpls=()=>cotTpls().map(t=>t.nombre);   // para las pruebas
+/* === fin 1.52z === */
+async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
-  const m=Math.max(0,...arr('presupuestos').filter(x=>x.oportunidadId===q.oportunidadId).map(x=>{const r=/\.S(\d+)$/.exec(String(x.numero||''));return r?+r[1]:0}));return o.numero+'.S'+(m+1)}catch(e){return''}}
+  return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
 // nombre de carpeta con el formato de siempre (número, fecha, descripción), para usar el mismo en el disco o en la nube
 const fjCarpeta=o=>o&&o.numero?`${o.numero}_${localISO(new Date(n0(o.creado)||Date.now())).slice(0,10)}_${String(o.titulo||'').replace(/[\\/:*?"<>|]/g,'').trim()}`:'';
 const fjCarpHtml=o=>o&&o.numero?`<p class="fjc"><span class="muted">Carpeta del proyecto</span> <span class="code">${esc(fjCarpeta(o))}</span> <button type="button" class="btn ghost" data-act="fjcarp">Copiar</button></p>`:'';
@@ -3487,7 +3694,7 @@ function fjHtml(){const v=CRMD||CRMC(),propio=Array.isArray(v.flujo)&&v.flujo.le
       </div>${b.k!=='per'&&(F[i+1]||{}).k!=='nuevo'?`<button type="button" class="fjadd" data-act="fjadd:${i}">+ Agregar un bloque acá</button>`:''}`}).join('')}
     <label class="fld chk"><input type="checkbox" data-cv="unaEntrada"${v.unaEntrada?' checked':''}><span>Toda oportunidad entra por el primer bloque (no se cargan directo en los siguientes)</span></label>
     <label class="fld chk"><input type="checkbox" data-cv="oblig"${v.oblig?' checked':''}><span>Para abrir una oportunidad son obligatorios el cliente, el monto, la probabilidad y la fecha estimada</span></label>
-    <label class="fld chk"><input type="checkbox" data-cv="cotNum"${v.cotNum?' checked':''}><span>Los presupuestos de una oportunidad llevan su número: P12.S1, P12.S2…</span></label>
+    <label class="fld chk"><input type="checkbox" data-cv="cotNum"${v.cotNum!==false?' checked':''}><span>Los presupuestos de una oportunidad llevan su número: 3665.01, 3665.02…</span></label>
     ${hu?`<p class="hint">Al guardar, ${pl(hu,'oportunidad que está','oportunidades que están')} en un bloque que sacaste ${hu>1?'pasan':'pasa'} al bloque anterior.</p>`:''}
     <p class="hint">Se guarda con “Guardar ventas”, abajo.</p></div>`}
 document.addEventListener('input',e=>{const t=e.target,p=t.dataset&&t.dataset.fj;if(!p)return;const [i,f]=p.split('.'),b=fjDraft()[+i];if(!b)return;
@@ -4464,7 +4671,7 @@ const ICN={
   mensaje:'<path d="M4.5 18.5l1.2-3.6A7.5 7.5 0 1 1 9 18z"/>',
   correo:'<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
   imprimir:'<path d="M7 9V3.5h10V9M7 17H5a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 5 9h14a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 19 17h-2"/><rect x="7" y="14" width="10" height="6.5" rx="1"/>',
-  foto:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.5-2.2h5.6L16.3 7h2.2A1.5 1.5 0 0 1 20 8.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z"/><circle cx="12" cy="13" r="3.4"/>',
+  foto:'<path d="M3 9.6A2.6 2.6 0 0 1 5.6 7h1.7a1.1 1.1 0 0 0 .92-.5l.86-1.3a1.6 1.6 0 0 1 1.33-.7h3.18a1.6 1.6 0 0 1 1.33.7l.86 1.3a1.1 1.1 0 0 0 .92.5h1.7A2.6 2.6 0 0 1 21 9.6v7.3a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 16.9z"/><circle cx="12" cy="13.1" r="3.5"/><path d="M17.5 10.3h.01"/>',
   clip:'<path d="M15.5 7l-6.8 6.8a2 2 0 0 0 2.8 2.8l6.9-6.9a4 4 0 0 0-5.7-5.7l-6.9 6.9a6 6 0 0 0 8.5 8.5l5.2-5.2"/>',
   firma:'<path d="M3.5 17.5c2.5-.2 3.5-6.8 5.5-6.8 1.6 0 .3 5.3 2 5.3 1.2 0 2-2.8 3.2-2.8 1 0 1 2.3 2.3 2.3H20M3.5 20.5h17"/>',
   agendar:'<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4M12 12.5v5M9.5 15h5"/>',
@@ -5868,6 +6075,19 @@ function spotBuscar(q){const n=s=>String(s||'').toLowerCase().normalize('NFD').r
 // el buscador del medio vive en otro <script> (d2js): se le pasan la búsqueda y cómo abrir una ficha
 window.__spotBuscar=spotBuscar;window.__abrirFicha=(t,i)=>openSheet(t,i);
 /* === fin 1.52s === */
+/* === 1.52w · tablero que baja entero, títulos a la vista, buscador al centro === */
+(()=>{
+  // el texto del buscador del centro (en el teléfono sigue siendo solo la lupa)
+  const lu=document.getElementById('topLupa');if(lu&&!lu.querySelector('.tl')){const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
+    lu.insertAdjacentHTML('beforeend',`<span class="tl">Buscar oportunidades, clientes, números…</span><kbd>${mac?'⌘':'Ctrl '}K</kbd>`)}
+  // todas las columnas del alto de la más larga (así ningún título se va con su columna) y los títulos pegados debajo de la barra
+  const medir=()=>{if(innerWidth<900)return;const tp=document.querySelector('.top');if(tp){const r=tp.getBoundingClientRect(),t=parseFloat(getComputedStyle(tp).top)||0;document.documentElement.style.setProperty('--toph',Math.round(t+r.height+6)+'px')}
+    document.querySelectorAll('#main .board').forEach(b=>{b.style.setProperty('--colmin','0px');const alto=Math.max(0,...[...b.querySelectorAll(':scope>.col')].map(c=>c.offsetHeight));b.style.setProperty('--colmin',alto+'px')})};
+  let pend=0;const ya=()=>{if(pend)return;pend=requestAnimationFrame(()=>{pend=0;medir()})};
+  const m=document.getElementById('main');if(m)new MutationObserver(ya).observe(m,{childList:true,subtree:true});
+  addEventListener('resize',ya);ya();window.__tableroMedir=medir;
+})();
+/* === fin 1.52w === */
 /* === 1.52f · editor de planos === */
 // 1.52f · Editor de planos y croquis como los programas que ya lo resolvieron (Christian 16/11 22:35: «cuando quiero mover un punto
 // puesto, termino moviendo la hoja… estas cosas hay que copiarlas de programas que ya lo tienen resuelto, como Canva… los botones clásicos
@@ -6808,7 +7028,7 @@ function vInventario(){
   const tec=isTec();const ds=tec?deps().filter(d=>d.tecnicoId===ME||arr('cuadrillas').some(c=>c.depositoId===d.id&&(c.miembros||[]).includes(ME))):deps();
   if(tec&&!['stock','equipos'].includes(INVT))INVT='stock';
   const tabs=`<div class="seg invtabs" role="tablist" style="margin-bottom:14px">${(tec?[['stock','Mi camioneta'],['equipos','Equipos'+(mp?` (${mp})`:'')]]:[['stock','Stock'],['movimientos','Movimientos'],['compras','Compras'],['equipos','Equipos'+(mp?` (${mp})`:'')],['depositos','Depósitos']]).map(([k,n])=>`<button role="tab" class="${INVT===k?'on':''}" aria-selected="${INVT===k}" data-act="invtab:${k}">${n}</button>`).join('')}</div>`;
-  const search=ph=>`<div class="row2" style="align-items:center"><input type="search" class="tfq" id="inv_q" value="${esc(INVQ)}" placeholder="${ph}" aria-label="Buscar" style="flex:1">${INVT==='stock'?scanBtn('inv'):''}</div>`;
+  const search=ph=>`<div class="invq"><label class="clibus">${ic('lupa')}<input type="search" class="tfq" id="inv_q" value="${esc(INVQ)}" placeholder="${ph}" aria-label="Buscar"></label>${INVT==='stock'?scanBtn('inv'):''}</div>`;
   const kpi=(n,v)=>`<div class="kpi"><span class="k">${n}</span><b class="num">${v}</b></div>`;
   const head=(sub,tools='')=>`<div class="vhead"><div><h1>${tec?'Mi camioneta':'Inventario'}</h1><p class="sub">${tec?'Lo que llevás cargado. Lo que usás en cada trabajo se descuenta desde el informe de la visita; la carga la hace la empresa.':sub}</p></div>${tools&&!tec?`<div class="tools">${tools}</div>`:''}</div>`;
   if(INVT==='compras')return vCompras(head,tabs);
@@ -6852,7 +7072,7 @@ function vInventario(){
     <tbody>${l.map(p=>`<tr data-open="stk:${p.id}" tabindex="0" style="cursor:pointer"><td><span class="pcell">${prodThumb(p,34)}<span><b>${esc(p.nombre)}</b>${p.codigo?`<br><span class="muted code">${esc(p.codigo)}</span>`:''}</td>${cols.map(d=>{const v=stockOf(m,p.id,d.id);return`<td class="n"${v<0?' style="color:var(--bad)"':''}>${v?fq(v,p):'—'}</td>`}).join('')}${INVD?'':`<td class="n"><b>${fq(stockOf(m,p.id),p)}</b></td>`}<td class="n">${n0(p.stockMin)?fq(p.stockMin,p):'—'}</td>${boss?`<td class="n">${n0(p.costo)?money(Math.max(0,tot(p))*costoUYU(p),'UYU'):'<span class="muted">sin costo</span>'}</td>`:''}<td>${st(p)}</td></tr>`).join('')}</tbody></table></div>`;
   return head(`Stock por depósito y camioneta${ds.length>6&&!INVD?' · se muestran los primeros 6 depósitos, filtrá para ver otro':''}`,tools)+tabs
     +`<div class="kpis only-dsk" style="margin:0 0 14px">${kpi('Artículos con stock',prods.filter(p=>stockOf(m,p.id)>0).length)}${boss?kpi('Valor del stock',money(val,'UYU')):kpi('Depósitos',ds.length)}${kpi('Bajo mínimo',nb)}${kpi('Mantenimientos a vencer',mp)}</div>`
-    +filt+search('Buscar producto o código')
+    +'<div class="invtop">'+search('Buscar producto o código')+filt+'</div>'
     +(l.length?mob+dsk:prods.length?'<p class="muted">Ningún producto coincide.</p>':`<div class="empty"><h2>Todavía no hay stock</h2><p>Cargá una <b>entrada</b> con lo que compraste o un <b>ajuste por conteo</b> con lo que hay hoy en cada depósito. Los productos se toman del catálogo.</p></div>`)
     +`<p class="hint" style="margin-top:12px">El stock baja solo cuando un técnico carga “Materiales del stock” en un trabajo. Los productos con número de serie quedan además como equipos instalados del cliente.</p>`;
 }
@@ -8027,7 +8247,11 @@ async function pdfQuote(q,isF){
   pdfNeed(d,tot.length*15+60);tot.forEach(([k,v])=>{pdfText(d,lx,d.y+10,k,{size:10});pdfText(d,tx,d.y+10,v,{size:10,align:'right'});d.y+=15});
   d.y+=4;pdfLine(d,lx,d.y,tx,d.y,{w:1.4,color:d.color});d.y+=6;pdfText(d,lx,d.y+13,'Total',{size:13,bold:true});pdfText(d,tx,d.y+13,money(t.total,m,2),{size:13,bold:true,align:'right'});d.y+=22;
   if(isF&&pag){pdfText(d,lx,d.y+10,'Cobrado',{size:10});pdfText(d,tx,d.y+10,money(pag,m,2),{size:10,align:'right'});d.y+=15;pdfText(d,lx,d.y+10,'Saldo',{size:10,bold:true});pdfText(d,tx,d.y+10,money(Math.max(0,t.total-pag),m,2),{size:10,bold:true,align:'right'});d.y+=15}
-  const cond=isF?q.notas:q.condiciones;if(cond){d.y+=14;pdfK(d,isF?'Notas':'Condiciones');pdfPara(d,cond,{size:9.5,color:'#323c4b'})}
+  if(!isF&&Array.isArray(q.bloques)&&q.bloques.length){d.y+=10;for(const b of q.bloques){if(!(b.t||'').trim()&&!(b.x||'').trim())continue;d.y+=8;if((b.t||'').trim()){pdfNeed(d,30);pdfPara(d,b.t.trim(),{size:10,bold:true,lh:14})}if((b.x||'').trim())pdfPara(d,b.x.trim(),{size:9.5,color:'#323c4b'})}}
+  else{const cond=isF?q.notas:q.condiciones;if(cond){d.y+=14;pdfK(d,isF?'Notas':'Condiciones');pdfPara(d,cond,{size:9.5,color:'#323c4b'})}}
+  if(!isF&&q.firma&&(q.firma.img||q.firma.nombre)){d.y+=22;const im=q.firma.img?await pdfImgFrom(q.firma.img,600):null;const cx=(d.m.l+d.W-d.m.r)/2;
+    if(im){const s=Math.min(54/im.h,170/im.w,1),w=im.w*s,h=im.h*s;pdfNeed(d,h+30);pdfImg(d,im,cx-w/2,d.y,w,h);d.y+=h+4}
+    if(q.firma.nombre){pdfNeed(d,16);pdfText(d,cx,d.y+10,q.firma.nombre,{size:10,align:'center'});d.y+=16}}
   d.y+=18;pdfPara(d,`Importes en ${m==='USD'?'dólares estadounidenses':'pesos uruguayos'}${q.iva?', IVA incluido en el total':', sin IVA'}.${isF?(q.cfe?` Comprobante fiscal: CFE ${q.cfe}.`:' Este detalle no es un comprobante fiscal.'):''}`,{size:8.5,color:d.muted});
   return pdfBytes(d);
 }
@@ -8215,8 +8439,8 @@ document.addEventListener('keydown',e=>{
   if(t.id==='inv_q'&&/^\d{8,14}$/.test(t.value.trim())){const p=scanFind(t.value.trim());if(p){e.preventDefault();INVQ=p.codigo||p.nombre;sr()}}
 });
 /* 1.23: pulido */
-const CAM_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8h4.6L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>';
-const scanBtn=(ctx,label='Leer código con la cámara')=>readonly?'':`<button type="button" class="btn ico" data-act="scan:${ctx}" title="${esc(label)}" aria-label="${esc(label)}">${CAM_SVG}</button>`;
+const CAM_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.6A2.6 2.6 0 0 1 5.6 7h1.7a1.1 1.1 0 0 0 .92-.5l.86-1.3a1.6 1.6 0 0 1 1.33-.7h3.18a1.6 1.6 0 0 1 1.33.7l.86 1.3a1.1 1.1 0 0 0 .92.5h1.7A2.6 2.6 0 0 1 21 9.6v7.3a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 16.9z"/><circle cx="12" cy="13.1" r="3.5"/><path d="M17.5 10.3h.01"/></svg>';
+const scanBtn=(ctx,label='Leer código con la cámara')=>readonly?'':`<button type="button" class="btn ico scanb" data-act="scan:${ctx}" title="${esc(label)}" aria-label="${esc(label)}">${CAM_SVG}</button>`;
 
 /* --- moneda rápida en el catálogo --- */
 let CATQ='';
@@ -8918,7 +9142,7 @@ function vOficina(){OFI.ready=false;OFI.last='';
 function saludo(){const h=new Date().getHours(),n=String((NAMES[ME]&&NAMES[ME].name)||'').split(' ')[0];return(h<12?'Buen día':h<20?'Buenas tardes':'Buenas noches')+(n?', '+n:'')}
 async function ofiMsg(e){const f=$('#ofiFrame');if(!f||e.source!==f.contentWindow)return;const d=e.data||{};if('ovFull' in d){f.classList.toggle('ofiFull',!!d.ovFull);document.documentElement.style.overflow=d.ovFull?'hidden':''}
   if(d.ovAlto){f.style.height=Math.ceil(d.ovAlto)+'px';return}
-  if(d.ovListo){OFI.ready=true;OFI.last='';ofiPost();return}
+  if(d.ovListo){f.classList.remove('ofiFull');document.documentElement.style.overflow='';OFI.ready=true;OFI.last='';ofiPost();return}
   if(Array.isArray(d.ovLayout)){if(!isLead())return;clearTimeout(OFI.layT);const lay=d.ovLayout;OFI.layT=setTimeout(()=>{if(JSON.stringify(lay)!==JSON.stringify(CFG.oficina&&CFG.oficina.lay))saveCfg({...CFG,oficina:{lay,at:Date.now(),by:ME||''}}).catch(()=>toast('No se pudo guardar la oficina. Revisá la conexión.'))},1500);return}
   if(d.olumiAvatar&&ME){const a=d.olumiAvatar,ok=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x);put('munecos',ME,{skin:ok(a.skin)?a.skin:'',hair:ok(a.hair)?a.hair:'',top:ok(a.top)?a.top:'',style:[0,1,2].includes(a.style)?a.style:0,at:Date.now()}).catch(()=>{});return}
   if(d.olumiAbrir&&/^agentes:/.test(String(d.olumiAbrir))){AGT=String(d.olumiAbrir).split(':')[1];lsSet('olumi.ag',AGT);if(viewOk('agentes')){if(typeof ofiPanel==='function'&&VIEW==='oficina')ofiPanel('agentes');else{VIEW='agentes';lsSet('crm.view',VIEW);sr()}}return}
@@ -9699,7 +9923,7 @@ function renderAuth(){
   }else if(authMode==='mfa'){
     body=mfaAuthHtml(err);
   }else if(authMode==='config'){
-    body=`<h2>Falta conectar el servidor</h2><p class="muted">Completá el archivo <b>www/config.js</b> con la URL y la clave pública de tu proyecto de Supabase.</p>`;
+    body=`<h2>Olumi se está actualizando</h2><p class="muted">Volvemos en unos minutos. Mientras tanto podés seguir en la web: es la misma cuenta y los mismos datos.</p><a class="btn pri" href="https://unitytech.uy/olumi/app/" target="_blank" rel="noopener">Abrir Olumi en la web</a><button type="button" class="btn ghost" onclick="location.reload()">Reintentar</button><p class="hint" style="margin-top:14px">Código para soporte: ${esc(window.supabase?((window.__olumiFalta||'').trim()||'servidor'):'sin-libreria')}</p>`;
   }
   const keep=($('#a_email')||{}).value||'';$('#authBody').innerHTML=body;const ae=$('#a_email');if(ae&&keep&&!ae.value)ae.value=keep;const f=(ae&&keep&&$('#a_pass'))||$('#authBody input');if(f)f.focus();
 }
