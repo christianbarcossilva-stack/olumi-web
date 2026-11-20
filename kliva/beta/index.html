@@ -461,6 +461,23 @@ button.row:hover { background: var(--surface-2); }
 .pick input { position: absolute; opacity: 0; }
 .pick strong { display: block; font-weight: 600; }
 .pick small { color: var(--muted); font-size: 12.5px; }
+/* Selector con buscador (el área): parece un campo, se abre debajo, adentro de la ficha */
+.picker-btn { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 9px 12px 9px 13px; border: 0; border-radius: 12px; background: var(--field); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.picker-btn > span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-btn > span.faint { color: var(--faint); }
+.picker-btn .i { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.picker-btn[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.picker-pop { margin-top: 6px; border-radius: 16px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 12px 32px rgb(0 0 0 / .12); overflow: hidden; }
+.picker-q { display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-bottom: 1px solid var(--line); }
+.picker-q .i { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.picker-q input[type="search"] { min-height: 44px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.picker-list { max-height: 264px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; }
+.picker-list .group { padding: 10px 12px 4px; color: var(--faint); font-size: 12px; font-weight: 600; }
+.picker-list .opt { min-height: 44px; border-radius: 12px; color: var(--fg); font: inherit; cursor: pointer; }
+.picker-list .opt:hover, .picker-list .opt:focus-visible { background: var(--surface-2); outline: none; }
+.picker-list .opt .i { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.picker-list .opt[aria-selected="true"] .i:last-child { color: var(--accent-ink, var(--accent)); }
+.picker-list .empty { padding: 14px 12px; color: var(--muted); font-size: 14px; }
 .palette { align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
 .palette-box { position: relative; width: min(620px, 100%); max-height: 100%; display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; }
 .palette-field { display: flex; align-items: center; gap: 12px; padding: 6px 18px; border-bottom: 1px solid var(--line); color: var(--muted); }
@@ -1898,6 +1915,9 @@ function values(form) {
 async function submit(form) {
   const button = $('button[type="submit"]', form), error = $('.form-error', form);
   if (error) error.textContent = '';
+  // campos que no son de los del navegador (como el área): avisan si quedaron vacíos
+  const missing = $$('input[type="hidden"][data-required]', form).find(i => !i.value);
+  if (missing) { if (error) error.textContent = missing.dataset.required; else toast(missing.dataset.required, 'deny'); missing.closest('[data-picker]')?.querySelector('.picker-btn')?.focus(); return; }
   if (button) button.disabled = true;
   try {
     await forms[form.dataset.form](form, values(form));
@@ -2445,7 +2465,7 @@ function deviceSheet(d) {
           <input type="radio" name="brand" value="${b.brand}" ${b === first ? raw('checked') : ''}><strong>${b.label}</strong><small>${b.protocol}</small></label>`)}</div>
           <p class="hint" id="brand-hint" style="margin-top:8px">${brandHint(first)}</p></fieldset>`}
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${d?.name}" placeholder="Controladora de portería" required></label>
-    <label class="field"><span>Área</span><select name="site_id" required>${S.sites.map(s => html`<option value="${s.id}" ${(d?.site_id ?? S.vista.area) === s.id ? raw('selected') : ''}>${viewCompany() ? s.name : `${companyById(s.company_id)?.name ?? ''}, ${s.name}`}</option>`)}</select></label>
+    ${areaPicker('site_id', d?.site_id ?? (S.vista.area || (S.sites.length === 1 ? S.sites[0].id : '')))}
     <div class="form-row">
       <label class="field"><span>Dirección IP</span><input type="text" name="host" class="mono" value="${d?.host}" placeholder="192.168.1.201" inputmode="decimal" required></label>
       <label class="field"><span>Puerto</span><input type="number" name="port" class="mono" value="${d?.port ?? first.defaultPort}" min="1" max="65535" required></label>
@@ -2466,7 +2486,7 @@ function deviceSheet(d) {
       ${d.capabilities.people ? html`<button class="btn sm" type="button" data-action="device-resync" data-id="${d.id}">Reenviar todas las personas a este equipo</button>` : ''}</div>` : ''}
   </form>`);
 }
-actions['device-new'] = () => S.sites.length ? deviceSheet(null) : toast('Primero creá un área en Ajustes', 'deny');
+actions['device-new'] = () => deviceSheet(null); // si no hay áreas, se crea desde el mismo campo Área
 actions['device-edit'] = el => isAdmin() && deviceSheet(S.devices.find(d => d.id === el.dataset.id));
 actions['device-test'] = async el => {
   const form = el.closest('form'), v = values(form), box = $('#test-result');
@@ -3159,6 +3179,75 @@ function redrawForCompany(el) {
     setHTML($('#person-levels'), html`<legend>Por dónde puede pasar</legend>${personLevels(el.value, null)}`);
   }
 }
+
+// ── Elegir el área en una ficha: con buscador (para cuando son muchas) y para crear una nueva ahí mismo,
+// sin ir a Ajustes. Se abre adentro de la ficha, debajo del campo, para que no la tape nada.
+const manyCompanies = () => !viewCompany() && S.companies.length > 1;
+const areaLabel = s => manyCompanies() ? `${companyById(s.company_id)?.name ?? ''}, ${s.name}` : s.name;
+const canCreateArea = () => isAdmin() && !S.me.areas;
+function areaPicker(name, current) {
+  const s = S.sites.find(x => x.id === current);
+  return html`<div class="field picker" data-picker><span id="${name}-label">Área</span>
+    <input type="hidden" name="${name}" value="${s?.id ?? ''}" data-required="Elegí el área${canCreateArea() ? ' o creá una' : ''}">
+    <button class="picker-btn" type="button" data-action="picker-toggle" aria-expanded="false" aria-labelledby="${name}-label">
+      <span class="${s ? '' : 'faint'}">${s ? areaLabel(s) : (S.sites.length ? 'Elegí un área' : 'Todavía no hay áreas: creá la primera')}</span>${icon('updown')}</button>
+    <div class="picker-pop" hidden>
+      <label class="picker-q">${icon('search')}<input type="search" autocomplete="off" spellcheck="false" aria-label="Buscar un área"
+        placeholder="${S.sites.length ? (canCreateArea() ? 'Buscar o crear un área' : 'Buscar un área') : 'Nombre del área, por ejemplo Planta B'}"></label>
+      <ul class="picker-list" role="listbox"></ul>
+    </div></div>`;
+}
+function pickerDraw(box) {
+  const typed = $('.picker-q input', box).value.trim(), q = fold(typed), cur = $('input[type="hidden"]', box).value;
+  const hit = s => !q || fold(`${s.name} ${s.address ?? ''} ${companyById(s.company_id)?.name ?? ''}`).includes(q);
+  const opt = s => html`<li role="presentation"><button class="opt" type="button" role="option" data-action="picker-choose" data-id="${s.id}" aria-selected="${String(s.id === cur)}">
+    ${icon('site')}<span><b>${s.name}</b>${s.address ? html`<small>${s.address}</small>` : ''}</span>${s.id === cur ? icon('check') : ''}</button></li>`;
+  let out = '';
+  if (manyCompanies()) {
+    for (const c of S.companies) {
+      const list = S.sites.filter(s => s.company_id === c.id && hit(s));
+      if (list.length) out += html`<li class="group" role="presentation">${c.name}</li>${list.map(opt)}`;
+    }
+  } else out += S.sites.filter(hit).map(opt).join('');
+  // Crear: con lo que se escribió, en la empresa que se está mirando (o en cada una, si se miran todas)
+  if (canCreateArea() && typed && !S.sites.some(s => fold(s.name) === q)) {
+    const targets = viewCompany() ? [viewCompany()] : S.companies.length ? S.companies.slice(0, 6) : [null];
+    out += html`<li class="group" role="presentation">Nueva</li>${targets.map(c => html`<li role="presentation"><button class="opt" type="button" data-action="picker-new" data-company="${c?.id ?? ''}">
+      ${icon('plus')}<span><b>Crear «${typed}»</b>${c && (manyCompanies() || S.companies.length > 1) ? html`<small>en ${c.name}</small>` : ''}</span></button></li>`)}`;
+  }
+  if (!out) out = html`<li class="empty">${S.sites.length ? 'Ningún área coincide.' : canCreateArea() ? 'Escribí el nombre del área: una planta, un depósito, una oficina.' : 'Pedile a un administrador que cree el área.'}</li>`;
+  setHTML($('.picker-list', box), out);
+}
+function pickerClose(box) {
+  if (!box) return;
+  $('.picker-pop', box).hidden = true;
+  $('.picker-btn', box).setAttribute('aria-expanded', 'false');
+}
+function pickerSet(box, s) {
+  $('input[type="hidden"]', box).value = s.id;
+  setHTML($('.picker-btn', box), html`<span>${areaLabel(s)}</span>${icon('updown')}`);
+  pickerClose(box);
+  $('.picker-btn', box).focus();
+}
+actions['picker-toggle'] = el => {
+  const box = el.closest('[data-picker]'), pop = $('.picker-pop', box);
+  if (!pop.hidden) return pickerClose(box);
+  pop.hidden = false; el.setAttribute('aria-expanded', 'true');
+  const q = $('.picker-q input', box); q.value = ''; pickerDraw(box);
+  q.focus({ preventScroll: true }); box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+};
+actions['picker-choose'] = el => pickerSet(el.closest('[data-picker]'), S.sites.find(s => s.id === el.dataset.id));
+actions['picker-new'] = async el => {
+  const box = el.closest('[data-picker]'), name = $('.picker-q input', box).value.trim();
+  el.disabled = true;
+  try {
+    const s = await S.api.post('/api/sites', { name, company_id: el.dataset.company || undefined });
+    await load('companies', 'sites');
+    drawScope();
+    pickerSet(box, S.sites.find(x => x.id === s.id) ?? s);
+    toast(`Área «${s.name}» creada`);
+  } catch (e) { el.disabled = false; toast(e.message, 'deny'); }
+};
 
 // Control de horario: a qué hora entró y salió cada persona contra su turno, con las pasadas de las puertas que marcan horario.
 // El cálculo es el mismo del servidor (server/core/horario.js); acá solo se muestra y se administran los turnos.
@@ -3927,6 +4016,8 @@ async function boot() {
 actions.retry = () => boot();
 
 document.addEventListener('click', e => {
+  // tocar fuera de un selector abierto lo cierra
+  for (const box of $$('[data-picker]')) if (!$('.picker-pop', box).hidden && !box.contains(e.target)) pickerClose(box);
   const el = e.target.closest('[data-action]'), fn = el && actions[el.dataset.action];
   if (!fn) return;
   if (el.tagName !== 'A') e.preventDefault();
@@ -3939,6 +4030,21 @@ document.addEventListener('submit', e => {
   submit(form);
 });
 document.addEventListener('keydown', e => {
+  const pick = e.target.closest?.('.picker-q');
+  if (pick) {
+    const box = pick.closest('[data-picker]'), opts = $$('.picker-list .opt', box), at = opts.indexOf(document.activeElement);
+    if (e.key === 'Enter') { e.preventDefault(); (opts.find(o => o.getAttribute('aria-selected') === 'true' && $('.picker-q input', box).value === '') ?? opts[0])?.click(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pickerClose(box); $('.picker-btn', box).focus(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); opts[0]?.focus(); return; }
+  }
+  const inList = e.target.closest?.('.picker-list');
+  if (inList && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Escape')) {
+    const box = inList.closest('[data-picker]'), opts = $$('.picker-list .opt', box), at = opts.indexOf(e.target);
+    e.preventDefault();
+    if (e.key === 'Escape') { pickerClose(box); $('.picker-btn', box).focus(); return; }
+    const next = at + (e.key === 'ArrowDown' ? 1 : -1);
+    (next < 0 ? $('.picker-q input', box) : opts[Math.min(next, opts.length - 1)]).focus(); return;
+  }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && S.me) { e.preventDefault(); return palette.isOpen ? palette.close() : palette.open(); }
   // «/» abre el buscador, como en Olumi, salvo que se esté escribiendo en un campo
   if (e.key === '/' && S.me && !palette.isOpen && !sheet.isOpen && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '') && !document.activeElement?.isContentEditable) { e.preventDefault(); return palette.open(); }
@@ -3954,6 +4060,7 @@ window.addEventListener('resize', () => { if ($('#view')) { drawChrome(); $$('.s
 let searchTimer;
 document.addEventListener('input', e => {
   if (e.target.id === 'palette-q') return palette.render();
+  if (e.target.closest('.picker-q')) return pickerDraw(e.target.closest('[data-picker]'));
   if (e.target.id === 'look-custom') { const c = e.target.value.toUpperCase(); return look.set({ accent: c, fg: look.ink(c) }); }
   if (e.target.id !== 'people-q') return;
   S.peopleQ = e.target.value;
