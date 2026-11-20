@@ -302,6 +302,23 @@ legend { padding: 0; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
 .card.flush { padding-bottom: 6px; }
 .card-head { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
 .card-head > :first-child { flex: 1 1 auto; min-width: 0; }
+.back { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 6px -4px; padding: 4px 8px 4px 2px; border: 0; border-radius: 999px; background: none; color: var(--accent-ink, var(--accent)); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.back .i { width: 18px; height: 18px; }
+.back:hover { background: var(--surface-2); }
+/* Ficha de cliente (instaladora mirando todas las empresas): la ficha entera se toca */
+.card.client { width: 100%; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; gap: 10px; transition: transform var(--t2) var(--mo); }
+.card.client:active { transform: scale(.99); }
+.card.client:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.card.client > .card-head { flex-wrap: nowrap; align-items: flex-start; }
+.card.client > .card-head > .i { margin-top: 4px; flex: none; width: 20px; height: 20px; color: var(--muted); }
+.client-name { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; }
+.client-name b { font-size: 19px; font-weight: 700; letter-spacing: -.015em; }
+.client-name small { grid-column: 2; }
+.health { width: 10px; height: 10px; border-radius: 50%; background: var(--pass); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pass) 18%, transparent); }
+.health[data-tone="deny"] { background: var(--deny); box-shadow: 0 0 0 4px color-mix(in srgb, var(--deny) 18%, transparent); }
+.client-line { color: var(--muted); font-size: 15px; line-height: 1.5; }
+.client-line b { color: var(--fg); font-weight: 600; }
+.client-line .bad { color: var(--deny); font-weight: 500; }
 .card-head small { display: block; color: var(--muted); font-size: 13.5px; font-weight: 400; letter-spacing: 0; margin-top: 2px; }
 .rows > li + li { border-top: 1px solid var(--line); }
 .row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 60px; padding: 10px 2px; border: 0; background: none; text-align: left; }
@@ -2095,17 +2112,52 @@ const PRIMARY = {
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 views.panel = () => html`
-  <header class="view-head"><div>${canSwitch() ? html`<h1><button class="title-pick" type="button" data-action="scope" aria-label="Elegir empresa y área">${scopeTitle()}${icon('updown')}</button></h1>` : html`<h1>${scopeTitle()}</h1>`}
+  <header class="view-head"><div>${isGlobal() && viewCompany() && S.companies.length > 1 ? html`<button class="back" type="button" data-action="client-open" data-id="">${icon('left')}<span>Todas las empresas</span></button>` : ''}${canSwitch() ? html`<h1><button class="title-pick" type="button" data-action="scope" aria-label="Elegir empresa y área">${scopeTitle()}${icon('updown')}</button></h1>` : html`<h1>${scopeTitle()}</h1>`}
     <p class="lede" id="status">${statusText()}</p></div>${demoNote()}</header>
   ${areaBar()}
   <div class="panel-grid">
-    <div class="stack" style="gap:20px">${S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">${viewCompany() ? `${viewCompany().name} todavía no tiene áreas. Se agregan en Ajustes, en la ficha de la empresa.` : 'Todavía no hay empresas. Se agregan en Ajustes, con sus áreas y sus usuarios.'}</p></section>`}</div>
+    <div class="stack" style="gap:20px">${clientMode() ? S.companies.map(clientCard) : S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">${viewCompany() ? `${viewCompany().name} todavía no tiene áreas. Se agregan en Ajustes, en la ficha de la empresa.` : 'Todavía no hay empresas. Se agregan en Ajustes, con sus áreas y sus usuarios.'}</p></section>`}</div>
     <section class="card flush" aria-label="Movimientos en vivo">
       <div class="card-head"><h2>Ahora</h2></div>${hoursChart(S.overview.hours)}
       <ol class="events" id="feed">${S.feed.filter(e => inGroup(e, 'main')).slice(0, 40).map(e => eventRow(e))}</ol>
       ${S.feed.length ? '' : html`<p class="empty">Acá van a aparecer los accesos a medida que ocurran.</p>`}
     </section>
   </div>`;
+
+// Mirando todas las empresas, la instaladora ve una ficha por cliente: cómo está y qué le pasa, sin entrar.
+// Tocarla lleva a ese cliente, con sus áreas y sus puertas.
+const clientMode = () => isGlobal() && !viewCompany() && S.companies.length > 1;
+function clientHealth(c) {
+  const areas = new Set(c.areas.map(a => a.id));
+  const devices = S.devices.filter(d => d.enabled && areas.has(d.site_id)), off = devices.filter(d => d.status !== 'online');
+  const doors = S.doors.filter(d => areas.has(d.site_id)), open = doors.filter(d => d.state === 'open' && d.device_status === 'online').length;
+  const inside = S.presence.filter(p => areas.has(p.site_id)).length;
+  const sitesOn = S.sites.filter(s => areas.has(s.id) && MODE[s.mode]);
+  const last = S.feed.find(e => areas.has(e.site_id) && (e.kind === 'access_granted' || e.kind === 'access_denied'));
+  const tone = sitesOn.length || off.length ? 'deny' : 'pass';
+  return { devices, off, doors, open, inside, sitesOn, last, tone };
+}
+function clientLine(h) {
+  return html`${h.sitesOn.map(s => html`<span class="bad">${MODE[s.mode][0]} en ${s.name}.</span> `)}
+    ${!h.devices.length ? 'Todavía sin equipos.' : h.off.length ? html`<b>${h.devices.length - h.off.length}</b> de <b>${h.devices.length}</b> equipos en línea. <span class="bad">Sin conexión: ${h.off.map(d => d.name).join(', ')}.</span>`
+      : h.devices.length === 1 ? 'El equipo está en línea.' : html`Los <b>${h.devices.length}</b> equipos en línea.`}
+    ${h.open ? html`<b>${count(h.open, 'puerta abierta', 'puertas abiertas')}</b>.` : ''}
+    ${h.inside ? html`<b>${count(h.inside, 'persona', 'personas')}</b> adentro.` : ''}
+    ${h.last ? html`Último acceso: ${h.last.person_name || 'sin identificar'}, ${isToday(h.last.ts) ? `a las ${hourFormat.format(h.last.ts)}` : dayFormat.format(h.last.ts)}.` : ''}`;
+}
+function clientCard(c) {
+  return html`<button class="card client" id="client-${c.id}" type="button" data-action="client-open" data-id="${c.id}" aria-label="Entrar a ${c.name}">${clientInner(c)}</button>`;
+}
+function clientInner(c) {
+  const h = clientHealth(c);
+  const line = clientLine(h);
+  return html`<span class="card-head"><span class="client-name"><span class="health" data-tone="${h.tone}" aria-hidden="true"></span><b>${c.name}</b>
+      <small>${[c.areas.map(a => a.name).join(', ') || 'Sin áreas', count(h.doors.length, 'puerta', 'puertas'), count(c.people, 'persona', 'personas')].join(', ')}</small></span>${icon('right')}</span>
+    <span class="client-line">${line}</span>`;
+}
+/** Con datos en vivo, cada ficha de cliente se actualiza sola, sin redibujar el panel. */
+const patchClients = () => { if (clientMode()) for (const c of S.companies) { const el = $(`#client-${c.id}`); if (el) setHTML(el, clientInner(c)); } };
+actions['client-open'] = el => setVista({ empresa: el.dataset.id, area: '' });
 
 function siteCard(site) {
   const doors = S.doors.filter(d => d.site_id === site.id);
@@ -3632,7 +3684,7 @@ function onLive(type, data) {
 }
 
 function handleLive(type, data) {
-  const status = () => { if (S.view === 'panel') setHTML($('#status'), statusText()); };
+  const status = () => { if (S.view === 'panel') { setHTML($('#status'), statusText()); patchClients(); } };
   if (type === 'event' && data.recovered) return refreshSoon('feed', 'overview', 'presence', ...(S.view === 'eventos' ? ['events'] : [])); // vino del historial de un equipo: va en su lugar, no arriba
   if (type === 'event') {
     S.feed.unshift(data);
@@ -3673,6 +3725,7 @@ function handleLive(type, data) {
     Object.assign(S.sites.find(s => s.id === data.id) ?? {}, data);
     drawAlarm();
     if (S.view === 'panel') for (const d of S.doors) if (d.site_id === data.id) patchDoor(d.id);
+    status();
     refreshSoon('notices');
   } else if (type === 'device') {
     Object.assign(S.devices.find(d => d.id === data.id) ?? {}, data);
