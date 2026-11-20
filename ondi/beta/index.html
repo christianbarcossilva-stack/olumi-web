@@ -130,6 +130,12 @@ main{min-width:0;padding:26px 28px 56px}
 .maq{position:relative;height:calc(100vh - 250px);min-height:460px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--sunken)}
 .maq iframe{width:100%;height:100%;border:0;display:block}
 .maq #maqvieja{opacity:.01;pointer-events:none}
+.maqcarga{position:absolute;inset:0;z-index:4;display:grid;place-content:center;justify-items:center;gap:12px;text-align:center;padding:24px;background:var(--sunken);color:var(--ink);transition:opacity .35s ease}
+.maqcarga.fuera{opacity:0;pointer-events:none}.maqcarga b{font-size:15px;font-weight:600}.maqcarga small{font-size:13px;color:var(--muted);max-width:44ch}
+.barra{width:min(240px,60vw);height:4px;border-radius:4px;background:color-mix(in srgb,var(--ink) 12%,transparent);overflow:hidden;position:relative}
+.barra::after{content:"";position:absolute;top:0;bottom:0;left:0;width:38%;border-radius:4px;background:var(--accent);animation:barra 1.25s cubic-bezier(.45,0,.35,1) infinite}
+@keyframes barra{from{transform:translateX(-105%)}to{transform:translateX(270%)}}
+@media (prefers-reduced-motion:reduce){.barra::after{animation:barra2 1.6s ease-in-out infinite alternate;width:100%;transform:none}@keyframes barra2{from{opacity:.25}to{opacity:.9}}}
 .maqpase{position:absolute;inset:0;z-index:3;display:grid;place-content:center;gap:6px;text-align:center;padding:24px;background:var(--sunken);color:var(--ink)}
 .maqpase b{font-size:17px}
 .maqpase span{font-size:13.5px;color:var(--muted);max-width:44ch}
@@ -193,6 +199,15 @@ tr:last-child td{border-bottom:0}
   .maq{height:calc(100vh - 260px);min-height:380px}
 }
 @media (min-width:861px){.mnav{display:none}}
+/* pantalla de un cliente: encabezado finito (volver + nombre), pestañas y barra de la maqueta en una sola fila, y la maqueta ocupa el resto */
+main.msitio{padding-top:14px}.wrap.sitio{gap:10px}
+.shead{display:flex;align-items:center;gap:12px;min-width:0}
+.volver{flex:none;width:36px;height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 var(--brillo);transition:background .2s,border-color .2s,transform .2s}
+.volver:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}.volver:hover svg{transform:translateX(-2px)}.volver svg{width:18px;height:18px;transition:transform .2s}.volver:active{transform:scale(.94)}
+.stit{min-width:0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.stit h1{font-family:var(--f-display);font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.15;margin:0}.stit p{margin:0;color:var(--muted);font-size:13.5px}
+.srow{display:flex;align-items:flex-end;gap:6px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.srow .tabs{border-bottom:0;min-width:0}.srow .tabs button{padding:9px 11px;font-size:14.5px}.srow .maqbar{margin-left:auto;padding-bottom:6px;gap:6px}.srow .maqbar .grow{display:none}.srow .maqbar .btn{padding:6px 10px;font-size:13.5px}.srow .save{white-space:nowrap}
+.wrap.sitio .maq{height:calc(100vh - 168px);height:calc(100dvh - 168px);min-height:420px}
+@media (max-width:860px){main.msitio{padding-top:12px}.stit h1{font-size:21px}.srow .maqbar{margin-left:0;width:100%;padding-bottom:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.srow .maqbar .btn{flex:none}.wrap.sitio .maq{height:calc(100dvh - 250px);min-height:360px}}
 /* panel, ajustes, marcas y alta de clientes */
 .stabs{display:flex;gap:4px;flex-wrap:wrap}
 .stabs button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:7px 14px;font-weight:500;font-size:14px;color:var(--muted)}
@@ -305,7 +320,9 @@ select option{background:var(--solid);color:var(--ink)}
 html.navmini .app{grid-template-columns:84px minmax(0,1fr)}html.navmini .side{padding:18px 8px;align-items:stretch}html.navmini .sidehead{flex-direction:column;gap:12px}
 html.navmini .side .orgsel,html.navmini .side .side-foot,html.navmini .side .sopo,html.navmini .side .logo>span{display:none}
 html.navmini .nav button{flex-direction:column;justify-content:center;gap:3px;padding:8px 2px 7px;border-radius:18px;min-height:54px}html.navmini .nav button span{font-size:10px;font-weight:600;line-height:1.1;text-align:center;white-space:normal}html.navmini .navpill{border-radius:18px}
-@media (prefers-reduced-motion:reduce){.navpill{transition:none}}
+html.navcambia .side .nav button span,html.navcambia .side .logo>span,html.navcambia .side .orgsel,html.navcambia .side .side-foot{animation:navfade .26s ease}
+@keyframes navfade{from{opacity:0}to{opacity:1}}html.navcambia .navpill{transition:none!important}
+@media (prefers-reduced-motion:reduce){.navpill{transition:none}html.navcambia .side *{animation:none!important}}
 /* documentación de conexiones */
 .doc{display:grid;grid-template-columns:var(--dw,300px) 14px minmax(0,1fr);gap:0;margin-top:14px;align-items:start}.doc.cerrada .docl{visibility:hidden;overflow:hidden;width:0;padding:0}.doc.cerrada{grid-template-columns:0 14px minmax(0,1fr)}
 .docsplit{position:relative;align-self:stretch;min-height:200px;cursor:col-resize;display:flex;flex-direction:column;align-items:center}.docsplit::before{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;border-radius:2px;background:transparent;transition:background .15s}.docsplit:hover::before,.doc.arrastra .docsplit::before,.docsplit:focus-visible::before{background:var(--accent)}
@@ -400,6 +417,7 @@ const IC = {
   sites: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg>',
   cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
   back: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  volver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   ped: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
@@ -451,7 +469,7 @@ const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
 const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
 const BASES = { motor: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], plano: ['Desde un plano o una foto', 'Arrastrás a la maqueta un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'Un parque logístico completo, inventado, para mostrar cómo queda.'], vacia: ['Maqueta en blanco', ''] };
 // La maqueta es una sola, en el motor común. La de siempre quedó archivada (ondi/archivo/): se abre tapada, una sola vez por cliente, para convertir lo que tenía cargado.
-const MOTOR = '../../motor/beta/?app=ondi&v=40', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
+const MOTOR = '../../motor/beta/?app=ondi&v=41', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
 let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
 const fmtD = d => d ? new Date(d).toLocaleString('es-UY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -582,11 +600,11 @@ function render() {
   if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
   S.docRe = false;
   if (S.view === 'sim' && S.sim && !S.modal && !S.falta && $('#maqframe') && $('#maqframe').dataset.site === 'sim:' + S.sim) return;
-  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15"/><path d="${S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'}"/></svg></button></div>
+  $('#root').innerHTML = `<div class="app"><aside class="side"><div class="sidehead">${logo()}<button class="sidetog" data-sidetog aria-expanded="${!S.mini}" aria-label="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}" title="${S.mini ? 'Agrandar el menú' : 'Achicar el menú'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M9.5 4.5v15"/><path d="${S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'}"/></svg></button></div>
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav"><span class="navpill" aria-hidden="true"></span>${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot"><span>${esc(S.user.email)}</span><span class="muted">${who}</span><button class="lnk" style="text-align:left" data-a="logout">Salir</button></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}<button data-a="logout">Salir</button></div>
-    <main id="main">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    <main id="main" class="${S.view === 'site' && S.site && !S.falta ? 'msitio' : ''}">${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   navPill();
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
@@ -686,15 +704,16 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="acts"><button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button></div></div><div class="maq" id="maqbox"></div></div>`;
   return `<div class="wrap"><div class="head"><div><h1>Simulación</h1><p>Clientes inventados para mostrar Ondi o practicar. No son clientes tuyos, no usan equipos reales y lo que cambies no se guarda.</p></div></div>
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
-async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
+async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = CARGA();
   let g = null; try { g = await (await fetch(ESCENAS + 'sim-' + s.id + '.json')).json(); } catch (e) {} if (S.sim !== s.id || !$('#maqbox')) return; if (!g || !g.escena) { box.innerHTML = '<div class="empty">No se pudo abrir la simulación. Probá de nuevo.</div>'; return; }
   window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, save() {} };
-  box.innerHTML = `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; }
+  box.innerHTML = CARGA() + `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; maqListo($('#maqframe')); }
 function siteHead() { const st = S.site, l = linksOf(st);
-  return `${staff() ? `<button class="crumb" data-nav="clientes">${IC.back}Clientes</button>` : ''}<div class="head"><div><h1>${esc(st.name)}</h1><p>${esc([(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · '))}</p></div></div>`; }
+  const sub = [(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · ');
+  return `<div class="shead">${staff() ? `<button class="volver" data-nav="clientes" aria-label="Volver a Clientes" title="Volver a Clientes">${IC.volver}</button>` : ''}<div class="stit"><h1>${esc(st.name)}</h1>${sub ? `<p>${esc(sub)}</p>` : ''}</div></div>`; }
 function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos', 'Equipos'], ['doc', 'Documentación'], ['integ', 'Integraciones'], ['accesos', 'Accesos'], ['datos', 'Datos']] : [['maqueta', 'Maqueta'], ['equipos', 'Equipos']];
-  return `<div class="wrap wide"><div id="sitehead">${siteHead()}</div><div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${n}</button>`).join('')}</div>
-    ${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div><div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'doc' && staff() ? docView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
+  return `<div class="wrap wide sitio"><div id="sitehead">${siteHead()}</div><div class="srow"><div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${n}</button>`).join('')}</div>${S.tab === 'maqueta' ? `<div class="maqbar" id="maqbar">${maqBar()}</div>` : ''}</div>
+    ${S.tab === 'maqueta' ? `<div class="maq" id="maqbox"></div>` : S.tab === 'equipos' ? equiposView() : S.tab === 'doc' && staff() ? docView() : S.tab === 'integ' ? integView() : S.tab === 'accesos' ? accesosView() : datosView()}</div>`; }
 
 /* maqueta */
 let MAQ = null, maqT = null;
@@ -710,7 +729,10 @@ function maqPresencia(st) { maqPresFin(); if (!SB.channel || !S.user) return nul
   S.maqCh = ch; S.maqChSite = st.id; let ult = 0;
   return { yo, nombre, enviar: (p, ya) => { const t = Date.now(); if (!ya && t - ult < 140) return; ult = t; try { ch.send({ type: 'broadcast', event: 'pos', payload: { id: yo, nombre, ...p } }); } catch (e) {} }, al: f => { subs.add(f); return () => subs.delete(f); }, prueba: m => { for (const f of subs) f(m); } }; }
 function maqPresFin() { if (S.maqCh) { try { SB.removeChannel(S.maqCh); } catch (e) {} } S.maqCh = null; S.maqChSite = null; }
-async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) return; box.innerHTML = '<div class="empty">Cargando la maqueta…</div>';
+const CARGA = (t = 'Cargando la maqueta', d = '') => `<div class="maqcarga" role="status" aria-live="polite"><b>${t}</b><div class="barra" aria-hidden="true"></div>${d ? `<small>${d}</small>` : ''}</div>`;
+// la barra de carga se va recién cuando el motor terminó de armar la escena (window.__maqueta), con un fundido
+function maqListo(f) { let n = 0; const mira = () => { const c = $('#maqbox .maqcarga'); if (!c || !f.isConnected) return; let ok = false; try { ok = !!(f.contentWindow && f.contentWindow.__maqueta); } catch (e) {} if (ok || ++n > 600) { requestAnimationFrame(() => requestAnimationFrame(() => { c.classList.add('fuera'); setTimeout(() => c.remove(), 400); })); return; } setTimeout(mira, 150); }; mira(); }
+async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) return; box.innerHTML = CARGA();
   const base = (st.data && st.data.base) || 'vacia';
   const [r, pl] = await Promise.all([SB.from('ondi_maquetas').select('data,updated_at').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(),
     base === 'polo' ? Promise.resolve({ data: null }) : SB.from('ondi_planos').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle()]);
@@ -737,13 +759,13 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
     else if (base === 'generica' || base === 'polo') { try { g = await (await fetch(ESCENAS + (base === 'polo' ? 'sim-parque' : 'generica') + '.json')).json(); if (g && g.escena) g.escena.nombre = st.name; } catch (e) { g = null; } }
     if (S.site !== st || !$('#maqbox')) return; window.__ondiMaqueta = MAQ; if (g === false) return; if (g && g.escena) { data = g; MAQ.state = g; } }
   { const mb = $('#maqbar'); if (mb) mb.innerHTML = maqBar(); }
-  box.innerHTML = `<iframe id="maqframe" data-site="${esc(st.id)}" src="${MOTOR}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`;
-  const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
+  box.innerHTML = CARGA() + `<iframe id="maqframe" data-site="${esc(st.id)}" src="${MOTOR}" title="Maqueta 3D de ${esc(st.name)}" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`;
+  maqListo($('#maqframe')); const s = $('#savest'); if (s) s.textContent = S.maqSave || 'Solo lectura.'; }
 // Pase al motor común de un cliente que tenía la maqueta de siempre. La página archivada arma lo que tenía cargado y su conversor lo devuelve en piezas del motor;
 // se le aplican los datos propios del sitio (planos, ajustes, suelo, retoques) y, si quien abre puede editar, queda guardado. Lo anterior no se pierde: va en «anterior».
 // Devuelve el estado nuevo, o false si no se pudo (y deja el aviso con el botón para reintentar).
 async function maqPase(st, data, base) { const box = $('#maqbox'), espera = ms => new Promise(z => setTimeout(z, ms)); if (!box) return false;
-  box.innerHTML = `<iframe id="maqvieja" src="${ARCH}" title="" aria-hidden="true" tabindex="-1"></iframe><div class="maqpase"><b>Pasando la maqueta al motor nuevo…</b><span>Es una sola vez por cliente y tarda unos segundos. Lo que estaba cargado se conserva.</span></div>`;
+  box.innerHTML = `<iframe id="maqvieja" src="${ARCH}" title="" aria-hidden="true" tabindex="-1"></iframe>${CARGA('Pasando la maqueta al motor nuevo', 'Es una sola vez por cliente y tarda unos segundos. Lo que estaba cargado se conserva.')}`;
   // la página archivada no guarda nada: solo arma la escena para convertirla
   window.__ondiMaqueta = { ...MAQ, save() {}, savePlano() {}, presencia: null, leerPlano: null, abrirDoc: null, start: null }; const f = $('#maqvieja'); let r = null;
   for (let i = 0; i < 280 && !r; i++) { await espera(250); if (S.site !== st || !f.isConnected) return false; try { const w = f.contentWindow; if (w && w.__aMotor && w.document.readyState === 'complete') { await espera(800); r = w.__aMotor(); if (!r || !r.escena || !Array.isArray(r.escena.piezas)) r = null; } } catch (e) { r = null; } }
@@ -1153,7 +1175,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
   if (t.dataset.atab) { S.atab = t.dataset.atab; render(); return; }
   if (t.dataset.bfull != null && t.closest('.brand, .brands')) { e.preventDefault(); S.bfull = t.dataset.bfull || null; document.documentElement.classList.toggle('bfullon', !!S.bfull); render(); return; }
   if (t.dataset.probar) { e.preventDefault(); probar(t.dataset.probar); return; }
-  if (t.dataset.sidetog != null) { S.mini = !S.mini; try { localStorage.setItem('ondi.mini', S.mini ? '1' : ''); } catch (x) {} document.documentElement.classList.toggle('navmini', S.mini); render(); return; }
+  if (t.dataset.sidetog != null) { sideTog(); return; }
   if (t.dataset.ball) { const on = t.dataset.ball === '1'; document.querySelectorAll('details[data-bk]').forEach(d => { d.open = on; BOPEN[d.dataset.bk] = on ? 1 : 0; }); bSave(); return; }
   if (t.dataset.bgo) { e.preventDefault(); const d = document.getElementById('br-' + t.dataset.bgo); if (d) { d.open = true; d.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); } return; }
   if (t.dataset.goaj) { S.view = 'ajustes'; S.atab = t.dataset.goaj; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
@@ -1588,6 +1610,9 @@ function cajaDiff(a, b) { const out = [], A = (a && a.cajas) || {}, B = (b && b.
   return out; }
 
 // la pastilla del menú se estira hasta la opción elegida (el mismo movimiento que Olumi)
+function sideTog() { S.mini = !S.mini; try { localStorage.setItem('ondi.mini', S.mini ? '1' : ''); } catch (x) {} const R = document.documentElement; R.classList.add('navcambia'); R.classList.toggle('navmini', S.mini);
+  const b = document.querySelector('[data-sidetog]'); if (b) { const t = S.mini ? 'Agrandar el menú' : 'Achicar el menú'; b.setAttribute('aria-label', t); b.title = t; b.setAttribute('aria-expanded', String(!S.mini)); const pa = b.querySelectorAll('path')[1]; if (pa) pa.setAttribute('d', S.mini ? 'M13.5 10l2 2-2 2' : 'M16 10l-2 2 2 2'); }
+  S.pill = null; navPill(); requestAnimationFrame(() => { S.pill = null; navPill(); setTimeout(() => R.classList.remove('navcambia'), 260); }); }
 function navPill() { const nav = document.querySelector('.side .nav'), pl = nav && nav.querySelector('.navpill'), b = nav && nav.querySelector('[aria-current="page"]'); if (!pl) return;
   if (!b) { pl.style.opacity = 0; return; } const to = [b.offsetTop, b.offsetLeft, b.offsetWidth, b.offsetHeight], de = S.pill || to, quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pon = r => { pl.style.transform = `translate(${r[1]}px,${r[0]}px)`; pl.style.width = r[2] + 'px'; pl.style.height = r[3] + 'px'; };

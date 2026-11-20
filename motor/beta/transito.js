@@ -4,7 +4,7 @@
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
 import { THREE } from './nucleo.js?v=14';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=37';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=38';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };

@@ -375,16 +375,23 @@ function esquinas(calles) { const out = [];
         una(A, B, jx, jz, rx / lr, rz / lr, sx / ls, sz / ls); una(A, B, jx, jz, -rx / lr, -rz / lr, sx / ls, sz / ls); } }
   return out; }
 let ENT = null;
+// playa en pendiente: sube en línea recta hasta «subeAlto» metros en el lado elegido (0 en el lado opuesto)
+const RUMBO = { oeste: [-1, 0], este: [1, 0], norte: [0, -1], sur: [0, 1] };
+export function cotaDe(p) { const r = RUMBO[p.sube], A = +p.subeAlto; if (!r || !(A > 0) || !p.pts || p.pts.length < 3) return null; let a = 1e9, b = -1e9; for (const [x, z] of p.pts) { const v = x * r[0] + z * r[1]; if (v < a) a = v; if (v > b) b = v; }
+  const L = Math.max(1, b - a); return (x, z) => Math.max(0, Math.min(A, A * ((x * r[0] + z * r[1]) - a) / L)); }
 function entorno(ctx) { const L = ctx && ctx.piezas ? ctx.piezas() : null; if (!L) return null; let f = '' + L.length;
-  for (const p of L) f += p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
-  if (ENT && ENT.f === f) return ENT; const calles = [], rot = [], duros = [], otros = [], cajas = [];
+  for (const p of L) f += p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') + (p.t === 'playa' ? '' + (p.sube || '') + (p.subeAlto || '') : '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
+  if (ENT && ENT.f === f) return ENT; const calles = [], rot = [], duros = [], otros = [], cajas = [], playas = [];
   for (const p of L) { const T = TIPOS[p.t]; if (!T) continue; const d = { ...T.def, ...p };
+    if (p.t === 'playa' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: cotaDe(d) }); continue; }
     if (p.t === 'calle' && p.guia) continue; if (p.t === 'calle' && p.pts && p.pts.length > 1) { const b = cajaDe(p.pts), h = d.ancho / 2; calles.push({ id: p.id, pts: p.pts, h, tipo: d.tipo, bb: [b[0] - h - 9, b[1] - h - 9, b[2] + h + 9, b[3] + h + 9] }); }
     else if (p.t === 'rotonda' && !p.guia) rot.push([p.x, p.z, d.radio + 0.4]);
     else if ((p.t === 'terreno' || p.t === 'recinto') && p.pts && p.pts.length > 2) { const o = { id: p.id, pts: p.pts, bb: cajaDe(p.pts), huecos: p.huecos }; if (p.t === 'recinto' || !/pasto|monte|cultivo/.test(d.mat)) (/hormigon|asfalto/.test(d.mat) ? duros : otros).push(o); }
     else if (p.x != null && (p.t === 'estacionamiento' || (d.ancho && d.fondo))) { const hw = p.t === 'estacionamiento' ? (d.columnas * 2.6 + 1) / 2 : d.ancho / 2, hd = p.t === 'estacionamiento' ? (d.filas * 5.2 + 1) / 2 : d.fondo / 2; cajas.push({ x: p.x, z: p.z, c: Math.cos(p.r || 0), s: Math.sin(p.r || 0), hw, hd, R: Math.hypot(hw, hd) }); } }
   const esq = esquinas(calles), enPolis = (x, z, l, salvo) => { for (const o of l) if (o.id !== salvo && x >= o.bb[0] && x <= o.bb[2] && z >= o.bb[1] && z <= o.bb[3] && enPoli(x, z, o.pts) && !(o.huecos && o.huecos.some(h => enPoli(x, z, h)))) return true; return false; };
-  ENT = { f, calles, rot, duros, otros, cajas, esq, enPolis,
+  ENT = { f, calles, rot, duros, otros, cajas, esq, enPolis, playas,
+    playa(x, z, m = 0) { for (const o of playas) if (x >= o.bb[0] - m && x <= o.bb[2] + m && z >= o.bb[1] - m && z <= o.bb[3] + m && (enPoli(x, z, o.pts) || (m && dPL(x, z, [...o.pts, o.pts[0]]) < m))) return o; return null; },
+    cota(x, z) { const o = this.playa(x, z); return o && o.f ? o.f(x, z) : 0; },
     enCalle(x, z, salvo, m = 0) { for (const c of calles) { if (c.id === salvo || x < c.bb[0] || x > c.bb[2] || z < c.bb[1] || z > c.bb[3]) continue; if (dPL(x, z, c.pts) < c.h + m) return true; } for (const r of rot) if (Math.hypot(x - r[0], z - r[1]) < r[2] + m) return true; return false; },
     enCaja(x, z, m = 0) { for (const k of cajas) { const dx = x - k.x, dz = z - k.z; if (Math.abs(dx) > k.R + m || Math.abs(dz) > k.R + m) continue; if (Math.abs(k.c * dx - k.s * dz) < k.hw + m && Math.abs(k.s * dx + k.c * dz) < k.hd + m) return true; } return false; },
     enEsq(x, z) { for (const e of esq) if (Math.abs(x - e.c[0]) < 12 && Math.abs(z - e.c[1]) < 12 && (enPoli(x, z, e.tri) || dPL(x, z, [e.tri[1], e.tri[0], e.tri[2]]) < 0.4)) return true; return false; },
@@ -469,6 +476,21 @@ function bordeIsla(g, afuera, adentro, y0, y1, flechas, po) { const n = afuera.l
     if (fv.length) { const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(fv, 3)); fg.computeVertexNormals(); const fm = new THREE.Mesh(fg, oscuro() ? new THREE.MeshBasicMaterial({ color: '#8fa3b3', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -30, polygonOffsetUnits: -20 }) : mat('#f6f7f8', { roughness: 0.6, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -30, polygonOffsetUnits: -20 })); fm.userData.noPica = true; fm.userData.noChoca = true; g.add(fm); } }
   return k; }
 // placa de hormigón premoldeado: 2 m de largo por 50 cm de alto, con su junta abajo y las marcas del molde
+// alrededor de una playa: muro de placas de hormigón con sus postes (sigue la pendiente) y, si se pide, el talud de pasto que baja hasta el suelo
+function muroPlaya(g, p, Y, os) { const P = p.pts, n = P.length, mh = +p.muro || 0, tal = +p.talud || 0, hay = P.some(([x, z]) => Y(x, z) > 0.05);
+  let A = 0; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; A += a[0] * b[1] - b[0] * a[1]; } const sg = A > 0 ? -1 : 1; // normal hacia afuera de cada lado
+  const nor = i => { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [sg * (b[1] - a[1]) / L, -sg * (b[0] - a[0]) / L]; };
+  const anillo = []; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.ceil(L / 2)), na = nor((i + n - 1) % n), nb = nor(i);
+    let mx = na[0] + nb[0], mz = na[1] + nb[1]; const ml = Math.hypot(mx, mz) || 1, c = Math.max(0.35, (mx * nb[0] + mz * nb[1]) / ml); mx /= ml * c; mz /= ml * c;
+    for (let j = 0; j < k; j++) { const t = j / k; anillo.push({ x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, n: j ? nb : [mx, mz], d: L * t }); } }
+  anillo.push({ ...anillo[0] }); let acc = 0; for (let i = 1; i < anillo.length; i++) { acc += Math.hypot(anillo[i].x - anillo[i - 1].x, anillo[i].z - anillo[i - 1].z); anillo[i].acc = acc; } anillo[0].acc = 0;
+  if (mh > 0) { const pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), v = [], uv = [], ix = [], po = [];
+    anillo.forEach((q, i) => { const y = Y(q.x, q.z), y0 = tal > 0 ? y - 0.3 : -0.05, y1 = y + mh; v.push(q.x, y0, q.z, q.x, y1, q.z); uv.push(q.acc / 2, (y0 - y) / 0.5, q.acc / 2, mh / 0.5); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); }
+      if (i < anillo.length - 1) po.push([q.x, (y0 + y1 + 0.12) / 2, q.z, 0, 0.22, y1 + 0.12 - y0, 0.22]); });
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals(); g.add(sombra(new THREE.Mesh(geo, pl))); lote(g, CAJA, ph, po); }
+  if (tal > 0 && hay) { const v = [], uv = [], ix = []; anillo.forEach((q, i) => { const y = Y(q.x, q.z), w = y * tal, ox = q.x + q.n[0] * w, oz = q.z + q.n[1] * w; v.push(q.x, y + 0.03, q.z, ox, -0.04, oz); uv.push(q.x, -q.z, ox, -oz); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } });
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals();
+    const m = matSuelo('pasto', { side: THREE.DoubleSide }) || mat('#7c9659', { roughness: 1, side: THREE.DoubleSide }), k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); } }
 let _placas = null; function placas() { if (_placas) return _placas; const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d'), R = azar(4411);
   x.fillStyle = '#c9cac6'; x.fillRect(0, 0, 256, 64); for (let i = 0; i < 2400; i++) { const v = 190 + ((R() - 0.5) * 34) | 0; x.fillStyle = `rgb(${v},${v},${v - 4})`; x.fillRect(R() * 256, R() * 64, 1.5, 1.5); }
   const gr = x.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(0,0,0,.10)'); gr.addColorStop(0.12, 'rgba(0,0,0,0)'); gr.addColorStop(0.85, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.08)'); x.fillStyle = gr; x.fillRect(0, 0, 256, 64);
@@ -609,13 +631,17 @@ export const TIPOS = {
         caja(k, -w * 0.38, h * 0.12, d / 2, -w * 0.12, h * 0.3, d / 2 + 0.03, ne, false); caja(k, -w * 0.46, -h / 2 - 0.02, -d * 0.46, w * 0.46, -h / 2, d * 0.46, pi, false); caja(k, w * 0.1, -h * 0.44, d / 2, w * 0.44, -h * 0.2, d / 2 + 0.025, pi, false);
         k.rotation.z = -th; k.position.y = w / 2 * Math.sin(th) + h / 2 * Math.cos(th) - a * 0.03; g.add(k); return g; }
       const k = new THREE.Mesh(CAJA, mat(p.color, { roughness: 0.45, metalness: 0.2 })); k.scale.setScalar(a); k.rotation.set(Math.atan(Math.SQRT1_2), 0, Math.PI / 4); k.position.y = a * 0.87 + 0.3; g.add(sombra(k)); caja(g, -a * 0.5, 0, -a * 0.5, a * 0.5, 0.3, a * 0.5, mat(oscuro() ? '#5a6066' : '#c4c5c0', { roughness: 0.95 })); return g; } },
-  playa: { n: 'Playa de autos', g: 'Personas y vehículos', forma: 'area', capa: 'logistica', etiqueta: p => p.nombre, def: { ocupacion: 85, giro: 0, piso: 'asfalto' },
-    campos: [F.nombre, { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'giro', n: 'Giro de las filas (grados)', t: 'num', min: -90, max: 90, paso: 5 }, { k: 'piso', n: 'Piso', t: 'sel', ops: [['asfalto', 'Asfalto'], ['hormigon', 'Hormigón'], ['ripio', 'Ripio'], ['no', 'Sin piso']] }],
-    armar(p) { const g = new THREE.Group(), os = oscuro(); if (p.piso !== 'no') area(g, p.pts, 0.04, matSuelo(p.piso, { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -2 }) || mat(suelo(p.piso), { roughness: 0.97 }));
+  playa: { n: 'Playa de autos', g: 'Personas y vehículos', forma: 'area', capa: 'logistica', etiqueta: p => p.nombre, def: { ocupacion: 85, giro: 0, piso: 'asfalto', sube: 'no', subeAlto: 0, muro: 0, talud: 0 },
+    campos: [F.nombre, { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'giro', n: 'Giro de las filas (grados)', t: 'num', min: -90, max: 90, paso: 5 }, { k: 'piso', n: 'Piso', t: 'sel', ops: [['asfalto', 'Asfalto'], ['hormigon', 'Hormigón'], ['ripio', 'Ripio'], ['no', 'Sin piso']] },
+      { k: 'sube', n: 'Terreno en pendiente', t: 'sel', ops: [['no', 'Plano'], ['oeste', 'Sube hacia la izquierda (oeste)'], ['este', 'Sube hacia la derecha (este)'], ['norte', 'Sube hacia el norte'], ['sur', 'Sube hacia el sur']] }, { k: 'subeAlto', n: 'Altura en la punta más alta (m)', t: 'num', min: 0, max: 60, paso: 0.5 },
+      { k: 'muro', n: 'Muro de hormigón alrededor (m de alto, 0 = sin muro)', t: 'num', min: 0, max: 6, paso: 0.1 }, { k: 'talud', n: 'Talud de pasto afuera (m de ancho por cada m de altura)', t: 'num', min: 0, max: 6, paso: 0.25 }],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), F = cotaDe(p), Y = F || (() => 0); if (p.piso !== 'no') { const k = area(g, p.pts, 0.04, matSuelo(p.piso, { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -2 }) || mat(suelo(p.piso), { roughness: 0.97 }));
+        if (k && F) { const a = k.geometry.attributes.position; for (let i = 0; i < a.count; i++) a.setY(i, 0.04 + F(a.getX(i), a.getZ(i))); a.needsUpdate = true; k.geometry.computeVertexNormals(); k.geometry.computeBoundingSphere(); } }
+      if (F || +p.muro > 0) muroPlaya(g, p, Y, os);
       const bb = cajaDe(p.pts), cx = (bb[0] + bb[2]) / 2, cz = (bb[1] + bb[3]) / 2, a = (p.giro || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), R = azar(semilla(p)), rad = Math.hypot(bb[2] - bb[0], bb[3] - bb[1]) / 2 + 3, MAX = FINO ? 6500 : 1200, T = ['hatch', 'suv', 'sedan', 'pickup', 'hatch', 'suv', 'furgon'], por = {}, COL = os ? ['#7d858c', '#8b949c', '#6a727a', '#3b4249', '#22262a', '#5a2f2c', '#27405f'] : ['#f2f3f4', '#f2f3f4', '#f2f3f4', '#d5d9dd', '#b9bec4', '#8e969d', '#2b2f33', '#a8322b', '#2f5f9e'];
       // filas de a dos (cola con cola) y un pasillo; cada tramo de fila es de un mismo modelo, como llegan los autos nuevos
       const L = []; for (let v = -rad, f = 0; v < rad; v += f % 2 ? 6.8 : 4.9, f++) { let tipo = T[(R() * T.length) | 0], tramo = 0; const giro = Math.atan2(-c, s) + (f % 2 ? Math.PI : 0);
-        for (let u = -rad; u < rad; u += 2.55) { const x = cx + u * c + v * s, z = cz - u * s + v * c; if (--tramo < 0) { tipo = T[(R() * T.length) | 0]; tramo = 6 + ((R() * 14) | 0); } if (!enPoli(x, z, p.pts) || !enPoli(x + 2.5 * s, z + 2.5 * c, p.pts) || !enPoli(x - 2.5 * s, z - 2.5 * c, p.pts) || R() * 100 > p.ocupacion) continue; L.push([tipo, [x, 0, z, giro, 1, 1, 1, COL[(R() * COL.length) | 0]]]); } }
+        for (let u = -rad; u < rad; u += 2.55) { const x = cx + u * c + v * s, z = cz - u * s + v * c; if (--tramo < 0) { tipo = T[(R() * T.length) | 0]; tramo = 6 + ((R() * 14) | 0); } if (!enPoli(x, z, p.pts) || !enPoli(x + 2.5 * s, z + 2.5 * c, p.pts) || !enPoli(x - 2.5 * s, z - 2.5 * c, p.pts) || R() * 100 > p.ocupacion) continue; L.push([tipo, [x, Y(x, z), z, giro, 1, 1, 1, COL[(R() * COL.length) | 0]]]); } }
       const paso = Math.max(1, L.length / MAX); for (let i = 0; i < L.length; i += paso) { const [tipo, q] = L[i | 0]; (por[tipo] = por[tipo] || []).push(q); }
       for (const t of Object.keys(por)) { const A = autito(t); lote(g, A.cuerpo, mat('#ffffff', { roughness: 0.38, metalness: 0.4 }), por[t], FINO); lote(g, A.det, mat('#ffffff', { roughness: 0.5, metalness: 0.2, vertexColors: true }), por[t].map(q => q.slice(0, 7)), false); } return g; } },
   panelacc: { n: 'Panel de control de acceso', g: 'Control de acceso', forma: 'punto', capa: 'acceso', etiqueta: p => p.nombre, def: { y: 1.5, puertas: 4 },
@@ -669,10 +695,10 @@ export const TIPOS = {
       if (p.alto > 0) { const R = azar(semilla(p)), w = Math.max(0.5, p.ancho * 0.95), it = aLoLargo(p.pts, w * 0.55).map(([x, z]) => [x + (R() - 0.5) * 0.15, p.alto * 0.48, z + (R() - 0.5) * 0.15, R() * 6.3, w * (0.95 + R() * 0.2), p.alto * (1.05 + R() * 0.2), w * (0.95 + R() * 0.2), oscuro() ? '#3d5238' : V_ARBU[(R() * V_ARBU.length) | 0]]); lote(g, HOJAS, mat('#ffffff', { roughness: 1, vertexColors: true }), it); } return g; } },
   arboles: { n: 'Hilera de árboles', g: 'Vegetación', forma: 'linea', capa: 'vegetacion', def: { tipo: 'pino', paso: 7, alto: 1 },
     campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['pino', 'Pino'], ['fronda', 'Fronda'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto']] }, { k: 'paso', n: 'Cada (m)', t: 'num', min: 2, max: 40, paso: 0.5 }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 2.5, paso: 0.1 }],
-    armar(p, ctx) { const g = new THREE.Group(), R = azar(semilla(p)), E = entorno(ctx); arbolado(g, aLoLargo(p.pts, p.paso).filter(([x, z]) => !(E && (E.enCalle(x, z, null, 2.5) || E.enCaja(x, z, 2.5) || E.enPolis(x, z, E.duros)))).map(([x, z]) => [x + (R() - 0.5) * 1.2, z + (R() - 0.5) * 1.2, p.tipo, p.alto * (0.8 + R() * 0.4)])); return g; } },
+    armar(p, ctx) { const g = new THREE.Group(), R = azar(semilla(p)), E = entorno(ctx); arbolado(g, aLoLargo(p.pts, p.paso).filter(([x, z]) => !(E && (E.enCalle(x, z, null, 2.5) || E.enCaja(x, z, 2.5) || E.enPolis(x, z, E.duros) || E.playa(x, z, 3)))).map(([x, z]) => [x + (R() - 0.5) * 1.2, z + (R() - 0.5) * 1.2, p.tipo, p.alto * (0.8 + R() * 0.4)])); return g; } },
   arbol: { n: 'Árbol', g: 'Vegetación', forma: 'punto', capa: 'vegetacion', def: { tipo: 'fronda', alto: 1 },
     campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['fronda', 'Fronda'], ['pino', 'Pino'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto']] }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 3, paso: 0.1 }],
-    armar(p) { const g = new THREE.Group(); arbolado(g, [[0, 0, p.tipo, p.alto]]); return g; } },
+    armar(p, ctx) { const g = new THREE.Group(), E = entorno(ctx); if (E && E.playa(p.x || 0, p.z || 0, 3)) return g; arbolado(g, [[0, 0, p.tipo, p.alto]]); return g; } },
 
   // construcciones
   galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2, estilo: 'chapa', perfil: 'trapezoidal', terminacion: 'prepintada', andenes: 6, anexo: '', cubierta: 'claraboyas', desde: 1, placa: '#1F4D3A', alero: 0 },
@@ -1074,7 +1100,7 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
   const pa = chapaReal(os ? mix(p.color, '#000', 0.5) : p.color, CH), liso = mat(os ? mix(p.color, '#000', 0.5) : p.color, { roughness: 0.7 }), M = (k, o) => mat(K[k], o);
   const fr = (u0, u1, v0, v1, y0, y1, m, s = true) => caja(g, -w + u0, y0, d + v0, -w + u1, y1, d + v1, m, s);
   cajaT(g, -w, 0, -d, w, h, -d + e, pa, MCH); cajaT(g, -w, 0, -d, -w + e, h, d, pa, MCH); cajaT(g, w - e, 0, -d, w, h, d, pa, MCH); cajaT(g, -w, 0, d - e, w, h, d, pa, MCH);
-  for (const [x0, z0, x1, z1] of [[-w, -d, w, -d + e], [-w, d - e, w, d], [-w, -d, -w + e, d], [w - e, -d, w, d]]) caja(g, x0 - 0.08, 0, z0 - 0.08, x1 + 0.08, 1.1, z1 + 0.08, M('zocalo'));
+  for (const [x0, z0, x1, z1] of [[-w, -d, w, -d + e], [-w, d - e, w, d], [-w, -d, -w + e, d], [w - e, -d, w, d]]) caja(g, x0 - 0.08, 0, z0 - 0.08, x1 + 0.08, 1.2, z1 + 0.08, M('zocalo'));
   const t = cajaT(g, -w + e, h - 0.15, -d + e, w - e, h, d - e, chapaReal(os ? mix(p.techo, '#000', 0.55) : p.techo, { perfil: CH.perfil, terminacion: 'galvanizada' }), MCH); t.userData.techo = true; sombraDeApoyo(g, w, d, { fuerza: os ? 0.22 : 0.4 });
   for (const [x0, z0, x1, z1] of [[-w - 0.05, -d - 0.05, w + 0.05, -d + 0.45], [-w - 0.05, d - 0.45, w + 0.05, d + 0.05], [-w - 0.05, -d + 0.45, -w + 0.45, d - 0.45], [w - 0.45, -d + 0.45, w + 0.05, d - 0.45]]) caja(g, x0, h, z0, x1, h + 0.8, z1, M('pretil'));
   const ax = p.anexo === 'izq' ? [-0.2, 12] : p.anexo === 'der' ? [L - 12, L + 0.2] : null; if (p.banda !== false && h > 7) fr(p.anexo === 'izq' ? 12 : 0, p.anexo === 'der' ? L - 12 : L, 0, 0.12, h - 2.4, h - 0.6, M('banda'), false);
@@ -1088,12 +1114,13 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
   if (ax) { const ha = Math.min(8.6, h - 0.4), [u0, u1] = ax; fr(u0, u1, -9, 2.6, 0, ha, liso); fr(u0 - 0.1, u1 + 0.1, -9.1, 2.7, ha, ha + 0.5, M('pretil'));
     const vi = mat(K.vidrio, os ? { emissive: K.vidrio, emissiveIntensity: 0.55, roughness: 0.3 } : { roughness: 0.12, metalness: 0.5 }); for (const y of [1.4, 5]) { if (y + 2.4 > ha - 0.2) break; fr(u0 + 0.6, u1 - 0.6, 2.6, 2.64, y, y + 2.4, vi, false); const xl = p.anexo === 'izq' ? u0 - 0.04 : u1; fr(xl, xl + 0.04, -8.4, 2.0, y, y + 2.4, vi, false); } }
   // andenes: marco, portón con listones, visera, defensas de goma y la chapa con el número
-  const placa = mat(p.placa || '#1F4D3A', { roughness: 0.6 }), bl = mat('#ffffff', os ? { emissive: '#ffffff', emissiveIntensity: 0.35 } : {}), am = mat('#F2C230');
+  const placa = mat(p.placa || '#1F4D3A', { roughness: 0.6 }), bl = mat('#ffffff', os ? { emissive: '#ffffff', emissiveIntensity: 0.35 } : {}), am = mat('#F2C230'), ace = mat(os ? '#4a525a' : '#8a9299', { metalness: 0.65, roughness: 0.42 });
   const num = (n, uc, y0 = 5.95) => { const txt = String(n), W = 0.22, H = 0.36, T = 0.05, yb = y0 + 0.07; fr(uc - 0.24 - txt.length * 0.17, uc + 0.24 + txt.length * 0.17, 0.32, 0.37, y0, y0 + 0.5, placa, false);
     [...txt].forEach((c, i) => { const x = uc + (i - (txt.length - 1) / 2) * 0.34, q = (a, b, y, yy) => fr(x + a, x + b, 0.37, 0.385, yb + y, yb + yy, bl, false);
       for (const k of SIETE[c] || '') { if (k === 'a') q(-W / 2, W / 2, H - T, H); if (k === 'd') q(-W / 2, W / 2, 0, T); if (k === 'g') q(-W / 2, W / 2, H / 2 - T / 2, H / 2 + T / 2); if (k === 'b') q(W / 2 - T, W / 2, H / 2, H); if (k === 'c') q(W / 2 - T, W / 2, 0, H / 2); if (k === 'f') q(-W / 2, -W / 2 + T, H / 2, H); if (k === 'e') q(-W / 2, -W / 2 + T, 0, H / 2); } }); };
   const AN = andenesDe(p); g.userData.andenes = AN.map(([u, n]) => ({ x: -w + u, z: d, n }));
   for (const [u, n] of AN) { fr(u - 1.9, u + 1.9, 0, 0.32, 0.9, 5.2, M('marco')); fr(u - 1.6, u + 1.6, 0, 0.4, 1.2, 4.9, M('porton'), false); for (let y = 1.7; y < 4.8; y += 0.7) fr(u - 1.6, u + 1.6, 0, 0.43, y, y + 0.06, M('liston'), false);
+    fr(u - 1.05, u + 1.05, 0.4, 0.62, 1.1, 1.2, ace); fr(u - 1, u + 1, 0.62, 0.67, 0.8, 1.2, ace); fr(u - 1, u + 1, 0.67, 0.68, 1.08, 1.18, am, false); fr(u - 1, u + 1, 0.67, 0.68, 0.84, 0.9, am, false);
     if (h > 6.2) fr(u - 2.1, u + 2.1, 0, 1.6, 5.4, 5.7, M('pretil')); fr(u - 1.5, u - 1.1, 0, 0.6, 0.9, 1.5, M('goma'), false); fr(u + 1.1, u + 1.5, 0, 0.6, 0.9, 1.5, M('goma'), false); if (n != null && n !== '' && h > 6.8) num(n, u); }
   // pintura del piso: una calle por andén (líneas amarillas de 16 m) y la franja rayada al pie de los portones
   if (AN.length) { const pin = mat(os ? '#b89a3a' : '#E5C35A', { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -9, polygonOffsetUnits: -8 }), us = AN.map(q => q[0]), it = [];
@@ -1140,7 +1167,7 @@ function aplanar(g) { g.updateMatrixWorld(true); _inv.copy(g.matrixWorld).invert
 
 // ---------- armar una pieza completa en su lugar ----------
 export function armarPieza(p, ctx = {}) { const T = TIPOS[p.t]; if (!T) return null; const q = { ...T.def, ...p };
-  const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { g.position.set(q.x || 0, 0, q.z || 0); g.rotation.y = q.r || 0; }
+  const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { const E = q.t !== 'playa' && entorno(ctx); g.position.set(q.x || 0, E && E.playas.length ? E.cota(q.x || 0, q.z || 0) : 0, q.z || 0); g.rotation.y = q.r || 0; }
   g.userData.pieza = p; g.userData.tipo = T; g.traverse(o => { o.userData.dueño = g; }); return g; }
 // centro de una pieza (para etiquetas, enfocar y calcular el "lugar")
 export function centro(p) { if (p.pts && p.pts.length) { if (TIPOS[p.t] && TIPOS[p.t].forma === 'area') { const n = p.pts.length; return [p.pts.reduce((a, q) => a + q[0], 0) / n, p.pts.reduce((a, q) => a + q[1], 0) / n]; } const m = p.pts[Math.floor(p.pts.length / 2)]; return [m[0], m[1]]; } return [p.x || 0, p.z || 0]; }
