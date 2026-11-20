@@ -7,24 +7,31 @@
 <title>Maqueta · Olumi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="motor.css?v=f7fc1519">
+<link rel="stylesheet" href="motor.css?v=8d9e6df2">
 <script type="importmap">{"imports":{"three":"../lib/three.module.min.js","three/addons/RoomEnvironment.js":"../lib/RoomEnvironment.js","three/addons/GLTFLoader.js":"../lib/GLTFLoader.js","three/addons/SkeletonUtils.js":"../lib/SkeletonUtils.js","three/addons/BufferGeometryUtils.js":"../lib/BufferGeometryUtils.js"}}</script>
 </head>
 <body>
+<div id="mcarga" role="status" aria-live="polite" style="position:fixed;inset:0;z-index:50;display:grid;place-content:center;justify-items:center;gap:12px;font:600 15px 'Instrument Sans',system-ui,sans-serif;transition:opacity .35s ease"><span>Cargando la maqueta</span><i aria-hidden="true"></i></div>
+<style>#mcarga{background:#eef0f2;color:#1b2229}#mcarga i{display:block;width:min(240px,60vw);height:4px;border-radius:4px;background:rgba(27,34,41,.12);overflow:hidden;position:relative}#mcarga i::after{content:"";position:absolute;top:0;bottom:0;left:0;width:38%;border-radius:4px;background:#0B5FFF;animation:mcb 1.25s cubic-bezier(.45,0,.35,1) infinite}@keyframes mcb{from{transform:translateX(-105%)}to{transform:translateX(270%)}}
+@media (prefers-color-scheme:dark){#mcarga{background:#151b22;color:#e8ecef}#mcarga i{background:rgba(232,236,239,.14)}}html[data-tema="oscuro"] #mcarga{background:#151b22;color:#e8ecef}html[data-tema="claro"] #mcarga{background:#eef0f2;color:#1b2229}
+@media (prefers-reduced-motion:reduce){#mcarga i::after{animation:none;width:100%;opacity:.6}}</style>
 <script type="module">
 // Maqueta con el motor común, versión beta (lo nuevo se prueba acá antes de pasar a /motor/). Dentro de la app de Ondi lee el cliente de window.parent.__ondiMaqueta;
 // sola, abre una escena de ejemplo (?escena=deposito) o la guardada en este navegador.
-import { abrirMaqueta } from './maqueta.js?v=f7fc1519';
+import { abrirMaqueta } from './maqueta.js?v=8d9e6df2';
 const P = new URLSearchParams(location.search), app = P.get('app') || 'ondi';
 document.documentElement.dataset.app = app;
 if (app === 'kliva') document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap">');
 let host = null; try { host = window.parent !== window && (window.parent.__maquetaHost || window.parent.__ondiMaqueta) || null; } catch (e) {}
 let escena = null;
+{ const tm = (host && host.tema) || P.get('tema'); if (tm === 'oscuro' || tm === 'claro') document.documentElement.dataset.tema = tm; }
 if (!host) { const id = P.get('escena') || 'deposito';
   try { const g = localStorage.getItem('motor.escena.' + id); if (g && !P.has('nuevo')) escena = JSON.parse(g).escena; } catch (e) {}
   if (!escena) escena = await (await fetch('../escenas/' + id.replace(/[^\w-]/g, '') + '.json')).json(); }
 const M = await abrirMaqueta({ host, escena, app, raiz: document.body, catalogo: app === 'kliva' ? null : '../3d/', tema: (host && host.tema) || P.get('tema') || undefined, clave: 'motor.escena.' + (P.get('escena') || 'deposito'), editable: host ? undefined : !P.has('ver'), ruedaConCtrl: P.has('embebida') });
 window.__maqueta = M;
+// la barra de carga se va cuando la escena ya está dibujada
+{ const c = document.getElementById('mcarga'); if (c) requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity = 0; c.style.pointerEvents = 'none'; setTimeout(() => c.remove(), 400); })); }
 </script>
 </body>
 </html>

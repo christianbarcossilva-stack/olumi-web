@@ -107,7 +107,7 @@ export function crearMotor(canvas, o = {}) {
   motor.casa = () => ({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
-  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 ? 0.06 : 0.5; if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
+  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 || motor.caminando ? 0.06 : 0.5;   /* recorriendo (a pie o en vuelo) la cámara pasa al lado de la gente y los muebles: con el plano cercano a 0,5 m se veían cortados */ if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
     if (motor.bruma) { const e = motor.espesa; scene.fog.near = e ? Math.max(e[0], C.d * e[2]) : Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = e ? Math.max(e[1], C.d * e[3]) : Math.max(motor.bruma[1], C.d * 5); }
     cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
@@ -199,13 +199,25 @@ export function crearMotor(canvas, o = {}) {
   // Mover el mouse mira (sin arrastrar) y la mira del centro de la pantalla hace de puntero: todo lo que el editor hace con el mouse (elegir, agarrar,
   // ubicar, dibujar) lo hace igual, apuntando con la mira. Por eso los toques del mouse se vuelven a mandar como si salieran del centro de la pantalla.
   // Esc suelta el mouse (lo hace el navegador). motor.mira(true) lo toma (tiene que venir de un clic o una tecla); motor.mirando dice si está tomado.
-  const MI = { x: 0, y: 0, f: NaN, t: -1e9, btn: 0, ok: false, falla: 0, s: 0.0021 }, sint = new WeakSet(); motor.mirando = false; motor.sinMira = !canvas.requestPointerLock || navigator.webdriver === true;   // un navegador manejado por un programa (las pruebas) no toma el mouse: el de pruebas se cae al apretar una tecla con el mouse tomado
+  // ---------- ajustes del jugador (se guardan en el equipo): sensibilidad del mouse, eje invertido y una tecla por acción ----------
+  // Las teclas se leen por acción: quien las usa (recorrer, el editor) pasa cada tecla por motor.canon(), que devuelve la tecla de fábrica de la acción
+  // que el jugador puso en esa tecla. Una tecla de fábrica que quedó sin acción no hace nada. Mañana el mando y la VR entran por el mismo lugar.
+  const ACC = { adelante: 'w', atras: 's', izq: 'a', der: 'd', saltar: ' ', correr: 'shift', subir: 'e', bajar: 'q', vista: 'v', editar: 'f', inventario: 'tab', girar: 'r' };
+  const AJ = { sens: 1, invY: false, encimar: false, personaje: '', teclas: {} }; try { const g = JSON.parse(localStorage.getItem('motor.ajustes')); if (g && typeof g === 'object') Object.assign(AJ, g, { teclas: { ...(g.teclas || {}) } }); } catch (er) {}
+  let DE = {}; const teclaDe = a => AJ.teclas[a] || ACC[a];
+  function mapear() { DE = {}; for (const a in ACC) DE[teclaDe(a)] = ACC[a]; for (const a in ACC) if (!(ACC[a] in DE)) DE[ACC[a]] = ''; AJ.sens = Math.max(0.2, Math.min(3, +AJ.sens || 1)); }
+  mapear(); motor.aj = AJ; motor.ACC = ACC; motor.teclaDe = teclaDe; motor.canon = k => (k in DE ? DE[k] : k);
+  motor.nomTecla = k => ({ ' ': 'Espacio', shift: 'Shift', tab: 'Tab', enter: 'Enter', control: 'Ctrl', alt: 'Alt', arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→', backspace: 'Retroceso', capslock: 'Bloq Mayús' }[k] || (k.length === 1 ? k.toUpperCase() : k.charAt(0).toUpperCase() + k.slice(1)));
+  motor.guardarAj = () => { mapear(); try { localStorage.setItem('motor.ajustes', JSON.stringify(AJ)); } catch (er) {} motor.alAjustes && motor.alAjustes(); };
+  const MI = { x: 0, y: 0, f: NaN, t: -1e9, btn: 0, ok: false, falla: 0, s: 0.0021, prog: -1e9 }, sint = new WeakSet(); motor.mirando = false; motor.sinMira = !canvas.requestPointerLock || navigator.webdriver === true;   // un navegador manejado por un programa (las pruebas) no toma el mouse: el de pruebas se cae al apretar una tecla con el mouse tomado
   const enCentro = () => { const r = canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
   function alCentro(tipo, e) { const [x, y] = enCentro(), ini = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: e ? e.button : -1, buttons: e ? e.buttons : MI.btn, shiftKey: e ? e.shiftKey : !!teclas.shift, altKey: e ? e.altKey : !!teclas.alt, ctrlKey: !!(e && e.ctrlKey), metaKey: !!(e && e.metaKey) };
     const s = tipo === 'dblclick' ? new MouseEvent(tipo, ini) : new PointerEvent(tipo, { ...ini, pointerId: (e && e.pointerId) || 1, pointerType: 'mouse', isPrimary: true }); sint.add(s); canvas.dispatchEvent(s); }
   function ponMira(on) { if (motor.mirando === on) return; motor.mirando = on; MI.x = MI.y = 0; MI.f = NaN; MI.btn = 0; if (on) { MI.ok = true; frena(); } else MI.t = performance.now();
-    document.documentElement.classList.toggle('mirando', on); canvas.classList.remove('sobre', 'arrastra'); motor.alMira && motor.alMira(on); motor.dirty = true; }
-  motor.mira = on => { if (on === motor.mirando) return; if (!on) { if (document.pointerLockElement === canvas) document.exitPointerLock(); else ponMira(false); return; }
+    document.documentElement.classList.toggle('mirando', on); canvas.classList.remove('sobre', 'arrastra'); motor.alMira && motor.alMira(on); motor.dirty = true;
+    // el mouse se soltó sin que el motor lo pidiera (Esc o se cambió de ventana): como en cualquier juego, eso es la pausa
+    if (!on && performance.now() - MI.prog > 500) motor.alPausa && motor.alPausa(); if (on) motor.alRetomar && motor.alRetomar(); }
+  motor.mira = (on, porEsc) => { if (on === motor.mirando) return; if (!on) { MI.prog = porEsc ? -1e9 : performance.now(); if (document.pointerLockElement === canvas) document.exitPointerLock(); else ponMira(false); return; }
     if (motor.sinMira || tactil) return; try { const q = canvas.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch (er) {} };
   motor.reapuntar = () => { MI.f = NaN; motor.dirty = true; };   // vuelve a mirar qué hay en la mira (cambió la herramienta o lo que se tiene en la mano)
   motor._mira = ponMira;   // para las pruebas (el navegador de pruebas no siempre deja tomar el mouse)
@@ -215,10 +227,10 @@ export function crearMotor(canvas, o = {}) {
   const tope = v => Math.max(-120, Math.min(120, v || 0));
   for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'dblclick']) addEventListener(t, e => { if (!motor.mirando || sint.has(e) || e.target !== canvas || (e.pointerType && e.pointerType !== 'mouse')) return;
     e.stopImmediatePropagation(); if (t === 'pointermove') { MI.x += tope(e.movementX); MI.y += tope(e.movementY); return; } MI.btn = e.buttons || 0; alCentro(t, e); }, true);
-  addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (motor.mirando) { e.stopImmediatePropagation(); motor.mira(false); } else if (performance.now() - MI.t < 350) e.stopImmediatePropagation(); }, true);
+  addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (motor.mirando) { e.stopImmediatePropagation(); motor.mira(false, true); } else if (performance.now() - MI.t < 350) e.stopImmediatePropagation(); }, true);
   // cada cuadro: el giro del mouse entra suavizado (sin saltos) y, si la cámara se movió, lo que se apunta se actualiza una vez
   function miraGira(dt) { if (!MI.x && !MI.y) return; const k = 1 - Math.exp(-dt * 38), dx = MI.x * k, dy = MI.y * k; MI.x -= dx; MI.y -= dy; if (Math.abs(MI.x) < 0.02) MI.x = 0; if (Math.abs(MI.y) < 0.02) MI.y = 0;
-    C.yaw -= dx * MI.s; C.pitch = incl(C.pitch + dy * MI.s); viaje = null; motor.dirty = true; }
+    const s = MI.s * AJ.sens; C.yaw -= dx * s; C.pitch = incl(C.pitch + dy * s * (AJ.invY ? -1 : 1)); viaje = null; motor.dirty = true; }
   function miraApunta() { const f = C.tx * 3.1 + C.tz * 5.3 + (C.ty || 0) * 7.7 + C.yaw * 11.9 + C.pitch * 13.3 + C.d * 17.1; if (Math.abs(f - MI.f) < 1e-5) return; MI.f = f; alCentro('pointermove'); }
   const escribe = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
   addEventListener('keydown', e => { if (escribe(e) || e.metaKey || e.ctrlKey) return; teclas[e.key.toLowerCase()] = 1;

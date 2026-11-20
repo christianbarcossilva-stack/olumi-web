@@ -1,6 +1,8 @@
 // Motor común · un solo juego de íconos para la maqueta (Ondi, Olumi y Kliva): grilla de 24, trazo de 1,8, puntas redondas, color del texto.
 // Si falta uno se dibuja acá, en este mismo estilo. Nada de emojis ni de íconos sueltos en otros archivos.
 export const IC = {
+  // cámara de fotos: el mismo dibujo en Olumi, Ondi y Kliva para «sacar foto» y «leer un código con la cámara» (Christian 19/11: «mismo ícono de cámara en todos los software»)
+  foto: '<path d="M3 9.6A2.6 2.6 0 0 1 5.6 7h1.7a1.1 1.1 0 0 0 .92-.5l.86-1.3a1.6 1.6 0 0 1 1.33-.7h3.18a1.6 1.6 0 0 1 1.33.7l.86 1.3a1.1 1.1 0 0 0 .92.5h1.7A2.6 2.6 0 0 1 21 9.6v7.3a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 16.9z"/><circle cx="12" cy="13.1" r="3.5"/><path d="M17.5 10.3h.01"/>',
   varias: '<rect x="3.5" y="3.5" width="11" height="11" rx="1.5" stroke-dasharray="2.3 2.3"/><path d="M11.5 10.5l9 3.4-3.7 1.5-1.5 3.7z"/>',
   mano: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12m0-1V4.5a1.5 1.5 0 0 1 3 0V12m0-1.5a1.5 1.5 0 0 1 3 0V12m0-.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-1.2a6 6 0 0 1-4.8-2.4L4.3 16a1.6 1.6 0 0 1 2.5-2l1.2 1.4"/>',
   maza: '<path d="M14 4l6 6-3 3-6-6zM11 7l-8 8 2 2 8-8M3 21h8"/>',
@@ -45,6 +47,7 @@ export const IC = {
   regla: '<path d="M3.5 16.5 16.5 3.5l4 4-13 13z"/><path d="m7 13 1.8 1.8M10 10l1.8 1.8M13 7l1.8 1.8"/>',
   imagen: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/>',
   zona: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="2.4 2.6"/><path d="M8 10h5"/>',
-  abrir: '<path d="M4 21h16M6 21V4h9v17"/><path d="M15 4l4 2v15" /><circle cx="12" cy="12.5" r=".6" fill="currentColor"/>'
+  abrir: '<path d="M4 21h16M6 21V4h9v17"/><path d="M15 4l4 2v15" /><circle cx="12" cy="12.5" r=".6" fill="currentColor"/>',
+  atras: '<path d="M15 5l-7 7 7 7"/>'
 };
 export const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
