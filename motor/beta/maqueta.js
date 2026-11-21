@@ -624,6 +624,8 @@ export async function abrirMaqueta(o) {
 
   armarTodo();
   const enc = E.inicio || encuadre(); motor.inicio(enc); if (o.intro !== false) { Object.assign(motor.C, { ...enc, d: enc.d * 1.35, yaw: enc.yaw - 0.45, pitch: Math.min(1.2, enc.pitch + 0.2) }); motor.ir(enc, 1.8); }
+  // la app pidió ir a una pieza (por ejemplo «Ver en la maqueta» desde la documentación): se la elige y se la enfoca
+  if (host && host.ir) { const pi = E.piezas.find(q => q.id === host.ir); if (pi) setTimeout(() => elegir(pi, true), 500); }
   const api = { multi: () => [...MULTI].map(q => q.id), importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, XT, PASEO: RC.R, paseo: RC.paseo, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, juego: J, cancelarAgarre, salir, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
