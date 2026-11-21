@@ -3,8 +3,8 @@
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
-import { THREE } from './nucleo.js?v=49378947';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=49378947';
+import { THREE } from './nucleo.js?v=bb659e6f';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=bb659e6f';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -88,7 +88,26 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       for (const k of [0, 8, 16]) { const rx = o.x + ox * k - c.x, rz = o.z + oz * k - c.z, f = rx * fx + rz * fz, l = Math.abs(-rx * fz + rz * fx); if (l > 2.9) continue;
         if (at ? (f < -0.5 && f > -9) : (f > 17 && f < 26)) return true; } }
     return false; }
+  // ---------- lo que estorba en la calle: si alguien deja algo mal puesto, los camiones frenan antes, como en la vida real ----------
+  // Cuenta lo que llega a menos de 3,9 m del piso (un camión pasa abajo de un alero o del brazo de una columna); cercos y paredes van como tramos.
+  const NOEST = new Set(['calle', 'terreno', 'vereda', 'playa', 'estacionamiento', 'rayado', 'senda', 'rotonda', 'cancha', 'plano', 'balanza', 'barrera', 'persona', 'vehiculo', 'galpon', 'camion', 'chasis', 'tendido', 'fibra', 'arboles', 'monte', 'cantero', 'luminaria', 'plafon', 'aplique', 'zona', 'montículo']);
+  const E3 = new THREE.Box3(), E4 = new THREE.Box3(); let EST = new Map(), estT = 0; const celda = (x, z) => Math.floor(x / 20) + ':' + Math.floor(z / 20);
+  function estorbos() { const out = new Map(), objs = M.objs, poner = o => { const xs = [Math.floor(o.x0 / 20), Math.floor(o.x1 / 20)], zs = [Math.floor(o.z0 / 20), Math.floor(o.z1 / 20)]; for (let i = xs[0]; i <= xs[1]; i++) for (let j = zs[0]; j <= zs[1]; j++) { const k = i + ':' + j; (out.get(k) || out.set(k, []).get(k)).push(o); } };
+    if (!objs) return out;
+    for (const p of M.E.piezas) { if (NOEST.has(p.t) || p.oculta) continue;
+      if ((p.t === 'cerco' || p.t === 'pared' || p.t === 'recinto') && p.pts && p.pts.length > 1) { const P = p.cerrado || p.t === 'recinto' ? [...p.pts, p.pts[0]] : p.pts; for (let i = 1; i < P.length; i++) { const [a, b] = [P[i - 1], P[i]]; poner({ s: [a, b], x0: Math.min(a[0], b[0]) - 1, x1: Math.max(a[0], b[0]) + 1, z0: Math.min(a[1], b[1]) - 1, z1: Math.max(a[1], b[1]) + 1, p }); } continue; }
+      const g = objs.get(p.id); if (!g) continue; g.updateMatrixWorld(true);
+      g.traverse(k => { if (!k.isMesh || k.isInstancedMesh || !k.visible || k.userData.noChoca) return; if (!k.geometry.boundingBox) k.geometry.computeBoundingBox(); E3.copy(k.geometry.boundingBox).applyMatrix4(k.matrixWorld);
+        if (E3.min.y > 3.9 || E3.max.y < 0.12 || (E3.max.x - E3.min.x) * (E3.max.z - E3.min.z) > 900) return; poner({ x0: E3.min.x, x1: E3.max.x, z0: E3.min.z, z1: E3.max.z, p }); }); }
+    return out; }
+  const dSeg = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / L)); return Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz); };
+  function estorbo(c, tr) { const at = !!tr.atras, f = at ? -1 : 1, fx = Math.cos(c.h) * f, fz = -Math.sin(c.h) * f, lx = -fz, lz = fx;
+    for (const k of at ? [9, 12, 15] : [3, 6, 9]) for (const l of [-1.25, 0, 1.25]) { const x = c.x + fx * k + lx * l, z = c.z + fz * k + lz * l, L = EST.get(celda(x, z)); if (!L) continue;
+      for (const o of L) { if (o.s ? dSeg(x, z, o.s[0], o.s[1]) < 0.35 : (x > o.x0 - 0.15 && x < o.x1 + 0.15 && z > o.z0 - 0.15 && z < o.z1 + 0.15)) return o.p; } }
+    return null; }
+  let avisoEst = 0;
   function paso(dt) { if (!T.on || !T.andenes.length || document.hidden) return false; dt = Math.min(dt, 0.1); let movio = false;
+    if ((estT -= dt) <= 0) { estT = 3; EST = estorbos(); }
     T.prox -= dt; const andando = T.camiones.filter(c => c.estado === 'va' || c.estado === 'sale').length;
     if (T.prox <= 0) { T.prox = rnd(3.5, 8); const libres = (T.con || []).filter(a => !a.cam); if (libres.length && andando < Math.min(9, 2 + Math.ceil(T.andenes.length / 12))) { const a = de(libres), ent = T.entradas.filter(n => n.c === a.nodo.c), ini = ent.length ? de(ent) : null, ruta = ini && camino(ini, a.nodo);
         if (ruta && ruta.length > 1 && T.camiones.some(q => q.estado !== 'anden' && Math.hypot(q.x - ruta[0].x, q.z - ruta[0].z) < 34)) T.prox = 1.5; else if (ruta && ruta.length > 1) { const c = nuevoCamion(); if (c) { c.x = ruta[0].x; c.z = ruta[0].z; c.h = Math.atan2(-(ruta[1].z - ruta[0].z), ruta[1].x - ruta[0].x); pintar(c); entrar(c, a, ruta); } } } }
@@ -98,6 +117,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       const tr = c.cola[0]; if (!tr) { if (c.estado === 'va') { c.estado = 'anden'; c.t = rnd(45, 200); c.x = c.anden.x; c.z = c.anden.z; c.h = c.anden.h; c.lado = 0; c.art = 0; ubicar(c); avisar(); } else { c.estado = 'chau'; c.t = 1; } movio = true; continue; }
       if (c.esc < 1) c.esc = Math.min(1, c.esc + dt * 1.5);
       if (tapado(c, tr) && (c.esp = (c.esp || 0) + dt) < 25) continue; c.esp = 0;
+      const est = EST.size ? estorbo(c, tr) : null; if (est) { c.parado = est; if (M.aviso && performance.now() - avisoEst > 20000) { avisoEst = performance.now(); M.aviso('Tránsito parado: ' + (est.nombre || 'algo') + ' quedó en el camino de los camiones. Movelo y siguen.'); } continue; } c.parado = null;
       // velocidad: más despacio en las curvas y al llegar al final del tramo
       const queda = tr.largo - c.s, vmax = tr.atras ? tr.v : (tr.carril ? 6 : tr.v), v = Math.max(0.9, Math.min(vmax, queda * 0.6 + 0.9) * (c.gira > 0.25 ? 0.55 : 1)); c.s += v * dt;
       if (c.s >= tr.largo) { c.cola.shift(); c.s = 0; if (c.estado === 'sale' && !c.cola.length) { c.estado = 'chau'; c.t = 1; } if (c.cola[0] && c.estado === 'sale' && c.anden) { if (c.anden.cam === c) c.anden.cam = null; avisar(); } continue; }
