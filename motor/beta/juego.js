@@ -20,12 +20,12 @@ export function juego(M) {
   const inv = new THREE.Matrix4(), m4 = new THREE.Matrix4(), mi = new THREE.Matrix4(), bx = new THREE.Box3(), b2 = new THREE.Box3(), v3 = new THREE.Vector3(), w3 = new THREE.Vector3();
   // la huella de una pieza: su caja en sus propios ejes (vale aunque esté girada). Se recuerda mientras no cambien sus mallas (un modelo puede llegar después).
   function huella(g) { let f = 0; g.traverse(k => { if (k.isMesh) f += 1 + (k.geometry.attributes.position ? k.geometry.attributes.position.count : 0); }); const ud = g.userData; if (ud._hu && ud._hu.f === f) return ud._hu;
-    g.updateMatrixWorld(true); inv.copy(g.matrixWorld).invert(); bx.makeEmpty();
+    g.updateMatrixWorld(true); inv.copy(g.matrixWorld).invert(); bx.makeEmpty(); let alto = 0;
     g.traverse(k => { if (!k.isMesh || !k.visible || k.userData.campo || k.userData.noChoca) return; if (!k.geometry.boundingBox) k.geometry.computeBoundingBox(); m4.multiplyMatrices(inv, k.matrixWorld);
-      const suma = () => { if (b2.max.y - b2.min.y < 0.03 && b2.max.y < 0.08) return; bx.union(b2); };   // lo chato pegado al piso (una sombra, una marca) no ocupa lugar
+      const suma = () => { if (b2.max.y - b2.min.y < 0.03 && b2.max.y < 0.08) return; if (b2.min.y > 2.5) { alto = Math.max(alto, b2.max.y); return; } bx.union(b2); };   // lo chato pegado al piso no ocupa lugar; lo que está arriba de 2,5 m (brazos y focos de una columna, una copa) no ocupa lugar en el piso
       if (k.isInstancedMesh) { for (let i = 0; i < Math.min(k.count, 400); i++) { k.getMatrixAt(i, mi); b2.copy(k.geometry.boundingBox).applyMatrix4(mi.premultiply(m4)); suma(); } }
       else { b2.copy(k.geometry.boundingBox).applyMatrix4(m4); suma(); } });
-    return ud._hu = bx.isEmpty() ? { f, vacia: true } : { f, cx: (bx.min.x + bx.max.x) / 2, cz: (bx.min.z + bx.max.z) / 2, hx: (bx.max.x - bx.min.x) / 2, hz: (bx.max.z - bx.min.z) / 2, y0: bx.min.y, y1: bx.max.y }; }
+    return ud._hu = bx.isEmpty() ? { f, vacia: true } : { f, cx: (bx.min.x + bx.max.x) / 2, cz: (bx.min.z + bx.max.z) / 2, hx: (bx.max.x - bx.min.x) / 2, hz: (bx.max.z - bx.min.z) / 2, y0: bx.min.y, y1: Math.max(bx.max.y, alto) }; }
   // un punto del mundo, en los ejes de la pieza
   const aLocal = (g, x, z) => { const dx = x - g.position.x, dz = z - g.position.z, c = Math.cos(g.rotation.y), s = Math.sin(g.rotation.y); return [dx * c - dz * s, dx * s + dz * c]; };
   const aMundo = (g, x, z) => { const c = Math.cos(g.rotation.y), s = Math.sin(g.rotation.y); return [g.position.x + x * c + z * s, g.position.z - x * s + z * c]; };

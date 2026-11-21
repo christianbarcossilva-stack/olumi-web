@@ -18,9 +18,9 @@ import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
 import { construir } from './construir.js?v=32';
-import { juego } from './juego.js?v=1';
+import { juego } from './juego.js?v=2';
 import { recorrer } from './recorrer.js?v=15';
-import { transito } from './transito.js?v=31';
+import { transito } from './transito.js?v=32';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -608,7 +608,7 @@ export async function abrirMaqueta(o) {
   const XT = extras({ motor, objs, raiz, TIPOS, AMB, real: app === 'ondi', lugar: (o.lugar || (host && host.lugar)) || null, alClima: k => document.querySelectorAll('[data-clima]').forEach(b => b.setAttribute('aria-pressed', b.dataset.clima === k)), get E() { return E; }, toast, aplicarCapas, temaFijo: !!(o.tema || (host && host.tema)) });
   $('#bpres').addEventListener('click', () => { $('#mcapas').hidden = true; if (RC.R.on) RC.paseo(false); if (ED.on) editar(false); elegir(null); XT.presentar(true); });
   // camiones que entran, atracan y salen (transito.js): solo en Ondi, de ejemplo, y solo si hay naves con andenes
-  TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, subtitulo }) : null; if (TR && capas.transito === false) TR.ver(false);
+  TR = app === 'ondi' ? transito({ motor, mundo, get E() { return E; }, get objs() { return objs; }, aviso: m => toast(m), subtitulo }) : null; if (TR && capas.transito === false) TR.ver(false);
   // las personas respiran y cambian el peso de pierna (unos 24 cuadros por segundo, solo de cerca y con la página a la vista: lejos no se nota y gasta batería)
   motor.cada.push((dt, t) => { if (!PERS.size || motor.C.d > 150 || document.hidden) return false; avAcc += dt; if (avAcc < 1 / 24) return false; const d = avAcc; avAcc = 0;
     for (const ob of PERS) { if (!ob.dueño.parent) { PERS.delete(ob); continue; } AVM.avPose(ob, ob.dueño.userData.pose === 'sentado' ? 'sit' : 'idle', d, { x: 0, y: 0, t: t / 1000 + ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); } return true; });   // sentada: en su silla, con las manos en el teclado
