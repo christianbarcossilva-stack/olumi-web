@@ -193,6 +193,23 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .top:has(.top-chip) .top-title { flex: 0 1 auto; }
 .view-head.plain > div:first-child > h1 { display: none; }
 .top-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 0 8px 0 14px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); color: var(--fg); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+/* El buscador: en la compu un tramo en el centro de la barra (como Olumi), en el celular la lupa sola */
+.top { position: relative; }
+.top-lupa .tl, .top-lupa kbd { display: none; }
+@media (min-width: 900px) {
+  .top .top-lupa { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: clamp(220px, 30vw, 440px); height: 40px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 0 8px 0 14px; color: var(--muted); font-size: 14px; }
+  .top .top-lupa:active { transform: translate(-50%, -50%) scale(.98); }
+  .top .top-lupa:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 9%, transparent); }
+  .top .top-lupa .tl { display: block; flex: 1 1 auto; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top .top-lupa kbd { display: block; flex: none; padding: 5px 7px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font: 600 11px/1 var(--mono); }
+  .top:has(.top-chip) .top-lupa { display: none; }
+  .top-title { flex: 0 1 auto; max-width: calc(50% - clamp(110px, 15vw, 220px) - 24px); margin-right: auto; }
+}
+/* El botón principal de cada pantalla va sin palabra, redondo y del color de Kliva (lo que hace lo dice al pasar el mouse) */
+.round.pri { color: var(--accent-fg); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, #fff) 0%, var(--accent) 52%, color-mix(in srgb, var(--accent) 91%, #000) 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), inset 0 -1px 0 rgb(0 0 0 / .12), 0 6px 18px var(--glow); }
+.round.pri .i { width: 22px; height: 22px; }
 .top-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top-chip .i { flex: none; width: 18px; height: 18px; color: var(--muted); }
 .top-search { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--muted); text-align: left; }
@@ -201,7 +218,7 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .round:active { transform: scale(.94); }
 .round .count { position: absolute; top: -3px; right: -3px; box-shadow: 0 0 0 2px var(--bg); }
 .main { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
-.view { max-width: 1240px; padding: 30px 30px 72px; display: flex; flex-direction: column; gap: 20px; }
+.view { max-width: 1240px; padding: 20px 30px 72px; display: flex; flex-direction: column; gap: 20px; }
 .view-head { display: flex; align-items: flex-end; gap: 12px 16px; flex-wrap: wrap; }
 /* Plano: el motor común ocupa todo lo que queda de la pantalla; con pantalla completa, todo */
 .main.fixed { overflow: hidden; display: flex; flex-direction: column; }
@@ -212,7 +229,7 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
 .plano .empty { margin: 24px; }
 :root.plano-full .plano { position: fixed; inset: 0; z-index: 60; border: 0; border-radius: 0; }
 .view-head > div:first-child { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.lede { color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 68ch; }
+.lede { color: var(--muted); font-size: 15px; line-height: 1.45; max-width: 76ch; }
 .lede b { color: var(--fg); font-weight: 600; }
 .lede .bad { color: var(--deny); font-weight: 500; }
 .lede .wait { color: var(--warn); font-weight: 500; }
@@ -242,8 +259,6 @@ kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; backgr
   .side { display: none; }
   .top { margin: 0; padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; background: var(--bar); }
   .top .mark { display: block; }
-  .top .btn.pri { width: 44px; min-width: 44px; padding: 0; }
-  .top .btn.pri span { display: none; }
   .view { padding: 20px 16px 128px; gap: 16px; }
   #alarm { padding: 10px 12px 0; }
   #alarm:not(:empty) + .view { padding-top: 16px; }
@@ -446,7 +461,11 @@ button.row:hover { background: var(--surface-2); }
 .row.fresh { animation: arrive 1.6s var(--mo); }
 
 /* ── Ficha lateral, buscador y avisos ──────────────────────────────────── */
-.sheet, .palette { position: fixed; inset: 0; z-index: 20; display: flex; }
+/* Safari dibujaba las tarjetas de vidrio de la página (que corren dentro de su propia capa de scroll) por ENCIMA de la ficha y del
+   buscador: se veían la lupa y la campana sobre la cruz y el texto de atrás a través del buscador. La página queda en su propio
+   plano (#root, nivel 0) y lo que se abre arriba en una capa propia (translateZ), así ningún navegador los mezcla. */
+#root { position: relative; z-index: 0; isolation: isolate; height: 100%; }
+.sheet, .palette { position: fixed; inset: 0; z-index: 20; display: flex; -webkit-transform: translateZ(0); transform: translateZ(0); }
 .sheet { justify-content: flex-end; padding: 14px; }
 .backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / .42); }
 .sheet-panel { position: relative; width: min(480px, 100%); height: 100%; display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; }
@@ -501,6 +520,7 @@ button.row:hover { background: var(--surface-2); }
   .toast:not([hidden]) { animation: toast var(--t2) var(--mo) both; }
   @keyframes sheet { from { opacity: 0; transform: translateX(34px) scale(.985); } }
   @keyframes fade { from { opacity: 0; } }
+  @keyframes land { from { opacity: 0; transform: translateY(-10px) scale(.985); } }
   @keyframes toast { from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.97); } }
 }
 @media (max-width: 899px) {
@@ -2163,13 +2183,13 @@ const demoNote = () => S.api.demo ? html`<span class="note">Demostración con da
 const head = (title, lede, extra = '') => html`<header class="view-head plain"><div><h1>${title}</h1>${lede ? html`<p class="lede">${lede}</p>` : ''}</div>${extra}</header>`;
 /** La acción principal de cada pantalla (va en la barra de arriba, con el color del punto). */
 const PRIMARY = {
-  panel: () => canOperate() && ['Abrir puerta', 'palette-doors', 'panel'],
-  personas: () => canOperate() && (S.peopleKind === 'visit' ? ['Visita', 'visit-new', 'plus'] : ['Persona', 'person-new', 'plus']),
-  niveles: () => isAdmin() && ['Nivel', 'level-new', 'plus'],
-  equipos: () => isAdmin() && ['Equipo', 'device-new', 'plus'],
-  eventos: () => ['Descargar', 'events-download', 'download'],
-  horario: () => ['Descargar', 'horario-download', 'download'],
-  integraciones: () => isAdmin() && ['Conexión', 'hook-new', 'plus'],
+  panel: () => canOperate() && ['Abrir una puerta', 'palette-doors', 'panel'],
+  personas: () => canOperate() && (S.peopleKind === 'visit' ? ['Nueva visita', 'visit-new', 'plus'] : ['Nueva persona', 'person-new', 'plus']),
+  niveles: () => isAdmin() && ['Nuevo nivel', 'level-new', 'plus'],
+  equipos: () => isAdmin() && ['Agregar equipo', 'device-new', 'plus'],
+  eventos: () => ['Descargar la planilla de eventos', 'events-download', 'download'],
+  horario: () => ['Descargar la planilla de horario', 'horario-download', 'download'],
+  integraciones: () => isAdmin() && ['Nueva conexión', 'hook-new', 'plus'],
 };
 
 // ── Panel ────────────────────────────────────────────────────────────────────
@@ -3699,7 +3719,7 @@ function shell() {
     </aside>
     <div class="stage">
       <header class="top">${MARK}<b class="top-title" id="top-title"></b><span class="top-q" id="top-q"></span>
-        <button class="round top-lupa" type="button" data-action="palette" aria-label="Buscar" title="Buscar (${isMac ? '⌘K' : 'Ctrl K'} o /)">${icon('search')}</button>
+        <button class="round top-lupa" type="button" data-action="palette" aria-label="Buscar" title="Buscar (${isMac ? '⌘K' : 'Ctrl K'} o /)">${icon('search')}<span class="tl">Buscar personas, puertas, equipos, números…</span><kbd>${isMac ? '⌘K' : 'Ctrl K'}</kbd></button>
         <button class="round" type="button" data-action="notices" aria-label="Avisos" title="Avisos">${icon('bell')}<span data-bell></span></button><span id="primary" style="display:contents"></span></header>
       <main class="main" id="main"><div id="alarm"></div><div class="view" id="view"></div></main>
     </div>
@@ -3730,7 +3750,7 @@ function drawChrome() {
   movePill($('#menu'), 'y');
   movePill($('#dock'), 'x');
   const p = PRIMARY[S.view]?.();
-  setHTML($('#primary'), p ? html`<button class="btn pri" type="button" data-action="${p[1]}" aria-label="${p[0]}" title="${p[0]}">${icon(p[2])}<span>${p[0]}</span></button>` : '');
+  setHTML($('#primary'), p ? html`<button class="round pri" type="button" data-action="${p[1]}" aria-label="${p[0]}" title="${p[0]}">${icon(p[2])}</button>` : '');
   $('[data-action="night"]')?.setAttribute('aria-checked', String(root.dataset.mode === 'dark'));
   drawBell();
   drawAlarm();
