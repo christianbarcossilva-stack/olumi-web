@@ -467,16 +467,18 @@ html.navmini .side .side-foot{display:grid}html.navmini .yo{justify-content:cent
 @media (prefers-reduced-motion:reduce){.cl,.cl .ir,.sw::after,.sidetog svg{transition:none}.cl.arrastra{scale:1}}
 @media (max-width:860px){.mtop{margin:10px 12px 0;border-radius:20px;top:40px;border:0}.mtop select{border-radius:999px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);padding:0 12px;font-weight:600}.mnav .tema{width:auto;flex:none;gap:8px;border:1px solid var(--line);background:var(--surface);padding:5px 8px 5px 12px;font-size:13.5px;color:var(--ink)}.mnav .tema svg{width:16px;height:16px}.mnav .tema span{flex:none}.mnav .tema .sw{width:32px;height:18px}.mnav .tema .sw::after{width:12px;height:12px}.mnav .tema[aria-checked="true"] .sw::after{transform:translateX(14px)}.side{display:none}.app{grid-template-columns:minmax(0,1fr)}html.navmini .app{grid-template-columns:minmax(0,1fr)}.clist{grid-template-columns:minmax(0,1fr)}}
 .demo-in{display:grid;gap:8px;justify-items:center;text-align:center;margin-top:6px;padding-top:16px;border-top:1px solid var(--line)}.demo-in span{font-weight:600}.demo-in .btn{justify-content:center}.demo-in small{font-size:12.5px}
-.docflot{position:absolute;right:16px;top:70px;width:min(640px,calc(100% - 32px));height:min(82%,760px);min-width:340px;min-height:160px;resize:both;z-index:30;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;background:var(--solid);box-shadow:0 30px 80px -20px rgba(0,0,0,.55),inset 0 0 0 1px var(--line);opacity:0;transform:scale(.86) translateY(14px);transform-origin:50% 60%;transition:opacity .3s cubic-bezier(.22,1,.36,1),transform .34s cubic-bezier(.22,1,.36,1)}
+.docflot{position:absolute;right:16px;top:70px;width:min(640px,calc(100% - 32px));height:min(82%,760px);min-width:340px;min-height:160px;z-index:30;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;background:var(--solid);box-shadow:0 30px 80px -20px rgba(0,0,0,.55),inset 0 0 0 1px var(--line);opacity:0;transform:scale(.86) translateY(14px);transform-origin:50% 60%;transition:opacity .3s cubic-bezier(.22,1,.36,1),transform .34s cubic-bezier(.22,1,.36,1)}
 .docflot.abierta{opacity:1;transform:none}.docflot.saliendo{opacity:0;transform:scale(.9);transition-duration:.25s}
 .docflot-in{position:relative;flex:1;min-height:0;overflow:auto}
 .docflot-bar{flex:none;display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 12px;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;border-bottom:1px solid var(--line);background:var(--surface2)}
 .docflot-bar b{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.docflot-bar .grip{width:22px;height:10px;flex:none;background:radial-gradient(circle,var(--muted) 1.2px,transparent 1.6px) 0 0/6px 5px;opacity:.7}
 .docflot .dfb{width:30px;height:30px;border:0;border-radius:999px;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}.docflot .dfb:hover{background:var(--sunken);color:var(--ink)}
 .docflot.mueve{cursor:grabbing;transition:none;opacity:.94}.docflot.mueve .docflot-bar{cursor:grabbing}
-.docflot.min{height:38px!important;min-height:0;resize:none}.docflot.min .docflot-in{display:none}
-@media (max-width:759px){.docflot{left:0!important;right:0!important;top:auto!important;bottom:0;width:auto!important;height:72%!important;min-width:0;resize:none;border-radius:20px 20px 0 0;transform-origin:50% 100%}.docflot-bar{cursor:default;justify-content:center}.docflot.min{height:38px!important}}.docflot-in>#docred{min-height:100%}.docflot-c{display:grid;place-items:center;height:100%;color:var(--muted);font-weight:600}
+.docflot.min{height:38px!important;min-height:0}.docflot.min .docflot-rs{display:none}
+.docflot-rs{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,var(--muted) 50%,var(--muted) 56%,transparent 56%,transparent 68%,var(--muted) 68%,var(--muted) 74%,transparent 74%);opacity:.7;z-index:3}.docflot-rs:hover{opacity:1}.docflot.min .docflot-in{display:none}
+@media (max-width:759px){.docflot-rs{display:none}.docflot{left:0!important;right:0!important;top:auto!important;bottom:0;width:auto!important;height:72%!important;min-width:0;resize:none;border-radius:20px 20px 0 0;transform-origin:50% 100%}.docflot-bar{cursor:default;justify-content:center}.docflot.min{height:38px!important}}.docflot-in>#docred{min-height:100%}.docflot-c{display:grid;place-items:center;height:100%;color:var(--muted);font-weight:600}
 @media (prefers-reduced-motion:reduce){.docflot,.docflot.saliendo{transition:opacity .15s;transform:none}}
+.maqsalir{display:none!important}.docflot .red-x{display:none}
 </style>
 </head>
 <body>
@@ -793,12 +795,12 @@ function modalView() {
 
 function simView() { const s = SIMS.find(x => x.id === S.sim);
   if (s) return `<div class="wrap wide"><button class="crumb" data-sim="">${IC.back}Simulación</button><div class="head"><div><h1>${esc(s.n)}</h1><p>${esc(s.d)}. <b>Cliente inventado</b>: nada de lo que ves es real y lo que cambies no se guarda.</p></div>
-    <div class="acts"><button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button></div></div><div class="maq" id="maqbox"></div></div>`;
+    </div><div class="maq" id="maqbox"></div></div>`;
   return `<div class="wrap"><div class="head"><div><h1>Simulación</h1><p>Clientes inventados para mostrar Ondi o practicar. No son clientes tuyos, no usan equipos reales y lo que cambies no se guarda.</p></div></div>
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = CARGA();
   let g = null; try { g = await (await fetch(ESCENAS + 'sim-' + s.id + '.json')).json(); } catch (e) {} if (S.sim !== s.id || !$('#maqbox')) return; if (!g || !g.escena) { box.innerHTML = '<div class="empty">No se pudo abrir la simulación. Probá de nuevo.</div>'; return; }
-  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, guarda: false, save() {} };
+  window.__ondiMaqueta = { juego: on => maqJuego(on), state: g, role: 'inst', park: s.n, installer: S.ctx.name, guarda: false, save() {} };
   box.innerHTML = CARGA() + `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; maqListo($('#maqframe')); }
 function siteHead() { const st = S.site, l = linksOf(st);
   const sub = [(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · ');
@@ -810,7 +812,7 @@ function siteView() { const tabs = staff() ? [['maqueta', 'Maqueta'], ['equipos'
 /* maqueta */
 let MAQ = null, maqT = null;
 function maqBar() { return `<span class="save" id="savest">${siteEd() ? esc(S.maqSave || 'Los cambios se guardan solos.') : 'Solo lectura.'}</span><span class="grow"></span>
-  ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}<button class="btn sm" data-do="maqfull">${IC.full}Pantalla completa</button>`; }
+  ${admin() ? `<button class="btn sm" data-do="maqimport">Importar armado</button><button class="btn sm" data-do="maqexport">Exportar</button>` : ''}`; }
 // varios en la misma maqueta: canal en tiempo real por cliente (Realtime de Supabase, sin tablas). Cada uno manda su posición
 // mientras camina y recibe la de los otros; la lista de conectados sale de la presencia del canal.
 function maqPresencia(st) { maqPresFin(); if (!SB.channel || !S.user) return null; const yo = S.user.id, nombre = docQuien() || 'Alguien', subs = new Set();
@@ -832,7 +834,7 @@ async function mountMaq() { const st = S.site, box = $('#maqbox'); if (!box) ret
   if (r.error && !faltaSQL(r.error)) toast(errTxt(r.error));
   let data = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; data = docBase(st, data);
   S.maqSave = r.data ? 'Guardado ' + ago(r.data.updated_at) : (editor() ? 'Tocá el lápiz de la maqueta para empezar a armarla.' : '');
-  MAQ = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
+  MAQ = { juego: on => maqJuego(on), site: st.id, org: st.org_id, state: data, role: siteEd() ? 'inst' : 'cli', park: (st.data && st.data.parque) || st.name, installer: staff() ? S.ctx.name : (S.ctx.sub || ''), base: base === 'polo' ? 'polo' : 'vacia', generica: base === 'generica',
     plano: (pl && pl.data && pl.data.data) || null, start: null, save: st2 => queueSave(st, st2), savePlano: url => savePlano(st, url), leerPlano: siteEd() ? img => leerPlano(st, img) : null,
     canTicket: staff() || S.myRol === 'pedir' || S.myRol === 'editar',
     equipos: async () => { await loadEq(st); const E = S.eq[st.id] || { list: [], errs: [] }, man = S.man[st.id] || [];
@@ -1433,7 +1435,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=25'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=26'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
@@ -1517,26 +1519,37 @@ function docPaint() { const D = S.doc, box = $('#docbox'); if (!D || !box) retur
 // ---------- adentro de un rack o un gabinete, sin salir de la maqueta: se abre encima con un acercamiento y se cierra igual ----------
 async function docFlot(st, p) { const box = $('#maqbox'); if (!box) return;
   let f = box.querySelector('.docflot'); if (!f) { f = document.createElement('div'); f.className = 'docflot'; f.setAttribute('role', 'dialog'); f.setAttribute('aria-label', 'Adentro de ' + (p.nombre || p.id));
-    f.innerHTML = '<div class="docflot-bar" title="Arrastrá para mover la ventana"><span class="grip" aria-hidden="true"></span><b>' + esc(p.nombre || p.id) + '</b><button class="dfb" data-df="min" aria-label="Achicar la ventana" title="Achicar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 12h12"/></svg></button><button class="dfb" data-df="x" aria-label="Cerrar" title="Cerrar (Esc)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="docflot-in"><div class="docflot-c">Abriendo ' + esc(p.nombre || p.id) + '…</div></div>';
+    f.innerHTML = '<div class="docflot-bar" title="Arrastrá para mover la ventana"><span class="grip" aria-hidden="true"></span><b>' + esc(p.nombre || p.id) + '</b><button class="dfb" data-df="min" aria-label="Achicar la ventana" title="Achicar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 12h12"/></svg></button><button class="dfb" data-df="x" aria-label="Cerrar" title="Cerrar (Esc)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="docflot-in"><div class="docflot-c">Abriendo ' + esc(p.nombre || p.id) + '…</div></div><span class="docflot-rs" title="Arrastrá para cambiar el tamaño" aria-hidden="true"></span>';
     box.appendChild(f); flotLugar(f); flotMover(f); requestAnimationFrame(() => requestAnimationFrame(() => f.classList.add('abierta'))); }
   else { f.classList.remove('min'); const b = f.querySelector('.docflot-bar b'); if (b) b.textContent = p.nombre || p.id; }
   try { if (!S.doc || S.doc.site !== st.id) { await docRed(); S.doc = await docLoad(st); } } catch (e) { toast('No se pudo abrir la documentación: ' + errTxt(e)); docFlotCerrar(); return; }
   const D = S.doc, W = D.W, id = p.id; D.cid = id; D.hist = false; D.caja = null;
+  const dimDe = () => { const a = Math.round((+p.alto || 0.8) * 100), w = Math.round((+p.ancho || 0.6) * 100); return GABD.includes(a + 'x' + w) ? a + 'x' + w : '60x40'; };
+  if (W.cabs[id] && p.t === 'gabinete' && !W.cabs[id].dim && OndiRed.aGabinete && OndiRed.aGabinete(W.cabs[id], dimDe())) docSave();
+  try { const w = ($('#maqframe') || {}).contentWindow; if (w && w.__maqueta && w.__maqueta.elegir) w.__maqueta.elegir(null); } catch (e) {} // se cierra la ficha de la maqueta: la documentación es esta ventana
   if (!W.cabs[id]) { if (p.t === 'gabinete') { const a = Math.round((+p.alto || 0.8) * 100), w = Math.round((+p.ancho || 0.6) * 100), dim = GABD.includes(a + 'x' + w) ? a + 'x' + w : '60x40', ga = +dim.split('x')[0]; W.cabs[id] = { cap: Math.max(4, Math.round((ga - 10) / 4.445)), dim, items: [], links: [], ports: {} }; }
     else W.cabs[id] = { cap: (docRacks(W, D.idx).find(x => x.id === id) || {}).cap || 9, items: [], links: [], ports: {} }; }
   const c = f.querySelector('.docflot-in'); c.innerHTML = '<div id="docred"></div>'; D.V.cid = id; const H = docH();
-  OndiRed.pintar(c.firstChild, { ...H, cerrar: () => docFlotCerrar(), ir: x => { const w = ($('#maqframe') || {}).contentWindow, M = w && w.__maqueta, pz = M && M.E.piezas.find(q => q.id === x); if (pz) { M.elegir(pz, true); $('#maqbox .docflot').classList.add('min'); } else { docFlotCerrar(); H.ir(x); } } }, D.V); }
+  OndiRed.pintar(c.firstChild, { ...H, acciones: () => '', menu: () => [], cerrar: () => docFlotCerrar(), ir: x => { const w = ($('#maqframe') || {}).contentWindow, M = w && w.__maqueta, pz = M && M.E.piezas.find(q => q.id === x); if (pz) { M.elegir(pz, true); $('#maqbox .docflot').classList.add('min'); } else { docFlotCerrar(); H.ir(x); } } }, D.V); }
 // la ventana se mueve arrastrando la barra y se acuerda dónde la dejaste (en el celular va abajo, como una hoja)
 function flotLugar(f) { if (innerWidth < 760) return; let L = null; try { L = JSON.parse(localStorage.getItem('ondi.flot') || 'null'); } catch (e) {} const B = f.parentElement.getBoundingClientRect(), w = Math.min(L && L.w || 640, B.width - 24), h = Math.min(L && L.h || B.height * 0.82, B.height - 24);
-  const x = L ? Math.min(Math.max(8, L.x), B.width - w - 8) : B.width - w - 16, y = L ? Math.min(Math.max(8, L.y), B.height - 60) : 70; Object.assign(f.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); }
+  const x = L ? Math.min(Math.max(8, L.x), B.width - w - 8) : 16, y = L ? Math.min(Math.max(8, L.y), B.height - 60) : 70; Object.assign(f.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); }
 function flotGuardar(f) { try { localStorage.setItem('ondi.flot', JSON.stringify({ x: f.offsetLeft, y: f.offsetTop, w: f.offsetWidth, h: f.offsetHeight })); } catch (e) {} }
 function flotMover(f) { const bar = f.querySelector('.docflot-bar'); let d = null;
-  bar.addEventListener('pointerdown', e => { if (e.target.closest('button') || innerWidth < 760) return; d = { x: e.clientX - f.offsetLeft, y: e.clientY - f.offsetTop }; bar.setPointerCapture(e.pointerId); f.classList.add('mueve'); });
+  bar.addEventListener('pointerdown', e => { if (e.target.closest('button') || innerWidth < 760) return; d = { x: e.clientX - f.offsetLeft, y: e.clientY - f.offsetTop }; try { bar.setPointerCapture(e.pointerId); } catch (x) {} f.classList.add('mueve'); });
   bar.addEventListener('pointermove', e => { if (!d) return; const B = f.parentElement; f.style.left = Math.min(Math.max(-f.offsetWidth + 120, e.clientX - d.x), B.clientWidth - 120) + 'px'; f.style.top = Math.min(Math.max(0, e.clientY - d.y), B.clientHeight - 44) + 'px'; });
   const fin = () => { if (!d) return; d = null; f.classList.remove('mueve'); flotGuardar(f); }; bar.addEventListener('pointerup', fin); bar.addEventListener('pointercancel', fin);
   new ResizeObserver(() => { if (f.isConnected && f.classList.contains('abierta') && !f.classList.contains('min')) flotGuardar(f); }).observe(f);
   bar.addEventListener('click', e => { const b = e.target.closest('[data-df]'); if (!b) return; if (b.dataset.df === 'x') docFlotCerrar(); else f.classList.toggle('min'); });
+  // cambiar el tamaño desde la esquina (con el puntero tomado, así no se pierde al pasar por encima de la maqueta)
+  const rs = f.querySelector('.docflot-rs'); let r = null; rs.addEventListener('pointerdown', e => { r = { x: e.clientX, y: e.clientY, w: f.offsetWidth, h: f.offsetHeight }; try { rs.setPointerCapture(e.pointerId); } catch (x) {} f.classList.add('mueve'); e.preventDefault(); });
+  rs.addEventListener('pointermove', e => { if (!r) return; const B = f.parentElement; f.style.width = Math.min(Math.max(360, r.w + e.clientX - r.x), B.clientWidth - f.offsetLeft - 4) + 'px'; f.style.height = Math.min(Math.max(180, r.h + e.clientY - r.y), B.clientHeight - f.offsetTop - 4) + 'px'; });
+  const finR = () => { if (!r) return; r = null; f.classList.remove('mueve'); flotGuardar(f); const red = f.querySelector('#docred'); if (red && S.doc) OndiRed.pintar(red, red.__red ? red.__red.H : docH(), S.doc.V); }; rs.addEventListener('pointerup', finR); rs.addEventListener('pointercancel', finR);
   bar.addEventListener('dblclick', e => { if (!e.target.closest('button')) f.classList.toggle('min'); }); }
+function maqJuego(on) { const b = $('#maqbox'); if (!b) return; b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on);
+  try { if (on && b.requestFullscreen && !document.fullscreenElement) b.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} }
+// si se sale con Esc (o del navegador), la maqueta se entera y el botón vuelve a andar a la primera
+document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) return; const b = $('#maqbox'); if (b) b.classList.remove('full', 'juego'); try { $('#maqframe').contentDocument.documentElement.classList.remove('mfull'); } catch (e) {} });
 function docFlotCerrar() { const f = $('#maqbox .docflot'); if (!f) return; f.classList.remove('abierta'); f.classList.add('saliendo'); setTimeout(() => f.remove(), 320); if (S.doc) S.doc.cid = null; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#maqbox .docflot.abierta') && !e.defaultPrevented) docFlotCerrar(); });
 function docNid(W, D, pre) { const ids = new Set([...docRacks(W, D.idx).map(r => r.id), ...Object.keys(W.cabs), ...((D.idx || {}).devs || []).map(d => d.id)]); let n = 1, id; do id = pre + String(n++).padStart(2, '0'); while (ids.has(id)); return id; }

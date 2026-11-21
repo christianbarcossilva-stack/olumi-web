@@ -1049,5 +1049,7 @@ function css() { if (document.getElementById('red-css')) return; const s = docum
   .red-hoja .red-tw{border:0;overflow:visible}.red-hoja .red-t{font-size:10px}.red-hoja .red-t th{position:static;background:#eee;color:#222;print-color-adjust:exact;-webkit-print-color-adjust:exact}.red-hoja .red-t td,.red-hoja .red-t th{border:1px solid #bbb;padding:3px 5px}.red-hoja .red-fib header span{color:#444}.red-hoja a{color:inherit;text-decoration:none}}
 `; document.head.appendChild(s); }
 
-window.OndiRed = { v: 1, CAT, registrar, pintar, cadena, filas, hilos, frente, arbol, alPrincipal };
+// un rack «de prueba» que en la maqueta es un gabinete: pasa a gabinete con su placa y sus equipos se acomodan en la placa (no se pierde nada)
+function aGabinete(c, dim) { if (!c || c.dim) return false; c.dim = dim; const its = c.items.slice().sort((a, b) => (a.u || 0) - (b.u || 0)); for (const it of its) { delete it.x; delete it.y; } for (const it of its) { const h = gHueco(c, it); if (h) { it.x = h[0]; it.y = h[1]; } } return true; }
+window.OndiRed = { v: 1, CAT, registrar, pintar, cadena, filas, hilos, frente, arbol, alPrincipal, aGabinete };
 })();
