@@ -3,8 +3,8 @@
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
-import { THREE } from './nucleo.js?v=14';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=36';
+import { THREE } from './nucleo.js?v=15';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=41';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -14,7 +14,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   const im = malla(G.cabina, MC.t, true), ir = malla(G.tractor, MC.d, false), iL = malla(G.lisa, MC.t, true), iC = malla(G.contenedor, MC.t, true), iR = malla(G.remolque, MC.d, false), TODAS = [im, ir, iL, iC, iR];
   // de noche, la luz de los faros en el piso delante de cada camión que anda (un solo dibujo para todos)
   const cl = document.createElement('canvas'); cl.width = cl.height = 64; { const x = cl.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); }
-  const il = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cl), color: '#ffe9bf', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 }), MAX); il.frustumCulled = false; il.raycast = () => {}; il.renderOrder = 2; il.visible = false; mundo.add(il);
+  const il = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cl), color: '#ffe9bf', transparent: true, opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 }), MAX); il.frustumCulled = false; il.raycast = () => {}; il.renderOrder = 2; il.visible = false; mundo.add(il);
   const T = { on: true, firma: '', nodos: [], andenes: [], camiones: [], entradas: [], prox: 2, im, ir, il, mallas: TODAS };
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), eu = new THREE.Euler(), v3 = new THREE.Vector3(), s3 = new THREE.Vector3(), col = new THREE.Color(), CERO = new THREE.Matrix4().makeScale(0, 0, 0);
   for (let i = 0; i < MAX; i++) { for (const k of TODAS) k.setMatrixAt(i, CERO); for (const k of [im, iL, iC]) k.setColorAt(i, col.set('#ffffff')); il.setMatrixAt(i, CERO); }

@@ -53,7 +53,7 @@ export function extras(M) { const { motor, objs, raiz } = M, THREE = motor.THREE
       fragmentShader: 'uniform float uO; varying float vA; void main(){ gl_FragColor = vec4(0.86, 0.9, 0.95, uO * vA); }' }));
     lluvia.frustumCulled = false; lluvia.renderOrder = 6; lluvia.raycast = () => {}; lluvia.userData.noPica = lluvia.userData.noChoca = true; lluvia.visible = false; motor.scene.add(lluvia); return lluvia; }
   motor.cada.push((dt) => { if (!lluvia || !lluvia.visible) return false; UL.uT.value = (UL.uT.value + dt * 0.95) % 1000; UL.uS.value = Math.min(520, Math.max(42, C.d * 1.5)); UL.uC.value.set(C.tx, 0, C.tz); return true; });
-  const mojar = on => { if (M.AMB) M.AMB.mojado = on; motor.scene.traverse(k => { const m = k.material; if (m && m.userData && m.userData.suelo) m.roughness = on ? Math.min(m.userData.r0, 0.4) : m.userData.r0; }); };
+  const mojar = on => { if (M.AMB) M.AMB.mojado = on; motor.scene.traverse(k => { const m = k.material; if (m && m.userData && m.userData.suelo) m.roughness = on ? Math.min(m.userData.r0, 0.6) : m.userData.r0; }); };
   function aplicarClima(c) { motor.ponerClima(c); const ll = c === 'lluvia'; if (ll || lluvia) { gotas().visible = ll; UL.uO.value = motor.tema === 'oscuro' ? 0.2 : 0.34; } mojar(ll); motor.dirty = true; }
   motor.alTema.push(() => { if (lluvia) UL.uO.value = motor.tema === 'oscuro' ? 0.2 : 0.34; });
   // tiempo real de la ciudad: código del tiempo de la OMM → uno de los cuatro climas
