@@ -13,15 +13,15 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=843878bc';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=843878bc';
-import { ve, dominio, DOMINIOS } from './plano.js?v=843878bc';
-import { svg } from './iconos.js?v=843878bc';
-import { construir } from './construir.js?v=843878bc';
-import { juego } from './juego.js?v=843878bc';
-import { recorrer } from './recorrer.js?v=843878bc';
-import { transito } from './transito.js?v=843878bc';
-import { extras } from './extras.js?v=843878bc';
+import { THREE, crearMotor } from './nucleo.js?v=49378947';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=49378947';
+import { ve, dominio, DOMINIOS } from './plano.js?v=49378947';
+import { svg } from './iconos.js?v=49378947';
+import { construir } from './construir.js?v=49378947';
+import { juego } from './juego.js?v=49378947';
+import { recorrer } from './recorrer.js?v=49378947';
+import { transito } from './transito.js?v=49378947';
+import { extras } from './extras.js?v=49378947';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -55,7 +55,7 @@ export async function abrirMaqueta(o) {
   if (host && !E.piezas.length) E.piezas.push({ id: 'ter1', t: 'terreno', nombre: E.nombre, mat: 'tierra', pts: [[-60, -40], [60, -40], [60, 40], [-60, 40]] });
   // ---------- pantalla ----------
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" tabindex="0" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover; rueda o dos dedos para acercar; clic derecho, o dos dedos de costado, para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
-  <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? 'Los cambios se guardan solos' : 'Solo lectura'}</span></div></div>
+  <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? (host && host.guarda === false ? 'Simulación: los cambios no se guardan' : 'Los cambios se guardan solos') : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
     <div class="mbtns">${host && host.tema ? '' : `<button id="btema" class="mbtn" aria-label="Cambiar la hora del día" title="Hora del día: mañana, mediodía, hora azul, noche u hora real">${svg('tema')}</button>`}<button id="bcapas" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes">${svg('capas')}</button><button id="bplano" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta)">${svg('plano')}</button><button id="bvista" class="mbtn" aria-label="Vista general" title="Vista general">${svg('vista')}</button><button id="bpaseo" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando">${svg('caminar')}</button><button id="bfull" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
   <div id="mcapas" class="vidrio mpop" hidden><button class="mbtn mpresb" id="bpres">${svg('ojo', 16)}Recorrido de presentación</button><div class="mseg mclima" role="group" aria-label="Clima"><span>Clima</span><div>${[['real', 'Real'], ['despejado', 'Sol'], ['nublado', 'Nubes'], ['lluvia', 'Lluvia'], ['niebla', 'Niebla']].map(([k, n]) => `<button data-clima="${k}" aria-pressed="${k === 'despejado'}">${n}</button>`).join('')}</div></div>${CAPAS.filter(([k]) => !(SIN_CAPA[app] || []).includes(k) && !(k === 'transito' && app !== 'ondi')).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}
@@ -139,7 +139,7 @@ export async function abrirMaqueta(o) {
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
-      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=843878bc'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=49378947'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
         if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }

@@ -1,10 +1,10 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=843878bc';
+import { THREE } from './nucleo.js?v=49378947';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=843878bc';
-import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=843878bc';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=49378947';
+import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=49378947';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
 // { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
