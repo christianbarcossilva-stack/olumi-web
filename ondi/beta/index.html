@@ -1409,7 +1409,7 @@ function docDiff(a, b) { const out = [], A = (a && a.cabs) || {}, B = (b && b.ca
     for (const [k, p] of qb) { const o = qa.get(k); if (!o) out.push({ r: k, m: `Puso ${p.nombre || k} en la maqueta` }); else if (o.sinUbicar && !p.sinUbicar) out.push({ r: k, m: `Ubicó ${p.nombre || k} en la maqueta` }); }
     for (const [k, p] of qa) if (!qb.has(k)) out.push({ r: k, m: `Sacó ${p.nombre || k} de la maqueta` }); }
   return out.length > 30 ? out.slice(0, 29).concat({ m: `y ${out.length - 29} cambios más` }) : out; }
-const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=23'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const docRed = () => window.OndiRed ? Promise.resolve() : (docRed.p = docRed.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'red.js?v=24'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 async function docLoad(st) { const D = { site: st.id, W: null, cid: null, V: { tab: 'frente', q: '' }, q: '', hist: false, histR: false, nuevo: false, idx: S.docIdx[st.id] || null };
   await docRed(); let W = S.docT[st.id] && Date.now() - S.docT[st.id] < 120000 ? docCl(S.docPrev[st.id]) : null;
   if (!W) { const r = await SB.from('ondi_maquetas').select('data').eq('org_id', st.org_id).eq('site_id', st.id).maybeSingle(); if (r.error && !faltaSQL(r.error)) throw r.error; W = r.data && r.data.data && r.data.data.v === 1 ? r.data.data : null; S.docPrev[st.id] = docCl(W); }
