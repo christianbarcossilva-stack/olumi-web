@@ -133,6 +133,8 @@ const F = {
 export const MARCAS = [['hikvision', 'Hikvision'], ['dahua', 'Dahua'], ['unifi', 'Ubiquiti UniFi'], ['meraki', 'Cisco Meraki'], ['tplink', 'TP-Link'], ['mikrotik', 'MikroTik'], ['cisco', 'Cisco'], ['intelbras', 'Intelbras'], ['honeywell', 'Honeywell'], ['sonoff', 'Sonoff'], ['otra', 'Otra']];
 // montaje: en columna (con poste desde el piso), en pared o en el techo (sin poste). piso = altura del piso donde está (planta alta de un edificio)
 const MONT = { k: 'montaje', n: 'Montaje', t: 'sel', ops: [['poste', 'En columna o poste'], ['pared', 'En pared'], ['techo', 'En el techo']] }, BASE = { k: 'piso', n: 'Altura del piso (m)', t: 'num', min: 0, max: 40, paso: 0.1 };
+// un rack o un gabinete es un NODO de la red: tiene nombre, marca y modelo, pero no IP ni MAC (esas son de los equipos de adentro)
+const NODO_CAMPOS = () => [{ k: 'nombre', n: 'Nombre del nodo', t: 'txt' }, EQ_CAMPOS[1], EQ_CAMPOS[2]];
 const EQ_CAMPOS = [F.nombre, { k: 'marca', n: 'Marca', t: 'sel', ops: MARCAS }, { k: 'modelo', n: 'Modelo', t: 'txt' }, { k: 'ip', n: 'IP', t: 'txt' }, { k: 'mac', n: 'MAC', t: 'txt' }, { k: 'y', n: 'Altura (m)', t: 'num', min: 0, max: 40, paso: 0.1 }, F.r, { k: 'notas', n: 'Notas', t: 'area' }, MONT, BASE];
 
 // ---------- equipos de red y seguridad (Ondi) ----------
@@ -960,7 +962,7 @@ export const TIPOS = {
     armar: equipo((g, p, ec) => { caja(g, -0.22, -0.03, -0.22, 0.22, 0.03, 0.22, negro()); for (let i = 0; i < 8; i++) caja(g, -0.18 + i * 0.05, -0.01, 0.22, -0.15 + i * 0.05, 0.02, 0.225, led(ec), false); }) },
   // rack: de piso con puerta de vidrio, de pared (más chico, colgado) o abierto (dos parantes). Lo de adentro se documenta aparte (bocas, patch cords, fibras).
   rack: { n: 'Rack', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', protegido: true, etiqueta: p => p.nombre, def: { y: 0, alto: 2, clase: 'piso' },
-    campos: [...EQ_CAMPOS.slice(0, 5), { k: 'clase', n: 'Tipo de rack', t: 'sel', ops: [['piso', 'De piso'], ['pared', 'De pared'], ['abierto', 'Abierto (parantes)']] }, F.alto('Alto (m)', 0.3, 2.4), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.4, max: 1, paso: 0.05 }, { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r, EQ_CAMPOS[7]],
+    campos: [...NODO_CAMPOS(), { k: 'clase', n: 'Tipo de rack', t: 'sel', ops: [['piso', 'De piso'], ['pared', 'De pared'], ['abierto', 'Abierto (parantes)']] }, F.alto('Alto (m)', 0.3, 2.4), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.4, max: 1, paso: 0.05 }, { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r, EQ_CAMPOS[7]],
     variantes: [{ n: 'Rack de piso', o: { clase: 'piso', alto: 2 } }, { n: 'Rack de pared', o: { clase: 'pared', alto: 0.5 } }, { n: 'Rack abierto', o: { clase: 'abierto', alto: 2 } }],
     armar: equipo((g, p, ec) => { const c = p.clase || 'piso', h = p.alto || (c === 'pared' ? 0.5 : 2), a = p.ancho || 0.6, f = p.fondo || (c === 'pared' ? 0.45 : c === 'abierto' ? 0.5 : 0.8), b = c === 'pared' ? (p.base ?? 1.5) : 0, ch = negro(), acero = mat('#2b3035', { roughness: 0.45, metalness: 0.5 });
       const frentes = z => { for (let yy = b + h - 0.16, i = 0; yy > b + 0.14 && i < 14; yy -= 0.135, i++) caja(g, -a / 2 + 0.07, yy, z, a / 2 - 0.07, yy + (i % 4 === 2 ? 0.085 : 0.04), z + 0.012, i % 3 === 1 ? gris() : mat('#3b4148', { roughness: 0.5, metalness: 0.3 }), false); };
@@ -971,7 +973,7 @@ export const TIPOS = {
       caja(g, -a / 2 + 0.06, b + h - 0.07, (c === 'abierto' ? 0.04 : f / 2) + 0.008, -a / 2 + 0.2, b + h - 0.05, (c === 'abierto' ? 0.04 : f / 2) + 0.014, led(ec), false); }) },
   // gabinete exterior de chapa (tipo IP66, gris claro) sobre dos perfiles galvanizados ranurados que bajan al piso, como el de E1 (foto del 16/11)
   gabinete: { n: 'Gabinete exterior', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', protegido: true, etiqueta: p => p.nombre, def: { y: 0, ancho: 0.6, alto: 0.8, fondo: 0.3, base: 1.0, rieles: true, color: '#D2D3CE' },
-    campos: [...EQ_CAMPOS.slice(0, 5), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, F.alto('Alto (m)', 0.3, 1.6, 0.05), { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.15, max: 0.6, paso: 0.05 },
+    campos: [...NODO_CAMPOS(), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, F.alto('Alto (m)', 0.3, 1.6, 0.05), { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.15, max: 0.6, paso: 0.05 },
       { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 2.5, paso: 0.05 }, { k: 'rieles', n: 'Perfiles hasta el piso', t: 'bool' }, F.color('Color'), F.r, EQ_CAMPOS[7]],
     armar: equipo((g, p) => { const a = p.ancho || 0.6, h = p.alto || 0.8, f = p.fondo || 0.3, b = p.base ?? 1, z0 = p.rieles === false ? 0.01 : 0.045, chapa = mat(p.color || '#D2D3CE', { roughness: 0.55, metalness: 0.15 });
       const galv = mat('#A7ACAE', { roughness: 0.4, metalness: 0.75 }), pieza = mat('#C9CBC6', { roughness: 0.5, metalness: 0.15 }), traba = mat('#202326', { roughness: 0.5 });
