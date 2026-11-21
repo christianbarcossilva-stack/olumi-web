@@ -122,6 +122,15 @@ const tex = new Map();
 function rayas(c1, c2, n = 8) { const k = c1 + c2 + n; if (tex.has(k)) return tex.get(k); const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; const x = cv.getContext('2d');
   x.fillStyle = c1; x.fillRect(0, 0, 64, 64); x.fillStyle = c2; for (let i = 0; i < n; i++) x.fillRect(0, i * 64 / n, 64, 64 / n * 0.45);
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; tex.set(k, t); return t; }
+// cara de una señal de tránsito (círculo con aro rojo y número, octógono de PARE, triángulo de ceda)
+function senalTex(tipo, valor) { const k = 'senal' + tipo + valor; if (tex.has(k)) return tex.get(k); const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'), c = 128;
+  const txt = (t, fs, col) => { x.fillStyle = col; x.font = `800 ${fs}px "Instrument Sans", system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, c, c + fs * 0.04); };
+  if (tipo === 'pare') { x.beginPath(); for (let i = 0; i < 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; x.lineTo(c + Math.cos(a) * 124, c + Math.sin(a) * 124); } x.closePath(); x.fillStyle = '#C8102E'; x.fill(); x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke(); txt('PARE', 70, '#fff'); }
+  else if (tipo === 'ceda') { x.beginPath(); x.moveTo(c, 240); x.lineTo(14, 30); x.lineTo(242, 30); x.closePath(); x.fillStyle = '#C8102E'; x.fill(); x.beginPath(); x.moveTo(c, 196); x.lineTo(56, 56); x.lineTo(200, 56); x.closePath(); x.fillStyle = '#fff'; x.fill(); }
+  else { x.beginPath(); x.arc(c, c, 124, 0, 7); x.fillStyle = '#C8102E'; x.fill(); x.beginPath(); x.arc(c, c, 96, 0, 7); x.fillStyle = '#fff'; x.fill();
+    if (tipo === 'prohibido') { x.fillStyle = '#C8102E'; x.fillRect(40, 112, 176, 32); } else if (tipo === 'peaton') { x.fillStyle = '#1d1f22'; x.beginPath(); x.arc(c, 74, 16, 0, 7); x.fill(); x.fillRect(116, 92, 24, 66); x.fillRect(104, 152, 14, 46); x.fillRect(138, 152, 14, 46); }
+    else txt(String(valor || 15), String(valor || 15).length > 2 ? 92 : 112, '#1d1f22'); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; tex.set(k, t); return t; }
 function textoTex(txt, fondo, tinta, w = 512, h = 160) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.fillStyle = fondo; x.fillRect(0, 0, w, h);
   x.fillStyle = tinta; let fs = h * 0.5; x.font = `700 ${fs}px "Instrument Sans", system-ui, sans-serif`; while (x.measureText(txt).width > w * 0.9 && fs > 10) { fs -= 2; x.font = `700 ${fs}px "Instrument Sans", system-ui, sans-serif`; }
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w / 2, h / 2 + fs * 0.04); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
@@ -450,9 +459,11 @@ const HOJAS = (() => { const g = new THREE.IcosahedronGeometry(0.5, FINO ? 2 : 1
     nrm.setXYZ(i, v.x, v.y, v.z); p.setXYZ(i, v.x * 0.5 * k, v.y * 0.5 * k, v.z * 0.5 * k); col[i * 3] = s * 0.97; col[i * 3 + 1] = s; col[i * 3 + 2] = s * 0.92; }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; })();
 const TRONCO = new THREE.CylinderGeometry(0.28, 0.5, 1, 7);
+// perfil New Jersey (ancho 1, alto 1, largo 1 en z): base ancha, quiebre a un tercio y lomo angosto
+const JERSEY = (() => { const V = (a, b) => new THREE.Vector2(a, b), g = new THREE.ExtrudeGeometry(new THREE.Shape([V(-0.5, 0), V(0.5, 0), V(0.5, 0.1), V(0.22, 0.32), V(0.14, 1), V(-0.14, 1), V(-0.22, 0.32), V(-0.5, 0.1)]), { depth: 1, bevelEnabled: false }); g.translate(0, 0, -0.5); return g; })();
 // mata de pasto: cinco hojas finas abiertas en abanico
 const MATA = (() => { const l = []; for (let i = 0; i < 5; i++) { const a = i * 1.257, c = new THREE.ConeGeometry(0.035, 0.42 + (i % 3) * 0.1, 3, 1, true); c.translate(0, 0.21, 0); c.rotateZ(0.28 + (i % 2) * 0.22); c.rotateY(a); c.translate(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05); l.push(c); } return mergeGeometries(l); })();
-const V_EUCA = ['#7d9a80', '#6f8f78', '#88a58a', '#789b7c'], V_ALAMO = ['#5d8a47', '#679350', '#557f41'], V_ARBU = ['#5c8a4a', '#6b9856', '#4f7c41', '#7aa05f'], V_PASTO = ['#86a565', '#7b9b5c', '#93b072', '#6f9153', '#a3b97c'];
+const OLIVOS = ['#8a9a72', '#7f9168', '#95a47d', '#7a8c66'], V_EUCA = ['#7d9a80', '#6f8f78', '#88a58a', '#789b7c'], V_ALAMO = ['#5d8a47', '#679350', '#557f41'], V_ARBU = ['#5c8a4a', '#6b9856', '#4f7c41', '#7aa05f'], V_PASTO = ['#86a565', '#7b9b5c', '#93b072', '#6f9153', '#a3b97c'];
 // pasto con vida: matas y algún arbusto donde el terreno es pasto y no hay calle, playón ni construcción encima
 function matas(g, p, ctx) { const E = entorno(ctx), bb = cajaDe(p.pts), A = Math.abs(areaSig(p.pts)); if (A < 40) return; const R = azar(semilla(p)), monte = p.mat === 'monte', nM = Math.min(FINO ? 5200 : 500, Math.round(A / (monte ? 8 : 13))), nB = Math.min(FINO ? 60 : 16, Math.round(A / (monte ? 150 : 520)));
   const libre = (x, z, m) => enPoli(x, z, p.pts) && !(E && (E.enCalle(x, z, null, m) || E.enPolis(x, z, E.duros) || E.enPolis(x, z, E.otros) || E.enCaja(x, z, m)));
@@ -719,7 +730,7 @@ export const TIPOS = {
       // la isla va por encima de las calles que cruzan por el centro (más alta y dibujada adelante)
       if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const cir = r => { const l = []; for (let k = 0; k < 48; k++) l.push([r * Math.cos(k / 48 * 6.2832), -r * Math.sin(k / 48 * 6.2832)]); return l; }; try { bordeIsla(g, cir(p.isla + 0.62), cir(p.isla + 0.02), 0.058, 0.33, p.flechas === 'no' ? '' : (p.flechas || 'anti'), ad); } catch (e) { console.warn('borde', e); } g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color de la baranda', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
     armar(p) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
       if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return g; }
       // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
@@ -727,6 +738,10 @@ export const TIPOS = {
         let acc = 0; for (let i = 0; i < P.length; i++) { if (i) acc += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); v.push(P[i][0], 0, P[i][1], P[i][0], h, P[i][1]); uv.push(acc / 2, 0, acc / 2, h / 0.5); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
         const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals(); g.add(sombra(new THREE.Mesh(geo, pl)));
         lote(g, CAJA, ph, aLoLargo(P, 2).map(([x, z, d]) => [x, (h + 0.12) / 2, z, d, 0.2, h + 0.12, 0.2])); return g; }
+      // bloques New Jersey sueltos, de 2 m, uno detrás del otro con una junta (los amarillos que cortan un carril)
+      if (p.tipo === 'jersey') { const hb = Math.min(1.1, p.alto || 0.8), c = p.color || '#E9C23A', it = []; for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), d = Math.atan2(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2)), l = L / n;
+          for (let j = 0; j < n; j++) { const f = (j + 0.5) / n; it.push([a[0] + (b[0] - a[0]) * f, 0, a[1] + (b[1] - a[1]) * f, d, 0.6, hb, l - 0.18]); } }
+        lote(g, JERSEY, mat(oscuro() ? mix(c, '#000', 0.45) : c, { roughness: 0.85 }), it); return g; }
       if (p.tipo === 'baranda') { const ca = p.color ? mat(oscuro() ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.5, metalness: 0.3 }) : mat(oscuro() ? '#6c747b' : '#8f979d', { roughness: 0.5, metalness: 0.4 }), it = aLoLargo(P, 2.4).map(([x, z, d]) => [x, h / 2, z, d, 0.06, h, 0.06]); for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), r = Math.atan2(b[0] - a[0], b[1] - a[1]); for (const y of [h - 0.03, h * 0.5]) it.push([(a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2, r, 0.05, 0.05, L]); } lote(g, CAJA, ca, it); return g; }
       const postes = aLoLargo(P, gr ? 4 : 3), col = gr ? '#9aa3ab' : p.tipo === 'hormigon' ? (oscuro() ? '#6e7377' : '#b8bcbf') : '#8c949b', w = p.tipo === 'hormigon' ? 0.13 : 0.07;
       lote(g, CAJA, mat(col, { roughness: 0.7, metalness: gr ? 0.5 : 0.1 }), postes.map(([x, z, d]) => [x, h / 2, z, d, w, h, w]));
@@ -740,11 +755,11 @@ export const TIPOS = {
     armar(p) { const g = new THREE.Group(); g.add(sombra(new THREE.Mesh(cinta(p.pts, p.ancho, 0.06), mat(suelo('pasto'), { polygonOffset: true, polygonOffsetFactor: -8 })), false, true));
       if (p.alto > 0) { const R = azar(semilla(p)), w = Math.max(0.5, p.ancho * 0.95), it = aLoLargo(p.pts, w * 0.55).map(([x, z]) => [x + (R() - 0.5) * 0.15, p.alto * 0.48, z + (R() - 0.5) * 0.15, R() * 6.3, w * (0.95 + R() * 0.2), p.alto * (1.05 + R() * 0.2), w * (0.95 + R() * 0.2), oscuro() ? '#3d5238' : V_ARBU[(R() * V_ARBU.length) | 0]]); lote(g, HOJAS, mat('#ffffff', { roughness: 1, vertexColors: true }), it); } return g; } },
   arboles: { n: 'Hilera de árboles', g: 'Vegetación', forma: 'linea', capa: 'vegetacion', def: { tipo: 'pino', paso: 7, alto: 1 },
-    campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['pino', 'Pino'], ['fronda', 'Fronda'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto']] }, { k: 'paso', n: 'Cada (m)', t: 'num', min: 2, max: 40, paso: 0.5 }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 2.5, paso: 0.1 }],
-    armar(p, ctx) { const g = new THREE.Group(), R = azar(semilla(p)), E = entorno(ctx); arbolado(g, aLoLargo(p.pts, p.paso).filter(([x, z]) => !(E && (E.enCalle(x, z, null, 2.5) || E.enCaja(x, z, 2.5) || E.enPolis(x, z, E.duros) || E.playa(x, z, 3)))).map(([x, z]) => [x + (R() - 0.5) * 1.2, z + (R() - 0.5) * 1.2, p.tipo, p.alto * (0.8 + R() * 0.4)])); return g; } },
+    campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['pino', 'Pino'], ['fronda', 'Fronda'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto'], ['olivo', 'Olivo (chico)']] }, { k: 'paso', n: 'Cada (m)', t: 'num', min: 2, max: 40, paso: 0.5 }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 2.5, paso: 0.1 }, { k: 'maceta', n: 'Maceta', t: 'sel', ops: [['', 'Sin maceta (en la tierra)'], ['corten', 'Redonda de acero corten'], ['hormigon', 'Redonda de hormigón']] }],
+    armar(p, ctx) { const g = new THREE.Group(), R = azar(semilla(p)), E = entorno(ctx); arbolado(g, aLoLargo(p.pts, p.paso).filter(([x, z]) => !(E && (E.enCalle(x, z, null, 2.5) || E.enCaja(x, z, 2.5) || E.enPolis(x, z, E.duros) || E.playa(x, z, 3)))).map(([x, z]) => p.maceta ? [x, z, p.tipo, p.alto * (0.9 + R() * 0.2), p.maceta] : [x + (R() - 0.5) * 1.2, z + (R() - 0.5) * 1.2, p.tipo, p.alto * (0.8 + R() * 0.4)])); return g; } },
   arbol: { n: 'Árbol', g: 'Vegetación', forma: 'punto', capa: 'vegetacion', def: { tipo: 'fronda', alto: 1 },
-    campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['fronda', 'Fronda'], ['pino', 'Pino'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto']] }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 3, paso: 0.1 }],
-    armar(p, ctx) { const g = new THREE.Group(), E = entorno(ctx); if (E && E.playa(p.x || 0, p.z || 0, 3)) return g; arbolado(g, [[0, 0, p.tipo, p.alto]]); return g; } },
+    campos: [F.nombre, { k: 'tipo', n: 'Árbol', t: 'sel', ops: [['fronda', 'Fronda'], ['pino', 'Pino'], ['alamo', 'Álamo'], ['eucalipto', 'Eucalipto'], ['palmera', 'Palmera'], ['arbusto', 'Arbusto'], ['olivo', 'Olivo (chico)']] }, { k: 'alto', n: 'Tamaño', t: 'num', min: 0.4, max: 3, paso: 0.1 }, { k: 'maceta', n: 'Maceta', t: 'sel', ops: [['', 'Sin maceta (en la tierra)'], ['corten', 'Redonda de acero corten'], ['hormigon', 'Redonda de hormigón']] }],
+    armar(p, ctx) { const g = new THREE.Group(), E = entorno(ctx); if (E && E.playa(p.x || 0, p.z || 0, 3)) return g; arbolado(g, [[0, 0, p.tipo, p.alto, p.maceta]]); return g; } },
 
   // construcciones
   galpon: { n: 'Galpón', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, siempre: true, def: { ancho: 40, fondo: 25, alto: 9, color: '#e4e8eb', techo: '#c9ced2', abierto: false, portones: 2, estilo: 'chapa', perfil: 'trapezoidal', terminacion: 'prepintada', andenes: 6, anexo: '', cubierta: 'claraboyas', desde: 1, placa: '#1F4D3A', alero: 0, losa: 22 },
@@ -884,6 +899,11 @@ export const TIPOS = {
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 120), F.fondo('Largo (m)', 2, 120), F.alto('Alto libre (m)', 2.2, 15), F.color('Color'), { k: 'columnas', n: 'Con columnas (sin columnas es una losa que apoya en las paredes)', t: 'bool' }, F.r],
     armar(p) { const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2; caja(g, -w, p.alto, -d, w, p.alto + 0.28, d, mat(p.color, { roughness: 0.5, metalness: 0.2 })); const c = mat('#8c949b', { metalness: 0.5, roughness: 0.4 });
       if (p.columnas !== false) for (const sx of [-1, 1]) for (const sz of [-1, 1]) caja(g, sx * (w - 0.3) - 0.18, 0, sz * (d - 0.3) - 0.18, sx * (w - 0.3) + 0.18, p.alto, sz * (d - 0.3) + 0.18, c); return g; } },
+  senal: { n: 'Señal de tránsito', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: () => '', def: { tipo: 'velocidad', valor: 15, alto: 2.2 },
+    campos: [{ k: 'tipo', n: 'Señal', t: 'sel', ops: [['velocidad', 'Velocidad máxima'], ['pare', 'PARE'], ['ceda', 'Ceda el paso'], ['prohibido', 'Prohibido pasar'], ['peaton', 'Peatones']] }, { k: 'valor', n: 'Velocidad (km/h)', t: 'num', min: 5, max: 120, paso: 5 }, F.alto('Alto del poste (m)', 1, 4), F.r],
+    armar(p) { const g = new THREE.Group(), h = p.alto || 2.2, gris = mat(oscuro() ? '#5d646a' : '#9aa1a7', { metalness: 0.5, roughness: 0.45 }); lote(g, CIL, gris, [[0, h / 2, 0, 0, 0.07, h, 0.07]]);
+      const m = new THREE.MeshStandardMaterial({ map: senalTex(p.tipo, p.valor), roughness: 0.5, transparent: true, alphaTest: 0.5 }), pl = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.75), m); pl.position.set(0, h + 0.3, 0.05); g.add(pl);
+      const dorso = new THREE.Mesh(new THREE.CircleGeometry(0.37, 24), gris); dorso.position.set(0, h + 0.3, 0.035); dorso.rotation.y = Math.PI; g.add(dorso); return g; } },
   semaforo: { n: 'Semáforo', g: 'Construcción', forma: 'punto', capa: 'base', def: { alto: 2.6, poste: false, luz: 'verde' },
     campos: [F.nombre, { k: 'luz', n: 'Luz prendida', t: 'sel', ops: [['verde', 'Verde'], ['roja', 'Roja']] }, F.alto('Altura (m)', 1.5, 6, 0.05), { k: 'poste', n: 'Con poste propio', t: 'bool' }, F.r],
     armar(p) { const g = new THREE.Group(), os = oscuro(), h = p.alto, on = c => os ? neon(c) : mat(c, { emissive: c, emissiveIntensity: 0.85 }), off = c => mat(c, { roughness: 0.5 });
@@ -1051,9 +1071,16 @@ export const TIPOS = {
 export const GRUPOS = ['Terreno', 'Construcción', 'Oficina', 'Cocina', 'Baño', 'Living y descanso', 'Muebles', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
 
 // árboles: tronco + copa, todos los de una pieza en dos o tres dibujos
-function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], R = azar(lista.length * 31 + 7), T = oscuro();
+function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], ma = { corten: [], hormigon: [] }, R = azar(lista.length * 31 + 7), T = oscuro();
   const copa = (x, y, z, sx, sy, sz, cols) => co.push([x, y, z, R() * 6.3, sx, sy, sz, cols[(R() * cols.length) | 0]]);
-  for (const [x, z, t, k = 1] of lista) {
+  for (let [x, z, t, k = 1, mc] of lista) {
+    // maceta redonda: el árbol queda plantado arriba de la tierra de la maceta (y los que no son olivo, más chicos)
+    const y0 = mc && ma[mc] ? 0.56 : 0, n0 = [tr.length, co.length, pi.length, pa.length]; if (y0) { ma[mc].push([x, 0.28, z, 0, 1.4, 0.56, 1.4]); if (t !== 'olivo') k *= 0.6; }
+    if (t === 'olivo') { // olivo chico de vereda: tronco corto que se abre en dos o tres ramas y copa rala gris verdosa
+      const h = 1.5 * k, n = 2 + (R() * 2 | 0), a0 = R() * 6.3; tr.push([x, y0 + h / 2, z, 0, 0.22 * k, h, 0.22 * k]);
+      for (let i = 0; i < n; i++) { const a = a0 + i * 6.283 / n, rr = 0.55 * k; tr.push([x + Math.cos(a) * rr * 0.5, y0 + h + 0.55 * k, z + Math.sin(a) * rr * 0.5, 0, 0.12 * k, 1.2 * k, 0.12 * k]);
+        copa(x + Math.cos(a) * rr, y0 + h + 1.5 * k + R() * 0.3 * k, z + Math.sin(a) * rr, 1.9 * k, 1.35 * k, 1.9 * k, OLIVOS); }
+      copa(x, y0 + h + 2.1 * k, z, 1.6 * k, 1.1 * k, 1.6 * k, OLIVOS); continue; }
     if (t === 'pino') { tr.push([x, 2 * k, z, 0, 0.5 * k, 4 * k, 0.5 * k]); const v = PINOS[(R() * PINOS.length) | 0], e = 0.85 + R() * 0.3; pi.push([x, 4.6 * k, z, R() * 6, 5.4 * k * e, 5.2 * k, 5.4 * k * e, v], [x, 7 * k, z, R() * 6, 4.4 * k * e, 5 * k, 4.4 * k * e, v], [x, 9.3 * k, z, R() * 6, 3.3 * k * e, 4.6 * k, 3.3 * k * e, v], [x, 11.4 * k, z, R() * 6, 2.1 * k * e, 3.8 * k, 2.1 * k * e, v]); }
     else if (t === 'palmera') { tr.push([x, 4.5 * k, z, 0, 0.5 * k, 9 * k, 0.5 * k]); pa.push([x, 9.2 * k, z, R() * 6, 4.6 * k, 1.1 * k, 4.6 * k]); }
     else if (t === 'arbusto') { const n = 2 + (R() * 2 | 0); for (let i = 0; i < n; i++) { const a = R() * 6.3, rr = i ? 0.55 * k : 0, s = (1.3 + R() * 0.7) * k * (i ? 0.75 : 1); copa(x + Math.cos(a) * rr, s * 0.36, z + Math.sin(a) * rr, s, s * 0.8, s, V_ARBU); } }
@@ -1062,7 +1089,10 @@ function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], R = azar
     else { // fronda: una copa central, un anillo de bultos más bajos y un remate arriba; cada bulto de un verde distinto
       const h = (3 + R() * 0.8) * k, s0 = (4.3 + R() * 1.2) * k, n = 4 + (R() * 2 | 0), a0 = R() * 6.3; tr.push([x, h / 2, z, 0, 0.55 * k, h, 0.55 * k]); copa(x, h + s0 * 0.33, z, s0, s0 * 0.86, s0, VERDES);
       for (let i = 0; i < n; i++) { const a = a0 + i * 6.283 / n + (R() - 0.5) * 0.5, rr = s0 * (0.3 + R() * 0.12), s = s0 * (0.52 + R() * 0.2); copa(x + Math.cos(a) * rr, h + s0 * (0.12 + R() * 0.2), z + Math.sin(a) * rr, s, s * 0.85, s, VERDES); }
-      copa(x + (R() - 0.5) * k, h + s0 * 0.68, z + (R() - 0.5) * k, s0 * 0.55, s0 * 0.5, s0 * 0.55, VERDES); } }
+      copa(x + (R() - 0.5) * k, h + s0 * 0.68, z + (R() - 0.5) * k, s0 * 0.55, s0 * 0.5, s0 * 0.55, VERDES); }
+    if (y0) for (const [L, i0] of [[tr, n0[0]], [co, n0[1]], [pi, n0[2]], [pa, n0[3]]]) for (let i = i0; i < L.length; i++) L[i][1] += y0; }
+  if (ma.corten.length) lote(g, CIL24, mat(T ? '#4a3326' : '#7b4a2f', { roughness: 0.9, metalness: 0.15 }), ma.corten);
+  if (ma.hormigon.length) lote(g, CIL24, mat(T ? '#64686b' : '#b9bbb6', { roughness: 0.95 }), ma.hormigon);
   lote(g, TRONCO, mat(T ? '#3b3026' : '#6b5440', { roughness: 1 }), tr); lote(g, HOJAS, mat(T ? '#5d6b5a' : '#ffffff', { roughness: 1, vertexColors: true }), co); lote(g, CONO2, mat(T ? '#5d6b5a' : '#ffffff', { roughness: 1 }), pi);
   lote(g, CONO, mat(T ? '#22361f' : '#6f9a5c', { roughness: 1, flatShading: true }), pa.map(q => { q[5] *= -1; return q; })); }
 // línea corrida hacia un costado (bordes de ruta)
