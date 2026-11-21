@@ -456,6 +456,7 @@ html.navmini .side .side-foot{display:grid}html.navmini .yo{justify-content:cent
 @media (hover:none){.cl .agarre{opacity:.6}}
 @media (prefers-reduced-motion:reduce){.cl,.cl .ir,.sw::after,.sidetog svg{transition:none}.cl.arrastra{scale:1}}
 @media (max-width:860px){.mtop{margin:10px 12px 0;border-radius:20px;top:40px;border:0}.mtop select{border-radius:999px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);padding:0 12px;font-weight:600}.mnav .tema{width:auto;flex:none;gap:8px;border:1px solid var(--line);background:var(--surface);padding:5px 8px 5px 12px;font-size:13.5px;color:var(--ink)}.mnav .tema svg{width:16px;height:16px}.mnav .tema span{flex:none}.mnav .tema .sw{width:32px;height:18px}.mnav .tema .sw::after{width:12px;height:12px}.mnav .tema[aria-checked="true"] .sw::after{transform:translateX(14px)}.side{display:none}.app{grid-template-columns:minmax(0,1fr)}html.navmini .app{grid-template-columns:minmax(0,1fr)}.clist{grid-template-columns:minmax(0,1fr)}}
+.demo-in{display:grid;gap:8px;justify-items:center;text-align:center;margin-top:6px;padding-top:16px;border-top:1px solid var(--line)}.demo-in span{font-weight:600}.demo-in .btn{justify-content:center}.demo-in small{font-size:12.5px}
 </style>
 </head>
 <body>
@@ -530,7 +531,7 @@ const CLOUD = BRANDS.filter(b => b.ready).map(b => b.k);
 const TIPOS = { switch: 'Switch', router: 'Router o firewall', ap: 'Access point', camara: 'Cámara', nvr: 'NVR o grabador', acceso: 'Control de acceso', ups: 'UPS', sensor_puerta: 'Sensor de puerta', sensor_mov: 'Sensor de movimiento', sensor_temp: 'Sensor de temperatura y humedad', sensor_agua: 'Sensor de agua', sensor_humo: 'Sensor de humo', enchufe: 'Enchufe o llave inteligente', otro: 'Otro' };
 const BASES = { motor: ['Maqueta en blanco', 'Terreno vacío con cuadrícula en metros. Dibujás los galpones, las calles y los equipos, todo editable, con cada equipo en su lugar y su estado en vivo.'], generica: ['Galpón genérico', 'Un galpón con calle de acceso y estacionamiento para arrancar. Después lo ajustás en el editor.'], plano: ['Desde un plano o una foto', 'Arrastrás a la maqueta un plano, una foto aérea o un dibujo a mano, le marcás la escala y dibujás encima.'], polo: ['Parque de ejemplo', 'Un parque logístico completo, inventado, para mostrar cómo queda.'], vacia: ['Maqueta en blanco', ''] };
 // La maqueta es una sola, en el motor común. La de siempre quedó archivada (ondi/archivo/): se abre tapada, una sola vez por cliente, para convertir lo que tenía cargado.
-const MOTOR = '../../motor/beta/?app=ondi&v=43', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
+const MOTOR = '../../motor/beta/?app=ondi&v=44', ARCH = '../archivo/maqueta.html?v=67', ESCENAS = '../escenas/';
 const logo = () => `<span class="logo"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><circle cx="16" cy="16" r="4.5" fill="none" stroke="#fff" stroke-width="2.2" opacity=".45"/><path d="M16 6.5A9.5 9.5 0 0 1 25.5 16H16z" fill="#fff" opacity=".28"/><path d="M16 16L22.7 9.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="21.6" cy="21" r="2.3" fill="#fff"/></svg><span><span class="wm">ondi</span><span class="by">by Unity Tech</span></span></span>`;
 let toastT; const toast = m => { if (!m) return; const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); };
 const fmtD = d => d ? new Date(d).toLocaleString('es-UY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -572,6 +573,7 @@ function authView() {
   else if (S.auth === 'login') b = `<div><h1>Entrar a Ondi</h1><p class="muted">Para instaladoras y para la gente de IT de sus clientes.</p></div>${i}
     <form class="form" data-f="login">${em}<label class="fld">Contraseña<input id="a_pass" type="password" autocomplete="current-password" required></label>${m}<button class="btn pri full" type="submit">Entrar</button></form>
     <div class="links"><button class="lnk" data-a="signup">Crear una cuenta</button><button class="lnk" data-a="forgot">Olvidé mi contraseña</button></div>
+    <div class="demo-in"><span>¿Querés conocer Ondi primero?</span><button class="btn full" data-a="demo">${IC.sim}Ver la demostración</button><small class="muted">Parques inventados, sin cuenta y sin equipos reales.</small></div>
     ${CODE ? `<p class="muted" style="font-size:13.5px">Tenés el código <b class="mono">${esc(CODE)}</b>. Entrá o creá tu cuenta y te sumamos solo.</p>` : ''}`;
   else if (S.auth === 'signup') b = `<div><h1>Crear una cuenta</h1><p class="muted">Gratis. Después elegís si sos una instaladora o el IT de un cliente.</p></div>
     <form class="form" data-f="signup"><label class="fld">Tu nombre<input id="a_name" autocomplete="name" required></label>${em}<label class="fld">Contraseña <small>(mínimo 6 caracteres)</small><input id="a_pass" type="password" autocomplete="new-password" minlength="6" required></label>${m}<button class="btn pri full" type="submit">Crear la cuenta</button></form>
@@ -608,6 +610,7 @@ async function logout() { try { await SB.auth.signOut(); } catch (e) {} ls.set('
 async function boot() {
   if (!SB) return showAuth('login');
   const { data: { session } } = await SB.auth.getSession();
+  if (!session && location.hash === '#demo') return demoEntrar();
   if (!session) return showAuth(S.auth === 'check' ? 'check' : 'login', S.msg);
   S.user = session.user;
   if (/type=recovery/.test(location.hash)) return showAuth('setpass');
@@ -647,15 +650,20 @@ async function fn(body) { const r = await SB.functions.invoke('ondi-unifi', { bo
   if (r.error) { let m = ''; try { const j = await r.error.context.json(); m = j && j.error; } catch (e) {} if (!m && /not found|404/i.test(r.error.message || '')) m = 'Falta publicar la función ondi-unifi en Supabase.'; if (!m && /Failed to send|Failed to fetch|network/i.test(r.error.message || '')) m = 'No se pudo llegar al servidor de Ondi. Revisá la conexión; se vuelve a intentar solo.'; throw { message: m || r.error.message }; }
   if (r.data && r.data.error) throw { message: r.data.error }; return r.data; }
 
+/* ---------- demostración: sin cuenta, solo los parques inventados (lo que se cambia no se guarda) ---------- */
+function demoEntrar() { S.demo = true; S.auth = ''; S.msg = ''; S.user = { id: 'demo', email: 'demostración', user_metadata: { name: 'Demostración' } }; S.ctxs = [{ kind: 'org', role: 'owner', name: 'Instaladora de demostración', org: 'demo', key: 'demo' }]; S.ctx = S.ctxs[0]; S.sites = []; S.view = 'sim'; S.sim = ''; try { history.replaceState(null, '', location.pathname + '#demo'); } catch (e) {} render(); }
+function demoSalir() { S.demo = false; S.user = null; S.ctxs = []; S.ctx = null; try { history.replaceState(null, '', location.pathname); } catch (e) {} showAuth('login'); }
+
 /* ---------- pantallas ---------- */
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
   const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['docs', 'Documentación', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>'], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
   if (S.super) navItems.push(['super', 'Unity Tech', IC.shield]);
+  if (S.demo) navItems.splice(0, navItems.length, ['sim', 'Demostración', IC.sim]);
   const cur = S.view === 'site' ? 'clientes' : S.view;
   const nav = navItems.map(([k, n, ic]) => `<button data-nav="${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic}<span>${n}</span></button>`).join('');
-  const who = staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
+  const who = S.demo ? 'Sin cuenta · nada se guarda' : staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
   const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
   if (S.view === 'site' && S.tab === 'doc' && !S.modal && !S.docRe && $('#docbox') && $('#docbox').dataset.docsite === S.site.id) { $('#sitehead').innerHTML = siteHead(); return; }
@@ -767,7 +775,7 @@ function simView() { const s = SIMS.find(x => x.id === S.sim);
     <div class="clist">${SIMS.map(x => `<button class="cl" data-sim="${x.id}"><b>${esc(x.n)}</b><span class="muted" style="font-size:13.5px">${esc(x.d)}</span><span class="row"><span class="pill off">Simulación</span><span class="tag">${esc(x.r)}</span></span></button>`).join('')}</div></div>`; }
 async function mountSim() { const s = SIMS.find(x => x.id === S.sim), box = $('#maqbox'); if (!s || !box) return; box.innerHTML = CARGA();
   let g = null; try { g = await (await fetch(ESCENAS + 'sim-' + s.id + '.json')).json(); } catch (e) {} if (S.sim !== s.id || !$('#maqbox')) return; if (!g || !g.escena) { box.innerHTML = '<div class="empty">No se pudo abrir la simulación. Probá de nuevo.</div>'; return; }
-  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, save() {} };
+  window.__ondiMaqueta = { juego: on => { const b = $('#maqbox'); if (b) { b.classList.toggle('full', !!on); b.classList.toggle('juego', !!on); } }, state: g, role: 'inst', park: s.n, installer: S.ctx.name, guarda: false, save() {} };
   box.innerHTML = CARGA() + `<iframe id="maqframe" data-site="sim:${s.id}" src="${MOTOR}" title="Maqueta 3D de ${esc(s.n)} (simulación)" allow="fullscreen"></iframe><button class="maqsalir" data-do="maqfull" title="Salir de pantalla completa" aria-label="Salir de pantalla completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>`; maqListo($('#maqframe')); }
 function siteHead() { const st = S.site, l = linksOf(st);
   const sub = [(st.data && st.data.direccion) || '', l.length ? 'En vivo: ' + l.map(k => BR[k].n).join(', ') : ''].filter(Boolean).join(' · ');
@@ -1178,7 +1186,8 @@ async function saveSite(st, patch) { const cur = await SB.from('ondi_sites').sel
   const r = await SB.from('ondi_sites').update(upd).eq('org_id', st.org_id).eq('id', st.id).select().single(); if (r.error) throw r.error; Object.assign(st, r.data); return st; }
 function openSite(id, tab) { const st = S.sites.find(x => x.id === id); if (!st) return; S.site = st; S.view = 'site'; S.tab = tab || 'maqueta'; S.link = {}; S.sitiosUI = {}; S.acc = null; S.manForm = null; ls.set('ondi.site.' + orgId(), id); history.replaceState(null, '', '#c'); render(); scrollTo(0, 0); }
 document.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a || !S.auth && a.dataset.a !== 'logout') return; const k = a.dataset.a;
-  if (k === 'logout') return logout();
+  if (k === 'logout') return S.demo ? demoSalir() : logout();
+  if (k === 'demo') return demoEntrar();
   if (k === 'delacct') { if (!arm('delacct')) return; SB.rpc('delete_my_account').then(r => { if (r.error) toast('No se pudo eliminar la cuenta: ' + errTxt(r.error)); else logout(); }); return; }
   S.info = '';
   if (k === 'sumar') { SB.rpc('ondi_sumar_empresa', { o: a.dataset.o }).then(r => { if (r.error) { showAuth('start', errTxt(r.error)); return; } ls.set('ondi.ctx', 'org:' + a.dataset.o); boot(); }); return; }
