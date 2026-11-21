@@ -851,9 +851,14 @@ async function maqPase(st, data, base) { const box = $('#maqbox'), espera = ms =
     if (u.error) toast('La maqueta se pasó al motor nuevo, pero no se pudo guardar: ' + errTxt(u.error)); else { S.docPrev[st.id] = docCl(g); S.maqSave = 'Guardado recién'; toast(`Maqueta pasada al motor nuevo: ${r.escena.piezas.length} piezas. Lo anterior quedó archivado.${sin ? ' No pasaron: ' + sin + '.' : ''}`); } }
   return g; }
 function setSave(t) { S.maqSave = t; const s = $('#savest'); if (s) s.textContent = t; }
-function queueSave(st, data) { if (!siteEd()) return; if (data && data.motor !== 1 && docMotor(S.docPrev[st.id])) return;   // una maqueta ya pasada al motor no se pisa con el formato anterior
+// guardado por partes: la maqueta manda lo suyo y la documentación de racks lo suyo, y el servidor junta (ondi_maqueta_parche); así no se pisan entre sí ni entre dos personas
+const CLAVES_DOC = ['cabs', 'fibs', 'cajas', 'campo', 'modelos', 'docidx']; let maqPend = null;
+function queueSave(st, data, parte = 'maq') { if (!siteEd()) return; if (data && data.motor !== 1 && docMotor(S.docPrev[st.id])) return;   // una maqueta ya pasada al motor no se pisa con el formato anterior
   data = docMerge(st, data); if (MAQ && MAQ.site === st.id) MAQ.state = data; S.maqExt = S.maqExt || {}; if (data && Array.isArray(data.ext)) S.maqExt[st.id] = data.ext; setSave('Guardando…');
-  clearTimeout(maqT); maqT = setTimeout(async () => { const r = await SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: data || {} }, { onConflict: 'org_id,site_id' });
+  if (!maqPend || maqPend.st.id !== st.id) maqPend = { st, d: {}, todo: false }; maqPend.ultimo = data || {};
+  if (data && docMotor(data)) { const cl = Array.isArray(parte) ? parte : parte === 'doc' ? CLAVES_DOC.concat('bita') : Object.keys(data).filter(k => !CLAVES_DOC.includes(k) && k !== 'anterior'); for (const k of cl) if (data[k] !== undefined) maqPend.d[k] = data[k]; } else maqPend.todo = true;
+  clearTimeout(maqT); maqT = setTimeout(async () => { const p = maqPend; maqPend = null; const entero = () => SB.from('ondi_maquetas').upsert({ org_id: st.org_id, site_id: st.id, data: p.ultimo }, { onConflict: 'org_id,site_id' });
+    let r = p.todo ? await entero() : await SB.rpc('ondi_maqueta_parche', { o: st.org_id, s: st.id, d: p.d }); if (!p.todo && r.error && faltaSQL(r.error)) r = await entero();
     setSave(r.error ? 'No se pudo guardar: ' + errTxt(r.error) : 'Guardado ' + new Date().toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }));
     if (!r.error && !(st.data && st.data.maqueta)) { st.data = { ...(st.data || {}), maqueta: true }; SB.from('ondi_sites').update({ data: st.data }).eq('org_id', st.org_id).eq('id', st.id).then(() => {}); } }, 1200); }
 // leer el plano con IA (función ondi-plano-ia): devuelve galpones y calles propuestos; la maqueta los muestra y se eligen
@@ -1351,7 +1356,7 @@ S.docPrev = {}; S.docT = {}; S.docIdx = {};
 function docBase(st, data) { const L = S.docPrev[st.id]; if (L && S.docT[st.id] && Date.now() - S.docT[st.id] < 120000) return docCl(L); S.docPrev[st.id] = docCl(data); return data; }
 // la maqueta avisa sus racks y equipos (nombre y lugar); se guarda solo si cambió
 function docIndice(st, idx) { S.docIdx[st.id] = idx; const D = S.doc; if (D && D.site === st.id) D.idx = idx;
-  const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }); }
+  const cur = MAQ && MAQ.site === st.id ? MAQ.state : null; if (!cur || !siteEd() || JSON.stringify(cur.docidx) === JSON.stringify(idx)) return; queueSave(st, { ...cur, docidx: idx }, ['docidx']); }
 // lo que guarda la maqueta no borra lo de la documentación, y cada cambio se anota
 function docMerge(st, data) { if (!data) return data; const prev = S.docPrev[st.id] || {}; data = { ...data };
   for (const k of ['bita', 'docidx', 'cajas', 'campo', 'modelos', 'papelera', 'anterior'].concat(docMotor(data) ? ['cabs', 'fibs'] : [])) if (data[k] === undefined && prev[k] !== undefined) data[k] = prev[k];
@@ -1437,7 +1442,7 @@ function docFull(on) { const box = $('#docbox'); if (!box) return; on = on == nu
   try { if (on && !document.fullscreenElement && box.requestFullscreen) box.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} docPaint(); }
 document.addEventListener('fullscreenchange', () => { const box = $('#docbox'); if (!document.fullscreenElement && box && box.classList.contains('full')) docFull(false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#docbox') && $('#docbox').classList.contains('full') && !document.fullscreenElement && !e.target.closest('input,textarea,select')) docFull(false); });
-function docSave() { const D = S.doc, st = S.site; if (!D || !siteEd()) return; D.saving = true; try { queueSave(st, docCl(D.W)); } finally { D.saving = false; } docList(); }
+function docSave() { const D = S.doc, st = S.site; if (!D || !siteEd()) return; D.saving = true; try { queueSave(st, docCl(D.W), 'doc'); } finally { D.saving = false; } docList(); }
 function docIr(id) { S.maqIr = id; S.tab = 'maqueta'; render(); }
 const DIC = { gab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M17 10v4"/></svg>',
   wr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>',
