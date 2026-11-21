@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=15';
+import { THREE } from './nucleo.js?v=16';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=11';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=12';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=5';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -69,8 +69,24 @@ export function matSuelo(k, o = {}, escala = 1) { const t = SUELO_TEX[k]; if (!t
 // con lluvia los pisos brillan: cada material de piso recuerda su aspereza de seco
 export const AMB = { mojado: false };
 function piso(m) { if (m.userData.r0 == null) m.userData.r0 = m.roughness; m.userData.suelo = true; m.roughness = AMB.mojado ? Math.min(m.userData.r0, 0.4) : m.userData.r0; return m; }
+// un piso grande no puede ser dos triángulos de un kilómetro: de lejos la placa calcula mal su profundidad y se mezcla con el piso de al lado
+// (el pasto del predio con la losa de los andenes). Toda arista más larga que L se corta al medio; como se decide por arista, los dos
+// triángulos que la comparten la cortan en el mismo punto y no quedan rendijas.
+function partir(geo, L) { const U = geo.attributes.uv; if (!geo.index || !U) return geo; geo.computeBoundingBox(); const bb = geo.boundingBox; if (bb.max.x - bb.min.x <= L && bb.max.y - bb.min.y <= L) return geo;
+  const pos = Array.from(geo.attributes.position.array), uv = Array.from(U.array), L2 = L * L; let ix = Array.from(geo.index.array);
+  for (let vuelta = 0; vuelta < 8; vuelta++) { const medio = new Map(), sal = []; let hubo = false;
+    const mid = (a, b) => { const dx = pos[a * 3] - pos[b * 3], dy = pos[a * 3 + 1] - pos[b * 3 + 1]; if (dx * dx + dy * dy <= L2) return -1; const k = a < b ? a * 1e7 + b : b * 1e7 + a; let i = medio.get(k);
+      if (i === undefined) { i = pos.length / 3; pos.push((pos[a * 3] + pos[b * 3]) / 2, (pos[a * 3 + 1] + pos[b * 3 + 1]) / 2, 0); uv.push((uv[a * 2] + uv[b * 2]) / 2, (uv[a * 2 + 1] + uv[b * 2 + 1]) / 2); medio.set(k, i); } return i; };
+    for (let t = 0; t < ix.length; t += 3) { const a = ix[t], b = ix[t + 1], c = ix[t + 2], ab = mid(a, b), bc = mid(b, c), ca = mid(c, a), n = (ab >= 0) + (bc >= 0) + (ca >= 0); if (!n) { sal.push(a, b, c); continue; } hubo = true;
+      if (n === 3) sal.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+      else if (n === 1) { if (ab >= 0) sal.push(a, ab, c, ab, b, c); else if (bc >= 0) sal.push(a, b, bc, a, bc, c); else sal.push(a, b, ca, ca, b, c); }
+      else if (ab < 0) sal.push(a, b, bc, a, bc, ca, ca, bc, c); else if (bc < 0) sal.push(a, ab, ca, ab, b, c, ab, c, ca); else sal.push(a, ab, c, ab, bc, c, ab, b, bc); }
+    ix = sal; if (!hubo) break; }
+  const n = pos.length / 3, nor = new Float32Array(n * 3); for (let i = 0; i < n; i++) nor[i * 3 + 2] = 1;
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setIndex(ix); geo.clearGroups(); geo.addGroup(0, ix.length, 0); geo.boundingBox = null; geo.boundingSphere = null; return geo; }
 // superficie plana con la forma de un polígono (x, z)
-function area(g, pts, y, m, huecos) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); if (huecos) for (const h of huecos) if (h.length > 2) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], -p[1])))); const geo = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
+function area(g, pts, y, m, huecos) { if (pts.length < 3) return null; const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))); if (huecos) for (const h of huecos) if (h.length > 2) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], -p[1])))); const geo = partir(new THREE.ShapeGeometry(sh), 96).rotateX(-Math.PI / 2); geo.translate(0, y, 0);
   const k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); return k; }
 // cinta a lo largo de una línea (calles, canteros, guardarraíl visto de arriba)
 function cinta(pts, ancho, y, cerrada) { const P = cerrada ? [...pts, pts[0]] : pts, v = [], ix = [], uv = []; let L = 0;
@@ -514,13 +530,19 @@ let _placas = null; function placas() { if (_placas) return _placas; const c = d
   _placas = new THREE.CanvasTexture(c); _placas.wrapS = _placas.wrapT = THREE.RepeatWrapping; _placas.colorSpace = THREE.SRGBColorSpace; _placas.anisotropy = 8; return _placas; }
 function cordonDe(g, p) { const os = oscuro(), l = []; for (const c of [p.pts, ...(p.huecos || [])]) { if (c.length < 3) continue; const cer = [...c, c[0], c[1]]; l.push(conUV(cinta(cer, 0.16, 0.15)), conUV(cintaVertical(offset(cer, 0.08), 0.15, 0.075)), conUV(cintaVertical(offset(cer, -0.08), 0.15, 0.075))); }
   if (!l.length) return; const k = new THREE.Mesh(mergeGeometries(l), mat(os ? '#5b6066' : '#cfccc4', { roughness: 0.9, side: THREE.DoubleSide })); k.castShadow = k.receiveShadow = true; k.userData.noChoca = k.userData.noPica = true; g.add(k); }
-// manchas del pasto: zonas más secas, más oscuras y más tiernas, grandes y suaves (se repiten cada 64 m)
-let MAT_MAN = null;
-function matManchas() { if (MAT_MAN) return MAT_MAN; const N = 512, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), R = azar(4711), cols = ['52,84,30', '70,104,44', '176,168,92', '150,176,84', '96,124,50', '196,184,120'];
+// manchas del pasto: zonas más secas, más oscuras y más tiernas, grandes y suaves (se repiten cada 64 m). Van adentro del material del pasto
+// (como las manchas de uso del hormigón de calzada) y no en una capa transparente encima: esa capa, a 3 mm del pasto, de lejos se metía sobre
+// el hormigón y la tierra de al lado, no recibía sombra y se perdía en los canteros.
+let TEX_MAN = null; const CON_MAN = new Map();
+function texManchas() { if (TEX_MAN) return TEX_MAN; const N = 512, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), R = azar(4711), cols = ['52,84,30', '70,104,44', '176,168,92', '150,176,84', '96,124,50', '196,184,120'];
   for (let i = 0; i < 90; i++) { const px = R() * N, py = R() * N, r = 18 + R() * 70, col = cols[(R() * cols.length) | 0], al = 0.1 + R() * 0.2; for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) { const gr = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r); gr.addColorStop(0, `rgba(${col},${al})`); gr.addColorStop(1, `rgba(${col},0)`); x.fillStyle = gr; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2); } }
   for (let i = 0; i < 5000; i++) { x.fillStyle = `rgba(${R() < 0.5 ? '40,66,24' : '170,190,110'},${R() * 0.16})`; x.fillRect(R() * N, R() * N, 1 + R() * 2, 1 + R() * 2); }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / 64, 1 / 64); t.anisotropy = 4;
-  MAT_MAN = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); return MAT_MAN; }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return TEX_MAN = t; }
+function conManchas(base) { let m = CON_MAN.get(base.uuid); if (m) return piso(m); m = base.clone(); const antes = base.onBeforeCompile, clave = base.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { antes.call(m, sh, r); sh.uniforms.tManchas = { value: texManchas() };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vManW;').replace('#include <project_vertex>', '#include <project_vertex>\nvManW = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tManchas;\nvarying vec2 vManW;').replace('#include <map_fragment>', '#include <map_fragment>\n{ vec4 man = texture2D( tManchas, vManW / 64.0 ); diffuseColor.rgb = mix( diffuseColor.rgb, man.rgb, man.a ); }'); };
+  m.customProgramCacheKey = () => clave + '|manchas'; CON_MAN.set(base.uuid, m); return piso(m); }
 // fibras: las que comparten un tramo van una al lado de la otra (cada una en su carril) y cada una con su color (el código de colores de las fibras)
 const COL_FIBRA = ['#2f6fed', '#ff8a00', '#2fb457', '#a0673a', '#8b97a3', '#e9edf0', '#e5484d', '#f5d90a', '#8e4ec6', '#e93d82', '#12a594', '#59636e'];
 let FIB = null;
@@ -602,10 +624,10 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'mat', n: 'Superficie', t: 'sel', ops: [['tierra', 'Tierra o balasto'], ['ripio', 'Ripio'], ['hormigon', 'Hormigón'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro'], ['monte', 'Monte'], ['cultivo', 'Cultivo en hileras'], ['agua', 'Agua']] }, { k: 'cordon', n: 'Con cordón alrededor (cantero o isla)', t: 'bool' }, { k: 'borde', n: 'Cordón ancho de hormigón hacia adentro (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'flechas', n: 'Flechas de sentido en el cordón', t: 'sel', ops: [['', 'Sin flechas'], ['anti', 'Giro antihorario'], ['hor', 'Giro horario']] }],
     armar(p, ctx) { const g = new THREE.Group(), y = ({ agua: 0.012, pasto: 0.016, pasto2: 0.018, monte: 0.018, cultivo: 0.02, tierra: 0.026, ripio: 0.03, hormigon: 0.034, asfalto: 0.038, calzada: 0.038 }[p.mat] ?? 0.026) + (p.sobre ? 0.03 : 0), bo = +p.borde > 0 && p.pts.length > 2 ? adentro(p.pts, +p.borde) : null;
       let m; if (p.mat === 'cultivo') { const t = rayas(suelo('cultivo'), oscuro() ? '#1d2818' : '#8eaa72', 10).clone(); t.needsUpdate = true; t.repeat.set(1 / 20, 1 / 20); m = new THREE.MeshStandardMaterial({ map: t, roughness: 1 }); }
-      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0), polygonOffsetUnits: -2 }; m = matSuelo(p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); }
+      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0), polygonOffsetUnits: -2 }; m = matSuelo(p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); else if (/^(pasto|pasto2)$/.test(p.mat) && m.map && !oscuro()) m = conManchas(m); }
       // con borde: cordón ancho de hormigón con caída alrededor y la superficie adentro, un escalón más arriba (la isla de una rotonda)
       const ALTO_B = 0.15; if (bo) try { bordeIsla(g, p.pts, bo, y + 0.004, y + ALTO_B, p.flechas, { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - 1, polygonOffsetUnits: -2 }); } catch (e) { console.warn('borde', e); }
-      const k = area(g, bo || p.pts, y + (bo ? ALTO_B : 0), m, bo ? null : p.huecos); if (p.cordon && !bo) try { cordonDe(g, p); } catch (e) {} if (/^(pasto|pasto2)$/.test(p.mat) && !oscuro()) try { const mm = area(g, bo || p.pts, y + (bo ? ALTO_B + 0.003 : 0.003), matManchas(), bo ? null : p.huecos); if (mm) { mm.receiveShadow = false; mm.raycast = () => {}; mm.userData.noPica = true; } } catch (e) {} if (ctx && ctx.piezas && /^(pasto|pasto2|monte)$/.test(p.mat) && p.matas !== false) try { matas(g, bo ? { ...p, pts: bo, huecos: null } : p, ctx); } catch (e) { console.warn('matas', e); } if (k && p.mat === 'cultivo') { const uv = k.geometry.attributes.uv, pos = k.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i)); } return g; } },
+      const k = area(g, bo || p.pts, y + (bo ? ALTO_B : 0), m, bo ? null : p.huecos); if (p.cordon && !bo) try { cordonDe(g, p); } catch (e) {} if (ctx && ctx.piezas && /^(pasto|pasto2|monte)$/.test(p.mat) && p.matas !== false) try { matas(g, bo ? { ...p, pts: bo, huecos: null } : p, ctx); } catch (e) { console.warn('matas', e); } if (k && p.mat === 'cultivo') { const uv = k.geometry.attributes.uv, pos = k.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i)); } return g; } },
   bosque: { n: 'Monte o arboleda', g: 'Vegetación', forma: 'area', capa: 'vegetacion', def: { densidad: 40, tipo: 'fronda' },
     campos: [F.nombre, { k: 'tipo', n: 'Árboles', t: 'sel', ops: [['fronda', 'Fronda'], ['pino', 'Pino'], ['mixto', 'Mixto']] }, { k: 'densidad', n: 'Árboles por hectárea', t: 'num', min: 5, max: 200, paso: 5 }],
     armar(p) { const g = new THREE.Group(); area(g, p.pts, 0.014, matSuelo('monte', { roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 })); const xs = p.pts.map(q => q[0]), zs = p.pts.map(q => q[1]), R = azar(semilla(p)), dentro = (x, z) => { let c = false; for (let i = 0, j = p.pts.length - 1; i < p.pts.length; j = i++) { const a = p.pts[i], b = p.pts[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };

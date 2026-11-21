@@ -107,13 +107,26 @@ export function crearMotor(canvas, o = {}) {
   motor.casa = () => ({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
-  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 || motor.caminando ? 0.06 : 0.5;   /* recorriendo (a pie o en vuelo) la cámara pasa al lado de la gente y los muebles: con el plano cercano a 0,5 m se veían cortados */ if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
+  // plano cercano: de él depende que dos pisos casi a la misma altura (pasto y hormigón, a 2 cm) no se mezclen a lo lejos. Con 6 cm, a 200 m la
+  // placa confunde la profundidad de a 4 a 8 cm; con 80 cm, de a milímetros (medido el 21/11 en la maqueta más grande). Va lo más lejos que se
+  // pueda sin cortar lo que la cámara tiene al lado: a pie sigue en 6 cm (pasa junto a la gente y los muebles; con 50 cm se veían cortados) y
+  // crece con la altura sobre el piso que se pisa (motor.piso, que lo avisa recorrer.js) al volar; mirando de arriba, con la altura de la cámara.
+  const planoCercano = alto => motor.caminando ? Math.max(0.06, Math.min(1, (alto - (motor.piso || 0) - 1.5) * 0.04)) : C.d < 6 ? 0.06 : Math.max(0.5, Math.min(4, (alto - (C.ty || 0)) * 0.04));
+  const LX = new THREE.Vector3(), LY = new THREE.Vector3(), ARRIBA = new THREE.Vector3(0, 1, 0);
+  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0, camY = ty + C.d * Math.sin(C.pitch), cerca = planoCercano(camY); if (Math.abs(cam.near - cerca) > cam.near * 0.04) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
     if (motor.bruma) { const e = motor.espesa; scene.fog.near = e ? Math.max(e[0], C.d * e[2]) : Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = e ? Math.max(e[1], C.d * e[3]) : Math.max(motor.bruma[1], C.d * 5); }
-    cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
-    // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca)
-    const r = Math.min(700, Math.max(40, C.d * 0.85)); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
-    sol.position.set(C.tx + SD.x * r * 2.8, SD.y * r * 2.8, C.tz + SD.z * r * 2.8); sol.target.position.set(C.tx, 0, C.tz); }
+    cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), camY, C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
+    // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca). Recorriendo (a pie o en vuelo) la cámara está encima de lo que
+    // mira y ve lejos: la caja crece con la altura y se corre hacia adelante (antes era un cuadrado de 40 m alrededor del que vuela y, más allá,
+    // nada tenía sombra). Crece de a escalones y se mueve de a puntos enteros del mapa de sombras, para que las sombras no tiemblen al avanzar.
+    let r = Math.max(40, C.d * 0.85), sx = C.tx, sz = C.tz;
+    if (motor.caminando) { r = Math.max(60, (camY - (motor.piso || 0)) * 5); r = 40 * Math.pow(1.25, Math.ceil(Math.log(r / 40) / Math.log(1.25) - 1e-6));
+      const ade = r * 0.55 * Math.min(1, Math.max(0, 1 - (C.pitch - 0.3) / 0.9)); sx -= Math.sin(C.yaw) * ade; sz -= Math.cos(C.yaw) * ade; }
+    r = Math.min(700, r); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
+    const paso = 2 * r / sol.shadow.mapSize.x; LX.crossVectors(ARRIBA, SD).normalize(); LY.crossVectors(SD, LX);
+    const u = sx * LX.x + sz * LX.z, v = sx * LY.x + sz * LY.z, du = Math.round(u / paso) * paso - u, dv = Math.round(v / paso) * paso - v, px = sx + LX.x * du + LY.x * dv, py = LY.y * dv, pz = sz + LX.z * du + LY.z * dv;
+    sol.position.set(px + SD.x * r * 2.8, py + SD.y * r * 2.8, pz + SD.z * r * 2.8); sol.target.position.set(px, py, pz); }
 
   motor.horas = Object.keys(HORAS).map(k => [k, HORAS[k].n]); motor.climas = Object.keys(CLIMAS).map(k => [k, CLIMAS[k].n]); motor.clima = 'despejado';
   // cambiar el clima: solo se mueve la luz y el cielo (las piezas no se rearman)

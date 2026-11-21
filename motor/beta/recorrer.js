@@ -8,7 +8,7 @@
 // En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
 // (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=15';
+import { THREE } from './nucleo.js?v=16';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
@@ -82,7 +82,7 @@ export function recorrer(M) {
   // ---------- entrar y salir ----------
   async function paseo(on, donde) { if (on === R.on) { if (on && donde) irA(donde[0], donde[1]); return; } R.on = on; motor.caminando = on; if (on) { if (puedeMira()) { motor.mira(true); R.llena = !!M.completa && !M.llena(); if (R.llena) M.completa(true); } } else { motor.mira(false); if (R.llena) { R.llena = false; M.completa(false); } } const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on);
     document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); R.joy = { x: 0, y: 0 }; R.k = {}; R.ruta = null; marca.visible = false; joyKnob();
-    if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; R.vuelo = false; adentro(null); R.afuera = null; R.y = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
+    if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; R.vuelo = false; adentro(null); R.afuera = null; R.y = 0; motor.piso = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
     R.antes = { cam: { tx: C.tx, tz: C.tz, d: Math.max(30, C.d), pitch: Math.max(0.3, C.pitch) }, lim: { min: C.min, max: C.max, pmin: C.pmin } }; Object.assign(C, { min: 0.05, max: 60, pmin: 0.06 });
     R.y = 0; R.vx = R.vz = 0; R.vy = 0; R.ojos = false; R.vuelo = false; R.dist = motor.mirando || puedeMira() ? 4.2 : 7; obstaculos(); vistaTxt(); ayudaTxt(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
     const g = new THREE.Group(); g.position.set(R.x, 0, R.z); mundo.add(g); R.g = g; ayuda(true); R.ob = await M.avatar(g); motor.dirty = true; }
@@ -125,6 +125,7 @@ export function recorrer(M) {
   // ---------- cada cuadro ----------
   let tCerca = 0;
   motor.cada.push((dt, t) => { if (!R.on || !R.g) return false; const K = R.k, J = R.joy;
+    motor.piso = R.vuelo ? alturaEn(R.fx, R.fz, R.fy) : R.y;   // el piso que hay debajo: con él el núcleo sabe cuánto aire tiene la cámara (plano cercano y sombras)
     // la rueda, el pellizco o los dedos cambian la distancia de la cámara: eso pasa a ser lo que se quiere
     if (R.viaje > 0) R.viaje -= dt; else if (R.puesta != null && Math.abs(C.d - R.puesta) > 1e-4) R.dist = Math.min(C.max, Math.max(C.min, C.d));
     const giro = (K.arrowleft ? 1 : 0) - (K.arrowright ? 1 : 0); if (giro) C.yaw += giro * dt * 1.9;
