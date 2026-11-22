@@ -279,10 +279,13 @@ html:not(.n) .cine .bg{background:radial-gradient(80% 70% at 65% 40%,#f4f5f7,#cf
 .res .pv{height:190px}
 .res .est{display:flex;gap:10px;align-items:center;font-size:14.5px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
 .res .est i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.mvis{display:none}
 @media (max-width:860px){
-  .sg{grid-template-columns:1fr}.sg .stage{height:52vh;height:52svh;top:64px;z-index:2;order:-1;margin-bottom:-52vh;margin-bottom:-52svh}
-  .sg .stage::before{content:"";position:absolute;inset:-64px -24px 0;background:linear-gradient(var(--bg) 70%,transparent);z-index:-1}
-  .scene{width:min(340px,86vw)}.sg .caps{padding:52vh 0 20vh}.sg .cap{min-height:70vh;min-height:70svh;justify-content:flex-end;padding-bottom:6vh}}
+  /* en el celular cada capítulo lleva su dibujo arriba del texto, sin pantalla fija */
+  .sg{grid-template-columns:1fr}.sg .stage{display:none}.sg .caps{padding:0 0 10vh}
+  .sg .cap{min-height:0;padding:7vh 0}.sg .cap>*{opacity:1;transform:none}
+  .mvis{display:block;position:relative;width:100%;margin-bottom:26px}.mvis .lay{position:relative;inset:auto;opacity:1;transform:none}
+  .mvis .bola{display:none}.dos .code i{width:32px;height:42px}}
 /* ---------- resto ---------- */
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .card{padding:24px}.card .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
@@ -617,6 +620,9 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
     caps.forEach(function(c){var r=c.getBoundingClientRect();if(r.top<lin)act=c});if(!act)act=caps[0];
     caps.forEach(function(c){c.classList.toggle('on',c===act)});
     if(act.dataset.l!==capOn){capOn=act.dataset.l;lays.forEach(function(l){l.classList.toggle('on',l.dataset.l===capOn)})}}
+  // celular: una copia de cada dibujo arriba de su capítulo (se anima cuando aparece)
+  caps.forEach(function(c){var l=lays.filter(function(x){return x.dataset.l===c.dataset.l})[0];if(!l)return;var m=document.createElement('div');m.className='mvis';m.setAttribute('aria-hidden','true');var k=l.cloneNode(true);k.classList.remove('on');m.appendChild(k);c.insertBefore(m,c.firstChild)});
+  if('IntersectionObserver' in window){var mio=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.firstChild.classList.add('on')})},{threshold:.35});[].forEach.call(document.querySelectorAll('.mvis'),function(m){mio.observe(m)})}
   upd();segUpd();
 })();
 </script>
