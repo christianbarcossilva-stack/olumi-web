@@ -74,12 +74,14 @@ como_pg "${B}pg_ctl" -D "$T/pg" -m immediate stop >/dev/null 2>&1; rm -rf "$T/pg
 # 4) los archivos subidos (fotos, PDF, planos). Hace falta la llave del servidor de Supabase.
 if [ -n "${SB_SECRET_KEY:-}" ] && [ -n "${SB_URL:-}" ]; then
   BIEN=0; MAL=0; mkdir archivos
+  # las llaves nuevas (sb_secret_…) van solo en «apikey»; las viejas (eyJ…) van también en «Authorization»
+  CAB=(-H "apikey: $SB_SECRET_KEY"); case "$SB_SECRET_KEY" in sb_*) ;; *) CAB+=(-H "Authorization: Bearer $SB_SECRET_KEY") ;; esac
   q "select bucket_id || E'\t' || name from storage.objects where bucket_id is not null and name is not null and name not like '%.emptyFolderPlaceholder' order by 1" > "$T/lista" 2>/dev/null
   while IFS=$'\t' read -r b n; do
     case "/$b/$n/" in */../*|*/./*|*//*) MAL=$((MAL + 1)); continue ;; esac          # nunca se escribe fuera de la carpeta
     mkdir -p "archivos/$b/$(dirname "$n")"
     u="$SB_URL/storage/v1/object/$(printf '%s' "$b/$n" | jq -sRr 'split("/") | map(@uri) | join("/")')"
-    if curl -fsS --retry 2 --max-time 600 -H "apikey: $SB_SECRET_KEY" -H "Authorization: Bearer $SB_SECRET_KEY" -o "archivos/$b/$n" "$u" 2>/dev/null; then BIEN=$((BIEN + 1)); else MAL=$((MAL + 1)); rm -f "archivos/$b/$n"; fi
+    if curl -fsS --retry 2 --max-time 600 "${CAB[@]}" -o "archivos/$b/$n" "$u" 2>/dev/null; then BIEN=$((BIEN + 1)); else MAL=$((MAL + 1)); rm -f "archivos/$b/$n"; fi
   done < "$T/lista"
   tar -cf archivos.tar archivos && rm -rf archivos
   [ "$MAL" -gt 0 ] && AVISOS+=("archivos: $MAL de $((BIEN + MAL)) no se pudieron bajar")
@@ -204,7 +206,8 @@ fi
 echo "== 3. Entrada a la base de datos"
 if [ -s "$ETC/respaldo.env" ]; then echo "Ya estaba configurada: se deja como está. (Para cambiarla: borrá $ETC/respaldo.env y corré esto de nuevo.)"
 else
-  echo "Pegá la contraseña de la base de Supabase (Project Settings → Database; no se ve al pegar) y apretá Enter:"
+  echo "Pegá la contraseña de la base de Supabase y apretá Enter (no se ve al pegar)."
+  echo "Si no la tenés: https://supabase.com/dashboard/project/$REF/database/settings → «Reset database password»."
   P=$(pedir); [ -n "$P" ] || { echo "No se pegó nada. No se configuró la base."; exit 1; }
   E=$(mktemp); H=""; for c in "db.$REF.supabase.co postgres" "aws-0-sa-east-1.pooler.supabase.com postgres.$REF" "aws-1-sa-east-1.pooler.supabase.com postgres.$REF"; do
     set -- $c
@@ -212,11 +215,13 @@ else
   done
   [ -n "$H" ] || { echo "No se pudo entrar a la base. Último error: $(tail -1 "$E")"; echo "Si dice «password authentication failed», la contraseña no es. No se guardó nada."; rm -f "$E"; exit 1; }
   rm -f "$E"; echo "Entró por $H."
-  echo "Ahora la llave del servidor de Supabase (Project Settings → API Keys → «secret»), para copiar también las fotos y los PDF."
+  echo "Ahora la llave secreta de Supabase, para copiar también las fotos y los PDF. Está en"
+  echo "https://supabase.com/dashboard/project/$REF/settings/api-keys → «Secret keys» (empieza con sb_secret_)."
   echo "Pegala y Enter (o solo Enter para dejar los archivos para después):"
   K=$(pedir)
   if [ -n "$K" ]; then
-    if [ "$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $K" -H "Authorization: Bearer $K" "https://$REF.supabase.co/storage/v1/bucket")" = 200 ]; then echo "Llave aceptada."; else echo "Supabase no aceptó esa llave: se sigue sin copiar archivos (se puede agregar después)."; K=""; fi
+    CAB=(-H "apikey: $K"); case "$K" in sb_*) ;; *) CAB+=(-H "Authorization: Bearer $K") ;; esac
+    if [ "$(curl -s -o /dev/null -w '%{http_code}' "${CAB[@]}" "https://$REF.supabase.co/storage/v1/bucket")" = 200 ]; then echo "Llave aceptada."; else echo "Supabase no aceptó esa llave: se sigue sin copiar archivos (se puede agregar después)."; K=""; fi
   fi
   printf 'PGHOST=%s\nPGPORT=5432\nPGUSER=%s\nPGPASSWORD=%s\nSB_URL=https://%s.supabase.co\nSB_SECRET_KEY=%s\nAVISO_URL=\nRCLONE_DESTINO=\n' "$H" "$USR" "$P" "$REF" "$K" > "$ETC/respaldo.env"
   chmod 600 "$ETC/respaldo.env"; unset P K
