@@ -4,7 +4,7 @@
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
 import { THREE } from './nucleo.js?v=17';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=52';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=53';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -90,7 +90,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     return false; }
   // ---------- lo que estorba en la calle: si alguien deja algo mal puesto, los camiones frenan antes, como en la vida real ----------
   // Cuenta lo que llega a menos de 3,9 m del piso (un camión pasa abajo de un alero o del brazo de una columna); cercos y paredes van como tramos.
-  const NOEST = new Set(['calle', 'pintura', 'terreno', 'vereda', 'playa', 'estacionamiento', 'rayado', 'senda', 'rotonda', 'cancha', 'plano', 'balanza', 'barrera', 'persona', 'vehiculo', 'galpon', 'camion', 'chasis', 'tendido', 'fibra', 'arboles', 'monte', 'cantero', 'luminaria', 'plafon', 'aplique', 'zona', 'montículo']);
+  const NOEST = new Set(['calle', 'pintura', 'losas', 'terreno', 'vereda', 'playa', 'estacionamiento', 'rayado', 'senda', 'rotonda', 'cancha', 'plano', 'balanza', 'barrera', 'persona', 'vehiculo', 'galpon', 'camion', 'chasis', 'tendido', 'fibra', 'arboles', 'monte', 'cantero', 'luminaria', 'plafon', 'aplique', 'zona', 'montículo']);
   const E3 = new THREE.Box3(), E4 = new THREE.Box3(); let EST = new Map(), estT = 0; const celda = (x, z) => Math.floor(x / 20) + ':' + Math.floor(z / 20);
   function estorbos() { const out = new Map(), objs = M.objs, poner = o => { const xs = [Math.floor(o.x0 / 20), Math.floor(o.x1 / 20)], zs = [Math.floor(o.z0 / 20), Math.floor(o.z1 / 20)]; for (let i = xs[0]; i <= xs[1]; i++) for (let j = zs[0]; j <= zs[1]; j++) { const k = i + ':' + j; (out.get(k) || out.set(k, []).get(k)).push(o); } };
     if (!objs) return out;

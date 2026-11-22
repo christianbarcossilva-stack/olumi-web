@@ -7,7 +7,7 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=17';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=52';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=53';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -36,11 +36,22 @@ export function construir(M) {
   const punto = (x, z) => { const m = new THREE.Mesh(BOL, mB); m.scale.setScalar(Math.max(0.12, motor.C.d * 0.005)); m.position.set(x, 0.3, z); m.renderOrder = 9; guias.add(m); motor.dirty = true; };
 
   // ---------- herramientas ----------
-  function empezar(h, k) { cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
+  function empezar(h, k) { const antes = M.SEL; cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
     if (h === 'pared') { T.pts = []; T.p = null; T.arr = null; M.hint('<b>Pared</b>: arrastrá de punta a punta, como en Los Sims (o tocá punto por punto). Si arrancás en la punta sigue la misma pared; si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Q</kbd>/<kbd>E</kbd> giran · <kbd>Esc</kbd> sale'); }
     if (h === 'recinto') { T.a = null; T.p = null; T.zona = k === 'zona'; M.hint(T.zona ? '<b>Zona</b>: arrastrá de una esquina a la otra sobre el sector que querés nombrar (una oficina, un depósito). No lleva paredes ni piso. <kbd>Esc</kbd> sale' : '<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
+    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint('<b>Piso por losas</b>: arrastrá un rectángulo y se llena de losas · tocá un cuadro para sumar uno solo · con <kbd>Alt</kbd> borra · si había un piso elegido, se suma a ese · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Esc</kbd> sale'); }
     if (h === 'abertura') { T.k = ABERTURAS[k] ? k : 'puerta'; T.en = null; M.hint(`<b>${ABERTURAS[T.k].n}</b>: pasá por una pared y tocá donde va. <kbd>Shift</kbd> pone varias · <kbd>Esc</kbd> sale`); }
     M.herrVis(h === 'abertura' ? T.k : h); }
+  // ---------- piso por losas ----------
+  // el cuadro (i, j) de un punto, en la grilla del piso (su x, z es la esquina de la celda 0, 0)
+  const celdaDe = (L, x, z) => { const c = L.celda || 5; return [Math.floor((x - (L.x || 0)) / c), Math.floor((z - (L.z || 0)) / c)]; };
+  function losaNueva(x, z) { const b = T.base || {}, c = b.celda || 5;
+    const L = { id: M.nuevoId('losas'), t: 'losas', mat: b.mat || 'hormigon', celda: c, x: 0, z: 0, celdas: [] }; M.E.piezas.push(L); return L; }
+  function losaPinta(L, cel, borra) { const k = cel.join(','), C = L.celdas, i = C.findIndex(q => q[0] === cel[0] && q[1] === cel[1]); if (borra) { if (i < 0) return false; C.splice(i, 1); return true; } if (i >= 0) return false; C.push(cel); return true; }
+  function losaPaso(e, p) { const A = T.pint; if (!A) return; const cel = celdaDe(A.L, p.x, p.z); let cambio = false;
+    { A.L.celdas = A.antes.map(q => [...q]); const [i0, j0] = A.c0; for (let i = Math.min(i0, cel[0]); i <= Math.max(i0, cel[0]); i++) for (let j = Math.min(j0, cel[1]); j <= Math.max(j0, cel[1]); j++) losaPinta(A.L, [i, j], A.borra); cambio = true;
+      const c = A.L.celda || 5; medir(`${Math.abs(cel[0] - i0) + 1} × ${Math.abs(cel[1] - j0) + 1} losas · ${fmt((Math.abs(cel[0] - i0) + 1) * c)} × ${fmt((Math.abs(cel[1] - j0) + 1) * c)} m`, p.x, p.z, 1); }
+    if (cambio) M.rehacer(A.L); }
   function cancelar() { if (!T.h) return false; if (T.p) M.quitar(T.p, true); quitaPrev(); T.h = null; T.p = null; T.pts = []; T.a = null; guias.clear(); medir(''); marcar(); M.herrVis(null); return true; }
   // pared
   function paredPasar(p, e) { if (!T.pts.length) return; const a = T.pts[T.pts.length - 1], q = iman(p, e, a), pts = [...T.pts, q];
@@ -104,6 +115,7 @@ export function construir(M) {
     if (T.h === 'recinto') { if (!T.a) { T.a = iman(p0, e); T.recien = true; punto(T.a[0], T.a[1]); } return true; }
     // pared: arrastrar dibuja un tramo (de punta a punta). Recién al moverse se decide si sigue la pared de antes (arrancó en su punta) o empieza otra
     if (T.h === 'pared') { T.arr = { q0: iman(p0, e, null), x: e.clientX, y: e.clientY, mov: false }; return true; }
+    if (T.h === 'piso') { const L = T.losa && M.E.piezas.includes(T.losa) ? T.losa : (T.losa = losaNueva(p0.x, p0.z)); T.pint = { L, borra: e.altKey, c0: celdaDe(L, p0.x, p0.z), antes: L.celdas.map(q => [...q]), ult: null }; losaPaso(e, p0); return true; }
     if (T.h) return false;   // con abertura, arrastrar mueve la vista; el toque es el que la pone
     // una pared o una abertura se arrastra solo si ya estaba elegida (se elige con un toque): así arrastrar para moverse nunca corre nada por error
     const s = sobre(hit); if (!s || s.p.candado || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
@@ -111,6 +123,7 @@ export function construir(M) {
     return true; }
   function mover(e) { const p = motor.enPiso(e.clientX, e.clientY); if (!p) return !!(D || T.h);
     if (T.h === 'recinto' && T.a) { recPrev(p, e); return true; }
+    if (T.h === 'piso' && T.pint) { losaPaso(e, p); return true; }
     if (T.h === 'pared' && T.arr) { const A = T.arr; if (!A.mov) { if (Math.hypot(e.clientX - A.x, e.clientY - A.y) < 7) return true; A.mov = true; const ult = T.pts[T.pts.length - 1];
         if (!ult || Math.hypot(A.q0[0] - ult[0], A.q0[1] - ult[1]) > 0.3) { if (T.pts.length >= 2) paredFin(); else { if (T.p) M.quitar(T.p, true); T.p = null; guias.clear(); } T.pts = [A.q0]; punto(A.q0[0], A.q0[1]); } }
       paredPasar(p, e); return true; }
@@ -120,6 +133,7 @@ export function construir(M) {
     if (!D.mov && Math.abs(k) < 0.01) return true; D.mov = true; const pts = P.map(q => [...q]); for (const j of [i, (i + 1) % n]) pts[j] = [Math.round((P[j][0] + nx * k) * 100) / 100, Math.round((P[j][1] + nz * k) * 100) / 100];
     D.p.pts = pts; M.rehacer(D.p); marcar(); const ant = pts[(i - 1 + n) % n]; medir(fmt(Math.hypot(pts[i][0] - ant[0], pts[i][1] - ant[1])) + ' m', (pts[i][0] + ant[0]) / 2, (pts[i][1] + ant[1]) / 2, 3); return true; }
   function soltar(e) {
+    if (T.h === 'piso' && T.pint) { const L = T.pint.L; T.pint = null; medir(''); if (!L.celdas.length) { M.quitar(L, true); T.losa = null; } else M.cambio(); return true; }
     if (T.h === 'pared' && T.arr) { const A = T.arr; T.arr = null; if (!A.mov) return true;   // fue un toque: lo pone el clic, punto por punto
       const p = motor.enPiso(e.clientX, e.clientY); if (!p) return true; const prev = T.pts[T.pts.length - 1], q = iman(p, e, prev); if (Math.hypot(q[0] - prev[0], q[1] - prev[1]) < 0.2) return true;
       if (T.pts.length > 2 && Math.hypot(q[0] - T.pts[0][0], q[1] - T.pts[0][1]) < 0.05) { recintoDe(T.pts); return true; } T.pts.push(q); punto(q[0], q[1]); paredPasar(p, e); return true; }
