@@ -13,14 +13,14 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=16';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=49';
+import { THREE, crearMotor } from './nucleo.js?v=17';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=50';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=39';
-import { juego } from './juego.js?v=3';
-import { recorrer } from './recorrer.js?v=16';
-import { transito } from './transito.js?v=39';
+import { construir } from './construir.js?v=40';
+import { juego } from './juego.js?v=4';
+import { recorrer } from './recorrer.js?v=17';
+import { transito } from './transito.js?v=40';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -294,7 +294,7 @@ export async function abrirMaqueta(o) {
   const PISTA = { varias: '<b>Elegir varias</b>: tocá las piezas para sumarlas o arrastrá un recuadro en el piso. Después arrastrá cualquiera de las elegidas y se mueven todas juntas. Con la mano también se puede: Mayús o ⌘ + clic', mano: '<b>Mano</b>: arrastrá el piso para moverte. Tocá algo para elegirlo y arrastralo para correrlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
   function herramienta(h) { CON.cancelar(); cancelar(true); if (h === 'pared' || h === 'recinto') { CON.empezar(h); return; } if (h === 'puerta' || h === 'ventana') { CON.empezar('abertura', h); return; } if (h === 'catalogo') { catalogo($('#mcat').hidden); return; } ED.h = h; herrVis(null); }
   // qué botón queda marcado en la barra: la herramienta de construcción en curso o, si no hay, la mano, la maza o el gotero
-  function herrVis(h) { const v = h || ED.h; canvas.dataset.h = v; document.querySelectorAll('#mtool [data-h]').forEach(b => b.setAttribute('aria-pressed', b.dataset.h === v)); if (!h && ED.on && !ED.colocar && !ED.linea) hint(PISTA[ED.h]); puntos(); if (motor.mirando) motor.reapuntar(); J && J.marcar(); }
+  function herrVis(h) { const v = h || ED.h; canvas.dataset.h = v; document.documentElement.classList.toggle('ubicando', !!h && h !== 'mano' && h !== 'varias'); document.querySelectorAll('#mtool [data-h]').forEach(b => b.setAttribute('aria-pressed', b.dataset.h === v)); if (!h && ED.on && !ED.colocar && !ED.linea) hint(PISTA[ED.h]); puntos(); if (motor.mirando) motor.reapuntar(); J && J.marcar(); }
   $('#mtool').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.h) herramienta(b.dataset.h); if (b.id === 'beq') panelEquipos($('#meq').hidden); if (b.id === 'bundo') volver(undo, redo); if (b.id === 'bredo') volver(redo, undo); if (b.id === 'bpap') papelera(b);
     if (b.id === 'bpared') paredes({ alta: 'corte', corte: 'baja', baja: 'alta' }[ctx.paredes]);
     if (b.id === 'bgrid') { ED.grilla = !ED.grilla; b.setAttribute('aria-pressed', ED.grilla); grilla.visible = ED.on && ED.grilla; cuadricula = grilla.visible; pintaSuelo(); motor.dirty = true; } });
@@ -484,7 +484,8 @@ export async function abrirMaqueta(o) {
     const g = objs.get(P.id); if (g) { g.position.set(P.x, s ? 0 : 0.25, P.z); g.rotation.y = P.r || 0; } motor.dirty = true; }
 
   // mouse: lo que el editor agarra no mueve la cámara
-  motor.agarrar = e => { if (!ED.on) return false; const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
+  let espacio = false; addEventListener('keydown', e => { if (e.key === ' ' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !RC.R.on) espacio = true; }, true); addEventListener('keyup', e => { if (e.key === ' ') espacio = false; }, true); addEventListener('blur', () => { espacio = false; });
+  motor.agarrar = e => { if (!ED.on || espacio) return false; const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
     // mientras se ubica o se dibuja algo, arrastrar mueve la vista y el toque es el que pone (solo el recinto se dibuja arrastrando)
     if (ED.colocar || ED.linea) return false; if (CON.T.h) return CON.agarrar(e, p0, null);
     const mh = SEL && ED.h === 'mano' && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0];

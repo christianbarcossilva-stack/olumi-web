@@ -258,7 +258,7 @@ export function crearMotor(canvas, o = {}) {
     const v = C.d * 0.8 * dt, fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw), K = teclas, mueve = (a, b) => { C.tx += a; C.tz += b; motor.dirty = true; viaje = null; };
     if (!motor.caminando) { if (K.w || K.arrowup) mueve(fx * v, fz * v); if (K.s || K.arrowdown) mueve(-fx * v, -fz * v); if (K.a || K.arrowleft) mueve(fz * v, -fx * v); if (K.d || K.arrowright) mueve(-fz * v, fx * v);
       if (K.z) zoomHacia(Math.exp(-dt * 1.6)); if (K.x) zoomHacia(Math.exp(dt * 1.6)); }
-    if (!motor.editando && !motor.caminando) { const g = (K.q ? 1 : 0) - (K.e ? 1 : 0); if (g) { C.yaw += g * dt * 1.5; viaje = null; motor.dirty = true; } }
+    if (!motor.caminando) { const g = (K.q ? 1 : 0) - (K.e ? 1 : 0); if (g) { C.yaw += g * dt * 1.5; viaje = null; motor.dirty = true; } }
     // la rueda acerca en varios cuadros y lo que se soltó en movimiento frena de a poco
     if (Math.abs(rueda.k) > 1e-4) { const p = rueda.k * (1 - Math.exp(-dt * 16)); rueda.k -= p; zoomHacia(Math.exp(p), rueda.x, rueda.y); } else rueda.k = 0;
     if (!arr && !gesto && (vel.yaw || vel.pitch || vel.tx || vel.tz)) { const f = Math.exp(-dt * 5.5); C.yaw += vel.yaw * dt; C.pitch = incl(C.pitch + vel.pitch * dt); C.tx += vel.tx * dt; C.tz += vel.tz * dt;
