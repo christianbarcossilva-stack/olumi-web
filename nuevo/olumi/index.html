@@ -66,7 +66,8 @@ section{padding:clamp(80px,11vw,150px) 0}
 .modo:active{transform:scale(.92)}
 .modo svg{grid-area:1/1;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;transition:opacity .35s,transform .5s var(--e)}
 .modo .sol{opacity:0;transform:rotate(-60deg) scale(.6)}html:not(.n) .modo .sol{opacity:1;transform:none}html:not(.n) .modo .luna{opacity:0;transform:rotate(60deg) scale(.6)}
-@media (max-width:980px){.tabs{display:none}.ent{display:none}}
+@media (max-width:1140px){.tabs{display:none}}@media (max-width:980px){.ent{display:none}}
+.tabs a,.logo{white-space:nowrap}
 /* ---------- la historia sobre el motor común ---------- */
 .cine{position:relative;padding:0}
 .cine .bg{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;z-index:0;background:radial-gradient(80% 70% at 65% 40%,#2a2b31,#0b0b0d)}
@@ -140,6 +141,7 @@ html:not(.n) .cine .bg{background:radial-gradient(80% 70% at 65% 40%,#f4f5f7,#cf
 .rep .ok{display:flex;align-items:center;gap:8px;justify-content:center;font:600 13px var(--f);color:#30d158;margin-top:auto}.rep .ok i{width:8px;height:8px;border-radius:50%;background:#30d158}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:34px}
 .stats .gl{padding:18px}.stats .num{font:300 46px/1 var(--f);letter-spacing:-.05em}.stats .num small{font-size:15px;color:var(--ink3);margin-left:4px;letter-spacing:0}.stats p{margin:8px 0 0;font-size:14px;color:var(--ink2)}
+@media (max-width:1200px){.tkt{right:-16px}}
 @media (max-width:860px){
   .ch .wrap,.ch.hero .wrap{grid-template-columns:1fr}.ch .dev{justify-self:center}.mini{justify-self:start}
   .cine .bg::after{background:linear-gradient(0deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 82%,transparent) 46%,transparent 78%)}
@@ -591,7 +593,9 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
   f.addEventListener('load',function(){var n=0,tk=setInterval(function(){var mq=null;try{mq=f.contentWindow.__maqueta}catch(e){}if(mq&&mq.motor){clearInterval(tk);listo(mq)}else if(++n>120)clearInterval(tk)},250)});
   function listo(mq){M=mq.motor;try{var d=f.contentDocument,s=d.createElement('style');s.textContent='body>*:not(#m3d){display:none!important}html,body{cursor:default!important;background:transparent!important}';d.head.appendChild(s)}catch(e){}
     try{mq.XT&&mq.XT.presentar&&mq.XT.presentar(false)}catch(e){}
-    var c=cam(t);M.ir({tx:c[0],tz:c[1],yaw:c[2],pitch:c[3],d:c[4]},0.01);hora='';upd();setTimeout(function(){cine.classList.add('ready')},350)}
+    var c=cam(t);M.ir({tx:c[0],tz:c[1],yaw:c[2],pitch:c[3],d:c[4]},0.01);
+    // antes de mostrarla, la oficina pasa una vez por cada hora (sin esto, la primera vez que llega la noche la placa arma sus luces y se ve un cuadro gris)
+    var hs=['azul','noche','dia','manana'],i=0;(function sig(){if(i<hs.length){try{M.ponerHora(hs[i++]);M.dirty=true}catch(e){}setTimeout(sig,260);return}hora='';upd();setTimeout(function(){cine.classList.add('ready')},300)})()}
   var k=[0,0,0,0,0],kOn=false;
   function paso(now){raf=0;if(!M||!vis)return;var c=cam(t);if(!kOn){k=c.slice();kOn=true}
     var a=reduce?1:.08,quieto=true;for(var j=0;j<5;j++){k[j]+=(c[j]-k[j])*a;if(Math.abs(c[j]-k[j])>.002)quieto=false}
