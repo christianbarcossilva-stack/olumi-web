@@ -7,7 +7,7 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=17';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=50';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=51';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -106,7 +106,7 @@ export function construir(M) {
     if (T.h === 'pared') { T.arr = { q0: iman(p0, e, null), x: e.clientX, y: e.clientY, mov: false }; return true; }
     if (T.h) return false;   // con abertura, arrastrar mueve la vista; el toque es el que la pone
     // una pared o una abertura se arrastra solo si ya estaba elegida (se elige con un toque): así arrastrar para moverse nunca corre nada por error
-    const s = sobre(hit); if (!s || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
+    const s = sobre(hit); if (!s || s.p.candado || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
     if (j >= 0) D = { p, h: p.huecos[j], off: l.s - p.huecos[j].a }; else if (p.t === 'recinto') D = { p, lado: l.i, x0: p0.x, z0: p0.z, orig: p.pts.map(q => [...q]) }; else return false;   // una pared suelta se mueve entera, como cualquier pieza
     return true; }
   function mover(e) { const p = motor.enPiso(e.clientX, e.clientY); if (!p) return !!(D || T.h);
