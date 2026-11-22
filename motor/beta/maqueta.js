@@ -73,7 +73,8 @@ export async function abrirMaqueta(o) {
   const objs = new Map(), lbl = $('#mlbl');
   let tostT; const toast = m => { const t = $('#mtoast'); t.textContent = m; t.hidden = false; clearTimeout(tostT); tostT = setTimeout(() => t.hidden = true, 2800); };
   // la pista de la herramienta se muestra chica y a los segundos se aclara sola, para no tapar
-  let hintT; const hint = m => { const h = $('#mhint'); clearTimeout(hintT); h.hidden = !m; h.classList.remove('tenue'); if (m) { h.innerHTML = m; hintT = setTimeout(() => h.classList.add('tenue'), 9000); } };
+  // en la Mac la tecla Alt se llama Option (⌥): la ayuda la nombra como está escrita en el teclado
+  const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent); let hintT; const hint = m => { const h = $('#mhint'); clearTimeout(hintT); h.hidden = !m; h.classList.remove('tenue'); if (m) { h.innerHTML = MAC ? String(m).replace(/<kbd>Alt<\/kbd>/g, '<kbd>⌥ Option</kbd>') : m; hintT = setTimeout(() => h.classList.add('tenue'), 9000); } };
 
   // suelo de fondo (pasto) que acompaña el tema
   const pg = new THREE.PlaneGeometry(9000, 9000).rotateX(-Math.PI / 2); { const uv = pg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 9000, uv.getY(i) * 9000); }
@@ -500,7 +501,9 @@ export async function abrirMaqueta(o) {
 
   // mouse: lo que el editor agarra no mueve la cámara
   let espacio = false; addEventListener('keydown', e => { if (e.key === ' ' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !RC.R.on) espacio = true; }, true); addEventListener('keyup', e => { if (e.key === ' ') espacio = false; }, true); addEventListener('blur', () => { espacio = false; });
-  motor.agarrar = e => { if (!ED.on || espacio || ED.fach) return false; const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
+  motor.agarrar = e => { if (!ED.on || espacio || ED.fach) return false;
+    if (SEL && ED.h === 'mano' && !ED.colocar && !ED.linea && !CON.T.h) { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { menu(null); ED.drag = { fach: mf.object.userData.fach, m: mf.object }; return true; } }
+    const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
     // mientras se ubica o se dibuja algo, arrastrar mueve la vista y el toque es el que pone (solo el recinto se dibuja arrastrando)
     if (ED.colocar || ED.linea) return false; if (CON.T.h) return CON.agarrar(e, p0, null);
     const mh = SEL && ED.h === 'mano' && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0];
@@ -527,14 +530,16 @@ export async function abrirMaqueta(o) {
   addEventListener('mousedown', e => { if (e.button === 2) cancelarAgarre(); }, true);   // con el botón izquierdo apretado, el derecho no llega como toque: se mira acá
   // mantener apretado con el dedo sobre una pieza: la elige y la deja lista para arrastrar
   motor.agarrarLargo = e => { if (!ED.on || ED.colocar || ED.linea || CON.T.h || ED.h !== 'mano' || MED.p) return false; const p0 = motor.enPiso(e.clientX, e.clientY), h = hallar(e); if (!p0 || !h || h.p.t === 'terreno' || h.p.fijo || h.p.candado) return false; menu(null); tomar(h.p, p0, e); canvas.classList.add('lleva'); hint('Agarrado: arrastrá para moverlo'); return true; };
+  function arrastreFach(e, D) { const g = objs.get(SEL.id), n = new THREE.Vector3(0, 0, 1).transformDirection(g.matrixWorld), pl = new THREE.Plane().setFromNormalAndCoplanarPoint(n, alFrente(SEL, 0, 0)), w = motor.rayo(e.clientX, e.clientY).ray.intersectPlane(pl, new THREE.Vector3()); if (!w) return;
+      const u = uDe(SEL, w.x, w.z, e.altKey), v = alFrente(SEL, u, D.fach.y); D.m.position.copy(v); D.u = u; D.movido = true; hint(`${D.fach.k === 'anden' ? 'Andén' : D.fach.k === 'nivel' ? 'Portón a nivel' : 'Puerta de personal'} a <b>${fmt(u)} m</b> de la punta izquierda · <kbd>Alt</kbd> de a 10 cm · doble clic la saca`); }
   motor.mover = e => { if (recuadro) { const q = motor.enPiso(e.clientX, e.clientY); if (q) { const R = recuadro; R.x1 = q.x; R.z1 = q.z; if (!R.m) { R.m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf5a524, transparent: true, opacity: 0.2, depthWrite: false, depthTest: false })); R.m.renderOrder = 9; motor.scene.add(R.m); }
         R.m.scale.set(Math.abs(q.x - R.x0) || 0.01, 1, Math.abs(q.z - R.z0) || 0.01); R.m.position.set((q.x + R.x0) / 2, 0.25, (q.z + R.z0) / 2); motor.dirty = true; } return; }
     if (CON.mover(e)) return; const D = ED.drag; if (!D) return; if (MULTI.size) cajasM.visible = false;
     if (D.altura) { const v = motor.rayo(e.clientX, e.clientY).ray.intersectPlane(D.altura, new THREE.Vector3()); if (v) { const y = Math.max(0, Math.min(60, Math.round(v.y * (e.altKey ? 100 : 10)) / (e.altKey ? 100 : 10))); if (y !== SEL.y) { SEL.y = y; D.movido = true; rehacer(SEL); } } return; }
+    if (D.fach) { arrastreFach(e, D); return; }
     const p = motor.enPiso(e.clientX, e.clientY); if (!p) return;
     if (D.giroPts) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, a = Math.atan2(p.x - D.giroPts[0], p.z - D.giroPts[1]), d = Math.round((a - D.a0) / paso) * paso; if (d !== D.hecho) { CON.girar(SEL, d - D.hecho); D.hecho = d; D.movido = true; CON.marcar(); marcar(); hint(`Girado <b>${Math.round(d * 180 / Math.PI)}°</b> · <kbd>Alt</kbd> de a 1°`); } return; }
     if (D.giro) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, r = Math.round(Math.atan2(p.x - (SEL.x || 0), p.z - (SEL.z || 0)) / paso) * paso; if (r !== (SEL.r || 0)) { D.con = D.con || CON.contenido(SEL); rotarCon(SEL, r - (SEL.r || 0), D.con); SEL.r = r; D.movido = true; const g = objs.get(SEL.id); if (g) g.rotation.y = r; marcar(); } return; }
-    if (D.fach) { const u = uDe(SEL, p.x, p.z, e.altKey), v = alFrente(SEL, u, D.fach.y); D.m.position.copy(v); D.u = u; D.movido = true; hint(`${D.fach.k === 'anden' ? 'Andén' : D.fach.k === 'nivel' ? 'Portón a nivel' : 'Puerta de personal'} a <b>${fmt(u)} m</b> de la punta izquierda · <kbd>Alt</kbd> de a 10 cm · doble clic la saca`); return; }
     if (D.v != null) { SEL.pts[D.v] = [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]; rehacer(SEL); CON.marcar(); return; }
     const dx = p.x - D.x0, dz = p.z - D.z0; if (!D.movido && Math.hypot(dx, dz) < motor.C.d * 0.004) return; D.movido = true; canvas.classList.add('lleva'); manijas.visible = false;
     // las líneas, áreas y recintos se corren enteros (el salto se pega a la grilla, la forma no se toca) y un recinto se lleva lo que tiene adentro
