@@ -933,6 +933,15 @@ export const TIPOS = {
     armar(p) { const g = new THREE.Group(), h = p.alto || 2.2, gris = mat(oscuro() ? '#5d646a' : '#9aa1a7', { metalness: 0.5, roughness: 0.45 }); lote(g, CIL, gris, [[0, h / 2, 0, 0, 0.07, h, 0.07]]);
       const m = new THREE.MeshStandardMaterial({ map: senalTex(p.tipo, p.valor), roughness: 0.5, transparent: true, alphaTest: 0.5 }), pl = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.75), m); pl.position.set(0, h + 0.3, 0.05); g.add(pl);
       const dorso = new THREE.Mesh(new THREE.CircleGeometry(0.37, 24), gris); dorso.position.set(0, h + 0.3, 0.035); dorso.rotation.y = Math.PI; g.add(dorso); return g; } },
+  incendio: { n: 'Seguridad e instalaciones (pared)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: () => '', def: { tipo: 'extintor' },
+    campos: [F.nombre, { k: 'tipo', n: 'Qué es', t: 'sel', ops: [['extintor', 'Extintor con cartel'], ['manguera', 'Gabinete de incendio (manguera)'], ['central', 'Central de alarma de incendio'], ['tablero', 'Armario de tableros eléctricos'], ['felpudo', 'Felpudo de entrada']] }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), rojo = mat(os ? '#7a1f1c' : '#C8302A', { roughness: 0.45 }), bl = mat(os ? '#8a9096' : '#f2f3f1', { roughness: 0.7 }), ne = mat('#24272b', { roughness: 0.5 }), t = p.tipo || 'extintor';
+      if (t === 'extintor') { const c = new THREE.Mesh(CIL, rojo); c.scale.set(0.17, 0.55, 0.17); c.position.set(0, 0.62, 0.12); g.add(c); caja(g, -0.04, 0.9, 0.08, 0.04, 1.0, 0.16, ne); caja(g, -0.18, 1.45, 0, 0.18, 1.75, 0.02, rojo); caja(g, -0.13, 1.5, 0.021, 0.13, 1.7, 0.024, bl, false); }
+      if (t === 'manguera') { caja(g, -0.4, 0.7, 0, 0.4, 1.6, 0.22, rojo); caja(g, -0.33, 0.78, 0.221, 0.33, 1.52, 0.226, mat('#cfe3ea', { roughness: 0.1, transparent: true, opacity: 0.45 }), false); const r = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 8, 20), rojo); r.position.set(0, 1.15, 0.12); g.add(r); const ca = new THREE.Mesh(CIL, rojo); ca.scale.set(0.06, 2.6, 0.06); ca.position.set(0.5, 1.3, 0.06); g.add(ca); }
+      if (t === 'central') { caja(g, -0.28, 1.3, 0, 0.28, 1.75, 0.1, ne); caja(g, -0.2, 1.6, 0.101, 0.2, 1.68, 0.104, mat('#9fd0a8', os ? { emissive: '#3cff7a', emissiveIntensity: 0.6 } : {}), false); for (let i = 0; i < 3; i++) caja(g, -0.2, 1.36 + i * 0.07, 0.101, 0.2, 1.4 + i * 0.07, 0.103, mat('#3a3f45'), false); }
+      if (t === 'tablero') { caja(g, -0.7, 0, 0, 0.7, 2.6, 0.6, bl); caja(g, -0.005, 0.05, 0.6, 0.005, 1.95, 0.605, mat('#c9cccf'), false); caja(g, -0.7, 1.97, 0.6, 0.7, 1.99, 0.605, mat('#c9cccf'), false); for (const x of [-0.08, 0.05]) caja(g, x, 0.9, 0.6, x + 0.03, 1.15, 0.63, mat('#8d9399', { metalness: 0.6 }), false); }
+      if (t === 'felpudo') caja(g, -0.75, 0, -0.45, 0.75, 0.02, 0.45, ne);
+      return g; } },
   semaforo: { n: 'Semáforo', g: 'Construcción', forma: 'punto', capa: 'base', def: { alto: 2.6, poste: false, luz: 'verde' },
     campos: [F.nombre, { k: 'luz', n: 'Luz prendida', t: 'sel', ops: [['verde', 'Verde'], ['roja', 'Roja']] }, F.alto('Altura (m)', 1.5, 6, 0.05), { k: 'poste', n: 'Con poste propio', t: 'bool' }, F.r],
     armar(p) { const g = new THREE.Group(), os = oscuro(), h = p.alto, on = c => os ? neon(c) : mat(c, { emissive: c, emissiveIntensity: 0.85 }), off = c => mat(c, { roughness: 0.5 });
@@ -1140,7 +1149,8 @@ const mix = (a, b, k) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), k).ge
 // p.plano = { muros: [[piso, tipo, u0, v0, u1, v1, [[desde, hasta, 'p'|'v'|'pc'], ...]]], esc: { v0, meseta, llegada, uA: [a, b], uB: [a, b] } }
 // u = a lo ancho del plano (0 a fondo), v = a lo largo (0 a ancho), en metros desde la esquina de arriba a la izquierda del plano.
 // Tipos: e fachada (zócalo oscuro, franja clara en la losa, ventanas sueltas), c cortina de vidrio, i tabique, g tabique vidriado, m tabique móvil.
-// Huecos: tramo a lo largo de la pared (en u si es horizontal en el plano, en v si es vertical; en una diagonal, de 0 a 1): p puerta, v ventana, pc puerta cerrada.
+// Huecos: tramo a lo largo de la pared (en u si es horizontal en el plano, en v si es vertical; en una diagonal, de 0 a 1): p puerta, v ventana, pc puerta cerrada,
+// pv puerta de entrada de vidrio de dos hojas con marco oscuro (la principal).
 function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.altoPiso, N = Math.max(1, Math.round(p.pisos)), P = p.plano, os = oscuro(), suelos = [], duros = [];
   const X = v => v - L / 2, Z = u => u - W / 2, mPta = mat(os ? '#6b4e36' : '#8a6448', { roughness: 0.6 }), mMov = mat(os ? '#9aa1a8' : '#dfe2e4', { roughness: 0.8 });
   const mVidI = mat(os ? '#a9c7d6' : '#d6e8f1', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false }), mMarco = mat('#2a2e33', { roughness: 0.5, metalness: 0.3 }), mFachI = mat(os ? '#7f868c' : '#e7e9ea', { roughness: 0.9 });
@@ -1175,7 +1185,10 @@ function armarPlano(g, p, M, nv, sc) { const L = p.ancho, W = p.fondo, hp = p.al
       if (q === 'v') { const vb = t === 'e' ? 0.9 : 0.12; seg(h0, h1, 0, vb, t === 'e' ? M.mFach : mMarco); seg(h0, h1, vb, alto - (t === 'e' ? 0.55 : 0.5), M.mVid); seg(h0, h1, alto - (t === 'e' ? 0.55 : 0.5), alto, t === 'e' || t === 'c' ? M.mFr : mFachI);
         seg(h0 - 0.05, h0 + 0.05, vb, alto - 0.55, mMarco, false, 0.03); seg(h1 - 0.05, h1 + 0.05, vb, alto - 0.55, mMarco, false, 0.03); seg((h0 + h1) / 2 - 0.03, (h0 + h1) / 2 + 0.03, vb, alto - 0.55, mMarco, false, 0.03); }
       else { const dintel = Math.min(2.2, alto - 0.3); seg(h0, h1, dintel, ext ? alto - 0.55 : alto, ext ? (t === 'c' ? M.mFr : M.mFach) : t === 'g' ? mVidI : mFachI); if (ext) seg(h0, h1, alto - 0.55, alto, M.mFr); // el dintel llega hasta la franja de arriba, sin pisarse con ella
-        seg(h0 - 0.04, h0 + 0.04, 0, dintel, mMarco, false, 0.03); seg(h1 - 0.04, h1 + 0.04, 0, dintel, mMarco, false, 0.03); if (q === 'pc') seg(h0 + 0.04, h1 - 0.04, 0, dintel, mPta); } }
+        seg(h0 - 0.04, h0 + 0.04, 0, dintel, mMarco, false, 0.03); seg(h1 - 0.04, h1 + 0.04, 0, dintel, mMarco, false, 0.03); if (q === 'pc') seg(h0 + 0.04, h1 - 0.04, 0, dintel, mPta);
+        if (q === 'pv') { const br = mat(os ? '#2b2420' : '#3b2f28', { roughness: 0.45, metalness: 0.35 }), m = (h0 + h1) / 2; seg(h0 + 0.02, h1 - 0.02, 0.02, dintel - 0.03, M.mVid, false, 0.02);
+          for (const [a, b] of [[h0, h0 + 0.09], [m - 0.05, m + 0.05], [h1 - 0.09, h1]]) seg(a, b, 0, dintel, br, false, 0.06); seg(h0, h1, dintel - 0.09, dintel, br, false, 0.06); seg(h0, h1, 0, 0.06, br, false, 0.06);
+          for (const c of [m - 0.16, m + 0.12]) seg(c, c + 0.04, 0.95, 1.25, br, false, 0.1); } } }
     lleno(s, len); }
   // escalera en U: primer tramo por el carril A desde la llegada hasta la meseta, meseta a media altura, segundo tramo por el carril B hasta el piso de arriba
   if (E) for (let k = 0; k < N - 1; k++) { const yb = k * hp, ym = yb + hp / 2, xm0 = X(E.meseta[0]), xm1 = X(E.meseta[1]), xl = X(E.llegada[0]), [a0, a1] = E.uA.map(Z), [b0, b1] = E.uB.map(Z), run = xl - xm1, n = Math.max(6, Math.round(hp / 2 / 0.17)), tr = run / n;
