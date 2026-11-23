@@ -14,13 +14,13 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=18';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=58';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=59';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=48';
+import { construir } from './construir.js?v=49';
 import { juego } from './juego.js?v=5';
 import { recorrer } from './recorrer.js?v=19';
-import { transito } from './transito.js?v=48';
+import { transito } from './transito.js?v=49';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -378,7 +378,7 @@ export async function abrirMaqueta(o) {
   (() => { const fino = matchMedia('(pointer: fine) and (min-width: 900px)'), K = 'motor.paneles', leer = () => { try { return JSON.parse(localStorage.getItem(K) || '{}'); } catch (_) { return {}; } };
     const guardarP = (id, el) => { try { const o = leer(), r = el.getBoundingClientRect(); o[id] = { l: Math.round(r.left), t: Math.round(r.top), w: Math.round(r.width), h: el.classList.contains('mhoja') ? Math.round(r.height) : undefined, mini: el.classList.contains('mchico') }; localStorage.setItem(K, JSON.stringify(o)); } catch (_) {} };
     const ubicar = (el, o) => { const W = innerWidth, H = innerHeight, w = Math.min(o.w || el.offsetWidth, W - 16), l = Math.max(8, Math.min(W - w - 8, o.l)), t = Math.max(64, Math.min(H - 60, o.t));
-      Object.assign(el.style, { left: l + 'px', top: t + 'px', right: 'auto', width: w + 'px', maxHeight: Math.max(160, H - t - 84) + 'px' });   // nunca tapa la barra de abajo if (el.classList.contains('mhoja')) Object.assign(el.style, { bottom: 'auto', height: Math.max(220, Math.min(H - t - 70, o.h || el.offsetHeight)) + 'px' }); };
+      Object.assign(el.style, { left: l + 'px', top: t + 'px', right: 'auto', width: w + 'px', maxHeight: Math.max(160, H - t - 84) + 'px' }); /* nunca tapa la barra de abajo */ if (el.classList.contains('mhoja')) Object.assign(el.style, { bottom: 'auto', height: Math.max(220, Math.min(H - t - 70, o.h || el.offsetHeight)) + 'px' }); };
     for (const id of ['minfo', 'mcat', 'meq']) { const el = $('#' + id); if (!el) continue; el.classList.add('mflota'); el.title = '';
       const o = leer()[id]; if (o && fino.matches) { ubicar(el, o); el.classList.toggle('mchico', !!o.mini); }
       let D = null; const enRaya = e => fino.matches && e.clientY - el.getBoundingClientRect().top < 16 && !e.target.closest('input,select,textarea,button,a');
@@ -526,7 +526,10 @@ export async function abrirMaqueta(o) {
     if (SEL.t === 'galpon' && SEL.estilo === 'logistico') for (const f of fachada(SEL)) { const v = alFrente(SEL, f.u, f.y); pon(v.x, v.y, v.z, f.k === 'puerta' ? GIRm2 : f.k === 'nivel' || f.k === 'rampa' ? ALTm : MEDm, { fach: f }, 1.3); }
     const T = TIPOS[SEL.t], x = SEL.x || 0, z = SEL.z || 0, r = SEL.r || 0, b = cajaDe(objs.get(SEL.id), new THREE.Box3()), rad = Math.min(motor.C.d * 0.09, Math.max(0.9, Math.hypot(b.max.x - b.min.x, b.max.z - b.min.z) / 2 + Math.max(0.5, s * 3)));
     if (T.campos.some(c => c.k === 'r')) { pon(x + Math.sin(r) * rad, 0.3, z + Math.cos(r) * rad, GIRm2, { giro: 1 }, 1.5); anillo(x, z, rad, r); const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, 0.3, z), new THREE.Vector3(x + Math.sin(r) * rad, 0.3, z + Math.cos(r) * rad)]), LINm); l.renderOrder = 9; manijas.add(l); }
-    if (T.campos.some(c => c.k === 'y')) pon(x, (SEL.y ?? T.def.y ?? 0) + Math.max(0.7, s * 3.5), z, ALTm, { altura: 1 }); }
+    if (T.campos.some(c => c.k === 'y')) pon(x, (SEL.y ?? T.def.y ?? 0) + Math.max(0.7, s * 3.5), z, ALTm, { altura: 1 });
+    // manijas de medida (como empujar una pared en Los Sims): en lo que tiene ancho y fondo, una en cada borde; arrastrarla estira ese lado y el de enfrente queda quieto
+    if (medidas(SEL)) { const q = { ...T.def, ...SEL }, c = Math.cos(r), sn = Math.sin(r), w = +q.ancho / 2, d = +q.fondo / 2; for (const [k, lx, lz, lado] of [['ancho', w, 0, 1], ['ancho', -w, 0, -1], ['fondo', 0, d, 1], ['fondo', 0, -d, -1]]) pon(x + lx * c + lz * sn, 0.4, z - lx * sn + lz * c, MANm, { medida: k, lado }, 1.15); } }
+  const medidas = p => { const T = TIPOS[p.t]; return !T.equipo && !p.pts && T.campos.some(c => c.k === 'ancho' && c.t === 'num') && T.campos.some(c => c.k === 'fondo' && c.t === 'num'); };
   motor.cada.push(() => { const m = manijas.children.find(q => q.isMesh); if (!m) return false; const s = Math.max(0.12, motor.C.d * 0.006); if (Math.abs(m.scale.x / m.userData.k - s) > s * 0.1) { manijas.children.forEach(q => q.isMesh && q.scale.setScalar(s * q.userData.k)); return true; } return false; });
 
   // dónde cae un equipo que se está ubicando: en la pared que se apunta (a esa altura y mirando hacia afuera), colgado de un techo, arriba de algo, en una columna de luz cercana o en el piso
@@ -555,6 +558,7 @@ export async function abrirMaqueta(o) {
     if (ED.colocar || ED.linea) return false; if (CON.T.h) return CON.agarrar(e, p0, null);
     const mh = SEL && ED.h === 'mano' && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0];
     if (mh) { const ud = mh.object.userData; if (ud.fach) { ED.drag = { fach: ud.fach, m: mh.object }; return true; } if (ud.giro) ED.drag = { giro: true }; else if (ud.giroPts) ED.drag = { giroPts: ud.giroPts, a0: Math.atan2(p0.x - ud.giroPts[0], p0.z - ud.giroPts[1]), hecho: 0 }; else if (ud.altura) { const n = new THREE.Vector3(Math.sin(motor.C.yaw), 0, Math.cos(motor.C.yaw)); ED.drag = { altura: new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(SEL.x || 0, 0, SEL.z || 0)) }; }
+      else if (ud.medida) { const q = { ...TIPOS[SEL.t].def, ...SEL }; ED.drag = { medida: ud.medida, lado: ud.lado, w0: +q[ud.medida], x0: SEL.x || 0, z0: SEL.z || 0 }; }
       else if (ud.medio != null) { SEL.pts.splice(ud.medio, 0, [pegar(p0.x, e.altKey), pegar(p0.z, e.altKey)]); CON.insertado(SEL, ud.medio); ED.drag = { v: ud.medio }; rehacer(SEL); } else ED.drag = { v: ud.vertice }; return true; }
     if (ED.h === 'varias' || (ED.h === 'mano' && modif(e) && e.pointerType !== 'touch')) { const hv = hallar(e); if (hv && MULTI.has(hv.p) && !modif(e)) { tomar(hv.p, p0, e); return true; }
       if (!hv || hv.p.t === 'terreno' || hv.p.fijo || hv.p.candado) { recuadro = { x0: p0.x, z0: p0.z, suma: modif(e) }; return true; } return false; /* sobre una pieza suelta: el toque la suma y arrastrar mueve la vista */ }
@@ -587,6 +591,11 @@ export async function abrirMaqueta(o) {
     if (D.fach) { arrastreFach(e, D); return; }
     const p = motor.enPiso(e.clientX, e.clientY); if (!p) return;
     if (D.giroPts) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, a = Math.atan2(p.x - D.giroPts[0], p.z - D.giroPts[1]), d = Math.round((a - D.a0) / paso) * paso; if (d !== D.hecho) { CON.girar(SEL, d - D.hecho); D.hecho = d; D.movido = true; CON.marcar(); marcar(); hint(`Girado <b>${Math.round(d * 180 / Math.PI)}°</b> · <kbd>Alt</kbd> de a 1°`); } return; }
+    // estirar un lado: el borde de enfrente queda quieto; se pega a la grilla de 25 cm (Alt sin imán) y a una columna que esté cerca del borde
+    if (D.medida) { const r = SEL.r || 0, c = Math.cos(r), sn = Math.sin(r), dx = p.x - D.x0, dz = p.z - D.z0, eje = D.medida === 'ancho' ? 0 : 1, loc = eje ? dx * sn + dz * c : dx * c - dz * sn, opu = -D.lado * D.w0 / 2;
+      let borde = e.altKey ? loc : Math.round(loc * 4) / 4; if (!e.altKey) { let mejor = 1.2; for (const q of E.piezas) { if (!COLUMNAS.has(q.t)) continue; const qx = (q.x || 0) - D.x0, qz = (q.z || 0) - D.z0, ql = eje ? qx * sn + qz * c : qx * c - qz * sn, qo = eje ? qx * c - qz * sn : qx * sn + qz * c, med = { ...TIPOS[SEL.t].def, ...SEL }[eje ? 'ancho' : 'fondo'] / 2; if (Math.abs(qo) > med + 1 || Math.abs(ql - loc) > mejor) continue; mejor = Math.abs(ql - loc); borde = ql + D.lado * 0.3; } }
+      const cp = TIPOS[SEL.t].campos.find(k => k.k === D.medida), w = Math.max(cp.min || 1, Math.min(cp.max || 600, Math.round(D.lado * (borde - opu) * 100) / 100)), cl = opu + D.lado * w / 2;
+      SEL[D.medida] = w; SEL.x = Math.round((D.x0 + (eje ? cl * sn : cl * c)) * 100) / 100; SEL.z = Math.round((D.z0 + (eje ? cl * c : -cl * sn)) * 100) / 100; D.movido = true; rehacer(SEL); puntos(); marcar(); hint(`${cp.n.replace(/ \(m\)/, '')}: <b>${fmt(w)} m</b> · <kbd>Alt</kbd> sin imán`); return; }
     if (D.giro) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, r = Math.round(Math.atan2(p.x - (SEL.x || 0), p.z - (SEL.z || 0)) / paso) * paso; if (r !== (SEL.r || 0)) { D.con = D.con || CON.contenido(SEL); rotarCon(SEL, r - (SEL.r || 0), D.con); SEL.r = r; D.movido = true; const g = objs.get(SEL.id); if (g) g.rotation.y = r; marcar(); } return; }
     if (D.v != null) { SEL.pts[D.v] = [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]; rehacer(SEL); CON.marcar(); return; }
     const dx = p.x - D.x0, dz = p.z - D.z0; if (!D.movido && Math.hypot(dx, dz) < motor.C.d * 0.004) return; D.movido = true; canvas.classList.add('lleva'); manijas.visible = false;
@@ -606,7 +615,7 @@ export async function abrirMaqueta(o) {
     if (MULTI.size) setTimeout(marcarMulti, 0); canvas.classList.remove('lleva'); manijas.visible = true; if (!gesto && CON.soltar(e)) return; const D = ED.drag; ED.drag = null; if (gesto || !D) return; if (D.p && !D.p.pts) { const g = objs.get(D.p.id); if (g) g.position.y = 0; }
     if (D.p && !D.p.pts && D.movido && D.mal) { const b = D.bien || [D.orig[0], D.orig[1], D.y0]; ponerEn(D, b[0], b[1], b[2]); toast(J.msj(D) + (D.bien ? ' Quedó en el último lugar libre.' : ' Volvió a su lugar.')); } J && J.limpio();
     if (D.fach) { if (D.movido && D.u != null) { const L = fachLista(SEL, D.fach.k), it = L[D.fach.i]; if (D.fach.k === 'puerta' && !Array.isArray(it)) L[D.fach.i] = D.u; else if (it) it[0] = D.u; if (D.fach.k === 'anden') L.sort((a, b) => a[0] - b[0]); rehacer(SEL); cambio(); } hint(''); puntos(); motor.dirty = true; return; }
-    if (D.movido || D.v != null) { cambio(); marcar(); if (D.giro || D.giroPts || D.altura) info(); if (D.giroPts) { hint(''); puntos(); } } else if (D.p && ED.h === 'varias') toqueEd(e); else if (D.p) info(); motor.dirty = true; };
+    if (D.movido || D.v != null) { cambio(); marcar(); if (D.giro || D.giroPts || D.altura || D.medida) info(); if (D.medida) hint(''); if (D.giroPts) { hint(''); puntos(); } } else if (D.p && ED.h === 'varias') toqueEd(e); else if (D.p) info(); motor.dirty = true; };
   motor.pasar = e => { if (ED.on && CON.pasar(e)) return; const p = motor.enPiso(e.clientX, e.clientY);
     if (ED.colocar && p) { cajaH.visible = false; const C = ED.colocar; if (!C.p) { C.p = { ...JSON.parse(JSON.stringify(C.tpl)), id: nuevoId(C.tpl.t), x: 0, z: 0, r: C.tpl.r || 0, _p: 1 }; E.piezas.push(C.p); rehacer(C.p); } apoyar(C, e, p); if (J) J.probar(C.p, C, { base: C.tpl.y ?? null }); return; }
     if (ED.linea && p && ED.linea.rect && ED.linea.p && ED.linea.pts.length === 1) { const L = ED.linea; L.p.pts = rect(L.pts[0], [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]); rehacer(L.p); return; }
