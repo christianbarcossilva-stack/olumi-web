@@ -373,6 +373,21 @@ export async function abrirMaqueta(o) {
     if (T.forma === 'punto') { ED.colocar = { tpl, p: null }; hint(`<b>${esc(T.n)}</b>: tocá dónde va. ${T.equipo ? 'Apuntá a una pared, un techo o una columna y se pega ahí. ' : ''}<kbd>R</kbd> gira · <kbd>Shift</kbd> pone varios · <kbd>Alt</kbd> sin imán · <kbd>Esc</kbd> cancela`); }
     else { ED.linea = { tpl, pts: [], p: null }; hintLinea(T, ED.linea); } herrVis('ubicar'); }
   // recorriendo en la compu, lo que se elige en un panel (catálogo, equipos, gotero) devuelve el mouse a la mira para seguir apuntando
+  // paneles flotantes (en la compu): la ficha, el inventario y la lista de equipos se arrastran desde la rayita de arriba, se ensanchan desde la esquina de abajo
+  // y con doble clic en la rayita (o Y para la ficha) se minimizan a un renglón. Lo que cada uno deja queda guardado en este navegador.
+  (() => { const fino = matchMedia('(pointer: fine) and (min-width: 900px)'), K = 'motor.paneles', leer = () => { try { return JSON.parse(localStorage.getItem(K) || '{}'); } catch (_) { return {}; } };
+    const guardarP = (id, el) => { try { const o = leer(), r = el.getBoundingClientRect(); o[id] = { l: Math.round(r.left), t: Math.round(r.top), w: Math.round(r.width), h: el.classList.contains('mhoja') ? Math.round(r.height) : undefined, mini: el.classList.contains('mchico') }; localStorage.setItem(K, JSON.stringify(o)); } catch (_) {} };
+    const ubicar = (el, o) => { const W = innerWidth, H = innerHeight, w = Math.min(o.w || el.offsetWidth, W - 16), l = Math.max(8, Math.min(W - w - 8, o.l)), t = Math.max(64, Math.min(H - 60, o.t));
+      Object.assign(el.style, { left: l + 'px', top: t + 'px', right: 'auto', width: w + 'px', maxHeight: Math.max(160, H - t - 84) + 'px' });   // nunca tapa la barra de abajo if (el.classList.contains('mhoja')) Object.assign(el.style, { bottom: 'auto', height: Math.max(220, Math.min(H - t - 70, o.h || el.offsetHeight)) + 'px' }); };
+    for (const id of ['minfo', 'mcat', 'meq']) { const el = $('#' + id); if (!el) continue; el.classList.add('mflota'); el.title = '';
+      const o = leer()[id]; if (o && fino.matches) { ubicar(el, o); el.classList.toggle('mchico', !!o.mini); }
+      let D = null; const enRaya = e => fino.matches && e.clientY - el.getBoundingClientRect().top < 16 && !e.target.closest('input,select,textarea,button,a');
+      el.addEventListener('pointerdown', e => { if (!enRaya(e) || e.button !== 0) return; const r = el.getBoundingClientRect(); D = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height }; el.setPointerCapture(e.pointerId); el.classList.add('marrastre'); e.preventDefault(); e.stopPropagation(); });
+      el.addEventListener('pointermove', e => { if (!D) return; ubicar(el, { l: e.clientX - D.dx, t: e.clientY - D.dy, w: D.w, h: D.h }); });
+      el.addEventListener('pointerup', () => { if (!D) return; D = null; el.classList.remove('marrastre'); guardarP(id, el); });
+      el.addEventListener('dblclick', e => { if (!enRaya(e)) return; el.classList.toggle('mchico'); guardarP(id, el); e.stopPropagation(); });
+      new ResizeObserver(() => { if (!D && fino.matches && el.style.width) guardarP(id, el); }).observe(el); }
+    addEventListener('keydown', e => { if (e.key.toLowerCase() !== 'y' || e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.target.closest('input,textarea,select')) return; const f = $('#minfo'); if (f && !f.hidden) { f.classList.toggle('mchico'); guardarP('minfo', f); } }); })();
   motor.alMiraFalla = () => { if (RC.R.on) toast('El navegador no soltó el mouse todavía: hacé clic en la maqueta o apretá M'); };
   const retomar = () => { if (RC.R.on && !motor.mirando && RC.puedeMira()) motor.mira(true); };
   function cancelar(todo) { J && J.limpio(); if (ED.colocar && ED.colocar.p) quitar(ED.colocar.p, true); if (ED.linea && ED.linea.p) { if (ED.linea.sigue) { ED.linea.p.pts = ED.linea.sigue; rehacer(ED.linea.p); } else quitar(ED.linea.p, true); } const habia = ED.colocar || ED.linea; ED.colocar = ED.linea = null; if (ED.on && !todo && habia) herrVis(null); }
