@@ -14,13 +14,13 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=18';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=61';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=62';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=51';
+import { construir } from './construir.js?v=52';
 import { juego } from './juego.js?v=5';
 import { recorrer } from './recorrer.js?v=20';
-import { transito } from './transito.js?v=51';
+import { transito } from './transito.js?v=52';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -367,7 +367,7 @@ export async function abrirMaqueta(o) {
   const MEDIDAS = ['ancho', 'fondo', 'alto', 'largo', 'pisos', 'altoPiso', 'niveles', 'modulo', 'prof'];
   function empezar(tpl) { CON.cancelar(); cancelar(true); retomar(); const T = TIPOS[tpl.t];
     // algo con medida fija que se construye como recinto (el contenedor oficina): se toca dónde va y queda armado, listo para ponerle puertas y ventanas
-    if (tpl.molde && tpl.pts) { ED.linea = { tpl, pts: [], p: null, rect: true, molde: true }; hint(`<b>${esc(tpl.nombre || T.n)}</b>: tocá dónde va el centro. Después: <kbd>R</kbd> gira, la puerta y las ventanas se agarran del inventario y se apoyan en la pared · <kbd>Shift</kbd> pone varios · <kbd>Esc</kbd> cancela`); herrVis('ubicar'); return; } if (T.herramienta) { CON.empezar(T.herramienta, T.herramienta === 'piso' ? tpl : undefined); return; }
+    if (tpl.molde && tpl.pts) { ED.linea = { tpl, pts: [], p: null, rect: true, molde: true }; hint(`<b>${esc(tpl.nombre || T.n)}</b>: tocá dónde va el centro. Después: <kbd>R</kbd> gira, la puerta y las ventanas se agarran del inventario y se apoyan en la pared · <kbd>Shift</kbd> pone varios · <kbd>Esc</kbd> cancela`); herrVis('ubicar'); return; } if (T.herramienta) { CON.empezar(T.herramienta, T.herramienta === 'piso' || T.herramienta === 'relieve' ? tpl : undefined); return; }
     const ult = (() => { try { return (JSON.parse(localStorage.getItem('motor.medidas') || '{}'))[tpl.t + (tpl.estilo ? ':' + tpl.estilo : '')] || null; } catch (e) { return null; } })();
     if (ult) { tpl = { ...tpl, ...ult }; toast('Con las medidas de la última: ' + Object.entries(ult).map(([k, v]) => v + (['ancho', 'fondo', 'alto', 'largo'].includes(k) ? ' m' : ' ' + k)).join(' × ')); }
     if (T.forma === 'punto') { ED.colocar = { tpl, p: null }; hint(`<b>${esc(T.n)}</b>: tocá dónde va. ${T.equipo ? 'Apuntá a una pared, un techo o una columna y se pega ahí. ' : ''}<kbd>R</kbd> gira · <kbd>Shift</kbd> pone varios · <kbd>Alt</kbd> sin imán · <kbd>Esc</kbd> cancela`); }

@@ -455,6 +455,21 @@ let ENT = null;
 const RUMBO = { oeste: [-1, 0], este: [1, 0], norte: [0, -1], sur: [0, 1] };
 export function cotaDe(p) { const r = RUMBO[p.sube], A = +p.subeAlto; if (!r || !(A > 0) || !p.pts || p.pts.length < 3) return null; let a = 1e9, b = -1e9; for (const [x, z] of p.pts) { const v = x * r[0] + z * r[1]; if (v < a) a = v; if (v > b) b = v; }
   const L = Math.max(1, b - a); return (x, z) => Math.max(0, Math.min(A, A * ((x * r[0] + z * r[1]) - a) / L)); }
+// relieve pintado con el pincel de terreno (como en Los Sims): alturas en las esquinas de una grilla de 2 m, guardadas solo donde no son cero.
+// La grilla arranca en x, z de la pieza; entre esquinas la altura se interpola. Se pisa, se camina y las cosas se apoyan encima, como en la loma.
+export function relieveDe(p) { const A = p.alt; if (!A) return null; const c = p.celda || 2, ox = p.x || 0, oz = p.z || 0; let i0 = 1e9, j0 = 1e9, i1 = -1e9, j1 = -1e9, n = 0;
+  for (const k in A) { if (!(A[k] > 0)) continue; const s = k.indexOf(','), i = +k.slice(0, s), j = +k.slice(s + 1); n++; if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j; }
+  if (!n) return null; const h = (i, j) => A[i + ',' + j] || 0;
+  const f = (x, z) => { const u = (x - ox) / c, v = (z - oz) / c, i = Math.floor(u), j = Math.floor(v), a = u - i, b = v - j; return (h(i, j) * (1 - a) + h(i + 1, j) * a) * (1 - b) + (h(i, j + 1) * (1 - a) + h(i + 1, j + 1) * a) * b; };
+  return { f, h, c, ox, oz, i0, j0, i1, j1, bb: [ox + (i0 - 1) * c, oz + (j0 - 1) * c, ox + (i1 + 1) * c, oz + (j1 + 1) * c] }; }
+// franja a lo largo de una línea con varias columnas a lo ancho: cols(i) da [[desplazamiento, tierra], …] (la tierra es cuánto barro se ve en ese borde)
+function franja(P, cols, y) { const v = [], uv = [], t = [], ix = []; let nC = 0;
+  for (let i = 0; i < P.length; i++) { const A = P[Math.max(0, i - 1)], B = P[Math.min(P.length - 1, i + 1)]; let dx = B[0] - A[0], dz = B[1] - A[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const C = cols(i); nC = C.length;
+    for (const [d, k] of C) { const x = P[i][0] - dz * d, z = P[i][1] + dx * d; v.push(x, y, z); uv.push(x, -z); t.push(k); } }
+  for (let i = 1; i < P.length; i++) for (let c = 0; c < nC - 1; c++) { const a = (i - 1) * nC + c, b = i * nC + c; ix.push(a, a + 1, b, a + 1, b + 1, b); }   // de frente hacia arriba (el agua se ve de un solo lado)
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setAttribute('tierra', new THREE.Float32BufferAttribute(t, 1)); geo.setIndex(ix);
+  const nr = new Float32Array(v.length); for (let i = 1; i < nr.length; i += 3) nr[i] = 1; geo.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); geo.computeBoundingSphere(); return geo; }
+let JUNCO = null, PIEDRA = null;
 // loma o terraplén de pasto o tierra: sube desde el borde con la ladera pedida. «loma» es redondeada y algo despareja; «meseta» queda plana arriba
 export function lomaDe(p) { const A = +p.alto, P = p.pts; if (!(A > 0) || !P || P.length < 3) return null; const C = [...P, P[0]], bb = cajaDe(P), nat = p.forma !== 'meseta'; let w = Math.max(0.5, A * (+p.talud || 2));
   if (nat) { let dm = 0; for (let i = 1; i < 18; i++) for (let j = 1; j < 18; j++) { const x = bb[0] + (bb[2] - bb[0]) * i / 18, z = bb[1] + (bb[3] - bb[1]) * j / 18; if (enPoli(x, z, P)) dm = Math.max(dm, dPL(x, z, C)); } w = Math.max(w, dm * 0.9); }
@@ -473,11 +488,12 @@ export function cajones(p) { const c = p.celda || 5, ox = p.x || 0, oz = p.z || 
 // altura del terreno en un punto (playas en pendiente con su talud, y lomas): para apoyar piezas y para caminar
 export const cotaEn = (x, z) => ENT ? ENT.cota(x, z) : 0;
 function entorno(ctx) { const L = ctx && ctx.piezas ? ctx.piezas() : null; if (!L) return null; let f = '' + L.length;
-  for (const p of L) f += p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') + (p.t === 'playa' ? '' + (p.sube || '') + (p.subeAlto || '') + (p.talud || '') : p.t === 'loma' ? '' + (p.alto || '') + (p.talud || '') + (p.forma || '') + (p.semilla || '') : '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
+  for (const p of L) f += p.t === 'relieve' ? '|r' + p.id + (p.v | 0) + ',' + Math.round(p.x || 0) + ',' + Math.round(p.z || 0) : p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') + (p.t === 'playa' ? '' + (p.sube || '') + (p.subeAlto || '') + (p.talud || '') : p.t === 'loma' ? '' + (p.alto || '') + (p.talud || '') + (p.forma || '') + (p.semilla || '') : '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
   if (ENT && ENT.f === f) return ENT; const calles = [], rot = [], duros = [], otros = [], cajas = [], playas = [];
   for (const p of L) { const T = TIPOS[p.t]; if (!T) continue; const d = { ...T.def, ...p };
     if (p.t === 'playa' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: cotaDe(d), tal: +d.talud || 0, m: (+d.talud || 0) * (+d.subeAlto || 0) }); continue; }
     if (p.t === 'loma' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: lomaDe(d), loma: true }); continue; }
+    if (p.t === 'relieve') { const R = relieveDe(d); if (R) { const b = R.bb; playas.push({ id: p.id, pts: [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]], bb: b, f: R.f, loma: true }); } continue; }
     if (p.t === 'calle' && p.guia) continue; if (p.t === 'calle' && p.pts && p.pts.length > 1) { const b = cajaDe(p.pts), h = d.ancho / 2; calles.push({ id: p.id, pts: p.pts, h, tipo: d.tipo, bb: [b[0] - h - 9, b[1] - h - 9, b[2] + h + 9, b[3] + h + 9] }); }
     else if (p.t === 'rotonda' && !p.guia) rot.push([p.x, p.z, d.radio + 0.4]);
     else if ((p.t === 'terreno' || p.t === 'recinto') && p.pts && p.pts.length > 2) { const o = { id: p.id, pts: p.pts, bb: cajaDe(p.pts), huecos: p.huecos }; if (p.t === 'recinto' || !/pasto|monte|cultivo/.test(d.mat)) (/hormigon|asfalto/.test(d.mat) ? duros : otros).push(o); }
@@ -631,13 +647,14 @@ function conManchas(base) { let m = CON_MAN.get(base.uuid); if (m) return piso(m
   m.customProgramCacheKey = () => clave + '|manchas'; CON_MAN.set(base.uuid, m); return piso(m); }
 // pasto con tierra a la vista: cada vértice dice cuánta tierra se ve (laderas empinadas, la cresta de un talud)
 const CON_TIE = new Map(), MAT_LOMA = new Map(), SOLO_SOMBRA = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, side: THREE.DoubleSide });
-function conTierra(base) { let m = CON_TIE.get(base.uuid); if (m) return piso(m); m = base.clone(); const antes = base.onBeforeCompile, clave = base.customProgramCacheKey(), col = oscuro() ? '0.05, 0.04, 0.03' : '0.50, 0.36, 0.21';
+function conTierra(base, barro) { const ck = base.uuid + (barro ? '|b' : ''); let m = CON_TIE.get(ck); if (m) return piso(m); m = base.clone(); const antes = base.onBeforeCompile, clave = base.customProgramCacheKey(), col = barro ? (oscuro() ? '0.04, 0.035, 0.03' : '0.27, 0.21, 0.14') : oscuro() ? '0.05, 0.04, 0.03' : '0.50, 0.36, 0.21';
   m.onBeforeCompile = (sh, r) => { antes.call(m, sh, r);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float tierra;\nvarying float vTierra;').replace('#include <project_vertex>', '#include <project_vertex>\nvTierra = tierra;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vTierra;').replace('#include <color_fragment>', '{ float lt = dot( diffuseColor.rgb, vec3( 0.4, 0.5, 0.1 ) ); diffuseColor.rgb = mix( diffuseColor.rgb, vec3( ' + col + ' ) * ( 0.8 + 0.9 * lt ), clamp( vTierra, 0.0, 1.0 ) ); }\n#include <color_fragment>')
       // luz de terreno: la ladera toma parte de la luz como si mirara al cielo; así se ve su forma sin que el lado de sombra quede negro
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize( mix( normal, normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz ), 0.6 ) );'); };
-  m.customProgramCacheKey = () => clave + '|tierra'; CON_TIE.set(base.uuid, m); return piso(m); }
+  m.customProgramCacheKey = () => clave + '|tierra' + (barro ? '|barro' : ''); CON_TIE.set(ck, m); return piso(m); }
+function matBarro() { const c = 'barro|' + (oscuro() ? 'n' : 'd'); let m = MAT_LOMA.get(c); if (!m) { const po = { polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -2, side: THREE.DoubleSide }; m = matSuelo('pasto', po) || mat(suelo('pasto'), { roughness: 0.97, ...po }); if (m.map && !oscuro()) m = conManchas(m); m = conTierra(m, true); m.userData.r0 = m.roughness = 0.7; MAT_LOMA.set(c, m); } return piso(m); }
 function matLoma(k) { const c = k + (oscuro() ? '|n' : '|d'); let m = MAT_LOMA.get(c); if (!m) { const po = { polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -2, side: THREE.DoubleSide };
     m = matSuelo(k, po) || mat(suelo(k), { roughness: 0.97, ...po }); if (/^pasto/.test(k) && m.map && !oscuro()) m = conManchas(m); m = conTierra(m); MAT_LOMA.set(c, m); } return piso(m); }
 // fibras: las que comparten un tramo van una al lado de la otra (cada una en su carril) y cada una con su color (el código de colores de las fibras)
@@ -740,6 +757,40 @@ export const TIPOS = {
       // donde la ladera es empinada el pasto no agarra del todo y se ve la tierra, en manchones
       if (p.mat === 'pasto') for (let i = 0; i < a.count; i++) { const ny = Math.max(0.2, N.getY(i)), pend = Math.sqrt(Math.max(0, 1 - ny * ny)) / ny, x = a.getX(i), z = a.getZ(i); t[i] = Math.max(0, Math.min(0.9, (pend - 0.14) * 3 * (0.6 + 0.4 * Math.sin(x * 0.23 + z * 0.17) * Math.sin(z * 0.29 - x * 0.11)))); }
       geo.setAttribute('tierra', new THREE.BufferAttribute(t, 1)); geo.computeBoundingSphere(); g.add(sombra(new THREE.Mesh(geo, matLoma(p.mat)))); return g; } },
+  // relieve: no se ubica como una pieza, se pinta con el pincel (subir, bajar, nivelar, alisar). Hay uno por maqueta y crece donde se pinta.
+  relieve: { n: 'Relieve (subir y bajar el terreno con el pincel)', g: 'Terreno', forma: 'punto', capa: 'base', herramienta: 'relieve', etiqueta: p => p.nombre, def: { mat: 'pasto', celda: 2, alt: {} },
+    variantes: [{ n: 'Pincel de terreno: subir', o: { modo: 'subir' } }, { n: 'Pincel de terreno: bajar', o: { modo: 'bajar' } }, { n: 'Pincel de terreno: nivelar', o: { modo: 'nivelar' } }, { n: 'Pincel de terreno: alisar', o: { modo: 'alisar' } }],
+    campos: [F.nombre, { k: 'mat', n: 'De qué es', t: 'sel', ops: [['pasto', 'Pasto, con tierra a la vista en lo empinado'], ['pasto2', 'Pasto parejo'], ['tierra', 'Tierra'], ['ripio', 'Ripio o balasto']] }],
+    armar(p) { const g = new THREE.Group(); g.userData.sinAplanar = true; const R = relieveDe(p); if (!R) return g; const { c, h } = R, I0 = R.i0 - 1, J0 = R.j0 - 1, nI = R.i1 - R.i0 + 3, nJ = R.j1 - R.j0 + 3;
+      const pos = new Float32Array(nI * nJ * 3), uv = new Float32Array(nI * nJ * 2), idx = [];
+      for (let j = 0; j < nJ; j++) for (let i = 0; i < nI; i++) { const k = j * nI + i, x = (I0 + i) * c, z = (J0 + j) * c; pos[k * 3] = x; pos[k * 3 + 1] = 0.03 + h(I0 + i, J0 + j); pos[k * 3 + 2] = z; uv[k * 2] = x + R.ox; uv[k * 2 + 1] = -(z + R.oz); }
+      for (let j = 0; j < nJ - 1; j++) for (let i = 0; i < nI - 1; i++) { const a = j * nI + i, b = a + nI, e = a + 1, d = b + 1; if (pos[a * 3 + 1] + pos[b * 3 + 1] + pos[e * 3 + 1] + pos[d * 3 + 1] < 0.13) continue; idx.push(a, b, e, e, b, d); }
+      if (!idx.length) return g; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+      const N = geo.attributes.normal, t = new Float32Array(nI * nJ);
+      if (p.mat === 'pasto') for (let k = 0; k < t.length; k++) { const ny = Math.max(0.2, N.getY(k)), pend = Math.sqrt(Math.max(0, 1 - ny * ny)) / ny, x = pos[k * 3], z = pos[k * 3 + 2]; t[k] = Math.max(0, Math.min(0.9, (pend - 0.14) * 3 * (0.6 + 0.4 * Math.sin(x * 0.23 + z * 0.17) * Math.sin(z * 0.29 - x * 0.11)))); }
+      geo.setAttribute('tierra', new THREE.BufferAttribute(t, 1)); geo.computeBoundingSphere(); g.add(sombra(new THREE.Mesh(geo, matLoma(p.mat)))); return g; } },
+  // arroyo, cañada o zanja: se dibuja como una calle. Agua al medio, orilla de barro que se pierde en el pasto, juncos en el arroyo y piedras en la cañada.
+  // Va sobre terreno plano (no se hunde en el piso ni sigue una loma).
+  arroyo: { n: 'Arroyo o cañada', g: 'Terreno', forma: 'linea', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 3, tipo: 'arroyo', orilla: 2 },
+    variantes: [{ n: 'Arroyo (con agua y juncos)', o: { tipo: 'arroyo', ancho: 3, orilla: 2 } }, { n: 'Cañada (casi seca, con piedras)', o: { tipo: 'canada', ancho: 2.5, orilla: 1.5 } }, { n: 'Zanja o cuneta con agua', o: { tipo: 'zanja', ancho: 1.2, orilla: 0.6 } }],
+    campos: [F.nombre, F.ancho('Ancho del cauce (m)', 0.5, 40), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['arroyo', 'Arroyo, con agua y juncos'], ['canada', 'Cañada, casi seca, con piedras'], ['zanja', 'Zanja o cuneta con agua']] }, { k: 'orilla', n: 'Orilla de barro a cada lado (m)', t: 'num', min: 0, max: 15, paso: 0.25 }],
+    armar(p) { const g = new THREE.Group(); if (!p.pts || p.pts.length < 2) return g; const a = Math.max(0.3, +p.ancho || 3), o = Math.max(0, +p.orilla || 0), R = azar(semilla(p)), largo = largoDe(p.pts), tipo = p.tipo || 'arroyo';
+      const cur = new THREE.CatmullRomCurve3(p.pts.map(q => new THREE.Vector3(q[0], 0, q[1])), false, 'centripetal'), P = cur.getSpacedPoints(Math.max(6, Math.ceil(largo / 0.8))).map(v => [v.x, v.z]);
+      // el cauce cambia un poco de ancho, como uno de verdad (en la zanja no: es hecha a mano)
+      const s0 = (semilla(p) % 628) / 100, mitad = P.map((q, i) => a / 2 * (tipo === 'zanja' ? 1 : 1 + 0.16 * Math.sin(i * 0.19 + s0) + 0.07 * Math.sin(i * 0.61 - s0)));
+      const lecho = i => { const m = mitad[i]; return o > 0 ? [[-m - o, 0], [-m - o * 0.5, 0.35], [-m, 0.8], [m, 0.8], [m + o * 0.5, 0.35], [m + o, 0]] : [[-m, 0.8], [m, 0.8]]; };
+      const orilla = new THREE.Mesh(franja(P, lecho, 0.045), matBarro()); orilla.receiveShadow = true; orilla.userData.noChoca = true; g.add(orilla);
+      const ag = tipo === 'canada' ? 0.16 : 0.9, agua = new THREE.Mesh(franja(P, i => { const c = tipo === 'canada' ? mitad[i] * 0.5 * Math.sin(i * 0.13 + s0 * 2) : 0; return [[c - mitad[i] * ag, 0], [c + mitad[i] * ag, 0]]; }, 0.06), mat(oscuro() ? '#1c3946' : '#4d7c90', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -3 }));
+      agua.receiveShadow = true; agua.userData.noChoca = true; g.add(agua);
+      if (tipo === 'canada') { const it = []; PIEDRA = PIEDRA || new THREE.DodecahedronGeometry(1, 0);
+        P.forEach((q, i) => { const n = 1 + Math.floor(R() * 3); for (let k = 0; k < n; k++) { const d = (R() * 2 - 1) * mitad[i] * 0.95, A = P[Math.max(0, i - 1)], B = P[Math.min(P.length - 1, i + 1)], l = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, s = 0.06 + R() * R() * 0.3;
+          it.push([q[0] - (B[1] - A[1]) / l * d, 0.04 + s * 0.3, q[1] + (B[0] - A[0]) / l * d, R() * 6, s * (1 + R() * 0.5), s * 0.55, s, ['#9b958b', '#8a857d', '#b0aa9f', '#7f7a72'][Math.floor(R() * 4)]]); } });
+        lote(g, PIEDRA, mat('#ffffff', { roughness: 0.95 }), it); }
+      if (tipo === 'arroyo' && o > 0) { const it = []; JUNCO = JUNCO || new THREE.ConeGeometry(0.045, 1, 4).translate(0, 0.5, 0);
+        P.forEach((q, i) => { if (R() < 0.35) return; const A = P[Math.max(0, i - 1)], B = P[Math.min(P.length - 1, i + 1)], l = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, lado = R() < 0.5 ? -1 : 1, d = lado * (mitad[i] * 0.85 + R() * o * 0.5), n = 3 + Math.floor(R() * 5);
+          for (let k = 0; k < n; k++) { const x = q[0] - (B[1] - A[1]) / l * d + (R() - 0.5) * 0.4, z = q[1] + (B[0] - A[0]) / l * d + (R() - 0.5) * 0.4, h = 0.5 + R() * 0.8; it.push([x, 0.04, z, R() * 6, 1, h, 1, ['#5b7442', '#6d8048', '#4b6338', '#7a8a4c'][Math.floor(R() * 4)]]); } });
+        lote(g, JUNCO, mat('#ffffff', { roughness: 0.8 }), it, false); }
+      return g; } },
   calle: { n: 'Calle o ruta', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 8, tipo: 'asfalto', linea: 'discontinua', borde: 'auto', mano: 'doble' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['corta', 'Discontinua corta (calle de barrio)'], ['continua', 'Continua'], ['no', 'Sin línea']] }, { k: 'borde', n: 'Borde', t: 'sel', ops: [['auto', 'Cordón donde da al pasto'], ['cordon', 'Cordón en todo el largo'], ['vereda', 'Cordón y vereda a los dos lados'], ['vereda-izq', 'Vereda de un lado'], ['vereda-der', 'Vereda del otro lado'], ['no', 'Sin cordón']] }, { k: 'mano', n: 'Mano (para los camiones)', t: 'sel', ops: [['doble', 'Doble mano'], ['unica', 'Mano única, en el sentido en que se dibujó']] }],
     armar(p, ctx) { if (p.guia) return new THREE.Group(); const g = new THREE.Group(), y = 0.05, c = { asfalto: oscuro() ? '#2b3036' : '#7d838a', ruta: oscuro() ? '#272c31' : '#73797f', hormigon: suelo('hormigon'), tierra: suelo('ripio') }[p.tipo] || '#7d838a';
@@ -1453,7 +1504,7 @@ function aplanar(g) { g.updateMatrixWorld(true); _inv.copy(g.matrixWorld).invert
 
 // ---------- armar una pieza completa en su lugar ----------
 export function armarPieza(p, ctx = {}) { const T = TIPOS[p.t]; if (!T) return null; const q = { ...T.def, ...p };
-  const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { const E = q.t !== 'playa' && entorno(ctx); g.position.set(q.x || 0, E && E.playas.length ? E.cota(q.x || 0, q.z || 0) : 0, q.z || 0); g.rotation.y = q.r || 0; } else if (q.t === 'loma' || q.t === 'playa') entorno(ctx);   // el terreno que sube también se pisa, aunque no haya otra pieza que lo calcule
+  const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { const E = q.t !== 'playa' && q.t !== 'relieve' && entorno(ctx); g.position.set(q.x || 0, E && E.playas.length ? E.cota(q.x || 0, q.z || 0) : 0, q.z || 0); g.rotation.y = q.t === 'relieve' ? 0 : q.r || 0; if (q.t === 'relieve') entorno(ctx); } else if (q.t === 'loma' || q.t === 'playa') entorno(ctx);   // el terreno que sube también se pisa, aunque no haya otra pieza que lo calcule
   g.userData.pieza = p; g.userData.tipo = T; g.traverse(o => { o.userData.dueño = g; }); return g; }
 // centro de una pieza (para etiquetas, enfocar y calcular el "lugar")
 export function centro(p) { if (p.pts && p.pts.length) { if (TIPOS[p.t] && TIPOS[p.t].forma === 'area') { const n = p.pts.length; return [p.pts.reduce((a, q) => a + q[0], 0) / n, p.pts.reduce((a, q) => a + q[1], 0) / n]; } const m = p.pts[Math.floor(p.pts.length / 2)]; return [m[0], m[1]]; } return [p.x || 0, p.z || 0]; }
