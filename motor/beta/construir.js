@@ -7,7 +7,11 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=18';
+<<<<<<< Updated upstream
 import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=59';
+=======
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=58';
+>>>>>>> Stashed changes
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');

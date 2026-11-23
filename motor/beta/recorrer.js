@@ -12,46 +12,91 @@ import { THREE } from './nucleo.js?v=18';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
-  const R = { on: false, x: 0, z: 0, y: 0, rumbo: 0, vx: 0, vz: 0, k: {}, joy: { x: 0, y: 0 }, dist: 7, ojos: false, cajas: [], piezas: [], edif: [], hash: new Map() };
+  const R = { on: false, x: 0, z: 0, y: 0, rumbo: 0, vx: 0, vz: 0, k: {}, joy: { x: 0, y: 0 }, dist: 7, ojos: false, piezas: [], edif: [], pis: [], hash: new Map() };
   // en tercera persona la cámara baja hasta mirar hacia arriba unos 50° (antes quedaba trancada mirando hacia abajo y había que pasar a los ojos)
   const PM3 = -0.85;
   const RADIO = 0.28, CAMINA = 3, CORRE = 6.5, SALTO = 6.2, PESO = 20, v3 = new THREE.Vector3();
   const puedeMira = () => !motor.sinMira && !motor.tactil && matchMedia('(pointer: fine)').matches;
 
   // ---------- lo que no se atraviesa ----------
-  function obstaculos() { R.cajas = []; R.piezas = []; R.edif = []; R.hash = new Map();
-    for (const g of objs.values()) { const p = g.userData.pieza; if (!g.visible || !p || p.t === 'persona') continue;
-      if (g.userData.suelos) R.edif.push(g);
-      if (g.userData.segs) { if (g.userData.segs.length) { g.updateMatrixWorld(true); R.piezas.push({ g, b: new THREE.Box3().setFromObject(g).expandByScalar(0.6), segs: g.userData.segs, inv: g.matrixWorld.clone().invert() }); } continue; }
-      if (TIPOS[p.t].forma === 'area') continue;
-      g.traverse(m => { if (!m.isMesh || m.userData.campo || m.userData.noChoca) return;
-        if (m.isInstancedMesh) { m.updateMatrixWorld(); if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); const X = new THREE.Matrix4(); for (let i = 0; i < Math.min(m.count, 4000); i++) { m.getMatrixAt(i, X); const b = m.geometry.boundingBox.clone().applyMatrix4(X.premultiply(m.matrixWorld)); if (b.max.y >= 0.35 && b.max.x - b.min.x < 60 && b.max.z - b.min.z < 60) R.cajas.push(b); } return; }
-        const b = new THREE.Box3().setFromObject(m); if (b.isEmpty() || b.max.y < 0.35 || b.max.x - b.min.x > 400 || b.max.z - b.min.z > 400) return; R.cajas.push(b); }); }
-    // grilla de 8 m para encontrar rápido las cajas cercanas
-    for (const b of R.cajas) for (let i = Math.floor((b.min.x - 1) / 8); i <= Math.floor((b.max.x + 1) / 8); i++) for (let j = Math.floor((b.min.z - 1) / 8); j <= Math.floor((b.max.z + 1) / 8); j++) { const k = i + ',' + j; (R.hash.get(k) || R.hash.set(k, []).get(k)).push(b); } }
+  // Cada pieza aporta cajas en su propio marco (aunque esté girada): una por cada parte que se ve (aplanar() guarda las partes que junta en una malla),
+  // los cilindros y esferas parados como redondos, y las partes inclinadas (una cinta, una rampa de balanza) en tramos, para que no sean una caja enorme.
+  // Las piezas con userData.segs (paredes, naves, edificios) usan sus tramos macizos y userData.cajasL (volúmenes en su marco); userData.pisables son superficies que se pisan (rampas,
+  // descansos, escaleras), macizas hasta el suelo (o hasta S.base; con S.abierta, abiertas por abajo a esa distancia de la superficie):
+  // se sube si el escalón es de menos de 60 cm, si no, son pared.
+  const MI = new THREE.Matrix4(), MR = new THREE.Matrix4(), MX = new THREE.Matrix4(), MQ = new THREE.Matrix4(), BX = new THREE.Box3(), VA = new THREE.Vector3(), VB = new THREE.Vector3(), ESQ = [...Array(8)].map(() => new THREE.Vector3());
+  const REDONDO = /Cylinder|Sphere|Icosahedron|Dodecahedron|Octahedron|Cone|Capsule/;
+  function cajasDe(bb, mm, tipo, out) { const e = mm.elements, uy = Math.hypot(e[4], e[5], e[6]) || 1, derecho = Math.abs(e[5] / uy) > 0.995, sx = Math.hypot(e[0], e[1], e[2]), sz = Math.hypot(e[8], e[9], e[10]);
+    if (derecho && REDONDO.test(tipo || '') && Math.abs(sx * (bb.max.x - bb.min.x) - sz * (bb.max.z - bb.min.z)) < 0.25 * sx * (bb.max.x - bb.min.x) + 0.01) { BX.copy(bb).applyMatrix4(mm); const c = BX.getCenter(VA);
+      out.push({ k: 1, cx: c.x, cz: c.z, rad: (sx * (bb.max.x - bb.min.x) + sz * (bb.max.z - bb.min.z)) / 4, y0: BX.min.y, y1: BX.max.y }); return; }
+    const yaw = derecho && Math.abs(e[1] / sx) < 0.005 ? Math.atan2(e[8], e[0]) : 0, recto = derecho && Math.abs(Math.sin(2 * yaw)) < 0.01;
+    if (derecho && !recto) { MQ.copy(mm).invert(); const q = MQ.elements; BX.copy(bb).applyMatrix4(mm);   // parada pero girada: caja orientada (la prueba pasa el punto al marco de la parte)
+      out.push({ k: 2, a: q[0], b: q[8], c: q[12], d: q[2], f: q[10], g: q[14], x0: bb.min.x, x1: bb.max.x, z0: bb.min.z, z1: bb.max.z, sx, sz, y0: BX.min.y, y1: BX.max.y, bx0: BX.min.x, bx1: BX.max.x, bz0: BX.min.z, bz1: BX.max.z }); return; }
+    if (derecho) { BX.copy(bb).applyMatrix4(mm); out.push({ k: 0, x0: BX.min.x, x1: BX.max.x, z0: BX.min.z, z1: BX.max.z, y0: BX.min.y, y1: BX.max.y }); return; }
+    // inclinada (una cinta, un cubo parado en un vértice): caja orientada en tres dimensiones; la prueba pasa a su marco unos puntos a la altura del cuerpo
+    BX.copy(bb).applyMatrix4(mm); out.push({ k: 3, q: MQ.copy(mm).invert().elements.slice(), bb: bb.clone(), sx, sy: uy, sz, y0: BX.min.y, y1: BX.max.y, bx0: BX.min.x, bx1: BX.max.x, bz0: BX.min.z, bz1: BX.max.z }); }
+  // ¿el punto (en el marco de la pieza) cae adentro de la caja, con un margen r?
+  function enCaja(c, lx, lz, r, ya, yb) { if (c.k === 1) return Math.hypot(lx - c.cx, lz - c.cz) < c.rad + r;
+    if (c.k === 3) { if (lx < c.bx0 - r || lx > c.bx1 + r || lz < c.bz0 - r || lz > c.bz1 + r) return false; const q = c.q, B = c.bb, rs = r / Math.min(c.sx, c.sy, c.sz), a = Math.max(ya ?? c.y0, c.y0), b = Math.min(yb ?? c.y1, c.y1);
+      for (let y = a; y <= b + 1e-6; y += Math.max(0.05, Math.min(0.3, (b - a) / 4 || 1))) { const px = q[0] * lx + q[4] * y + q[8] * lz + q[12], py = q[1] * lx + q[5] * y + q[9] * lz + q[13], pz = q[2] * lx + q[6] * y + q[10] * lz + q[14];
+        if (px > B.min.x - rs && px < B.max.x + rs && py > B.min.y - rs && py < B.max.y + rs && pz > B.min.z - rs && pz < B.max.z + rs) return true; } return false; }
+    if (c.k === 2) { if (lx < c.bx0 - r || lx > c.bx1 + r || lz < c.bz0 - r || lz > c.bz1 + r) return false; const px = c.a * lx + c.b * lz + c.c, pz = c.d * lx + c.f * lz + c.g; return px > c.x0 - r / c.sx && px < c.x1 + r / c.sx && pz > c.z0 - r / c.sz && pz < c.z1 + r / c.sz; }
+    return lx > c.x0 - r && lx < c.x1 + r && lz > c.z0 - r && lz < c.z1 + r; }
+  // marco de la pieza: x, z del mundo → x, z de la pieza (solo gira en y)
+  function marco(g) { g.updateMatrixWorld(true); const e = MI.copy(g.matrixWorld).invert().elements; return { g, a: e[0], b: e[8], c: e[12], d: e[2], f: e[10], h: e[14], oy: g.matrixWorld.elements[13] }; }
+  const enMarco = (P, x, z) => [P.a * x + P.b * z + P.c, P.d * x + P.f * z + P.h];
+  // altura de una superficie que se pisa en (lx, lz), o null si el punto queda afuera
+  function alturaS(S, lx, lz, m = 0) { if (lx < S.x0 - m || lx > S.x1 + m || lz < S.z0 - m || lz > S.z1 + m) return null;
+    if (S.rampa === 'z') return S.y0 + (S.y1 - S.y0) * Math.max(0, Math.min(1, (lz - S.za) / (S.zb - S.za)));
+    if (S.rampa) return S.y0 + (S.y1 - S.y0) * Math.max(0, Math.min(1, (lx - S.xa) / (S.xb - S.xa)));
+    const H = S.hueco; if (H && lx > H[0] && lx < H[2] && lz > H[1] && lz < H[3]) return null; return S.y; }
+  const visto = (m, g) => { for (let a = m; a && a !== g; a = a.parent) if (!a.visible) return false; return true; };
+  function obstaculos() { R.piezas = []; R.edif = []; R.pis = []; R.hash = new Map(); R.n = 0;
+    const meter = (P, c) => { const xs = [], zs = []; if (c.k === 1) for (const [dx, dz] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) { xs.push(c.cx + dx * c.rad); zs.push(c.cz + dz * c.rad); } else { const [x0, x1, z0, z1] = c.k >= 2 ? [c.bx0, c.bx1, c.bz0, c.bz1] : [c.x0, c.x1, c.z0, c.z1]; for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) { xs.push(x); zs.push(z); } }
+      const M4 = P.g.matrixWorld.elements, wx = xs.map((x, i) => M4[0] * x + M4[8] * zs[i] + M4[12]), wz = xs.map((x, i) => M4[2] * x + M4[10] * zs[i] + M4[14]);
+      const w = { x0: Math.min(...wx), x1: Math.max(...wx), z0: Math.min(...wz), z1: Math.max(...wz), y0: c.y0 + P.oy, y1: c.y1 + P.oy }, it = { P, c, w }; R.n++;
+      for (let i = Math.floor((w.x0 - 1) / 8); i <= Math.floor((w.x1 + 1) / 8); i++) for (let j = Math.floor((w.z0 - 1) / 8); j <= Math.floor((w.z1 + 1) / 8); j++) { const k = i + ',' + j; (R.hash.get(k) || R.hash.set(k, []).get(k)).push(it); } };
+    for (const g of objs.values()) { const p = g.userData.pieza; if (!g.visible || !p || p.t === 'persona') continue; const T = TIPOS[p.t] || {}, P = marco(g), U = g.userData;
+      if (U.suelos) R.edif.push(g);
+      if (U.pisables && U.pisables.length) { const b = new THREE.Box3(); for (const S of U.pisables) for (const [x, z] of [[S.x0, S.z0], [S.x1, S.z0], [S.x0, S.z1], [S.x1, S.z1]]) b.expandByPoint(VA.set(x, 0, z).applyMatrix4(g.matrixWorld)); R.pis.push({ P, S: U.pisables, b: b.expandByScalar(1) }); }
+      for (const c of U.cajasL || []) meter(P, { k: 0, x0: c[0], z0: c[1], x1: c[2], z1: c[3], y0: c[4], y1: c[5] });   // volúmenes macizos que la pieza declara
+      if (U.segs) { const vi = !U.interiorMalla || U.interiorMalla.visible, segs = vi ? U.segs : U.segs.filter(q => q[8] !== 'int'); if (segs.length) R.piezas.push({ g, P, b: new THREE.Box3().setFromObject(g).expandByScalar(0.6), segs, inv: g.matrixWorld.clone().invert() }); if (!U.mallas) continue; }
+      else if (T.forma === 'area' && !U.mallas) continue;
+      MR.copy(g.matrixWorld).invert(); const out = [];
+      g.traverse(m => { if (!m.isMesh || m.userData.campo || m.userData.noChoca || (U.mallas && !m.userData.choca) || !visto(m, g)) return; MX.multiplyMatrices(MR, m.matrixWorld);
+        if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+        if (m.userData.partes) { for (const q of m.userData.partes) cajasDe(q.bb, MQ.multiplyMatrices(MX, q.mm).clone(), q.tipo, out); return; }
+        if (m.isInstancedMesh) { const X = new THREE.Matrix4(), Y = new THREE.Matrix4(), n0 = out.length; for (let i = 0; i < Math.min(m.count, 4000); i++) { m.getMatrixAt(i, X); cajasDe(m.geometry.boundingBox, Y.multiplyMatrices(MX, X), m.geometry.type, out); }
+          if (m.userData.follaje) for (let i = n0; i < out.length; i++) if (out[i].y0 > 1) out[i].y1 = -1; return; }
+        cajasDe(m.geometry.boundingBox, MX.clone(), m.geometry.type, out); });
+      for (const c of out) { const lx = c.k === 1 ? 2 * c.rad : c.k >= 2 ? c.bx1 - c.bx0 : c.x1 - c.x0, lz = c.k === 1 ? 2 * c.rad : c.k >= 2 ? c.bz1 - c.bz0 : c.z1 - c.z0; if (c.y1 < 0.35 || lx > 400 || lz > 400) continue; meter(P, c); } } }
   const aTramo = (x, z, s) => { const ax = s[2] - s[0], az = s[3] - s[1], l2 = ax * ax + az * az, t = l2 ? Math.max(0, Math.min(1, ((x - s[0]) * ax + (z - s[1]) * az) / l2)) : 0; return Math.hypot(x - s[0] - ax * t, z - s[1] - az * t); };
   // ¿el cuerpo (de 0,35 a 1,7 m sobre donde pisa) toca algo en ese lugar?
   function choca(x, z, y = R.y, r = RADIO) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8));
-    if (L) for (const b of L) if (b.max.y > y + 0.35 && b.min.y < y + 1.7 && x > b.min.x - r && x < b.max.x + r && z > b.min.z - r && z < b.max.z + r) return true;
-    for (const P of R.piezas) { if (x < P.b.min.x || x > P.b.max.x || z < P.b.min.z || z > P.b.max.z) continue; v3.set(x, 0, z).applyMatrix4(P.inv);
-      for (const s of P.segs) if (s[6] > y + 0.35 && s[5] < y + 1.7 && aTramo(v3.x, v3.z, s) < s[4] + r) return true; }
+    if (L) for (const { P, c, w } of L) { if (w.y1 <= y + 0.35 || w.y0 >= y + 1.7 || x < w.x0 - r || x > w.x1 + r || z < w.z0 - r || z > w.z1 + r) continue; const [lx, lz] = enMarco(P, x, z); if (enCaja(c, lx, lz, r, y + 0.35 - P.oy, y + 1.7 - P.oy)) return true; }
+    for (const Q of R.piezas) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const [lx, lz] = enMarco(Q.P, x, z), yy = y - Q.P.oy;
+      for (const s of Q.segs) if (s[6] > yy + 0.35 && s[5] < yy + 1.7 && aTramo(lx, lz, s) < s[4] + r) return true; }
+    for (const Q of R.pis) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const [lx, lz] = enMarco(Q.P, x, z), yy = y - Q.P.oy;
+      for (const S of Q.S) { const h = alturaS(S, lx, lz, Math.min(r, 0.1)); if (h != null && h > yy + 0.6 && (S.abierta ? h - S.abierta : S.base || 0) < yy + 1.7) return true; } }
+    // las escaleras de adentro de los edificios son macizas desde el piso donde arrancan
+    for (const g of R.edif) { const [lx, lz] = enEdif(g, x, z); for (const S of g.userData.suelos) { if (!S.rampa) continue; const h = alturaS(S, lx, lz, Math.min(r, 0.1)); if (h != null && h > y + 0.6 && Math.min(S.y0, S.y1) < y + 1.7) return true; } }
     return false; }
   // ¿ese punto del aire queda tapado para la cámara? (no cuenta lo que está escondido arriba del piso donde uno camina)
   function tapa(x, y, z) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8));
-    if (L) for (const b of L) if (y > b.min.y - 0.1 && y < b.max.y + 0.15 && x > b.min.x - 0.15 && x < b.max.x + 0.15 && z > b.min.z - 0.15 && z < b.max.z + 0.15) return true;
-    for (const P of R.piezas) { if (x < P.b.min.x || x > P.b.max.x || z < P.b.min.z || z > P.b.max.z) continue; const oculto = P.g === R.dentro; v3.set(x, 0, z).applyMatrix4(P.inv);
-      for (const s of P.segs) { if (oculto && (s[7] || 0) > R.piso) continue; if (y > s[5] - 0.1 && y < s[6] + 0.15 && aTramo(v3.x, v3.z, s) < s[4] + 0.15) return true; } }
+    if (L) for (const { P, c, w } of L) { if (y < w.y0 - 0.1 || y > w.y1 + 0.15 || x < w.x0 - 0.15 || x > w.x1 + 0.15 || z < w.z0 - 0.15 || z > w.z1 + 0.15) continue; const [lx, lz] = enMarco(P, x, z); if (enCaja(c, lx, lz, 0.15, y - P.oy, y - P.oy)) return true; }
+    for (const Q of R.piezas) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const oculto = Q.g === R.dentro, [lx, lz] = enMarco(Q.P, x, z), yy = y - Q.P.oy;
+      for (const s of Q.segs) { if ((oculto && (s[7] || 0) > R.piso) || s[4] < 0.1) continue; if (yy > s[5] - 0.1 && yy < s[6] + 0.15 && aTramo(lx, lz, s) < s[4] + 0.15) return true; } }
     return false; }
-  function sobre(x, z, y) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8)); let m = 0; if (L) for (const b of L) if (b.max.y <= y + 0.3 && b.max.y > m && x > b.min.x - 0.05 && x < b.max.x + 0.05 && z > b.min.z - 0.05 && z < b.max.z + 0.05) m = b.max.y; return m; }
+  // lo bajo a lo que uno se sube (un escritorio, un cantero, la plataforma de la balanza)
+  function sobre(x, z, y) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8)); let m = 0; if (L) for (const { P, c, w } of L) { if (w.y1 > y + 0.3 || w.y1 <= m || x < w.x0 - 0.05 || x > w.x1 + 0.05 || z < w.z0 - 0.05 || z > w.z1 + 0.05) continue; if (c.k === 3) continue; const [lx, lz] = enMarco(P, x, z); if (enCaja(c, lx, lz, 0.05)) m = w.y1; } return m; }
   // arranca donde mira la cámara; si ahí hay algo (un edificio, una pila), busca el lugar libre más cercano dando vueltas
   function libre(x, z) { if (!choca(x, z)) return [x, z]; for (let r = 1; r < 120; r += 1) for (let a = 0; a < 6.28; a += 0.9 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (!choca(px, pz)) return [px, pz]; } return [x, z]; }
   // pisos que se pisan (edificios por dentro): el más alto que queda a un paso (60 cm) de donde uno está; afuera, el suelo
   function enEdif(g, x, z) { v3.set(x, 0, z); g.worldToLocal(v3); return [v3.x, v3.z]; }
   function alturaEn(x, z, y) { let mejor = motor.cota ? Math.max(0, motor.cota(x, z)) : 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, x, z);
-      for (const S of g.userData.suelos) { if (lx < S.x0 || lx > S.x1 || lz < S.z0 || lz > S.z1) continue; let h;
-        if (S.rampa) h = S.y0 + (S.y1 - S.y0) * Math.max(0, Math.min(1, (lx - S.xa) / (S.xb - S.xa)));
-        else { const H = S.hueco; if (H && lx > H[0] && lx < H[2] && lz > H[1] && lz < H[3]) continue; h = S.y; }
-        if (h <= y + 0.6 && h > mejor) mejor = h; } } return mejor; }
+      for (const S of g.userData.suelos) { const h = alturaS(S, lx, lz); if (h != null && h <= y + 0.6 && h > mejor) mejor = h; } }
+    for (const Q of R.pis) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const [lx, lz] = enMarco(Q.P, x, z);
+      for (const S of Q.S) { const h = alturaS(S, lx, lz); if (h != null && h + Q.P.oy <= y + 0.6 && h + Q.P.oy > mejor) mejor = h + Q.P.oy; } } return mejor; }
   // adentro de un edificio se esconde lo que está arriba del piso donde uno camina (losas, paredes y techo); por los ojos se ve todo, como en la realidad
   function niveles(g, hasta) { const p = g.userData.pieza || {}; g.traverse(m => { if (m.isMesh && m.userData.nivel != null) m.visible = hasta == null ? !(p.corte && m.userData.nivel > 0) : m.userData.nivel <= hasta; }); motor.dirty = true; }
   function adentro(g, piso) { const ver = g && !R.ojos && !R.vuelo ? piso : null;
@@ -160,4 +205,4 @@ export function recorrer(M) {
     if (t - tCerca > 220) { tCerca = t; let mejor = null, md = 2.2; for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t].equipo) continue; const d = Math.hypot((p.x || 0) - R.x, (p.z || 0) - R.z); if (d < md && Math.abs((+p.piso || 0) - R.y) < 2) { md = d; mejor = p; } }
       if (mejor !== R.cerca) { R.cerca = mejor; const el = $('#musar'); el.hidden = !mejor || motor.tactil; if (mejor) el.innerHTML = `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}`; } }
     return true; });
-  return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca, puedeMira, ayudaTxt }; }
+  return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca, alturaEn, sobre, puedeMira, ayudaTxt }; }
