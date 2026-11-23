@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=17';
+import { THREE } from './nucleo.js?v=18';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=13';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=14';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=5';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -941,6 +941,11 @@ export const TIPOS = {
           l.position.set(cx, y + LUZ_H, cz); l.target.position.set(cx, y, cz); g.add(l, l.target); } }
       else if (p.tipo === 'sin') area(g, P, y + 0.05, matZona());   // zona: sin paredes ni piso, nombra un sector (por ejemplo, sobre el plano del lugar)
       for (let i = 0; i < n; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[(i + 1) % n], { y, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, dentro, e0: true, e1: true }, (p.huecos || []).filter(h => h.s === i), segs); }
+      // contenedor oficina: techo de chapa, esquineros y bastidor de abajo; el techo se saca cuando las paredes se ven cortadas o con la capa de techos apagada
+      if (p.estilo === 'contenedor') { const H = y + (+p.alto || 2.59), oc = oscuro(), fr = mat(oc ? '#30363c' : mix(p.color || '#e6eaed', '#000', 0.3), { roughness: 0.5, metalness: 0.45 });
+        for (const [x, z] of P) caja(g, x - 0.09, y, z - 0.09, x + 0.09, H + 0.07, z + 0.09, fr);
+        if (alto >= p.alto - 0.01) { const t = area(g, P, H + 0.06, mat(oc ? mix(p.color || '#e6eaed', '#000', 0.6) : mix(p.color || '#e6eaed', '#000', 0.08), { roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide })); if (t) t.userData.techo = true; }
+        area(g, P, y + 0.012, mat(oc ? '#1b1f23' : '#5b6167', { roughness: 0.9 })); }
       g.userData.segs = segs; return g; } },
   tanque: { n: 'Tanque o silo', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { radio: 6, alto: 10, color: '#d9dde0' },
     campos: [F.nombre, { k: 'radio', n: 'Radio (m)', t: 'num', min: 0.5, max: 60, paso: 0.5 }, F.alto('Alto (m)', 1, 60, 0.5), F.color('Color'), F.r],

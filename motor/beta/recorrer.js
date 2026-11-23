@@ -8,11 +8,13 @@
 // En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
 // (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=17';
+import { THREE } from './nucleo.js?v=18';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
   const R = { on: false, x: 0, z: 0, y: 0, rumbo: 0, vx: 0, vz: 0, k: {}, joy: { x: 0, y: 0 }, dist: 7, ojos: false, cajas: [], piezas: [], edif: [], hash: new Map() };
+  // en tercera persona la cámara baja hasta mirar hacia arriba unos 50° (antes quedaba trancada mirando hacia abajo y había que pasar a los ojos)
+  const PM3 = -0.85;
   const RADIO = 0.28, CAMINA = 3, CORRE = 6.5, SALTO = 6.2, PESO = 20, v3 = new THREE.Vector3();
   const puedeMira = () => !motor.sinMira && !motor.tactil && matchMedia('(pointer: fine)').matches;
 
@@ -83,14 +85,14 @@ export function recorrer(M) {
   async function paseo(on, donde) { if (on === R.on) { if (on && donde) irA(donde[0], donde[1]); return; } R.on = on; motor.caminando = on; if (on) { if (puedeMira()) { motor.mira(true); R.llena = !!M.completa && !M.llena(); if (R.llena) M.completa(true); } } else { motor.mira(false); if (R.llena) { R.llena = false; M.completa(false); } } const b = $('#bpaseo'); if (b) b.setAttribute('aria-pressed', on);
     document.body.classList.toggle('paseando', on); document.body.classList.toggle('tactil', !!motor.tactil || matchMedia('(pointer: coarse)').matches); R.joy = { x: 0, y: 0 }; R.k = {}; R.ruta = null; marca.visible = false; joyKnob();
     if (!on) { if (R.g) mundo.remove(R.g); R.g = R.ob = null; R.vuelo = false; adentro(null); R.afuera = null; R.y = 0; motor.piso = 0; R.ojos = false; Object.assign(C, R.antes.lim); C.ty = 0; R.incl = R.cerca = null; $('#musar').hidden = true; motor.ir(R.antes.cam, 0.6); M.alSalir && M.alSalir(); return; }
-    R.antes = { cam: { tx: C.tx, tz: C.tz, d: Math.max(30, C.d), pitch: Math.max(0.3, C.pitch) }, lim: { min: C.min, max: C.max, pmin: C.pmin } }; Object.assign(C, { min: 0.05, max: 60, pmin: 0.06 });
+    R.antes = { cam: { tx: C.tx, tz: C.tz, d: Math.max(30, C.d), pitch: Math.max(0.3, C.pitch) }, lim: { min: C.min, max: C.max, pmin: C.pmin } }; Object.assign(C, { min: 0.05, max: 60, pmin: PM3 });
     R.y = 0; R.vx = R.vz = 0; R.vy = 0; R.ojos = false; R.vuelo = false; R.dist = motor.mirando || puedeMira() ? 4.2 : 7; obstaculos(); vistaTxt(); ayudaTxt(); [R.x, R.z] = libre(donde ? donde[0] : C.tx, donde ? donde[1] : C.tz); R.rumbo = C.yaw + Math.PI; R.puesta = null; motor.ir({ tx: R.x, tz: R.z, d: R.dist, pitch: 0.36 }, 0.7); R.viaje = 0.75;
     const g = new THREE.Group(); g.position.set(R.x, 0, R.z); mundo.add(g); R.g = g; ayuda(true); R.ob = await M.avatar(g); motor.dirty = true; }
   // por los ojos (V): la cámara va a la cabeza y el muñeco no se dibuja
   function ojos(on) { if (!R.on) return; if (on && !R.ojos) R.tercera = Math.max(2.5, R.dist); R.dist = on ? 0.05 : R.tercera || 7; }
   // vuelo: la cámara se suelta del muñeco y vuela sin chocar; al salir, el muñeco baja donde quedó
   function vuelo(on, vuelve) { if (!R.on || on === !!R.vuelo) return; R.vuelo = on; R.vy = 0; if (on) { R.deOjos = R.ojos; if (!R.ojos) R.tercera = Math.max(2.5, R.dist); R.fx = R.x; R.fz = R.z; R.fy = R.y + 1.62; R.ruta = null; marca.visible = false; C.pmin = -1.2; }
-    else { [R.x, R.z] = libre(R.fx, R.fz); R.y = alturaEn(R.x, R.z, Math.max(0, R.fy - 1.6)); R.vx = R.vz = 0; const aOjos = vuelve && R.deOjos; R.dist = aOjos ? 0.05 : R.tercera || 7; R.ojos = !!aOjos; C.pmin = aOjos ? -1.2 : 0.06; if (!aOjos && C.pitch < 0.2) C.pitch = 0.36; R.viaje = 0; R.puesta = null; } vistaTxt(); motor.dirty = true; }
+    else { [R.x, R.z] = libre(R.fx, R.fz); R.y = alturaEn(R.x, R.z, Math.max(0, R.fy - 1.6)); R.vx = R.vz = 0; const aOjos = vuelve && R.deOjos; R.dist = aOjos ? 0.05 : R.tercera || 7; R.ojos = !!aOjos; C.pmin = aOjos ? -1.2 : PM3; if (!aOjos && C.pitch < 0.2) C.pitch = 0.36; R.viaje = 0; R.puesta = null; } vistaTxt(); motor.dirty = true; }
   // V pasa de tercera persona a los ojos, de los ojos al vuelo y vuelve
   function vista() { if (R.vuelo) vuelo(false); else if (R.ojos || R.dist < 0.9) { vuelo(true); } else ojos(true); vistaTxt(); }
   function vistaTxt() { const b = $('#mpojos'); if (!b) return; const n = R.vuelo ? 'Vuelo' : R.dist < 0.9 ? 'Ojos' : '3.ª persona'; b.querySelector('span').textContent = n; b.setAttribute('aria-pressed', n !== '3.ª persona'); b.title = `Vista: ${n}. Cambiar (V)`; }
@@ -103,8 +105,8 @@ export function recorrer(M) {
     const N = a => motor.nomTecla(motor.teclaDe(a)), andar = `<kbd>${N('adelante')} ${N('izq')} ${N('atras')} ${N('der')}</kbd>`;
     const its = motor.mirando ? (motor.editando ? ['<b>Clic</b> pone, elige o agarra', '<b>Clic derecho</b> suelta o deja como estaba', '<kbd>1</kbd> a <kbd>0</kbd> barra rápida', `<kbd>${N('inventario')}</kbd> inventario`, '<b>Rueda</b> gira', '<kbd>Esc</kbd> menú']
         : R.vuelo ? ['<b>Mouse</b> mirar', `${andar} volar`, `<kbd>${N('saltar')}</kbd> sube`, `<kbd>${N('bajar')}</kbd> baja`, `<kbd>${N('saltar')}</kbd> dos veces: bajar`, `<kbd>${N('correr')}</kbd> rápido`, `<kbd>${N('editar')}</kbd> editar`, '<kbd>Esc</kbd> menú']
-        : ['<b>Mouse</b> mirar', `${andar} caminar`, `<kbd>${N('editar')}</kbd> editar`, `<kbd>${N('saltar')}</kbd> saltar, dos veces vuela`, '<kbd>Esc</kbd> menú', `<kbd>${N('correr')}</kbd> correr`, `<kbd>${N('vista')}</kbd> vista`])
-      : puedeMira() ? ['<b>Clic en la maqueta</b> para mirar con el mouse', '<kbd>Esc</kbd> menú', `${andar} caminar`]
+        : ['<b>Mouse</b> mirar', `${andar} caminar`, `<kbd>${N('editar')}</kbd> editar`, `<kbd>${N('saltar')}</kbd> saltar, dos veces vuela`, '<kbd>Esc</kbd> menú', '<kbd>M</kbd> soltar el mouse', `<kbd>${N('correr')}</kbd> correr`, `<kbd>${N('vista')}</kbd> vista`])
+      : puedeMira() ? ['<kbd>M</kbd> o <b>clic en la maqueta</b> para volver a mirar', '<kbd>Esc</kbd> menú', `${andar} caminar`]
       : [`${andar} caminar`, `<kbd>${N('correr')}</kbd> correr`, '<b>clic</b> ir ahí', '<b>arrastrar</b> mirar', `<kbd>${N('vista')}</kbd> vista`, '<kbd>Esc</kbd> menú'];
     let cabe = Math.max(26, (Math.min(980, innerWidth - 230)) / 7.5), out = []; for (const h of its) { if (out.length && largo(h) > cabe) break; out.push(h); cabe -= largo(h); } el.innerHTML = out.join(P); }
   ayudaTxt(); motor.alAjustes = () => { R.k = {}; ayudaTxt(); }; motor.alMira = () => { if (!R.on) return; if (!motor.mirando) R.k = {}; ayudaTxt(); ayuda(true); }; motor.alEditar = () => { if (R.on) { ayudaTxt(); ayuda(true); } };
@@ -144,7 +146,7 @@ export function recorrer(M) {
     if (R.vy || R.y > yo + 0.5) { R.vy = (R.vy || 0) - PESO * dt; R.y += R.vy * dt; if (R.y <= yo) { R.y = yo; R.vy = 0; } }   // en el aire: sube y cae con su peso
     else { R.y += (yo - R.y) * Math.min(1, dt * 14); if (Math.abs(yo - R.y) < 0.004) R.y = yo; }
     let dg = null, piso = 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, R.x, R.z), S = g.userData.suelos[0]; if (lx > S.x0 - 0.2 && lx < S.x1 + 0.2 && lz > S.z0 - 0.2 && lz < S.z1 + 0.2) { dg = g; piso = Math.max(0, Math.floor((R.y + 0.9) / g.userData.altoPiso)); break; } }
-    const eraOjos = R.ojos; R.ojos = R.dist < 0.9; if (R.ojos !== eraOjos) { C.pmin = R.ojos ? -1.2 : 0.06; if (!R.ojos && C.pitch < 0.06) C.pitch = 0.2; vistaTxt(); }
+    const eraOjos = R.ojos; R.ojos = R.dist < 0.9; if (R.ojos !== eraOjos) { C.pmin = R.ojos ? -1.2 : PM3; if (!R.ojos && C.pitch < PM3) C.pitch = PM3; vistaTxt(); }
     adentro(dg, piso); if (R.incl) { R.incl.t -= dt; if (!R.ojos) C.pitch += (R.incl.a - C.pitch) * Math.min(1, dt * 5); if (R.incl.t <= 0) R.incl = null; }
     // cámara: sigue al muñeco a la altura del pecho (o de los ojos) y se acerca si hay algo en el medio
     const hom = motor.mirando && !R.ojos ? Math.min(0.5, C.d * 0.14) : 0, hx0 = Math.cos(C.yaw) * hom, hz0 = -Math.sin(C.yaw) * hom, hl = hom && !tapa(R.x + hx0, R.y + 1.5, R.z + hz0), hx = hl ? hx0 : 0, hz = hl ? hz0 : 0;

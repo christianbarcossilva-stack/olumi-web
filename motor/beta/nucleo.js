@@ -116,7 +116,9 @@ export function crearMotor(canvas, o = {}) {
   function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0, camY = ty + C.d * Math.sin(C.pitch), cerca = planoCercano(camY); if (Math.abs(cam.near - cerca) > cam.near * 0.04) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
     if (motor.bruma) { const e = motor.espesa; scene.fog.near = e ? Math.max(e[0], C.d * e[2]) : Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = e ? Math.max(e[1], C.d * e[3]) : Math.max(motor.bruma[1], C.d * 5); }
-    cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), camY, C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
+    // recorriendo, la cámara puede bajar para mirar hacia arriba (una columna, un foco, un techo): si llega al piso se acerca al muñeco en vez de atravesarlo
+    let dd = C.d, yy = camY; if (motor.caminando && C.pitch < 0) { const suelo = (motor.piso || 0) + 0.25; if (yy < suelo) { dd = Math.max(0.3, (ty - suelo) / -Math.sin(C.pitch)); yy = ty + dd * Math.sin(C.pitch); } }
+    cam.position.set(C.tx + dd * cp * Math.sin(C.yaw), yy, C.tz + dd * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
     // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca). Recorriendo (a pie o en vuelo) la cámara está encima de lo que
     // mira y ve lejos: la caja crece con la altura y se corre hacia adelante (antes era un cuadrado de 40 m alrededor del que vuela y, más allá,
     // nada tenía sombra). Crece de a escalones y se mueve de a puntos enteros del mapa de sombras, para que las sombras no tiemblen al avanzar.
@@ -236,7 +238,7 @@ export function crearMotor(canvas, o = {}) {
   motor._mira = ponMira;   // para las pruebas (el navegador de pruebas no siempre deja tomar el mouse)
   document.addEventListener('pointerlockchange', () => ponMira(document.pointerLockElement === canvas));
   // si el navegador no deja tomar el mouse nunca (dos intentos y ninguno anduvo), se sigue como antes: mirar arrastrando
-  document.addEventListener('pointerlockerror', () => { if (!MI.ok && ++MI.falla >= 2) { motor.sinMira = true; motor.alMira && motor.alMira(false); } });
+  document.addEventListener('pointerlockerror', () => { if (!MI.ok && ++MI.falla >= 2) { motor.sinMira = true; motor.alMira && motor.alMira(false); } else motor.alMiraFalla && motor.alMiraFalla(); });   // el navegador no dejó tomar el mouse esta vez: se avisa cómo seguir
   const tope = v => Math.max(-120, Math.min(120, v || 0));
   for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'dblclick']) addEventListener(t, e => { if (!motor.mirando || sint.has(e) || e.target !== canvas || (e.pointerType && e.pointerType !== 'mouse')) return;
     e.stopImmediatePropagation(); if (t === 'pointermove') { MI.x += tope(e.movementX); MI.y += tope(e.movementY); return; } MI.btn = e.buttons || 0; alCentro(t, e); }, true);
