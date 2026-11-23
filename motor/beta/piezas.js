@@ -435,19 +435,29 @@ let ENT = null;
 const RUMBO = { oeste: [-1, 0], este: [1, 0], norte: [0, -1], sur: [0, 1] };
 export function cotaDe(p) { const r = RUMBO[p.sube], A = +p.subeAlto; if (!r || !(A > 0) || !p.pts || p.pts.length < 3) return null; let a = 1e9, b = -1e9; for (const [x, z] of p.pts) { const v = x * r[0] + z * r[1]; if (v < a) a = v; if (v > b) b = v; }
   const L = Math.max(1, b - a); return (x, z) => Math.max(0, Math.min(A, A * ((x * r[0] + z * r[1]) - a) / L)); }
+// loma o terraplén de pasto o tierra: sube desde el borde con la ladera pedida. «loma» es redondeada y algo despareja; «meseta» queda plana arriba
+export function lomaDe(p) { const A = +p.alto, P = p.pts; if (!(A > 0) || !P || P.length < 3) return null; const C = [...P, P[0]], bb = cajaDe(P), nat = p.forma !== 'meseta'; let w = Math.max(0.5, A * (+p.talud || 2));
+  if (nat) { let dm = 0; for (let i = 1; i < 18; i++) for (let j = 1; j < 18; j++) { const x = bb[0] + (bb[2] - bb[0]) * i / 18, z = bb[1] + (bb[3] - bb[1]) * j / 18; if (enPoli(x, z, P)) dm = Math.max(dm, dPL(x, z, C)); } w = Math.max(w, dm * 0.9); }
+  const s0 = (semilla(p) % 628) / 100;
+  return (x, z) => { if (x < bb[0] || x > bb[2] || z < bb[1] || z > bb[3] || !enPoli(x, z, P)) return 0; const t = Math.min(1, dPL(x, z, C) / w), s = t * t * (3 - 2 * t);
+    return A * s * (nat ? 1 + 0.06 * Math.sin(x * 0.13 + s0) * Math.cos(z * 0.11 - s0) + 0.03 * Math.sin((x - z) * 0.37 + s0) : 1); }; }
+// altura del terreno en un punto (playas en pendiente con su talud, y lomas): para apoyar piezas y para caminar
+export const cotaEn = (x, z) => ENT ? ENT.cota(x, z) : 0;
 function entorno(ctx) { const L = ctx && ctx.piezas ? ctx.piezas() : null; if (!L) return null; let f = '' + L.length;
-  for (const p of L) f += p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') + (p.t === 'playa' ? '' + (p.sube || '') + (p.subeAlto || '') : '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
+  for (const p of L) f += p.pts && p.pts.length ? '|' + p.id + p.pts.length + Math.round(p.pts[0][0]) + Math.round(p.pts[p.pts.length - 1][1]) + (p.ancho || '') + (p.mat || '') + (p.tipo || '') + (p.t === 'playa' ? '' + (p.sube || '') + (p.subeAlto || '') + (p.talud || '') : p.t === 'loma' ? '' + (p.alto || '') + (p.talud || '') + (p.forma || '') + (p.semilla || '') : '') : p.x != null ? '|' + Math.round(p.x) + ',' + Math.round(p.z) + (p.ancho || '') + (p.r ? Math.round(p.r * 10) : '') : '';
   if (ENT && ENT.f === f) return ENT; const calles = [], rot = [], duros = [], otros = [], cajas = [], playas = [];
   for (const p of L) { const T = TIPOS[p.t]; if (!T) continue; const d = { ...T.def, ...p };
-    if (p.t === 'playa' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: cotaDe(d) }); continue; }
+    if (p.t === 'playa' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: cotaDe(d), tal: +d.talud || 0, m: (+d.talud || 0) * (+d.subeAlto || 0) }); continue; }
+    if (p.t === 'loma' && p.pts && p.pts.length > 2) { playas.push({ id: p.id, pts: p.pts, bb: cajaDe(p.pts), f: lomaDe(d), loma: true }); continue; }
     if (p.t === 'calle' && p.guia) continue; if (p.t === 'calle' && p.pts && p.pts.length > 1) { const b = cajaDe(p.pts), h = d.ancho / 2; calles.push({ id: p.id, pts: p.pts, h, tipo: d.tipo, bb: [b[0] - h - 9, b[1] - h - 9, b[2] + h + 9, b[3] + h + 9] }); }
     else if (p.t === 'rotonda' && !p.guia) rot.push([p.x, p.z, d.radio + 0.4]);
     else if ((p.t === 'terreno' || p.t === 'recinto') && p.pts && p.pts.length > 2) { const o = { id: p.id, pts: p.pts, bb: cajaDe(p.pts), huecos: p.huecos }; if (p.t === 'recinto' || !/pasto|monte|cultivo/.test(d.mat)) (/hormigon|asfalto/.test(d.mat) ? duros : otros).push(o); }
     else if (p.x != null && (p.t === 'estacionamiento' || (d.ancho && d.fondo))) { const hw = p.t === 'estacionamiento' ? (d.columnas * 2.6 + 1) / 2 : d.ancho / 2, hd = p.t === 'estacionamiento' ? (d.filas * 5.2 + 1) / 2 : d.fondo / 2; cajas.push({ x: p.x, z: p.z, c: Math.cos(p.r || 0), s: Math.sin(p.r || 0), hw, hd, R: Math.hypot(hw, hd) }); } }
   const esq = esquinas(calles), enPolis = (x, z, l, salvo) => { for (const o of l) if (o.id !== salvo && x >= o.bb[0] && x <= o.bb[2] && z >= o.bb[1] && z <= o.bb[3] && enPoli(x, z, o.pts) && !(o.huecos && o.huecos.some(h => enPoli(x, z, h)))) return true; return false; };
   ENT = { f, calles, rot, duros, otros, cajas, esq, enPolis, playas,
-    playa(x, z, m = 0) { for (const o of playas) if (x >= o.bb[0] - m && x <= o.bb[2] + m && z >= o.bb[1] - m && z <= o.bb[3] + m && (enPoli(x, z, o.pts) || (m && dPL(x, z, [...o.pts, o.pts[0]]) < m))) return o; return null; },
-    cota(x, z) { const o = this.playa(x, z); return o && o.f ? o.f(x, z) : 0; },
+    playa(x, z, m = 0) { for (const o of playas) if (!o.loma && x >= o.bb[0] - m && x <= o.bb[2] + m && z >= o.bb[1] - m && z <= o.bb[3] + m && (enPoli(x, z, o.pts) || (m && dPL(x, z, [...o.pts, o.pts[0]]) < m))) return o; return null; },
+    cota(x, z) { let y = 0; for (const o of playas) { if (!o.f) continue; const m = o.m || 0; if (x < o.bb[0] - m || x > o.bb[2] + m || z < o.bb[1] - m || z > o.bb[3] + m) continue;
+        if (enPoli(x, z, o.pts)) y = Math.max(y, o.f(x, z)); else if (o.tal) y = Math.max(y, o.f(x, z) - dPL(x, z, [...o.pts, o.pts[0]]) / o.tal); } return y; },
     enCalle(x, z, salvo, m = 0) { for (const c of calles) { if (c.id === salvo || x < c.bb[0] || x > c.bb[2] || z < c.bb[1] || z > c.bb[3]) continue; if (dPL(x, z, c.pts) < c.h + m) return true; } for (const r of rot) if (Math.hypot(x - r[0], z - r[1]) < r[2] + m) return true; return false; },
     enCaja(x, z, m = 0) { for (const k of cajas) { const dx = x - k.x, dz = z - k.z; if (Math.abs(dx) > k.R + m || Math.abs(dz) > k.R + m) continue; if (Math.abs(k.c * dx - k.s * dz) < k.hw + m && Math.abs(k.s * dx + k.c * dz) < k.hd + m) return true; } return false; },
     enEsq(x, z) { for (const e of esq) if (Math.abs(x - e.c[0]) < 12 && Math.abs(z - e.c[1]) < 12 && (enPoli(x, z, e.tri) || dPL(x, z, [e.tri[1], e.tri[0], e.tri[2]]) < 0.4)) return true; return false; },
@@ -535,7 +545,7 @@ function bordeIsla(g, afuera, adentro, y0, y1, flechas, po) { const n = afuera.l
   return k; }
 // placa de hormigón premoldeado: 2 m de largo por 50 cm de alto, con su junta abajo y las marcas del molde
 // alrededor de una playa: muro de placas de hormigón con sus postes (sigue la pendiente) y, si se pide, el talud de pasto que baja hasta el suelo
-function muroPlaya(g, p, Y, os) { const P = p.pts, n = P.length, mh = +p.muro || 0, tal = +p.talud || 0, hay = P.some(([x, z]) => Y(x, z) > 0.05);
+function muroPlaya(g, p, Y, os) { const P = p.pts, n = P.length, tal = +p.talud || 0, hay = P.some(([x, z]) => Y(x, z) > 0.05), mh = +p.muro > 0 ? +p.muro : hay && !(tal > 0) ? 0.25 : 0;   // en pendiente y sin muro ni talud: un murete la cierra hasta el suelo
   let A = 0; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; A += a[0] * b[1] - b[0] * a[1]; } const sg = A > 0 ? -1 : 1; // normal hacia afuera de cada lado
   const nor = i => { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [sg * (b[1] - a[1]) / L, -sg * (b[0] - a[0]) / L]; };
   const anillo = []; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.ceil(L / 2)), na = nor((i + n - 1) % n), nb = nor(i);
@@ -546,9 +556,13 @@ function muroPlaya(g, p, Y, os) { const P = p.pts, n = P.length, mh = +p.muro ||
     anillo.forEach((q, i) => { const y = Y(q.x, q.z), y0 = tal > 0 ? y - 0.3 : -0.05, y1 = y + mh; v.push(q.x, y0, q.z, q.x, y1, q.z); uv.push(q.acc / 2, (y0 - y) / 0.5, q.acc / 2, mh / 0.5); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); }
       if (i < anillo.length - 1) po.push([q.x, (y0 + y1 + 0.12) / 2, q.z, 0, 0.22, y1 + 0.12 - y0, 0.22]); });
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals(); g.add(sombra(new THREE.Mesh(geo, pl))); lote(g, CAJA, ph, po); }
-  if (tal > 0 && hay) { const v = [], uv = [], ix = []; anillo.forEach((q, i) => { const y = Y(q.x, q.z), w = y * tal, ox = q.x + q.n[0] * w, oz = q.z + q.n[1] * w; v.push(q.x, y + 0.03, q.z, ox, -0.04, oz); uv.push(q.x, -q.z, ox, -oz); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } });
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals();
-    const m = matSuelo('pasto', { side: THREE.DoubleSide }) || mat('#7c9659', { roughness: 1, side: THREE.DoubleSide }), k = new THREE.Mesh(geo, m); k.receiveShadow = true; g.add(k); } }
+  // el talud: un terraplén que baja de la cresta al pie, apenas panzón arriba y tendido abajo, con tierra a la vista cerca de la cresta
+  if (tal > 0 && hay) { const v = [], uv = [], ti = [], ix = [], PERFIL = [[0, 1, 0.8], [0.3, 0.74, 0.6], [0.62, 0.36, 0.34], [0.86, 0.1, 0.12], [1, 0, 0]], K = PERFIL.length;   // [avance hacia afuera, altura, tierra a la vista]
+    anillo.forEach((q, i) => { const y = Y(q.x, q.z), w = y * tal, on = 0.6 + 0.4 * Math.sin(q.acc * 0.21) * Math.sin(q.acc * 0.057 + 1.3);
+      for (const [a, h, t] of PERFIL) { const ox = q.x + q.n[0] * w * a, oz = q.z + q.n[1] * w * a; v.push(ox, h ? y * h + 0.03 : -0.04, oz); uv.push(ox, -oz); ti.push(y > 0.4 ? t * on : 0); }
+      if (i) { const j = i * K; for (let k = 0; k < K - 1; k++) ix.push(j - K + k, j - K + k + 1, j + k, j - K + k + 1, j + k + 1, j + k); } });
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setAttribute('tierra', new THREE.Float32BufferAttribute(ti, 1)); geo.setIndex(ix); geo.computeVertexNormals();
+    const k = new THREE.Mesh(geo, matLoma('pasto')); k.receiveShadow = true; g.add(k); } }
 // casilla de control de un ingreso: pared gris, losa blanca que sobresale, ventanas con reja en los cuatro lados, vereda alta con baranda amarilla y, si se pide, semáforo
 function garita(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = 2.75, V = 1.3, base = p.color && p.color !== '#f5f6f7' ? p.color : '#8d949a';
   const pa = mat(os ? mix(base, '#000', 0.4) : base, { roughness: 0.85 }), losa = mat(os ? '#7d8287' : '#eef0f1', { roughness: 0.6 }), vid = mat(os ? '#3a3f45' : '#28333d', { roughness: 0.2, metalness: 0.3, emissive: os ? '#ffdcaa' : '#000000', emissiveIntensity: os ? 0.5 : 0 }), rej = mat(os ? '#6b7075' : '#b7bcc0', { metalness: 0.5, roughness: 0.5 }), am = mat(os ? '#8a6f1a' : '#f2c230', { roughness: 0.55 }), ver = mat(os ? '#5d6267' : '#c9c8c1', { roughness: 0.95 });
@@ -582,6 +596,17 @@ function conManchas(base) { let m = CON_MAN.get(base.uuid); if (m) return piso(m
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vManW;').replace('#include <project_vertex>', '#include <project_vertex>\nvManW = (modelMatrix * vec4(transformed, 1.0)).xz;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tManchas;\nvarying vec2 vManW;').replace('#include <map_fragment>', '#include <map_fragment>\n{ vec4 man = texture2D( tManchas, vManW / 64.0 ); diffuseColor.rgb = mix( diffuseColor.rgb, man.rgb, man.a ); }'); };
   m.customProgramCacheKey = () => clave + '|manchas'; CON_MAN.set(base.uuid, m); return piso(m); }
+// pasto con tierra a la vista: cada vértice dice cuánta tierra se ve (laderas empinadas, la cresta de un talud)
+const CON_TIE = new Map(), MAT_LOMA = new Map(), SOLO_SOMBRA = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, side: THREE.DoubleSide });
+function conTierra(base) { let m = CON_TIE.get(base.uuid); if (m) return piso(m); m = base.clone(); const antes = base.onBeforeCompile, clave = base.customProgramCacheKey(), col = oscuro() ? '0.05, 0.04, 0.03' : '0.50, 0.36, 0.21';
+  m.onBeforeCompile = (sh, r) => { antes.call(m, sh, r);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float tierra;\nvarying float vTierra;').replace('#include <project_vertex>', '#include <project_vertex>\nvTierra = tierra;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vTierra;').replace('#include <color_fragment>', '{ float lt = dot( diffuseColor.rgb, vec3( 0.4, 0.5, 0.1 ) ); diffuseColor.rgb = mix( diffuseColor.rgb, vec3( ' + col + ' ) * ( 0.8 + 0.9 * lt ), clamp( vTierra, 0.0, 1.0 ) ); }\n#include <color_fragment>')
+      // luz de terreno: la ladera toma parte de la luz como si mirara al cielo; así se ve su forma sin que el lado de sombra quede negro
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize( mix( normal, normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz ), 0.6 ) );'); };
+  m.customProgramCacheKey = () => clave + '|tierra'; CON_TIE.set(base.uuid, m); return piso(m); }
+function matLoma(k) { const c = k + (oscuro() ? '|n' : '|d'); let m = MAT_LOMA.get(c); if (!m) { const po = { polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -2, side: THREE.DoubleSide };
+    m = matSuelo(k, po) || mat(suelo(k), { roughness: 0.97, ...po }); if (/^pasto/.test(k) && m.map && !oscuro()) m = conManchas(m); m = conTierra(m); MAT_LOMA.set(c, m); } return piso(m); }
 // fibras: las que comparten un tramo van una al lado de la otra (cada una en su carril) y cada una con su color (el código de colores de las fibras)
 const COL_FIBRA = ['#2f6fed', '#ff8a00', '#2fb457', '#a0673a', '#8b97a3', '#e9edf0', '#e5484d', '#f5d90a', '#8e4ec6', '#e93d82', '#12a594', '#59636e'];
 let FIB = null;
@@ -673,6 +698,15 @@ export const TIPOS = {
       const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs), n = Math.min(4000, Math.round((x1 - x0) * (z1 - z0) / 10000 * p.densidad)), pts = [];
       for (let i = 0; i < n * 1.6 && pts.length < n; i++) { const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); if (dentro(x, z)) pts.push([x, z, R()]); }
       arbolado(g, pts.map(([x, z, k]) => [x, z, p.tipo === 'mixto' ? (k < 0.3 ? 'pino' : 'fronda') : p.tipo, 0.75 + k * 0.6])); return g; } },
+  loma: { n: 'Loma o terraplén (pasto o tierra)', g: 'Terreno', forma: 'area', capa: 'base', etiqueta: p => p.nombre, def: { mat: 'pasto', alto: 3, talud: 2, forma: 'loma' },
+    campos: [F.nombre, { k: 'mat', n: 'De qué es', t: 'sel', ops: [['pasto', 'Pasto, con tierra a la vista en la ladera'], ['pasto2', 'Pasto parejo'], ['tierra', 'Tierra'], ['ripio', 'Ripio o balasto']] }, F.alto('Altura (m)', 0.3, 40, 0.1),
+      { k: 'talud', n: 'Ladera: metros de ancho por cada metro de altura', t: 'num', min: 0.5, max: 12, paso: 0.25 }, { k: 'forma', n: 'Forma', t: 'sel', ops: [['loma', 'Loma natural, redondeada'], ['meseta', 'Terraplén, plano arriba']] }],
+    armar(p) { const g = new THREE.Group(), f = lomaDe(p); g.userData.sinAplanar = true; if (!f) return g; const bb = cajaDe(p.pts), L = Math.max(1.2, Math.min(7, Math.hypot(bb[2] - bb[0], bb[3] - bb[1]) / 70));
+      const geo = partir(new THREE.ShapeGeometry(new THREE.Shape(p.pts.map(q => new THREE.Vector2(q[0], -q[1])))), L).rotateX(-Math.PI / 2), a = geo.attributes.position, t = new Float32Array(a.count);
+      for (let i = 0; i < a.count; i++) a.setY(i, 0.03 + f(a.getX(i), a.getZ(i))); a.needsUpdate = true; geo.computeVertexNormals(); const N = geo.attributes.normal;
+      // donde la ladera es empinada el pasto no agarra del todo y se ve la tierra, en manchones
+      if (p.mat === 'pasto') for (let i = 0; i < a.count; i++) { const ny = Math.max(0.2, N.getY(i)), pend = Math.sqrt(Math.max(0, 1 - ny * ny)) / ny, x = a.getX(i), z = a.getZ(i); t[i] = Math.max(0, Math.min(0.9, (pend - 0.14) * 3 * (0.6 + 0.4 * Math.sin(x * 0.23 + z * 0.17) * Math.sin(z * 0.29 - x * 0.11)))); }
+      geo.setAttribute('tierra', new THREE.BufferAttribute(t, 1)); geo.computeBoundingSphere(); g.add(sombra(new THREE.Mesh(geo, matLoma(p.mat)))); return g; } },
   calle: { n: 'Calle o ruta', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 8, tipo: 'asfalto', linea: 'discontinua', borde: 'auto', mano: 'doble' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['corta', 'Discontinua corta (calle de barrio)'], ['continua', 'Continua'], ['no', 'Sin línea']] }, { k: 'borde', n: 'Borde', t: 'sel', ops: [['auto', 'Cordón donde da al pasto'], ['cordon', 'Cordón en todo el largo'], ['vereda', 'Cordón y vereda a los dos lados'], ['vereda-izq', 'Vereda de un lado'], ['vereda-der', 'Vereda del otro lado'], ['no', 'Sin cordón']] }, { k: 'mano', n: 'Mano (para los camiones)', t: 'sel', ops: [['doble', 'Doble mano'], ['unica', 'Mano única, en el sentido en que se dibujó']] }],
     armar(p, ctx) { if (p.guia) return new THREE.Group(); const g = new THREE.Group(), y = 0.05, c = { asfalto: oscuro() ? '#2b3036' : '#7d838a', ruta: oscuro() ? '#272c31' : '#73797f', hormigon: suelo('hormigon'), tierra: suelo('ripio') }[p.tipo] || '#7d838a';
@@ -721,7 +755,7 @@ export const TIPOS = {
       { k: 'sube', n: 'Terreno en pendiente', t: 'sel', ops: [['no', 'Plano'], ['oeste', 'Sube hacia la izquierda (oeste)'], ['este', 'Sube hacia la derecha (este)'], ['norte', 'Sube hacia el norte'], ['sur', 'Sube hacia el sur']] }, { k: 'subeAlto', n: 'Altura en la punta más alta (m)', t: 'num', min: 0, max: 60, paso: 0.5 },
       { k: 'muro', n: 'Muro de hormigón alrededor (m de alto, 0 = sin muro)', t: 'num', min: 0, max: 6, paso: 0.1 }, { k: 'talud', n: 'Talud de pasto afuera (m de ancho por cada m de altura)', t: 'num', min: 0, max: 6, paso: 0.25 }],
     armar(p) { const g = new THREE.Group(), os = oscuro(), F = cotaDe(p), Y = F || (() => 0); if (p.piso !== 'no') { const k = area(g, p.pts, 0.04, matSuelo(p.piso, { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -2 }) || mat(suelo(p.piso), { roughness: 0.97 }));
-        if (k && F) { const a = k.geometry.attributes.position; for (let i = 0; i < a.count; i++) a.setY(i, 0.04 + F(a.getX(i), a.getZ(i))); a.needsUpdate = true; k.geometry.computeVertexNormals(); k.geometry.computeBoundingSphere(); } }
+        if (k && F) { const a = k.geometry.attributes.position; for (let i = 0; i < a.count; i++) a.setY(i, 0.04 + F(a.getX(i), a.getZ(i))); a.needsUpdate = true; k.geometry.computeVertexNormals(); k.geometry.computeBoundingSphere(); const so = new THREE.Mesh(k.geometry, SOLO_SOMBRA); so.castShadow = true; so.renderOrder = 1; g.add(so); } }   // la losa en altura da sombra (con una malla invisible: un plano de una cara no la da), así los autos no se «dibujan» en el suelo de abajo
       if (F || +p.muro > 0) muroPlaya(g, p, Y, os);
       const bb = cajaDe(p.pts), cx = (bb[0] + bb[2]) / 2, cz = (bb[1] + bb[3]) / 2, a = (p.giro || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), R = azar(semilla(p)), rad = Math.hypot(bb[2] - bb[0], bb[3] - bb[1]) / 2 + 3, MAX = FINO ? 6500 : 1200, T = ['hatch', 'suv', 'sedan', 'pickup', 'hatch', 'suv', 'furgon'], por = {}, COL = os ? ['#7d858c', '#8b949c', '#6a727a', '#3b4249', '#22262a', '#5a2f2c', '#27405f'] : ['#f2f3f4', '#f2f3f4', '#f2f3f4', '#d5d9dd', '#b9bec4', '#8e969d', '#2b2f33', '#a8322b', '#2f5f9e'];
       // filas de a dos (cola con cola) y un pasillo; cada tramo de fila es de un mismo modelo, como llegan los autos nuevos

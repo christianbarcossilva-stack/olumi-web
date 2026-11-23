@@ -14,13 +14,13 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=17';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB } from './piezas.js?v=55';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn } from './piezas.js?v=56';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=45';
+import { construir } from './construir.js?v=46';
 import { juego } from './juego.js?v=4';
-import { recorrer } from './recorrer.js?v=17';
-import { transito } from './transito.js?v=45';
+import { recorrer } from './recorrer.js?v=18';
+import { transito } from './transito.js?v=46';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -68,7 +68,7 @@ export async function abrirMaqueta(o) {
   <div id="mmenu" class="vidrio" hidden role="menu"></div><div id="mconf" hidden></div>
   <div id="mhint" class="vidrio" hidden></div><div id="mtoast" class="vidrio" hidden role="status"></div>
   <div id="mstats" hidden></div>`);
-  const canvas = $('#m3d'), motor = crearMotor(canvas, { tema: o.tema, ruedaConCtrl: o.ruedaConCtrl }), mundo = new THREE.Group(); motor.scene.add(mundo);
+  const canvas = $('#m3d'), motor = crearMotor(canvas, { tema: o.tema, ruedaConCtrl: o.ruedaConCtrl }), mundo = new THREE.Group(); motor.scene.add(mundo); motor.cota = cotaEn;
   let J = null;   // la capa de juego (juego.js): barra rápida, pausa, ajustes y reglas de ubicar; se arma más abajo, cuando ya está todo lo demás
   const objs = new Map(), lbl = $('#mlbl');
   let tostT; const toast = m => { const t = $('#mtoast'); t.textContent = m; t.hidden = false; clearTimeout(tostT); tostT = setTimeout(() => t.hidden = true, 2800); };

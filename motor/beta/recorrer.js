@@ -45,7 +45,7 @@ export function recorrer(M) {
   function libre(x, z) { if (!choca(x, z)) return [x, z]; for (let r = 1; r < 120; r += 1) for (let a = 0; a < 6.28; a += 0.9 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (!choca(px, pz)) return [px, pz]; } return [x, z]; }
   // pisos que se pisan (edificios por dentro): el más alto que queda a un paso (60 cm) de donde uno está; afuera, el suelo
   function enEdif(g, x, z) { v3.set(x, 0, z); g.worldToLocal(v3); return [v3.x, v3.z]; }
-  function alturaEn(x, z, y) { let mejor = 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, x, z);
+  function alturaEn(x, z, y) { let mejor = motor.cota ? Math.max(0, motor.cota(x, z)) : 0; for (const g of R.edif) { const [lx, lz] = enEdif(g, x, z);
       for (const S of g.userData.suelos) { if (lx < S.x0 || lx > S.x1 || lz < S.z0 || lz > S.z1) continue; let h;
         if (S.rampa) h = S.y0 + (S.y1 - S.y0) * Math.max(0, Math.min(1, (lx - S.xa) / (S.xb - S.xa)));
         else { const H = S.hueco; if (H && lx > H[0] && lx < H[2] && lz > H[1] && lz < H[3]) continue; h = S.y; }
