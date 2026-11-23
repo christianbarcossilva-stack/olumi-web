@@ -1302,7 +1302,7 @@ function naveLog(p) { const g = new THREE.Group(), os = oscuro(), K = os ? NAVE.
     fr(u - 1.8, u + 1.8, 0, 0.32, hp, hp + 3.8, M('marco')); fr(u - 1.6, u + 1.6, 0.32, 0.36, hp, hp + 3.6, mat('#16191C'), false);
     const ba = [], n = Math.max(2, Math.round(largo / 1.5)); for (let i = 0; i <= n; i++) { const t = i / n, uu = b0 + (b1 - b0) * t, y = hp * (1 - t); ba.push([-w + uu, y + 0.5, d + an - 0.08, 0, 0.05, 1, 0.05]); }
     lote(g, CIL, am, ba); const pa = new THREE.Mesh(CIL, am), dl = Math.hypot(largo, hp); pa.scale.set(0.05, dl, 0.05); pa.rotation.z = sen * Math.atan2(largo, hp); pa.position.set(-w + (b0 + b1) / 2, hp / 2 + 1, d + an - 0.08); g.add(pa); }
-  for (const u of p.puertasEn || []) { const y0 = AN.length ? 1.2 : 0; fr(u - 0.62, u + 0.62, 0, 0.3, y0, y0 + 2.25, M('marco')); fr(u - 0.5, u + 0.5, 0.3, 0.34, y0, y0 + 2.12, M('porton'), false); fr(u + 0.3, u + 0.4, 0.33, 0.37, y0 + 1, y0 + 1.12, M('goma'), false);
+  for (const q of p.puertasEn || []) { const u = Array.isArray(q) ? q[0] : q, y0 = AN.length && !(Array.isArray(q) && q[1] === 'piso') ? 1.2 : 0; fr(u - 0.62, u + 0.62, 0, 0.3, y0, y0 + 2.25, M('marco')); fr(u - 0.5, u + 0.5, 0.3, 0.34, y0, y0 + 2.12, M('porton'), false); fr(u + 0.3, u + 0.4, 0.33, 0.37, y0 + 1, y0 + 1.12, M('goma'), false);
     if (y0) { const ac = mat(os ? '#5b6168' : '#8d9399', { roughness: 0.5, metalness: 0.5 }); fr(u - 0.75, u + 0.75, 0, 1.1, y0 - 0.06, y0, ac); for (let i = 0; i < 4; i++) fr(u - 0.55, u + 0.55, 1.1 + i * 0.28, 1.38 + i * 0.28, y0 - 0.3 * (i + 1) - 0.04, y0 - 0.3 * (i + 1), ac);
       for (const sx of [-0.62, 0.62]) { fr(u + sx - 0.025, u + sx + 0.025, 1.05, 1.1, y0, y0 + 1.0, am); fr(u + sx - 0.025, u + sx + 0.025, 2.2, 2.25, 0, 1.0, am); } } }
   for (const [u, n] of nivelesDe(p, AN, L)) { fr(u - 2.3, u + 2.3, 0, 0.3, 0, 4.9, M('marco')); fr(u - 2.05, u + 2.05, 0.3, 0.34, 0, 4.65, mat('#16191C'), false); if (n != null) num(n, u); for (const s of [-1, 1]) fr(u + s * 2.75 - 0.16, u + s * 2.75 + 0.16, 0.5, 0.82, 0, 1.15, am); }
@@ -1348,12 +1348,12 @@ export function armarPieza(p, ctx = {}) { const T = TIPOS[p.t]; if (!T) return n
 export function centro(p) { if (p.pts && p.pts.length) { if (TIPOS[p.t] && TIPOS[p.t].forma === 'area') { const n = p.pts.length; return [p.pts.reduce((a, q) => a + q[0], 0) / n, p.pts.reduce((a, q) => a + q[1], 0) / n]; } const m = p.pts[Math.floor(p.pts.length / 2)]; return [m[0], m[1]]; } return [p.x || 0, p.z || 0]; }
 // rampas de un galpón con andenes: [u del portón, largo, sentido]. El campo «rampa» la pone pegada al último (o primer) andén y que no se pase de la pared
 // portones a nivel del piso (sin andén): los puestos a mano en nivelEn y el del campo «nivel», pasando el último (o antes del primer) andén y su rampa
-function nivelesDe(p, AN, L) { const R = (p.nivelEn || []).slice(); if (p.nivel && AN.length) { const us = AN.map(q => q[0]), ra = rampasDe(p, AN, L);
+export function nivelesDe(p, AN, L) { const R = (p.nivelEn || []).slice(); if (p.nivel && AN.length) { const us = AN.map(q => q[0]), ra = rampasDe(p, AN, L);
     const lejos = sg => ra.filter(r => r[2] === sg).reduce((m, r) => Math.max(m, 2.2 + r[1] + 1.5), 0);
     if (p.nivel === 'der' || p.nivel === 'ambas') { const u = Math.min(L - 3, Math.max(...us) + 5.5 + lejos(1)); R.push([u, null]); }
     if (p.nivel === 'izq' || p.nivel === 'ambas') { const u = Math.max(3, Math.min(...us) - 5.5 - lejos(-1)); R.push([u, null]); } }
   return R; }
-function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.rampa && AN.length) { const us = AN.map(q => q[0]), lg = +p.rampaLargo || 10;
+export function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.rampa && AN.length) { const us = AN.map(q => q[0]), lg = +p.rampaLargo || 10;
     if (p.rampa === 'der' || p.rampa === 'ambas') { const u = Math.max(...us) + 5; R.push([u, Math.max(3, Math.min(lg, L - u - 2.4)), 1]); }
     if (p.rampa === 'izq' || p.rampa === 'ambas') { const u = Math.min(...us) - 5; R.push([u, Math.max(3, Math.min(lg, u - 2.4)), -1]); } }
   return R; }
