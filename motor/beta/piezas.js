@@ -199,16 +199,28 @@ function soporte(g, mont, largo, y = 0) { const b = blanco();
   else if (mont === 'techo') { malla(g, CIL24, b, 0, y + 0.3, 0, 0.2, 0.025, 0.2); malla(g, CIL, b, 0, y + 0.15, 0, 0.05, 0.3, 0.05); }
   else if (largo > 0.04) alFrente(malla(g, CIL, b, 0, y, largo / 2, 0.055, largo, 0.055)); }
 // cámaras: bullet (cuerpo con visera, apunta), domo (burbuja oscura), PTZ (domo grande que gira) y ojo de pez (disco chato de techo)
-export const CAMARAS = [['bullet', 'Bullet'], ['domo', 'Domo'], ['ptz', 'PTZ (gira y acerca)'], ['ojo', 'Ojo de pez (360°)']];
-const APERTURA = { bullet: 80, domo: 110, ptz: 360, ojo: 360 };
-function camBullet(g, p, ec, mont) { const b = blanco(), k = new THREE.Group(), z0 = mont === 'techo' ? 0 : 0.26; soporte(g, mont, z0); g.add(k);
-  k.position.set(0, mont === 'techo' ? -0.02 : 0, z0); k.rotation.x = (p.inclina ?? 14) * Math.PI / 180;
+export const CAMARAS = [['bullet', 'Bullet'], ['domo', 'Domo'], ['torreta', 'Torreta (ojo de bola)'], ['ptz', 'PTZ (gira y acerca)'], ['ojo', 'Ojo de pez (360°)'], ['multisensor', 'Panorámica multisensor (180°)'], ['lpr', 'Lectura de matrículas (LPR)'], ['termica', 'Térmica'], ['cubo', 'Cubo de interior']];
+const APERTURA = { bullet: 80, domo: 110, torreta: 100, ptz: 360, ojo: 360, multisensor: 180, lpr: 30, termica: 50, cubo: 110 };
+// bullet: también la de matrículas (más larga, con panel de luz infrarroja) y la térmica (frente oscuro y cuerpo gris)
+function camBullet(g, p, ec, mont, c = 'bullet') { const b = c === 'termica' ? mat(oscuro() ? '#3a4046' : '#8e969d', { roughness: 0.5, metalness: 0.3 }) : blanco(), k = new THREE.Group(), z0 = mont === 'techo' ? 0 : 0.26, L = c === 'lpr' ? 1.45 : 1; soporte(g, mont, z0); g.add(k);
+  k.position.set(0, mont === 'techo' ? -0.02 : 0, z0); k.rotation.x = (p.inclina ?? (c === 'lpr' ? 8 : 14)) * Math.PI / 180;
   malla(k, ESF, b, 0, 0, 0, 0.11);                                                     // rótula
-  alFrente(malla(k, CIL24, b, 0, 0, 0.3, 0.24, 0.56, 0.24));                           // cuerpo
-  caja(k, -0.14, 0.1, 0, 0.14, 0.135, 0.68, b);                                        // visera
-  alFrente(malla(k, CIL24, negro(), 0, 0, 0.59, 0.225, 0.03, 0.225));                  // frente oscuro
-  malla(k, ESF, burbuja(), 0, 0, 0.6, 0.13, 0.13, 0.05);                               // lente
-  malla(k, BOLA, led(ec), 0.07, -0.065, 0.61, 0.034, 0.034, 0.034, false); }           // luz de estado
+  alFrente(malla(k, CIL24, b, 0, 0, 0.3 * L, 0.24, 0.56 * L, 0.24));                   // cuerpo
+  caja(k, -0.14, 0.1, 0, 0.14, 0.135, 0.68 * L, b);                                    // visera
+  alFrente(malla(k, CIL24, negro(), 0, 0, 0.59 * L, 0.225, 0.03, 0.225));              // frente oscuro
+  malla(k, ESF, c === 'termica' ? negro() : burbuja(), 0, 0, 0.6 * L, c === 'termica' ? 0.16 : 0.13, c === 'termica' ? 0.16 : 0.13, 0.05);   // lente (la térmica, grande y oscuro)
+  if (c === 'lpr') caja(k, -0.1, -0.185, 0.18, 0.1, -0.12, 0.62, mat('#3b1414', { roughness: 0.4, emissive: '#4a0d0d', emissiveIntensity: 0.4 }), false);   // panel de luz infrarroja
+  malla(k, BOLA, led(ec), 0.07, -0.065, 0.61 * L, 0.034, 0.034, 0.034, false); }      // luz de estado
+// torreta (ojo de bola): base redonda y la bola con el lente, sin burbuja
+function camTorreta(g, p, ec, mont) { const b = blanco(); let cz = 0, cy = 0; if (mont === 'pared') { cz = 0.36; cy = 0.18; caja(g, -0.12, -0.04, -0.03, 0.12, 0.3, 0, b); alFrente(malla(g, CIL, b, 0, cy, cz / 2, 0.06, cz, 0.06)); } else if (mont !== 'techo') { cz = 0.4; cy = 0.18; alFrente(malla(g, CIL, b, 0, cy, cz / 2, 0.055, cz, 0.055)); }
+  const y0 = mont === 'techo' ? 0 : cy - 0.06; malla(g, CIL24, b, 0, y0 - 0.03, cz, 0.42, 0.06, 0.42); const k = new THREE.Group(); k.position.set(0, y0 - 0.14, cz); k.rotation.x = (p.inclina ?? 30) * Math.PI / 180; g.add(k);
+  malla(k, ESF, b, 0, 0, 0, 0.15); alFrente(malla(k, CIL24, negro(), 0, 0, 0.13, 0.13, 0.04, 0.13)); malla(k, ESF, burbuja(), 0, 0, 0.15, 0.07, 0.07, 0.03); malla(g, CIL24, led(ec), 0, y0 - 0.062, cz, 0.43, 0.012, 0.43, false); }
+// panorámica multisensor: cuerpo ancho y curvo con cuatro lentes en abanico
+function camMulti(g, p, ec, mont) { const b = blanco(), z0 = mont === 'techo' ? 0 : 0.3; soporte(g, mont, z0); const k = new THREE.Group(); k.position.set(0, mont === 'techo' ? -0.12 : -0.05, z0); k.rotation.x = (p.inclina ?? 18) * Math.PI / 180; g.add(k);
+  malla(k, CIL24, b, 0, 0, 0.12, 0.62, 0.2, 0.36); for (let i = 0; i < 4; i++) { const a = (-0.66 + i * 0.44), x = Math.sin(a) * 0.28, z = 0.12 + Math.cos(a) * 0.17; const l = malla(k, CIL24, negro(), x, -0.01, z, 0.1, 0.04, 0.1); l.rotation.set(Math.PI / 2, 0, -a); malla(k, ESF, burbuja(), x * 1.06, -0.01, z + 0.02, 0.045, 0.045, 0.03); }
+  malla(k, BOLA, led(ec), 0, 0.08, 0.3, 0.03, 0.03, 0.03, false); }
+// cubo de interior: chiquito, para un escritorio o un estante
+function camCubo(g, p, ec, mont) { const b = blanco(); if (mont === 'pared') caja(g, -0.06, -0.06, -0.02, 0.06, 0.06, 0, b); const y = mont === 'techo' ? -0.2 : 0; caja(g, -0.09, y - 0.09, 0.02, 0.09, y + 0.09, 0.2, b); alFrente(malla(g, CIL24, negro(), 0, y + 0.01, 0.2, 0.1, 0.012, 0.1)); malla(g, ESF, burbuja(), 0, y + 0.01, 0.205, 0.04, 0.04, 0.02); malla(g, BOLA, led(ec), 0.05, y - 0.05, 0.205, 0.02, 0.02, 0.02, false); }
 function camDomo(g, p, ec, mont, ptz) { const b = blanco(), R = ptz ? 0.25 : 0.19; let cz = 0, cy = 0;
   if (mont === 'pared') { cz = R + 0.14; cy = 0.2; caja(g, -0.12, -0.04, -0.03, 0.12, 0.3, 0, b); alFrente(malla(g, CIL, b, 0, cy, cz / 2, 0.06, cz, 0.06)); }
   else if (mont === 'techo') { if (ptz) { cy = -0.16; malla(g, CIL, b, 0, -0.08, 0, 0.06, 0.2, 0.06); } malla(g, CIL24, b, 0, 0.012, 0, R * 2.2, 0.025, R * 2.2); }
@@ -220,6 +232,11 @@ function camDomo(g, p, ec, mont, ptz) { const b = blanco(), R = ptz ? 0.25 : 0.1
   malla(g, ESF, negro(), 0, yb - R * 0.5, cz + R * 0.3, R * 0.5, R * 0.5, R * 0.5, false); }  // el lente que se adivina adentro
 function camOjo(g, p, ec, mont) { const b = blanco(), k = new THREE.Group(); g.add(k); if (mont !== 'techo') { k.rotation.x = -Math.PI / 2; k.position.z = mont === 'pared' ? 0.03 : 0.09; }
   malla(k, CIL24, b, 0, -0.03, 0, 0.42, 0.06, 0.42); malla(k, MEDIA, burbuja(), 0, -0.058, 0, 0.2, 0.09, 0.2); malla(k, CIL24, led(ec), 0, -0.062, 0, 0.26, 0.006, 0.26, false); }
+const SWITCHES = [['escritorio', 'De escritorio'], ['rack', 'De rack (1U)'], ['din', 'Industrial (riel DIN)'], ['exterior', 'En caja de exterior']];
+// Wi-Fi de exterior (cuerpo con dos antenas) y enlace punto a punto (plato que apunta hacia adelante)
+function apExterior(g, p, ec, mont) { const b = blanco(), z0 = mont === 'techo' ? 0 : 0.22; soporte(g, mont, z0);
+  if (p.clase === 'enlace') { const k = new THREE.Group(); k.position.set(0, 0, z0 + 0.05); g.add(k); const plato = malla(k, MEDIA, b, 0, 0, 0.12, 0.42, 0.14, 0.42); plato.rotation.x = -Math.PI / 2; alFrente(malla(k, CIL24, b, 0, 0, 0.13, 0.84, 0.02, 0.84)); alFrente(malla(k, CIL, negro(), 0, 0, 0.3, 0.05, 0.3, 0.05));   /* el plato mira hacia adelante, con el alimentador al centro */ malla(k, BOLA, led(ec), 0, -0.3, 0.02, 0.03, 0.03, 0.03, false); return; }
+  caja(g, -0.1, -0.18, z0 - 0.03, 0.1, 0.18, z0 + 0.07, b); for (const x of [-0.07, 0.07]) malla(g, CIL, b, x, 0.36, z0 + 0.02, 0.025, 0.36, 0.025); malla(g, BOLA, led(ec), 0, -0.1, z0 + 0.075, 0.03, 0.03, 0.03, false); }
 // campo de visión en el piso: abanico (o disco, si ve todo alrededor) que se apaga hacia lo lejos, con el borde marcado
 function campoVision(g, p, ec) { const al = p.alcance ?? 25, ap = Math.min(360, p.apertura || APERTURA[p.clase] || 90) * Math.PI / 180; if (!al) return;
   const y = (+p.piso || 0) + 0.07 - (g.position.y || 0), capa = (r, op) => { const geo = ap >= 6.28 ? new THREE.CircleGeometry(r, 48) : new THREE.CircleGeometry(r, 32, Math.PI / 2 - ap / 2, ap); geo.rotateX(-Math.PI / 2);
@@ -1143,12 +1160,21 @@ export const TIPOS = {
   camara: { n: 'Cámara', g: 'Equipos', forma: 'punto', capa: 'equipos', equipo: 'cam', ondi: 'camara', etiqueta: p => p.nombre, def: { y: 6, alcance: 25, clase: 'bullet' },
     campos: [...EQ_CAMPOS.slice(0, 1), { k: 'clase', n: 'Modelo de cámara', t: 'sel', ops: CAMARAS }, ...EQ_CAMPOS.slice(1, 7), MONT, BASE, { k: 'inclina', n: 'Inclinación (°)', t: 'num', min: 0, max: 80, paso: 1 }, { k: 'alcance', n: 'Alcance (m)', t: 'num', min: 0, max: 200, paso: 1 }, { k: 'apertura', n: 'Apertura (°)', t: 'num', min: 10, max: 360, paso: 5 }, EQ_CAMPOS[7]],
     variantes: CAMARAS.map(([clase, n]) => ({ n: 'Cámara ' + n.replace(/ \(.*/, '').toLowerCase().replace('ptz', 'PTZ'), o: { clase } })),
-    armar: equipo((g, p, ec, mont) => { const c = p.clase || 'bullet'; if (c === 'domo' || c === 'ptz') camDomo(g, p, ec, mont, c === 'ptz'); else if (c === 'ojo') camOjo(g, p, ec, mont); else camBullet(g, p, ec, mont); campoVision(g, p, ec); }) },
-  ap: { n: 'Wi-Fi (punto de acceso)', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'ap', equipo: 'ap', etiqueta: p => p.nombre, def: { y: 8 }, campos: EQ_CAMPOS,
-    armar: equipo((g, p, ec, mont) => { const k = new THREE.Group(); g.add(k); if (mont !== 'techo') { k.rotation.x = Math.PI / 2; k.position.z = mont === 'pared' ? 0.045 : 0.1; caja(g, -0.1, -0.1, mont === 'pared' ? -0.03 : 0.02, 0.1, 0.1, mont === 'pared' ? 0.01 : 0.07, blanco()); }
+    armar: equipo((g, p, ec, mont) => { const c = p.clase || 'bullet'; if (c === 'domo' || c === 'ptz') camDomo(g, p, ec, mont, c === 'ptz'); else if (c === 'ojo') camOjo(g, p, ec, mont); else if (c === 'torreta') camTorreta(g, p, ec, mont); else if (c === 'multisensor') camMulti(g, p, ec, mont); else if (c === 'cubo') camCubo(g, p, ec, mont); else camBullet(g, p, ec, mont, c); campoVision(g, p, ec); }) },
+  ap: { n: 'Wi-Fi (punto de acceso)', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'ap', equipo: 'ap', etiqueta: p => p.nombre, def: { y: 8, clase: 'techo' },
+    campos: [...EQ_CAMPOS.slice(0, 1), { k: 'clase', n: 'Tipo', t: 'sel', ops: [['techo', 'De techo o pared (disco)'], ['exterior', 'De exterior (antenas)'], ['enlace', 'Enlace punto a punto (antena plato)']] }, ...EQ_CAMPOS.slice(1)],
+    variantes: [{ n: 'Wi-Fi de techo', o: { clase: 'techo' } }, { n: 'Wi-Fi de exterior', o: { clase: 'exterior', y: 6 } }, { n: 'Enlace punto a punto', o: { clase: 'enlace', y: 10 } }],
+    armar: equipo((g, p, ec, mont) => { if (p.clase === 'exterior' || p.clase === 'enlace') { apExterior(g, p, ec, mont); return; } const k = new THREE.Group(); g.add(k); if (mont !== 'techo') { k.rotation.x = Math.PI / 2; k.position.z = mont === 'pared' ? 0.045 : 0.1; caja(g, -0.1, -0.1, mont === 'pared' ? -0.03 : 0.02, 0.1, 0.1, mont === 'pared' ? 0.01 : 0.07, blanco()); }
       malla(k, CIL24, blanco(), 0, 0, 0, 0.58, 0.07, 0.58); const r = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.018, 6, 28).rotateX(Math.PI / 2), led(ec)); r.position.y = mont !== 'techo' ? 0.04 : -0.04; k.add(r); }) },
-  switch: { n: 'Switch', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'switch', equipo: 'sw', etiqueta: p => p.nombre, def: { y: 1.5 }, campos: EQ_CAMPOS,
-    armar: equipo((g, p, ec) => { caja(g, -0.22, -0.03, -0.22, 0.22, 0.03, 0.22, negro()); for (let i = 0; i < 8; i++) caja(g, -0.18 + i * 0.05, -0.01, 0.22, -0.15 + i * 0.05, 0.02, 0.225, led(ec), false); }) },
+  // switch: de escritorio, de rack (24 o 48 bocas, 1U), industrial de riel DIN o en caja de exterior; la cantidad de bocas se ve en el frente
+  switch: { n: 'Switch', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'switch', equipo: 'sw', etiqueta: p => p.nombre, def: { y: 1.5, clase: 'escritorio', bocas: 8 },
+    campos: [...EQ_CAMPOS.slice(0, 1), { k: 'clase', n: 'Tipo de switch', t: 'sel', ops: SWITCHES }, { k: 'bocas', n: 'Bocas', t: 'num', min: 4, max: 52, paso: 1 }, ...EQ_CAMPOS.slice(1)],
+    variantes: [{ n: 'Switch de escritorio (8 bocas)', o: { clase: 'escritorio', bocas: 8 } }, { n: 'Switch de rack 24 bocas', o: { clase: 'rack', bocas: 24, y: 1.2 } }, { n: 'Switch de rack 48 bocas', o: { clase: 'rack', bocas: 48, y: 1.2 } }, { n: 'Switch industrial (riel DIN)', o: { clase: 'din', bocas: 8, montaje: 'pared', y: 1.6 } }, { n: 'Switch PoE de exterior (caja)', o: { clase: 'exterior', bocas: 8, y: 3 } }],
+    armar: equipo((g, p, ec, mont) => { const c = p.clase || 'escritorio', n = Math.max(4, Math.min(52, +p.bocas || 8)), gris = mat(oscuro() ? '#2f353b' : '#9aa3ab', { roughness: 0.45, metalness: 0.4 });
+      if (c === 'din') { caja(g, -0.06, -0.12, -0.01, 0.06, 0.12, 0.13, gris); for (let i = 0; i < Math.min(n, 10); i++) caja(g, -0.045, -0.1 + i * 0.022, 0.13, -0.02, -0.088 + i * 0.022, 0.135, led(ec), false); return; }
+      if (c === 'exterior') { caja(g, -0.2, -0.24, -0.02, 0.2, 0.24, 0.16, mat(oscuro() ? '#3a4046' : '#d9dde0', { roughness: 0.6 })); caja(g, -0.16, -0.2, 0.16, 0.16, 0.2, 0.17, gris); for (let i = 0; i < 4; i++) malla(g, CIL, negro(), -0.12 + i * 0.08, -0.27, 0.07, 0.03, 0.06, 0.03); malla(g, BOLA, led(ec), 0.13, 0.17, 0.175, 0.025, 0.025, 0.025, false); return; }
+      const W = c === 'rack' ? 0.48 : 0.44, D = c === 'rack' ? 0.32 : 0.44, H = c === 'rack' ? 0.05 : 0.06; caja(g, -W / 2, -H / 2, -D / 2, W / 2, H / 2, D / 2, c === 'rack' ? gris : negro());
+      const fil = n > 24 ? 2 : 1, col = Math.ceil(n / fil), paso = (W - 0.08) / col; for (let f = 0; f < fil; f++) for (let i = 0; i < col; i++) caja(g, -W / 2 + 0.04 + i * paso, -H / 2 + 0.008 + f * H * 0.45, D / 2, -W / 2 + 0.04 + i * paso + paso * 0.7, -H / 2 + 0.008 + f * H * 0.45 + H * 0.35, D / 2 + 0.005, led(ec), false); }) },
   // rack: de piso con puerta de vidrio, de pared (más chico, colgado) o abierto (dos parantes). Lo de adentro se documenta aparte (bocas, patch cords, fibras).
   rack: { n: 'Rack', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', protegido: true, etiqueta: p => p.nombre, def: { y: 0, alto: 2, clase: 'piso' },
     campos: [...NODO_CAMPOS(), { k: 'clase', n: 'Tipo de rack', t: 'sel', ops: [['piso', 'De piso'], ['pared', 'De pared'], ['abierto', 'Abierto (parantes)']] }, F.alto('Alto (m)', 0.3, 2.4), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.4, max: 1, paso: 0.05 }, { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r, EQ_CAMPOS[7]],
