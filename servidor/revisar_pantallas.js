@@ -6,7 +6,7 @@
 // Necesita playwright. El menú de quien trabaja en una empresa (grupos y «Mis clientes») se simula sobre la demostración.
 const { chromium, devices } = require('playwright');
 const fs = require('fs'), path = require('path');
-const BASE = (process.argv[2] || 'http://127.0.0.1:8766').replace(/\/$/, ''), OUT = process.argv[3] || 'revision-pantallas';
+const BASE = (process.argv[2] || 'http://127.0.0.1:8766').replace(/\/$/, ''), OUT = process.argv[3] || 'revision-pantallas', SOLO = process.argv[4] ? new RegExp(process.argv[4]) : null;
 fs.mkdirSync(OUT, { recursive: true });
 const EQUIPOS = [
   { n: 'compu', vp: { width: 1440, height: 900 } }, { n: 'compu-chica', vp: { width: 1180, height: 760 } },
@@ -31,6 +31,9 @@ function medir() {
     if (/(auto|scroll|hidden)/.test(sc.overflowX)) continue;
     for (const e of caja.querySelectorAll('button, a, h1, h2, input, select, .navpill')) { if (!vis(e)) continue; const r = e.getBoundingClientRect();
       if (r.right > R.right + 1.5 || r.left < R.left - 1.5) { P.push(`se sale de ${caja.className.split(' ')[0]}: «${(e.textContent || e.value || e.className).trim().slice(0, 30)}»`); break; } } }
+  for (const caja of document.querySelectorAll('.side')) { if (!vis(caja)) continue; const R = caja.getBoundingClientRect(); for (const e of caja.querySelectorAll('button')) { if (!vis(e)) continue; const r = e.getBoundingClientRect(); if (r.bottom > R.bottom + 1.5 && getComputedStyle(caja).overflowY === 'visible') { P.push(`el menú se sale por abajo: «${e.textContent.trim().slice(0, 20)}»`); break; } } }
+  if ([...document.querySelectorAll('.mnav .navcli button')].some(vis)) P.push('la lista de clientes aparece en el menú del celular');
+  if (document.documentElement.classList.contains('navmini') && [...document.querySelectorAll('.side .navcli button')].some(vis)) P.push('la lista de clientes aparece en el menú achicado');
   const altos = [...document.querySelectorAll('.mnav button')].filter(vis).map(e => e.getBoundingClientRect().height); if (altos.some(h => h > 52)) P.push(`botones del menú del celular de ${Math.round(Math.max(...altos))} px de alto`);
   for (const e of document.querySelectorAll('.side .nav button span')) { if (!vis(e)) continue; if (e.scrollWidth > e.clientWidth + 2 && getComputedStyle(e).whiteSpace === 'nowrap') { P.push(`texto cortado en el menú: «${e.textContent.trim()}»`); break; } }
   return P;
@@ -39,6 +42,7 @@ function medir() {
 (async () => {
   const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }); let total = 0; const filas = [];
   for (const eq of EQUIPOS) for (const tema of ['light', 'dark']) for (const mini of eq.d ? [''] : ['', '1']) for (const pa of PANTALLAS) {
+    const nom0 = `${pa.n}-${eq.n}-${tema === 'dark' ? 'oscuro' : 'claro'}${mini ? '-menu-chico' : ''}`; if (SOLO && !SOLO.test(nom0)) continue;
     const ctx = await b.newContext({ ...(eq.d || { viewport: eq.vp }), colorScheme: tema }), p = await ctx.newPage(), err = [];
     p.on('pageerror', e => err.push('error: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource|fonts|ERR_/.test(m.text())) err.push('consola: ' + m.text().slice(0, 120)); });
     await p.addInitScript(m => { try { localStorage.setItem('ondi.mini', m); } catch (e) {} }, mini);
