@@ -441,6 +441,15 @@ export function lomaDe(p) { const A = +p.alto, P = p.pts; if (!(A > 0) || !P || 
   const s0 = (semilla(p) % 628) / 100;
   return (x, z) => { if (x < bb[0] || x > bb[2] || z < bb[1] || z > bb[3] || !enPoli(x, z, P)) return 0; const t = Math.min(1, dPL(x, z, C) / w), s = t * t * (3 - 2 * t);
     return A * s * (nat ? 1 + 0.06 * Math.sin(x * 0.13 + s0) * Math.cos(z * 0.11 - s0) + 0.03 * Math.sin((x - z) * 0.37 + s0) : 1); }; }
+// cajones de un piso de estacionamiento: filas dobles de 5 m de fondo, cajones de 2,5 m y un pasillo de 6 m entre filas (franjas de 16 m, fijas en el mundo).
+// Cuenta solo los cajones que entran enteros en lo pintado, así el número es lo que de verdad entra.
+export function cajones(p) { const c = p.celda || 5, ox = p.x || 0, oz = p.z || 0, S = new Set((p.celdas || []).map(q => q[0] + ',' + q[1])), rayas = []; let n = 0;
+  const pintado = (x, z) => S.has(Math.floor((x - ox) / c) + ',' + Math.floor((z - oz) / c)), lleno = (x0, z0, x1, z1) => pintado(x0 + 0.05, z0 + 0.05) && pintado(x1 - 0.05, z0 + 0.05) && pintado(x0 + 0.05, z1 - 0.05) && pintado(x1 - 0.05, z1 - 0.05);
+  if (!S.size) return { n, rayas }; let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity; for (const q of p.celdas) { x0 = Math.min(x0, q[0]); z0 = Math.min(z0, q[1]); x1 = Math.max(x1, q[0]); z1 = Math.max(z1, q[1]); }
+  x0 = x0 * c + ox; z0 = z0 * c + oz; x1 = (x1 + 1) * c + ox; z1 = (z1 + 1) * c + oz; if ((x1 - x0) * (z1 - z0) > 4e6) return { n: Math.floor((p.celdas.length * c * c) / 25), rayas };
+  for (let zb = Math.floor(z0 / 16) * 16; zb < z1; zb += 16) for (const [za, zz] of [[zb, zb + 5], [zb + 11, zb + 16]]) for (let x = Math.floor(x0 / 2.5) * 2.5; x < x1; x += 2.5) {
+    if (!lleno(x, za, x + 2.5, zz)) continue; n++; rayas.push([x, za, x, zz], [x + 2.5, za, x + 2.5, zz]); rayas.push(za === zb ? [x, zz, x + 2.5, zz] : [x, za, x + 2.5, za]); }
+  return { n, rayas }; }
 // altura del terreno en un punto (playas en pendiente con su talud, y lomas): para apoyar piezas y para caminar
 export const cotaEn = (x, z) => ENT ? ENT.cota(x, z) : 0;
 function entorno(ctx) { const L = ctx && ctx.piezas ? ctx.piezas() : null; if (!L) return null; let f = '' + L.length;
@@ -774,12 +783,26 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'lado', n: 'Lado (m)', t: 'num', min: 0.3, max: 1.5, paso: 0.05 }, { k: 'y', n: 'Altura (m)', t: 'num', min: 1.8, max: 12, paso: 0.05 }, F.r],
     armar(p) { const g = new THREE.Group(), y = p.y, l = p.lado / 2, os = oscuro(); caja(g, -l, y, -l, l, y + 0.04, l, mat('#d7dade', { metalness: 0.4, roughness: 0.4 }), false); caja(g, -l + 0.03, y - 0.008, -l + 0.03, l - 0.03, y, l - 0.03, os ? neon('#ffe6bd') : mat('#fffdf5', { roughness: 0.3, emissive: '#ffe9c4', emissiveIntensity: 0.55 }), false); if (os) pozo(g, 0, 0, Math.min(4, y * 1.1), '#ffd9a0', 0.22); return g; } },
   // piso por losas, como los pisos de Los Sims: se pinta de a cuadros (5 m por defecto) arrastrando; cada cuadro se saca solo con la maza
-  losas: { n: 'Piso por losas (hormigón, adoquín…)', g: 'Terreno', forma: 'punto', capa: 'base', herramienta: 'piso', etiqueta: p => p.nombre, def: { mat: 'hormigon', celda: 5, celdas: [] },
-    campos: [F.nombre, { k: 'mat', n: 'Material', t: 'sel', ops: [['hormigon', 'Hormigón (losas con junta)'], ['adoquin', 'Adoquines'], ['asfalto', 'Asfalto'], ['ripio', 'Ripio'], ['tierra', 'Tierra o balasto'], ['pasto', 'Pasto']] }],
+  // piso por sector: se pinta con rectángulos sobre una cuadrícula de 5 m. Queda arriba del terreno del plano (pintar reemplaza lo que había)
+  // y dos pisos pintados nunca se enciman: lo que se pinta se le saca al que estaba ahí. El estacionamiento lleva cajones pintados y dice cuántos autos entran.
+  losas: { n: 'Piso por sector (se pinta con rectángulos)', g: 'Terreno', forma: 'punto', capa: 'base', herramienta: 'piso', etiqueta: p => p.nombre, def: { mat: 'hormigon', celda: 5, celdas: [] },
+    variantes: [{ n: 'Piso: hormigón', o: { mat: 'hormigon' } }, { n: 'Piso: hormigón de calzada', o: { mat: 'calzada' } }, { n: 'Piso: asfalto', o: { mat: 'asfalto' } }, { n: 'Piso: estacionamiento', o: { mat: 'estacionamiento' } },
+      { n: 'Piso: pasto', o: { mat: 'pasto' } }, { n: 'Piso: tierra o balasto', o: { mat: 'tierra' } }, { n: 'Piso: ripio', o: { mat: 'ripio' } }, { n: 'Piso: adoquines', o: { mat: 'adoquin' } }],
+    campos: [F.nombre, { k: 'mat', n: 'Material', t: 'sel', ops: [['hormigon', 'Hormigón (losas con junta)'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['estacionamiento', 'Estacionamiento (cajones pintados)'], ['adoquin', 'Adoquines'], ['ripio', 'Ripio'], ['tierra', 'Tierra o balasto'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro']] }],
     armar(p) { const g = new THREE.Group(), c = p.celda || 5, C = p.celdas || []; if (!C.length) return g; const pos = [], uv = [], idx = [];
       C.forEach(([i, j], n) => { const x0 = i * c, z0 = j * c, x1 = x0 + c, z1 = z0 + c, k = n * 4, ox = p.x || 0, oz = p.z || 0; pos.push(x0, 0, z0, x1, 0, z0, x1, 0, z1, x0, 0, z1); uv.push(x0 + ox, -(z0 + oz), x1 + ox, -(z0 + oz), x1 + ox, -(z1 + oz), x0 + ox, -(z1 + oz)); idx.push(k, k + 2, k + 1, k, k + 3, k + 2); });
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, matSuelo(p.mat || 'hormigon', { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }) || mat(suelo(p.mat || 'tierra'), { roughness: 0.95 })); m.position.y = 0.03; m.receiveShadow = true; m.userData.noChoca = true; g.add(m); return g; } },
+      const k = p.mat === 'estacionamiento' ? 'asfalto' : p.mat || 'hormigon', po = { polygonOffset: true, polygonOffsetFactor: -9, polygonOffsetUnits: -4 };
+      let ms = matSuelo(k, po) || mat(suelo(k), { roughness: 0.95, ...po }); if (/^(pasto|pasto2)$/.test(k) && ms.map && !oscuro()) ms = conManchas(ms); else if (k === 'calzada' && ms.map) ms = calzadaReal(ms);
+      const m = new THREE.Mesh(geo, ms); m.position.y = 0.05; m.receiveShadow = true; m.userData.noChoca = true; g.add(m);   // arriba del terreno del plano (0,012 a 0,04): pintar un sector lo reemplaza
+      // cajones: franjas pintadas de 12 cm (una línea de un píxel se perdía), arriba del asfalto
+      if (p.mat === 'estacionamiento') { const L = cajones(p), ox = p.x || 0, oz = p.z || 0, pos = [], ix = [], w = 0.06;
+        for (const [x0, z0, x1, z1] of L.rayas) { const dx = x1 - x0, dz = z1 - z0, l = Math.hypot(dx, dz) || 1, nx = -dz / l * w, nz = dx / l * w, k = pos.length / 3;
+          pos.push(x0 - ox + nx, 0, z0 - oz + nz, x1 - ox + nx, 0, z1 - oz + nz, x1 - ox - nx, 0, z1 - oz - nz, x0 - ox - nx, 0, z0 - oz - nz); ix.push(k, k + 2, k + 1, k, k + 3, k + 2); }
+        if (pos.length) { const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); lg.setIndex(ix); lg.computeVertexNormals();
+          const ln = new THREE.Mesh(lg, mat(oscuro() ? '#6b7178' : '#f1f1ec', { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -6, side: THREE.DoubleSide })); ln.position.y = 0.055; ln.receiveShadow = true; ln.userData.noChoca = true; g.add(ln); }
+        g.userData.cuenta = L.n; }
+      return g; } },
   estanteria: { n: 'Estantería (rack de pallets)', g: 'Logística', forma: 'linea', capa: 'logistica', etiqueta: p => p.nombre, def: { modulo: 2, prof: 1.1, alto: 6, niveles: 4, doble: false, ocupacion: 70, color: '#2F6FD6' },
     campos: [F.nombre, { k: 'modulo', n: 'Largo de cada módulo (m)', t: 'num', min: 1, max: 4, paso: 0.1 }, { k: 'prof', n: 'Fondo (m)', t: 'num', min: 0.4, max: 1.6, paso: 0.05 }, F.alto('Alto (m)', 1.5, 14), { k: 'niveles', n: 'Niveles', t: 'num', min: 1, max: 10, paso: 1 }, { k: 'doble', n: 'Doble (espalda con espalda)', t: 'bool' }, { k: 'ocupacion', n: 'Con pallets (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'color', n: 'Color de los parantes', t: 'color' }],
     armar(p) { const g = new THREE.Group(), os = oscuro(), P = p.pts || [], md = +p.modulo || 2, pr = +p.prof || 1.1, H = +p.alto || 6, nl = Math.max(1, +p.niveles || 4), R = azar(P.length * 97 + (p.id || '').length), filas = p.doble ? [-(pr / 2 + 0.1), pr / 2 + 0.1] : [0];

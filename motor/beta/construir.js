@@ -7,7 +7,7 @@
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
 import { THREE } from './nucleo.js?v=18';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=57';
+import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=58';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -39,7 +39,7 @@ export function construir(M) {
   function empezar(h, k) { const antes = M.SEL; cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
     if (h === 'pared') { T.pts = []; T.p = null; T.arr = null; M.hint('<b>Pared</b>: arrastrá de punta a punta, como en Los Sims (o tocá punto por punto). Si arrancás en la punta sigue la misma pared; si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Q</kbd>/<kbd>E</kbd> giran · <kbd>Esc</kbd> sale'); }
     if (h === 'recinto') { T.a = null; T.p = null; T.zona = k === 'zona'; M.hint(T.zona ? '<b>Zona</b>: arrastrá de una esquina a la otra sobre el sector que querés nombrar (una oficina, un depósito). No lleva paredes ni piso. <kbd>Esc</kbd> sale' : '<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
-    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint('<b>Piso por losas</b>: arrastrá un rectángulo y se llena de losas · tocá un cuadro para sumar uno solo · con <kbd>Alt</kbd> borra · si había un piso elegido, se suma a ese · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Esc</kbd> sale'); }
+    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint('<b>Piso por sector</b>: arrastrá un rectángulo y se pinta (reemplaza lo que había, sin encimar) · tocá un cuadro para sumar uno solo · con <kbd>Alt</kbd> borra · si había un piso elegido, se suma a ese · el material se cambia en su ficha · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Esc</kbd> sale'); }
     if (h === 'abertura') { T.k = ABERTURAS[k] ? k : 'puerta'; T.en = null; M.hint(`<b>${ABERTURAS[T.k].n}</b>: pasá por una pared y tocá donde va. <kbd>Shift</kbd> pone varias · <kbd>Esc</kbd> sale`); }
     M.herrVis(h === 'abertura' ? T.k : h); }
   // ---------- piso por losas ----------
@@ -133,7 +133,15 @@ export function construir(M) {
     if (!D.mov && Math.abs(k) < 0.01) return true; D.mov = true; const pts = P.map(q => [...q]); for (const j of [i, (i + 1) % n]) pts[j] = [Math.round((P[j][0] + nx * k) * 100) / 100, Math.round((P[j][1] + nz * k) * 100) / 100];
     D.p.pts = pts; M.rehacer(D.p); marcar(); const ant = pts[(i - 1 + n) % n]; medir(fmt(Math.hypot(pts[i][0] - ant[0], pts[i][1] - ant[1])) + ' m', (pts[i][0] + ant[0]) / 2, (pts[i][1] + ant[1]) / 2, 3); return true; }
   function soltar(e) {
-    if (T.h === 'piso' && T.pint) { const L = T.pint.L; T.pint = null; medir(''); if (!L.celdas.length) { M.quitar(L, true); T.losa = null; } else M.cambio(); return true; }
+    if (T.h === 'piso' && T.pint) { const A = T.pint, L = A.L; T.pint = null; medir('');
+      // lo que se pintó deja de ser de los otros pisos pintados: nunca quedan dos encimados. Un piso con candado no se toca: se le respeta su lugar.
+      if (!A.borra && L.celdas.length) { const antes = new Set(A.antes.map(q => q.join(','))), nuevas = new Set(L.celdas.map(q => q.join(',')).filter(k => !antes.has(k))); let sacadas = 0, trabadas = 0;
+        for (const O of M.E.piezas.slice()) { if (O === L || O.t !== 'losas' || (O.celda || 5) !== (L.celda || 5) || (O.x || 0) !== (L.x || 0) || (O.z || 0) !== (L.z || 0)) continue;
+          const quedan = O.celdas.filter(q => !nuevas.has(q.join(','))); if (quedan.length === O.celdas.length) continue;
+          if (O.candado || O.fijo) { const suyas = new Set(O.celdas.map(q => q.join(','))); trabadas += L.celdas.length - (L.celdas = L.celdas.filter(q => !suyas.has(q.join(',')))).length; continue; }
+          sacadas += O.celdas.length - quedan.length; O.celdas = quedan; if (!quedan.length) M.quitar(O, true); else M.rehacer(O); }
+        if (trabadas) M.rehacer(L); if (sacadas || trabadas) M.toast(`${sacadas ? `Reemplazó ${sacadas} cuadros de otro piso` : ''}${sacadas && trabadas ? ' · ' : ''}${trabadas ? `${trabadas} cuadros quedaron como estaban (ese piso tiene candado)` : ''}`); }
+      if (!L.celdas.length) { M.quitar(L, true); T.losa = null; } else M.cambio(); return true; }
     if (T.h === 'pared' && T.arr) { const A = T.arr; T.arr = null; if (!A.mov) return true;   // fue un toque: lo pone el clic, punto por punto
       const p = motor.enPiso(e.clientX, e.clientY); if (!p) return true; const prev = T.pts[T.pts.length - 1], q = iman(p, e, prev); if (Math.hypot(q[0] - prev[0], q[1] - prev[1]) < 0.2) return true;
       if (T.pts.length > 2 && Math.hypot(q[0] - T.pts[0][0], q[1] - T.pts[0][1]) < 0.05) { recintoDe(T.pts); return true; } T.pts.push(q); punto(q[0], q[1]); paredPasar(p, e); return true; }
