@@ -425,7 +425,7 @@ export async function abrirMaqueta(o) {
       E.piezas.push(q); rehacer(q); n2++; if (['edificio', 'galpon', 'recinto'].includes(q.t) && !grande) grande = q; }
     cambio(); if (grande) elegir(grande); toast(`${n2} pieza${n2 > 1 ? 's' : ''} importada${n2 > 1 ? 's' : ''}${grande ? ': mové o girá el edificio y sus equipos van con él' : ''}`); }
   let cambiarImagen = null;
-  async function leerImagen(f) { if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) throw new Error('El PDF no se puede leer acá: exportá el plano como imagen (PNG o JPG) o sacale una captura'); if (!/^image\//.test(f.type)) throw new Error('Tiene que ser una imagen (PNG o JPG)');
+  async function leerImagen(f) { if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) throw new Error('El PDF no se puede leer acá: exportá el plano como imagen (PNG o JPG) o sacale una captura'); if (!/^image\//.test(f.type) && !/\.(png|jpe?g|webp|gif)$/i.test(f.name)) throw new Error('Tiene que ser una imagen (PNG o JPG)');
     const bm = await createImageBitmap(f), k = Math.min(1, 2400 / Math.max(bm.width, bm.height)), c = document.createElement('canvas'); c.width = Math.round(bm.width * k); c.height = Math.round(bm.height * k);
     const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close();
     let src = c.toDataURL('image/webp', 0.86); if (!src.startsWith('data:image/webp')) src = c.toDataURL('image/jpeg', 0.86); return { img: src, aspecto: c.height / c.width }; }
