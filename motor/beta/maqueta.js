@@ -14,13 +14,13 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=66';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=67';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=56';
-import { juego } from './juego.js?v=7';
+import { construir } from './construir.js?v=57';
+import { juego } from './juego.js?v=8';
 import { recorrer } from './recorrer.js?v=23';
-import { transito } from './transito.js?v=56';
+import { transito } from './transito.js?v=57';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -755,7 +755,7 @@ export async function abrirMaqueta(o) {
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
   const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
-    avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
+    avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
   // «Salir de la maqueta» (menú de pausa): deja de recorrer y de editar, sale de la pantalla completa y le avisa a la app (host.salir); sola, vuelve a la vista general
   function salir() { if (RC.R.on) RC.paseo(false); if (ED.on) editar(false); elegir(null); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (document.documentElement.classList.contains('mfull')) pantalla(false);
