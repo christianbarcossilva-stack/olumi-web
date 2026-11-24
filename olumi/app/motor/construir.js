@@ -7,8 +7,8 @@
 //   Con la mano:  tocar una pared la elige (tipo, color, aberturas, arrastrarla estira el recinto); tocar el piso elige el recinto entero,
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
-import { THREE } from './nucleo.js?v=957f7798';
-import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=957f7798';
+import { THREE } from './nucleo.js?v=89bdb1cf';
+import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=89bdb1cf';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -37,10 +37,11 @@ export function construir(M) {
   const punto = (x, z) => { const m = new THREE.Mesh(BOL, mB); m.scale.setScalar(Math.max(0.12, motor.C.d * 0.005)); m.position.set(x, 0.3, z); m.renderOrder = 9; guias.add(m); motor.dirty = true; };
 
   // ---------- herramientas ----------
-  function empezar(h, k) { const antes = M.SEL; cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
-    if (h === 'pared') { T.pts = []; T.p = null; T.arr = null; M.hint('<b>Pared</b>: arrastrá de punta a punta, como en Los Sims (o tocá punto por punto). Si arrancás en la punta sigue la misma pared; si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Q</kbd>/<kbd>E</kbd> giran · <kbd>Esc</kbd> sale'); }
+  function empezar(h, k) { const antes = M.SEL; cancelar(); SUB = null; T.h = h; T.zona = false; T.contorno = false; M.elegir(null); guias.position.y = motor.pisoY || 0;   // las guías, a la altura de la planta en la que se dibuja
+    if (h === 'pared' && k === 'contorno') { T.pts = []; T.p = null; T.arr = null; T.contorno = true; M.hint(`<b>Contorno ${M.planta ? 'del ' + M.nomPlanta(M.planta).toLowerCase() : 'de la planta baja'}</b>: tocá cada esquina de afuera del edificio sobre el plano y terminá tocando la primera. Salen el piso y las paredes de afuera de esta planta. <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Esc</kbd> sale`); }
+    else if (h === 'pared') { T.pts = []; T.p = null; T.arr = null; M.hint('<b>Pared</b>: arrastrá de punta a punta, como en Los Sims (o tocá punto por punto). Si arrancás en la punta sigue la misma pared; si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Q</kbd>/<kbd>E</kbd> giran · <kbd>Esc</kbd> sale'); }
     if (h === 'recinto') { T.a = null; T.p = null; T.zona = k === 'zona'; M.hint(T.zona ? '<b>Zona</b>: arrastrá de una esquina a la otra sobre el sector que querés nombrar (una oficina, un depósito). No lleva paredes ni piso. <kbd>Esc</kbd> sale' : '<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
-    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint('<b>Piso por sector</b>: arrastrá un rectángulo y se pinta (reemplaza lo que había, sin encimar) · tocá un cuadro para sumar uno solo · con <kbd>Alt</kbd> borra · si había un piso elegido, se suma a ese · el material se cambia en su ficha · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Esc</kbd> sale'); }
+    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint(M.motor.tactil ? '<b>Piso por sector</b>: arrastrá un rectángulo y se pinta (reemplaza lo que había, sin encimar) · tocá un cuadro para sumar uno solo · si había un piso elegido, se suma a ese · el material se cambia en su ficha · con dos dedos se mueve la vista' : '<b>Piso por sector</b>: <kbd>Shift</kbd> + arrastrar pinta un rectángulo (reemplaza lo que había, sin encimar) · <kbd>Shift</kbd> + clic suma un cuadro · <kbd>Shift</kbd> + <kbd>Alt</kbd> borra · sin <kbd>Shift</kbd> el arrastre mueve la vista · si había un piso elegido, se suma a ese · <kbd>Esc</kbd> sale'); }
     if (h === 'relieve') { T.modo = (k && PINCEL[k.modo] && k.modo) || T.modo || 'subir'; T.radio = T.radio || 6; T.mat = (k && k.mat) || 'pasto'; pincelPista(); }
     if (h === 'abertura') { T.k = ABERTURAS[k] ? k : 'puerta'; T.en = null; M.hint(`<b>${ABERTURAS[T.k].n}</b>: pasá por una pared y tocá donde va. <kbd>Shift</kbd> pone varias · <kbd>Esc</kbd> sale`); }
     M.herrVis(h === 'abertura' ? T.k : h); }
@@ -59,7 +60,7 @@ export function construir(M) {
   const PINCEL = { subir: 'Subir', bajar: 'Bajar', nivelar: 'Nivelar', alisar: 'Alisar' };
   const anillo = new THREE.Mesh(new THREE.RingGeometry(0.95, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x1d9bf0, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
   anillo.renderOrder = 9; anillo.visible = false; motor.scene.add(anillo);
-  const pincelPista = () => M.hint(`<b>Pincel de terreno · ${PINCEL[T.modo]}</b>: ${{ subir: 'mantené apretado y pasá por donde querés que suba', bajar: 'mantené apretado y pasá por donde querés que baje (hasta el nivel del piso)', nivelar: 'empezá donde está la altura que querés y arrastrá: lo demás queda a esa altura', alisar: 'pasá por encima para emparejar los pozos y los picos' }[T.modo]} · <kbd>Alt</kbd> ${T.modo === 'bajar' ? 'sube' : 'baja'} · <kbd>+</kbd> <kbd>−</kbd> tamaño (${fmt(T.radio * 2)} m) · <kbd>Esc</kbd> sale`);
+  const pincelPista = () => M.hint(`<b>Pincel de terreno · ${PINCEL[T.modo]}</b>: ${M.motor.tactil ? '' : '<kbd>Shift</kbd> + '}${{ subir: 'mantené apretado y pasá por donde querés que suba', bajar: 'mantené apretado y pasá por donde querés que baje (hasta el nivel del piso)', nivelar: 'empezá donde está la altura que querés y arrastrá: lo demás queda a esa altura', alisar: 'pasá por encima para emparejar los pozos y los picos' }[T.modo]} · <kbd>Alt</kbd> ${T.modo === 'bajar' ? 'sube' : 'baja'} · <kbd>+</kbd> <kbd>−</kbd> tamaño (${fmt(T.radio * 2)} m) · ${M.motor.tactil ? 'con dos dedos se mueve la vista' : 'sin <kbd>Shift</kbd> el arrastre mueve la vista'} · <kbd>Esc</kbd> sale`);
   // dónde cae el puntero sobre el terreno (con lomas y relieve, no sobre el plano del piso)
   function enTerreno(e) { let p = motor.enPiso(e.clientX, e.clientY); if (!p) return null; for (let k = 0; k < 3; k++) { const q = motor.enPiso(e.clientX, e.clientY, cotaEn(p.x, p.z)); if (!q) break; p = q; } return p; }
   function verAnillo(p) { anillo.visible = !!p; if (p) { anillo.position.set(p.x, cotaEn(p.x, p.z) + 0.15, p.z); anillo.scale.setScalar(T.radio); } motor.dirty = true; }
@@ -91,6 +92,8 @@ export function construir(M) {
     T.pts.push(q); if (T.pts.length === 1) punto(q[0], q[1]); else paredPasar(p, e); }
   function paredFin() { const pts = T.pts; guias.clear(); medir(''); if (T.p && pts.length >= 2) { const p = T.p; p.pts = pts.map(q => [...q]); delete p._p; M.rehacer(p); T.p = null; T.pts = []; M.cambio(); M.toast('Pared lista'); } else { if (T.p) M.quitar(T.p, true); T.p = null; T.pts = []; } }
   function recintoDe(pts) { if (T.p) M.quitar(T.p, true); T.p = null; T.pts = []; T.a = null; guias.clear(); medir('');
+    if (T.contorno) { const p = { id: M.nuevoId('recinto'), t: 'recinto', nombre: M.nomPlanta(M.planta), grosor: 0.2, piso: 'hormigon', pts: pts.map(q => [...q]) }; M.E.piezas.push(p); M.rehacer(p); M.cambio(); T.contorno = false; cancelar(); M.hint('');
+      M.toast(`${p.nombre}: ${fmt(Math.abs(areaSig(p.pts)))} m² con su piso y las paredes de afuera. Ahora los ambientes de adentro con Pared (B) o Recinto (N)${M.planta ? '' : '; la planta de arriba, con Re Pág'}`, 6000); M.elegir(p); return p; }
     const p = { id: M.nuevoId('recinto'), t: 'recinto', nombre: nombreNuevo(T.zona), pts: pts.map(q => [...q]), ...(T.zona && { tipo: 'sin', piso: 'sin' }) }; M.E.piezas.push(p); M.rehacer(p); M.cambio(); M.toast(`${p.nombre}: ${fmt(Math.abs(areaSig(p.pts)))} m². Tocá el piso para moverlo entero`); return p; }
   // recinto de esquina a esquina
   function recPrev(p, e) { const q = iman(p, e), a = T.a, pts = [[a[0], a[1]], [q[0], a[1]], [q[0], q[1]], [a[0], q[1]]], w = Math.abs(q[0] - a[0]), f = Math.abs(q[1] - a[1]); T.q = q;
@@ -136,8 +139,10 @@ export function construir(M) {
 
   // ---------- lo que le llega del mouse (maqueta.js le pasa cada evento antes de usarlo) ----------
   // sobre qué pared o abertura cayó el toque (null si fue el piso de un recinto u otra cosa)
-  function sobre(hit) { if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) return null; const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l || l.d > (p.grosor || 0.15) / 2 + 0.22) return null;
-    return { p, l, j: (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05) }; }
+  function sobre(hit) { if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) return null; const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l) return null;
+    const j = (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05);
+    // la hoja de una puerta abierta sobresale hasta un metro de la pared: tocándola también se elige la puerta
+    if (l.d > (p.grosor || 0.15) / 2 + (j >= 0 ? 1.1 : 0.22)) return null; return { p, l, j }; }
   // un toque con la mano: si cayó en una pared o una abertura, la elige
   function tocar(hit) { const s = sobre(hit); if (!s) { if (SUB) { SUB = null; marcar(); } return false; } SUB = s.j >= 0 ? { id: s.p.id, hueco: s.j } : { id: s.p.id, lado: s.l.i }; M.elegir(s.p); marcar(); M.ficha(); return true; }
   function agarrar(e, p0, hit) {

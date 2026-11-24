@@ -8,7 +8,7 @@
 // En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
 // (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=eb3c83a2';
+import { THREE } from './nucleo.js?v=89bdb1cf';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);

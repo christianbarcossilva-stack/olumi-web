@@ -7,8 +7,8 @@
 //   Con la mano:  tocar una pared la elige (tipo, color, aberturas, arrastrarla estira el recinto); tocar el piso elige el recinto entero,
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
-import { THREE } from './nucleo.js?v=eb3c83a2';
-import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=eb3c83a2';
+import { THREE } from './nucleo.js?v=89bdb1cf';
+import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=89bdb1cf';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -139,8 +139,10 @@ export function construir(M) {
 
   // ---------- lo que le llega del mouse (maqueta.js le pasa cada evento antes de usarlo) ----------
   // sobre qué pared o abertura cayó el toque (null si fue el piso de un recinto u otra cosa)
-  function sobre(hit) { if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) return null; const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l || l.d > (p.grosor || 0.15) / 2 + 0.22) return null;
-    return { p, l, j: (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05) }; }
+  function sobre(hit) { if (M.ED.h !== 'mano' || !hit || !esMuro(hit.p)) return null; const p = hit.p, l = ladoDe(p, hit.h.point.x, hit.h.point.z); if (!l) return null;
+    const j = (p.huecos || []).findIndex(u => u.s === l.i && l.s >= u.a - 0.05 && l.s <= u.a + anchoDe(u) + 0.05);
+    // la hoja de una puerta abierta sobresale hasta un metro de la pared: tocándola también se elige la puerta
+    if (l.d > (p.grosor || 0.15) / 2 + (j >= 0 ? 1.1 : 0.22)) return null; return { p, l, j }; }
   // un toque con la mano: si cayó en una pared o una abertura, la elige
   function tocar(hit) { const s = sobre(hit); if (!s) { if (SUB) { SUB = null; marcar(); } return false; } SUB = s.j >= 0 ? { id: s.p.id, hueco: s.j } : { id: s.p.id, lado: s.l.i }; M.elegir(s.p); marcar(); M.ficha(); return true; }
   function agarrar(e, p0, hit) {

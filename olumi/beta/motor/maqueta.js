@@ -13,15 +13,15 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=eb3c83a2';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=eb3c83a2';
-import { ve, dominio, DOMINIOS } from './plano.js?v=eb3c83a2';
-import { svg } from './iconos.js?v=eb3c83a2';
-import { construir } from './construir.js?v=eb3c83a2';
-import { juego } from './juego.js?v=eb3c83a2';
-import { recorrer } from './recorrer.js?v=eb3c83a2';
-import { transito } from './transito.js?v=eb3c83a2';
-import { extras } from './extras.js?v=eb3c83a2';
+import { THREE, crearMotor } from './nucleo.js?v=89bdb1cf';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=89bdb1cf';
+import { ve, dominio, DOMINIOS } from './plano.js?v=89bdb1cf';
+import { svg } from './iconos.js?v=89bdb1cf';
+import { construir } from './construir.js?v=89bdb1cf';
+import { juego } from './juego.js?v=89bdb1cf';
+import { recorrer } from './recorrer.js?v=89bdb1cf';
+import { transito } from './transito.js?v=89bdb1cf';
+import { extras } from './extras.js?v=89bdb1cf';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -141,7 +141,7 @@ export async function abrirMaqueta(o) {
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
-      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=eb3c83a2'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=89bdb1cf'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
         if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
@@ -163,8 +163,9 @@ export async function abrirMaqueta(o) {
   for (const c of raiz.querySelectorAll('[data-capa]')) c.checked = capas[c.dataset.capa] !== false;
   const LUG = new Set();   // lugares cuyas puertas están ocultas
   const PL = { act: 0 }, NACEN = new Set(), conPlanta = t => t === 'plano' || !!(TIPOS[t] && TIPOS[t].g !== 'Terreno');
-  const enPlanta = p => { if (!p || !conPlanta(p.t)) return true; const n = nivelDe(p); return p.t === 'plano' ? n === PL.act : !ED.on || n <= PL.act; };
-  const elegible = p => !ED.on || !p || (conPlanta(p.t) ? nivelDe(p) === PL.act : PL.act === 0);
+  const plAct = () => motor.caminando ? 0 : PL.act;   // a pie se está en planta baja: todavía no hay escalera de interior
+  const enPlanta = p => { if (!p || !conPlanta(p.t)) return true; const n = nivelDe(p); return p.t === 'plano' ? n === plAct() : !ED.on || n <= plAct(); };
+  const elegible = p => !ED.on || !p || (conPlanta(p.t) ? nivelDe(p) === plAct() : plAct() === 0);
   function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))) && enPlanta(p); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; if (k.userData.interior) k.visible = !capas.techos; }); }
   motor.alTema.push(() => { armarTodo(); });
   function encuadre() { const b = new THREE.Box3(); for (const p of E.piezas) { const [x, z] = centro(p); if (p.pts) for (const q of p.pts) b.expandByPoint(new THREE.Vector3(q[0], 0, q[1])); else b.expandByPoint(new THREE.Vector3(x, 0, z)); }
@@ -185,7 +186,7 @@ export async function abrirMaqueta(o) {
   function rotulos(id) { for (const e of etq) if (e.p.puerta === id) { const T = TIPOS[e.p.t]; rotulo(e.el, e.p, T, T.etiqueta({ ...T.def, ...e.p })); e.w = 0; } motor.dirty = true; }
   let lejosAntes = null;
   motor.despues.push(() => { const d = motor.C.d, lejos = d > 75, w = canvas.clientWidth, h = canvas.clientHeight, pase = RC.R.on; lbl.classList.toggle('lejos', lejos); if (lejos !== lejosAntes) { lejosAntes = lejos; for (const e of etq) e.w = 0; }
-    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p && !(ED.on && PL.act && conPlanta(e.p.t) && nivelDe(e.p) < PL.act);   // editando arriba, los nombres de abajo no tapan if (!vis) { e.fuera = true; continue; }
+    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p && !(ED.on && PL.act && conPlanta(e.p.t) && nivelDe(e.p) < PL.act);   /* editando arriba, los nombres de abajo no tapan */ if (!vis) { e.fuera = true; continue; }
       if (e.p.pts) { const [x, z] = centro(e.p); e.v.set(x, e.v.y, z); } else e.v.set(e.p.x || 0, e.v.y, e.p.z || 0);
       const s = motor.aPantalla(e.v); let fuera = s.z > 1 || s.x < -60 || s.y < -30 || s.x > w + 60 || s.y > h + 30 || (e.eq && d > 700 && !e.siempre);
       if (pase && Math.hypot(e.v.x - RC.R.x, e.v.z - RC.R.z) > (e.eq ? 16 : 70)) fuera = true;
@@ -337,9 +338,10 @@ export async function abrirMaqueta(o) {
   // ---------- plantas (como en Los Sims): Re Pág / Av Pág o las flechitas de la barra cambian la planta en la que se dibuja ----------
   // Lo que se pone nace en la planta activa y sube 2,8 m por planta. Editando se ven la planta activa y las de abajo; de cada plano, solo el de la planta activa.
   // El terreno (pasto, calles, lomas) es siempre de la planta baja.
-  function verPlantas() { for (const g of objs.values()) aplicarCapas(g); motor.pisoY = ED.on ? PL.act * ALTO_PLANTA : 0; $('#bplnom').textContent = NOM_PLANTA(PL.act); $('#bplbaja').disabled = PL.act <= 0; $('#bplsube').disabled = PL.act >= 5; motor.dirty = true; }
+  function verPlantas() { for (const g of objs.values()) aplicarCapas(g); motor.pisoY = ED.on ? plAct() * ALTO_PLANTA : 0; $('#bplnom').textContent = NOM_PLANTA(plAct()); PL.vista = motor.caminando; $('#bplbaja').disabled = PL.act <= 0; $('#bplsube').disabled = PL.act >= 5; motor.dirty = true; }
   function planta(n, aviso = true) { n = Math.max(0, Math.min(5, n)); if (n === PL.act) return; PL.act = n; CON.cancelar(); cancelar(true); if (SEL && !elegible(SEL)) elegir(null); verPlantas(); motor.ir({ ty: n * ALTO_PLANTA }, 0.35);
     if (aviso) { const hay = E.piezas.some(q => q.t !== 'plano' && conPlanta(q.t) && nivelDe(q) === n), pl = E.piezas.some(q => q.t === 'plano' && nivelDe(q) === n); toast(NOM_PLANTA(n) + (hay ? '' : pl ? ': vacía. Dibujá encima del plano: el contorno con Pared (B), cerrando en la primera esquina' : ': vacía. Podés subir su plano desde el inventario (Plano del lugar)')); } }
+  motor.cada.push(() => { if (!!motor.caminando !== !!PL.vista && objs.size) verPlantas(); return false; });
   $('#bplsube').onclick = () => planta(PL.act + 1); $('#bplbaja').onclick = () => planta(PL.act - 1);
   // vistas de pared, como en Los Sims: altas, cortadas (se ve adentro) o al ras del piso
   function paredes(v) { ctx.paredes = v; document.querySelectorAll('[data-pared]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pared === v)); for (const p of E.piezas) if (CON.esMuro(p) && objs.has(p.id)) rehacer(p); CON.marcar(); toast({ alta: 'Paredes altas', corte: 'Paredes cortadas', baja: 'Paredes al ras' }[v]); }
@@ -466,7 +468,7 @@ export async function abrirMaqueta(o) {
     else if (base) toast(`${NOM_PLANTA(n)}: quedó encima del plano ${nivelDe(base) ? 'del ' + NOM_PLANTA(nivelDe(base)).toLowerCase() : 'de la planta baja'}, con la misma escala y semitransparente. Arrastralo (y giralo con R) hasta que calce con las paredes de abajo; después, el contorno desde su ficha`, 9000);
     else medir(p); }
   // elegir entre varias opciones (un botón por opción); devuelve el valor o null
-  function pideOpcion(titulo, detalle, ops, def) { return new Promise(listo => { const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p><div class="mopciones">${ops.map(([v, t]) => `<button class="mbtn${v === def ? ' pri' : ''}" type="button" data-v="${esc(v)}">${esc(t)}</button>`).join('')}</div><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button></div></form>`; box.hidden = false;
+  function pideOpcion(titulo, detalle, ops, def) { return new Promise(listo => { if (document.pointerLockElement) document.exitPointerLock(); const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p><div class="mopciones">${ops.map(([v, t]) => `<button class="mbtn${v === def ? ' pri' : ''}" type="button" data-v="${esc(v)}">${esc(t)}</button>`).join('')}</div><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button></div></form>`; box.hidden = false;
       const fin = v => { box.hidden = true; box.innerHTML = ''; removeEventListener('keydown', tecla, true); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(null); } };
       box.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const o = ops.find(([v]) => String(v) === b.dataset.v); fin(o ? o[0] : null); }); box.querySelector('[data-no]').onclick = () => fin(null); addEventListener('keydown', tecla, true); setTimeout(() => (box.querySelector('.pri') || box.querySelector('[data-v]')).focus(), 30); }); }
   $('#mimg').addEventListener('change', e => { subirPlano(e.target.files[0]); e.target.value = ''; });
@@ -485,7 +487,7 @@ export async function abrirMaqueta(o) {
       // con la escala lista y la planta vacía, lo siguiente es el contorno del edificio
       else if (!E.piezas.some(q => q.t !== 'plano' && conPlanta(q.t) && nivelDe(q) === nivelDe(p))) { if (nivelDe(p) !== PL.act) planta(nivelDe(p), false); CON.empezar('pared', 'contorno'); } }); }
   function finMedir() { MED.p = null; MED.pts = []; MED.g.clear(); herrVis(null); motor.dirty = true; }
-  function pideNumero(titulo, detalle, unidad, atajos = []) { return new Promise(listo => { const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p>${atajos.length ? `<div class="mopciones">${atajos.map(([v, t]) => `<button class="mbtn" type="button" data-v="${v}">${esc(t)}</button>`).join('')}</div>` : ''}<label class="mnum"><input type="number" inputmode="decimal" step="0.01" min="0.1" required aria-label="${esc(titulo)}"><span>${esc(unidad)}</span></label><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button><button class="mbtn pri" type="submit">${svg('check', 16)}Ajustar</button></div></form>`; box.hidden = false;
+  function pideNumero(titulo, detalle, unidad, atajos = []) { return new Promise(listo => { if (document.pointerLockElement) document.exitPointerLock(); const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p>${atajos.length ? `<div class="mopciones">${atajos.map(([v, t]) => `<button class="mbtn" type="button" data-v="${v}">${esc(t)}</button>`).join('')}</div>` : ''}<label class="mnum"><input type="number" inputmode="decimal" step="0.01" min="0.1" required aria-label="${esc(titulo)}"><span>${esc(unidad)}</span></label><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button><button class="mbtn pri" type="submit">${svg('check', 16)}Ajustar</button></div></form>`; box.hidden = false;
       const f = box.querySelector('form'), inp = f.querySelector('input'), fin = v => { box.hidden = true; box.innerHTML = ''; removeEventListener('keydown', tecla, true); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(null); } };
       f.onsubmit = e => { e.preventDefault(); const v = parseFloat(String(inp.value).replace(',', '.')); if (v > 0) fin(v); }; f.querySelector('[data-no]').onclick = () => fin(null); f.querySelectorAll('[data-v]').forEach(b => b.onclick = () => fin(+b.dataset.v)); addEventListener('keydown', tecla, true); setTimeout(() => inp.focus(), 30); }); }
   const lee = f => { if (!f) return; if (/^image\//.test(f.type) || /\.pdf$/i.test(f.name)) { cambiarImagen = null; subirPlano(f); return; } if (!/\.json$/i.test(f.name)) { toast('Tiene que ser un archivo .json o la imagen de un plano'); return; } const r = new FileReader(); r.onload = () => importar(String(r.result)); r.readAsText(f); };

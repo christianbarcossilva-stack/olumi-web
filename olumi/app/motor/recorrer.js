@@ -8,7 +8,7 @@
 // En la compu se maneja como un juego: al entrar se toma el mouse (mover el mouse mira, sin arrastrar) y la mira del centro apunta. Espacio salta
 // (se puede subir a lo bajo: un escritorio, un cantero) y dos veces seguidas pasa al vuelo o vuelve. Esc suelta el mouse; un clic en la maqueta lo retoma.
 // No atraviesa nada: cajas de lo que ocupa lugar y tramos macizos de las paredes (userData.segs, que valen aunque la pieza esté girada).
-import { THREE } from './nucleo.js?v=957f7798';
+import { THREE } from './nucleo.js?v=89bdb1cf';
 
 export function recorrer(M) {
   const { motor, mundo, objs, TIPOS } = M, C = motor.C, $ = s => document.querySelector(s);
@@ -203,6 +203,7 @@ export function recorrer(M) {
     if (R.ob) { const A = M.AVM(); A.avPose(R.ob, v > 0.25 ? 'walk' : 'idle', dt * (v > 4.5 ? 2 : v > 2.4 ? 1.45 : 1), { x: R.x, y: R.z, t: t / 1000 }); R.ob.sync(); }
     // el equipo que queda a mano (a menos de 2,2 m y adelante): E o clic lo abre
     if (t - tCerca > 220) { tCerca = t; let mejor = null, md = 2.2; for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t].equipo) continue; const d = Math.hypot((p.x || 0) - R.x, (p.z || 0) - R.z); if (d < md && Math.abs((+p.piso || 0) - R.y) < 2) { md = d; mejor = p; } }
+      if (!mejor && M.apuntado) mejor = M.apuntado();   // lo que está en la mira aunque quede alto o lejos (un AP en el techo)
       if (mejor !== R.cerca) { R.cerca = mejor; const el = $('#musar'); el.hidden = !mejor || motor.tactil; if (mejor) el.innerHTML = `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}`; } }
     return true; });
   return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca, alturaEn, sobre, puedeMira, ayudaTxt }; }
