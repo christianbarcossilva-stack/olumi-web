@@ -7,9 +7,12 @@
 #   · Bloqueados en el código (ni se anotan ni se contestan): familia, pareja, equipo de Phitel y grupos.
 #   · Sin correo: el mail va en otro flujo (el disparador de correo trababa el prender/apagar de n8n).
 # Uso: python3 n8n/christian.py credenciales.json > christian.json
+#      python3 n8n/christian.py credenciales.json --clientes > christian-clientes.json   (BORRADOR: también contesta a clientes, apagado)
 import json, sys
 
-CR = json.load(open(sys.argv[1])) if len(sys.argv) > 1 else {}
+ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
+CLIENTES = '--clientes' in sys.argv
+CR = json.load(open(ARGS[0])) if ARGS else {}
 def cred(k, t):
     c = CR.get(k) or {"id": "", "name": k}
     return {t: {"id": c["id"], "name": c["name"]}}
@@ -286,6 +289,9 @@ link(anot, nota)
 anot2 = code("Anotar nota del asistente", (4400, 780), "const sd = $getWorkflowStaticData('global'); sd.auto = sd.auto || {}; const id = $json.key?.id; if (id) sd.auto[id] = Date.now(); return [];")
 link(nota, anot2)
 
+if CLIENTES:
+    exec(open(__file__.replace('christian.py', 'christian_clientes.py')).read())
+
 # ============ conectar WhatsApp a ESTE flujo (se corre una vez a mano: "Execute workflow" desde "Conectar WhatsApp") ============
 man = node("Conectar WhatsApp a este flujo", "n8n-nodes-base.manualTrigger", 1, {}, (0, 1100))
 setw = http("Evolution → mandar a este flujo", (240, 1100), f"{EVO}/webhook/set/{INST}", credkey="evo",
@@ -294,6 +300,6 @@ link(man, setw)
 findw = node("Ver a dónde manda Evolution", "n8n-nodes-base.httpRequest", 4.2, {"method": "GET", "url": f"{EVO}/webhook/find/{INST}", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "options": {}}, (480, 1100), credentials=cred("evo", "httpHeaderAuth"))
 link(setw, findw)
 
-wf = {"name": "Christian · WhatsApp (nuevo)", "nodes": nodes, "connections": conns,
+wf = {"name": "Christian · WhatsApp (borrador: contesta a clientes)" if CLIENTES else "Christian · WhatsApp (nuevo)", "nodes": nodes, "connections": conns,
       "settings": {"executionOrder": "v1", "saveDataSuccessExecution": "all", "saveDataErrorExecution": "all", "timezone": "America/Montevideo"}}
 print(json.dumps(wf, ensure_ascii=False, indent=1))
