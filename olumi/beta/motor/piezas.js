@@ -1,10 +1,10 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=04a115e9';
+import { THREE } from './nucleo.js?v=eb3c83a2';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=04a115e9';
-import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=04a115e9';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=eb3c83a2';
+import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=eb3c83a2';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
 // { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
@@ -1212,7 +1212,7 @@ export const TIPOS = {
     armar(p, ctx) { const g = new THREE.Group(), c = mat(p.color || '#c9ced2', { roughness: 0.35, metalness: 0.4 }); caja(g, -2.2, 0.35, -0.9, 2.2, 1.1, 0.9, c); caja(g, -1.2, 1.1, -0.82, 1.0, 1.6, 0.82, mat('#2c3e4f', { roughness: 0.1, metalness: 0.6 }));
       ctx && ctx.glb && ctx.glb('vehiculos', p.modelo, g, p.color); return g; } },
   persona: { n: 'Persona', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', etiqueta: p => p.cartel ? p.nombre : '', def: { modelo: 'tec-h-epp' },
-    campos: [F.nombre, { k: 'modelo', n: 'Cómo es', t: 'sel', ops: [['tec-h-epp', 'Técnico con casco y chaleco'], ['tec-h', 'Técnico'], ['of-h', 'Oficina (hombre)'], ['of-h2', 'Oficina (hombre con suéter)'], ['of-m', 'Oficina (mujer)'], ['of-m2', 'Oficina (mujer con suéter)'], ['of-h5', 'Oficina (hombre, chomba y cargo)'], ['of-h6', 'Oficina (hombre, camisa a rayas)'], ['of-h7', 'Oficina (hombre, remera y pantalón de vestir)'], ['of-m5', 'Oficina (mujer, remera y jean)'], ['of-m6', 'Oficina (mujer, remera y botas)'], ['of-m7', 'Oficina (mujer, blusa y pollera)']] }, { k: 'pose', n: 'Postura', t: 'sel', ops: [['', 'Parada'], ['sentado', 'Sentada (en su puesto)']] }, F.r],
+    campos: [F.nombre, { k: 'modelo', n: 'Cómo es', t: 'sel', ops: [['tec-h-epp', 'Técnico con casco y chaleco'], ['tec-h', 'Técnico con mameluco'], ['of-h', 'Oficina (hombre)'], ['of-h2', 'Oficina (hombre con suéter)'], ['of-m', 'Oficina (mujer)'], ['of-m2', 'Oficina (mujer con suéter)'], ['of-h5', 'Oficina (hombre, chomba y cargo)'], ['of-h6', 'Oficina (hombre, camisa a rayas)'], ['of-h7', 'Oficina (hombre, remera y pantalón de vestir)'], ['of-m5', 'Oficina (mujer, remera y jean)'], ['of-m6', 'Oficina (mujer, remera y botas)'], ['of-m7', 'Oficina (mujer, blusa y pollera)']] }, { k: 'pose', n: 'Postura', t: 'sel', ops: [['', 'Parada'], ['sentado', 'Sentada (en su puesto)']] }, F.r],
     armar(p, ctx) { const g = new THREE.Group(); g.userData.pose = p.pose || ''; cil(g, 0, 0, 0, 0.22, 1.45, mat('#3b5b7a')); const k = new THREE.Mesh(BOLA, mat('#e0b493')); k.scale.setScalar(0.26); k.position.y = 1.62; g.add(sombra(k)); ctx && ctx.glb && ctx.glb('avatares', p.modelo, g, null, p.id); return g; } },
 
   // equipos (Ondi). y = altura de montaje; uid = vínculo con el equipo real de la app (UniFi, Meraki o cargado a mano)

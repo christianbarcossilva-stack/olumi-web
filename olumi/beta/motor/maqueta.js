@@ -13,15 +13,15 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=04a115e9';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=04a115e9';
-import { ve, dominio, DOMINIOS } from './plano.js?v=04a115e9';
-import { svg } from './iconos.js?v=04a115e9';
-import { construir } from './construir.js?v=04a115e9';
-import { juego } from './juego.js?v=04a115e9';
-import { recorrer } from './recorrer.js?v=04a115e9';
-import { transito } from './transito.js?v=04a115e9';
-import { extras } from './extras.js?v=04a115e9';
+import { THREE, crearMotor } from './nucleo.js?v=eb3c83a2';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=eb3c83a2';
+import { ve, dominio, DOMINIOS } from './plano.js?v=eb3c83a2';
+import { svg } from './iconos.js?v=eb3c83a2';
+import { construir } from './construir.js?v=eb3c83a2';
+import { juego } from './juego.js?v=eb3c83a2';
+import { recorrer } from './recorrer.js?v=eb3c83a2';
+import { transito } from './transito.js?v=eb3c83a2';
+import { extras } from './extras.js?v=eb3c83a2';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -141,7 +141,7 @@ export async function abrirMaqueta(o) {
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
-      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=04a115e9'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=eb3c83a2'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
         if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
@@ -755,7 +755,7 @@ export async function abrirMaqueta(o) {
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
   const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
-    avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
+    avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
   // «Salir de la maqueta» (menú de pausa): deja de recorrer y de editar, sale de la pantalla completa y le avisa a la app (host.salir); sola, vuelve a la vista general
   function salir() { if (RC.R.on) RC.paseo(false); if (ED.on) editar(false); elegir(null); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (document.documentElement.classList.contains('mfull')) pantalla(false);

@@ -1123,6 +1123,15 @@ body.portal #topLupa,body.portal #topQ,body.portal .top .ttl{display:none!import
 .pvtv-bar{height:5px;border-radius:3px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden;margin:2px 0!important}.pvtv-bar i{display:block;height:100%;width:45%;background:var(--ok,#2fa36b)}
 .vhead .tools .tvb{flex:none}
 /* fin 1.53f */
+/* 1.53h */
+.cal-ags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.cal-ag{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 13.5px/1 inherit;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.cal-ag i{width:12px;height:12px;border-radius:4px;border:2px solid var(--c);background:transparent;transition:background .2s}
+.cal-ag.on{color:var(--fg);background:color-mix(in srgb,var(--c) 12%,transparent);border-color:color-mix(in srgb,var(--c) 40%,transparent)}
+.cal-ag.on i{background:var(--c)}
+.cal-ag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ag-mapa{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+/* fin 1.53h */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -2850,21 +2859,21 @@ function vCalLista(){
   if(!calStart)calStart=monday(new Date());
   const n=calN(),start=calRange();const mesRef=CALV==='mes'?new Date(new Date(calStart).setDate(1)):null;
   const days=[...Array(n)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return localISO(d).slice(0,10)});
-  const jobs=arr('trabajos').filter(j=>days.includes(j.fecha)&&(!calTec||(j.tecnicos||[]).includes(calTec)));
-  const acts=arr('actividades').filter(a=>!a.hecha&&a.fecha&&days.includes(a.fecha.slice(0,10))&&(!calTec||a.responsable===calTec));const evsL=calEvL(days);
+  const jobs=arr('trabajos').filter(j=>days.includes(j.fecha)&&(!calTec||(j.tecnicos||[]).includes(calTec))&&calOk('j',j));
+  const acts=arr('actividades').filter(a=>!a.hecha&&a.fecha&&days.includes(a.fecha.slice(0,10))&&(!calTec||a.responsable===calTec)&&calOk('a',a));const evsL=calEvL(days);
   const t=today();
   const step=CALV==='mes'?'mes':String(n);const titulo=CALV==='mes'?mesRef.toLocaleDateString('es-UY',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase()):`${fdate(days[0])} al ${fdateL(days[n-1])}`;
   const head=`<div class="vhead"><div><h1>Calendario</h1><p class="sub">${titulo} · ${jobs.length} trabajo${jobs.length===1?'':'s'}</p></div>
     <div class="tools calnav"><button class="btn" data-act="cal:-${step}" aria-label="Período anterior">‹</button><button class="btn" data-act="cal:0">Hoy</button><button class="btn" data-act="cal:${step}" aria-label="Período siguiente">›</button>
     ${calSel()}
     <select id="calTec" data-ch="calTec" aria-label="Filtrar por técnico"><option value="">Todos los técnicos</option>${opts(peopleOpts().slice(1),calTec)}</select>${calImpBtn()}</div></div>`;
-  if(CALV==='mes'){const m=mesRef.getMonth();return head+`<div class="month"><div class="mh">${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<span>${x}</span>`).join('')}</div><div class="mg">${days.map(d=>{const dd=new Date(d+'T12:00');const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));const da=acts.filter(a=>a.fecha.slice(0,10)===d);
+  if(CALV==='mes'){const m=mesRef.getMonth();return head+calAgendas()+`<div class="month"><div class="mh">${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<span>${x}</span>`).join('')}</div><div class="mg">${days.map(d=>{const dd=new Date(d+'T12:00');const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));const da=acts.filter(a=>a.fecha.slice(0,10)===d);
       return`<section class="mday${d===t?' today':''}${dd.getMonth()!==m?' other':''}" data-date="${d}"><div class="mdh"><b data-act="mday:${d}" role="button" tabindex="0">${dd.getDate()}</b>${!readonly?`<button class="madd" data-new="trab" data-date="${d}" aria-label="Nuevo trabajo el ${fdate(d)}">+</button>`:''}</div>
         ${dj.slice(0,4).map(j=>{const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4;return`<div class="mev${j.estado==='terminado'?' done':''}${j.tentativo?' tent':''}" role="button" tabindex="0" data-open="trab:${j.id}" draggable="${calMueve()}" data-cal="j:${j.id}" style="--ec:${calCol(j,p)}" title="${esc((j.hora||'')+' '+(jCli(j)||j.titulo||''))}">${j.hora?`<span>${esc(j.hora)}</span> `:''}${esc(jCli(j)||j.titulo||'Trabajo')}</div>`}).join('')}
         ${da.slice(0,2).map(a=>`<div class="mev fu" role="button" tabindex="0" data-open="act:${a.id}" draggable="${calMueve()}" data-cal="a:${a.id}">${esc(a.fecha.slice(11,16))} ${esc(a.titulo||'')}</div>`).join('')}
         ${calMevs(evsL[d])}${dj.length>4?`<div class="mmore">+${dj.length-4} más</div>`:''}</section>`}).join('')}</div></div>
     <p class="hint" style="margin-top:12px">Tocá el número de un día para ver esa semana por horas. Para reprogramar, arrastrá el trabajo a otro día.</p>${calLeyenda()}`}
-  return head+`<div class="week${CALV==='quincena'?' q2':''}">${days.map((d,i)=>{
+  return head+calAgendas()+`<div class="week${CALV==='quincena'?' q2':''}">${days.map((d,i)=>{
     const dj=jobs.filter(j=>j.fecha===d).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')),da=acts.filter(a=>a.fecha.slice(0,10)===d);
     const dn=new Date(d+'T12:00').toLocaleDateString('es-UY',{weekday:'long'});
     return`<section class="day${d===t?' today':''}${i%7>4?' off':''}${!dj.length&&!da.length&&!(evsL[d]||[]).length?' noev':''}" data-date="${d}"><div class="dayh"><b>${dn.charAt(0).toUpperCase()+dn.slice(1)}</b><span>${fdate(d)}</span></div>
@@ -4052,6 +4061,46 @@ pryTablero=function(l){const J=arr('trabajos'),F=pryFlujo().filter(e=>PRYARCH?e.
   const a='aria-label="Vista">',i=h.indexOf(a);if(i<0)return h;const f=h.indexOf('</div>',i)+6;return h.slice(0,f)+tvBoton('proyectos')+h.slice(f)}}
 window.__tv=k=>({...tvLee(k),busq:busqModo()});   // para las pruebas
 /* === fin 1.53f === */
+/* === 1.53h · calendarios separados (Operaciones, Ventas, Administración, Personal) y según el rol === */
+// Christian 23/11 23:30: «cuando dos personas traen el mismo calendario se duplica… lo que sí tenemos que tener es los calendarios que queden separados lo que son de trabajo…
+// estaría bueno que podamos ver calendarios múltiples, solo el de operaciones, administración, ventas, y según el rol es lo que ves».
+// Cada cosa del Calendario cae en un calendario: los trabajos en Operaciones, los seguimientos del CRM en Ventas, los eventos en el que diga su ficha
+// (los traídos de Google, según el calendario de Google del que vinieron: eso lo elige el dueño en «Conectar calendarios»). Personal: solo lo ve su dueño.
+// El rol dice qué calendarios puede ver cada uno; arriba se tilda cuáles mostrar (queda en el equipo). Un evento de Google que es el mismo trabajo
+// que ya está en Olumi (mismo día y mismo número, o mismo título) no se muestra dos veces: gana el trabajo.
+const AGS=[['ops','Operaciones','#2f80ed'],['ventas','Ventas','#9b51e0'],['adm','Administración','#d9822b'],['pers','Personal','#27ae60']];
+const AGN=Object.fromEntries(AGS.map(([k,n])=>[k,n]));
+const agColor=e=>(AGS.find(([k])=>k===agDe('e',e))||AGS[0])[2];
+// qué calendarios ve cada rol (además de su Personal)
+const AG_ROL={owner:['ops','ventas','adm'],admin:['ops','ventas','adm'],encargado:['ops','ventas'],ventas:['ventas','ops'],administracion:['adm','ops'],tecnico:['ops'],subcontratista:['ops'],viewer:['ops']};
+const agRol=()=>[...(AG_ROL[ROLE]||['ops']),'pers'];
+// el calendario de Google «Instalaciones» → Operaciones; uno que se llama como un correo es la agenda personal de quien lo trajo
+const agGoogle=e=>{const m=(CFG&&CFG.calMapa)||{},c=e.calendario||'';if(m[c])return m[c];return/@/.test(c)?'pers':'ops'};
+function agDe(k,x){if(k==='j')return'ops';if(k==='a')return'ventas';if(x.privado)return'pers';if(x.agenda&&AGN[x.agenda])return x.agenda;return x.origen==='google'?agGoogle(x):'ops'}
+function agOcultos(){try{return new Set(JSON.parse(lsGet('cal.ocultos')||'[]'))}catch(_){return new Set()}}
+// ¿se muestra en el Calendario?
+function calOk(k,x){const g=agDe(k,x);if(g==='pers'&&x.de&&x.de!==ME)return false;if(!agRol().includes(g))return false;if(agOcultos().has(g))return false;
+  if(k==='e'&&x.origen==='google'&&agEsTrabajo(x))return false;return true}
+// el mismo trabajo ya está en Olumi ese día
+const agNorm=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
+const agNum=t=>{const m=String(t||'').match(/^\s*P?(\d{4,5})\b/i);return m?m[1]:''};
+function agEsTrabajo(e){const n=agNum(e.titulo),t=agNorm(e.titulo);if(!e.fecha)return false;
+  return arr('trabajos').some(j=>j.fecha===e.fecha&&((n&&agNum(j.titulo)===n)||(t&&agNorm(j.titulo)===t)))}
+// la fila de calendarios arriba del Calendario
+function calAgendas(){const ver=agRol(),oc=agOcultos();
+  return`<div class="cal-ags" role="group" aria-label="Calendarios que se muestran">${AGS.filter(([k])=>ver.includes(k)).map(([k,n,c])=>`<button type="button" class="cal-ag${oc.has(k)?'':' on'}" style="--c:${c}" data-agv="${k}" aria-pressed="${!oc.has(k)}"><i aria-hidden="true"></i>${n}</button>`).join('')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-agv]');if(!b)return;e.preventDefault();const s=agOcultos(),k=b.dataset.agv;
+  if(s.has(k))s.delete(k);else s.add(k);lsSet('cal.ocultos',JSON.stringify([...s]));sr()},true);
+// el evento nuevo cae en el calendario de quien lo crea
+const agPropio=()=>({ventas:'ventas',administracion:'adm'})[ROLE]||'ops';
+// «Conectar calendarios»: a qué calendario de Olumi va cada calendario de Google (solo el dueño y los administradores)
+function agMapaHtml(){const cs=[...new Set(arr('eventos').filter(e=>e.origen==='google').map(e=>e.calendario||''))];if(!cs.length)return'';
+  return`<h3 class="calh" style="margin-top:18px">Dónde va lo traído de Google</h3><p class="hint" style="margin-top:0">Cada calendario de Google cae en uno de Olumi. Lo de Personal lo ve solo quien lo trajo.</p>
+    <div class="ag-mapa">${cs.map(c=>{const g=agGoogle({calendario:c});return`<label class="fld"><span>${esc(c||'Sin nombre')}</span><select data-agmapa="${esc(c)}"${isBoss()?'':' disabled'}>${AGS.map(([k,n])=>`<option value="${k}"${g===k?' selected':''}>${n}</option>`).join('')}</select></label>`}).join('')}</div>`}
+document.addEventListener('change',async e=>{const t=e.target;if(!t||!t.dataset||t.dataset.agmapa===undefined)return;if(!isBoss())return;
+  const m={...((CFG&&CFG.calMapa)||{}),[t.dataset.agmapa]:t.value};try{await saveCfg({...CFG,calMapa:m});toast(`«${t.dataset.agmapa||'Sin nombre'}» va a ${AGN[t.value]}`)}catch(x){handleErr(x)}});
+window.__ag={agDe,calOk,agEsTrabajo,agRol};   // para las pruebas
+/* === fin 1.53h === */
 async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
@@ -4197,19 +4246,19 @@ function calVista(v){
 function calDatos(days){
   const set=new Set(days),out={};days.forEach(d=>out[d]={t:[],a:[]});
   for(const j of arr('trabajos')){
-    if(!set.has(j.fecha)||(calTec&&!(j.tecnicos||[]).includes(calTec)))continue;
+    if(!set.has(j.fecha)||(calTec&&!(j.tecnicos||[]).includes(calTec))||!calOk('j',j))continue;
     const tk=j.ticketId&&D.tickets[j.ticketId],p=tk?tkPrio(tk):4,ini=hm2m(j.hora),done=j.estado==='terminado';
     out[j.fecha][ini==null?'a':'t'].push({k:'j',id:j.id,open:'trab:'+j.id,ini,dur:Math.max(15,Math.round((n0(j.duracion)||1)*60)),tit:jCli(j)||j.titulo||'Trabajo',sub:(j.tentativo?'Tentativo · ':'')+(done&&n0(j.horasMO)?qty(j.horasMO)+' h reales'+(j.titulo?' · ':''):'')+(j.titulo||''),col:calCol(j,p),tent:!!j.tentativo,done,fijo:done});
   }
   for(const a of arr('actividades')){
-    if(a.hecha||!a.fecha)continue;const f=a.fecha.slice(0,10);if(!set.has(f)||(calTec&&a.responsable!==calTec))continue;
+    if(a.hecha||!a.fecha)continue;const f=a.fecha.slice(0,10);if(!set.has(f)||(calTec&&a.responsable!==calTec)||!calOk('a',a))continue;
     const ini=hm2m(a.fecha.slice(11,16));
     out[f][ini==null?'a':'t'].push({k:'a',id:a.id,open:'act:'+a.id,ini,dur:Math.max(15,Math.round((n0(a.duracion)||.5)*60)),tit:a.titulo||TK[a.tipo]||'Actividad',sub:TK[a.tipo]||'Seguimiento',fu:1});
   }
   const d0=days[0],dn=days[days.length-1];
   for(const e of arr('eventos')){
-    if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
-    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:(e.hecho?'✓ ':'')+(e.titulo||'Evento'),sub:[e.tentativo?'Tentativo':'',e.privado?'Privado':'',e.lugar||''].filter(Boolean).join(' · '),col:calCol(e,null),tent:!!e.tentativo};
+    if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME)||!calOk('e',e))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;if(fin<d0||e.fecha>dn)continue;
+    const ini=hm2m(e.hora),it={k:'e',id:e.id,open:'ev:'+e.id,ini,dur:Math.max(15,Math.round((n0(e.duracion)||1)*60)),tit:(e.hecho?'✓ ':'')+(e.titulo||'Evento'),sub:[e.tentativo?'Tentativo':'',e.privado?'Privado':'',e.lugar||''].filter(Boolean).join(' · '),col:calCol(e,null)||agColor(e),tent:!!e.tentativo};
     if(ini==null){for(const d of days)if(d>=e.fecha&&d<=fin)out[d].a.push(it)}else if(set.has(e.fecha))out[e.fecha].t.push(it);
   }
   return out;
@@ -4244,7 +4293,7 @@ function vCalGrid(){
   const all=days.some(d=>X[d].a.length)?`<div class="cg-all"><div class="cg-gut"><span>Todo el día</span></div>${days.map(d=>`<div class="cg-ac">${X[d].a.map(it=>`<div class="cg-chip${it.fu?' fu':''}${it.tent?' tent':''}${it.done?' done':''}" role="button" tabindex="0" data-open="${it.open}"${it.col?` style="--ec:${it.col}"`:''} title="${esc(it.tit)}">${esc(it.tit)}</div>`).join('')}</div>`).join('')}</div>`:'';
   const horas=[...Array(23)].map((_,i)=>`<span style="top:${(i+1)*CGH}px">${String(i+1).padStart(2,'0')}:00</span>`).join('');
   const cols=days.map(d=>`<div class="cg-col${d===t?' hoy':''}" data-cgd="${d}">${calCols(X[d].t).map(calBloque).join('')}${d===t?'<i class="cg-now" id="cgNow"></i>':''}</div>`).join('');
-  return head+`<div class="cg" id="calGrid" style="--n:${n};--ch:${CGH}px"><div class="cg-sc" id="calSc"><div class="cg-top"><div class="cg-head"><div class="cg-gut"></div>${cab}</div>${all}</div><div class="cg-body"><div class="cg-gut cg-hs">${horas}</div>${cols}</div></div></div>
+  return head+calAgendas()+`<div class="cg" id="calGrid" style="--n:${n};--ch:${CGH}px"><div class="cg-sc" id="calSc"><div class="cg-top"><div class="cg-head"><div class="cg-gut"></div>${cab}</div>${all}</div><div class="cg-body"><div class="cg-gut cg-hs">${horas}</div>${cols}</div></div></div>
     <p class="hint" style="margin-top:12px">${readonly?'':'Tocá un hueco para agendar. '}${calMueve()?'Para mover algo, arrastralo (en el teléfono, mantenelo apretado un momento); para cambiar cuánto dura, estirá el borde de abajo. ':''}Un toque abre la edición rápida.</p>${calLeyenda()}`;
 }
 function vCal(){return CALG()?vCalGrid():vCalLista()}
@@ -4342,22 +4391,22 @@ document.addEventListener('contextmenu',e=>{if(CALDR.el&&CALDR.tactil)e.preventD
 /* --- eventos propios --- */
 const EVF=()=>[{k:'titulo',l:'Título',w:'full',ph:'Ej.: Reunión con el contador'},{k:'hecho',l:'Ya lo hice',t:'checkbox',w:'full'},{k:'fecha',l:'Fecha',t:'date'},{k:'hora',l:'Hora',t:'time'},
   {k:'duracion',l:'Duración (horas)',t:'number',step:'0.25'},{k:'todoDia',l:'Todo el día',t:'checkbox'},{k:'hasta',l:'Hasta (si dura varios días)',t:'date'},
-  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'de',l:'De quién es',t:'person'},{k:'etiqueta',l:'Etiqueta de color',t:'select',o:[['','Sin etiqueta'],...calEts().map(e=>[e.id,e.n])]},{k:'tentativo',l:'Tentativo (queda en gris)',t:'checkbox'},{k:'privado',l:'Privado (solo lo ves vos)',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
+  {k:'lugar',l:'Lugar',w:'full',ph:'Dirección, sala o enlace'},{k:'agenda',l:'Calendario',t:'select',o:AGS.filter(([k])=>agRol().includes(k)).map(([k,n])=>[k,n])},{k:'de',l:'De quién es',t:'person'},{k:'etiqueta',l:'Etiqueta de color',t:'select',o:[['','Sin etiqueta'],...calEts().map(e=>[e.id,e.n])]},{k:'tentativo',l:'Tentativo (queda en gris)',t:'checkbox'},{k:'privado',l:'Privado (solo lo ves vos)',t:'checkbox'},{k:'notas',l:'Notas',t:'textarea',w:'full'}];
 function sheetEv(id,p){
-  const e=id?{...D.eventos[id]}:{fecha:p.date||today(),hora:p.hora||'09:00',duracion:1,de:ME||''};e.todoDia=!e.hora;
+  const e=id?{...D.eventos[id]}:{fecha:p.date||today(),hora:p.hora||'09:00',duracion:1,de:ME||''};e.todoDia=!e.hora;/* 1.53h */e.agenda=id?agDe('e',e):agPropio();
   return sheetFrame('Evento',id?(e.titulo||'Evento'):'Nuevo evento',`<div class="grid">${EVF().map(f=>fld(f,e[f.k])).join('')}</div>${e.origen==='google'?'<p class="hint" style="margin-top:10px">Vino de Google Calendar. Lo que cambies acá no cambia en Google.</p>':''}<p class="err" id="shErr" hidden></p>`,{del:!!id});
 }
 async function saveEv(){
   const v=readForm(EVF()),er=$('#shErr');if(!v.titulo||!v.fecha){er.textContent=!v.titulo?'Ponele un título al evento.':'Elegí la fecha.';er.hidden=false;return}
   const base=SH.id?{...D.eventos[SH.id]}:{creado:Date.now()},e={...base,...v};if(e.hecho&&!base.hecho){e.hechoEn=Date.now();e.hechoPor=ME||''}
   if(v.todoDia){e.hora='';e.duracion=0;if(!e.hasta||e.hasta<=e.fecha)delete e.hasta}else{e.hora=e.hora||'09:00';e.duracion=Math.max(.25,n0(e.duracion)||1);delete e.hasta}
-  delete e.todoDia;if(e.privado)e.de=ME||e.de;await put('eventos',SH.id||uid(),e);toast('Evento guardado');closeSheet();
+  delete e.todoDia;if(e.agenda==='pers'&&!e.de)e.de=ME||'';if(e.privado)e.de=ME||e.de;await put('eventos',SH.id||uid(),e);toast('Evento guardado');closeSheet();
 }
-const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
+const calEvL=days=>{const o={},set=new Set(days);for(const e of arr('eventos')){if(!e.fecha||evPasado(e)||(calTec&&e.de!==calTec)||(e.privado&&e.de!==ME)||!calOk('e',e))continue;const fin=e.hasta&&e.hasta>e.fecha?e.hasta:e.fecha;
   for(const d of days)if(d>=e.fecha&&d<=fin)(o[d]=o[d]||[]).push(e)}
   for(const d in o)o[d].sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));return o};
-const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''} title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
-const calEvsDia=l=>(l||[]).map(e=>`<div class="ev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}"${calCol(e,null)?` style="--ec:${calCol(e,null)}"`:''}><span class="h">${e.tentativo?'Tentativo · ':''}${e.hora?esc(e.hora)+(e.duracion?` · ${qty(e.duracion)} h`:''):'Todo el día'}</span><b>${esc(e.titulo||'Evento')}</b>${e.lugar?`<span class="muted">${esc(e.lugar)}</span>`:''}</div>`).join('');
+const calMevs=l=>(l||[]).slice(0,2).map(e=>`<div class="mev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}" style="--ec:${calCol(e,null)||agColor(e)}" title="${esc(e.titulo||'')}">${e.hora?`<span>${esc(e.hora)}</span> `:''}${esc(e.titulo||'Evento')}</div>`).join('');
+const calEvsDia=l=>(l||[]).map(e=>`<div class="ev evx${e.tentativo?' tent':''}" role="button" tabindex="0" data-open="ev:${e.id}" style="--ec:${calCol(e,null)||agColor(e)}"><span class="h">${e.tentativo?'Tentativo · ':''}${e.hora?esc(e.hora)+(e.duracion?` · ${qty(e.duracion)} h`:''):'Todo el día'}</span><b>${esc(e.titulo||'Evento')}</b>${e.lugar?`<span class="muted">${esc(e.lugar)}</span>`:''}</div>`).join('');
 
 /* --- traer de Google Calendar: leer el archivo .ics (o el .zip que baja Google) --- */
 let ICS=null;
@@ -4466,7 +4515,7 @@ function sheetCalImp(){
     <details class="more" id="icsDet" style="margin-top:18px"><summary>Traer lo de Google Calendar a Olumi (una sola vez)</summary><ol class="pasos" style="margin-top:12px"><li>En una computadora abrí <b>calendar.google.com</b>, tocá la rueda de arriba a la derecha → <b>Configuración</b> → <b>Importar y exportar</b> → <b>Exportar</b>. Se baja un archivo .zip.</li><li>Elegí ese archivo acá abajo (el .zip tal cual, o los .ics que trae adentro).</li><li>Revisá la lista, destildá lo que no quieras y tocá Importar.</li></ol>
     <div class="actions"><label class="btn upl">Elegir el archivo de Google<input type="file" data-ics accept=".ics,.zip,text/calendar,application/zip" multiple></label></div>
     <div id="icsOut"></div>
-    ${ya?`<p class="hint" style="margin-top:14px">Ya hay ${pl(ya,'evento traído','eventos traídos')} de Google. Si volvés a importar no se duplican: se actualizan. <button class="btn ghost danger" data-act="icsquitar">Quitarlos</button></p>`:''}</details>
+    ${ya?`<p class="hint" style="margin-top:14px">Ya hay ${pl(ya,'evento traído','eventos traídos')} de Google. Si volvés a importar no se duplican: se actualizan. <button class="btn ghost danger" data-act="icsquitar">Quitarlos</button></p>`:''}</details>${agMapaHtml()}
     <p class="err" id="shErr" hidden></p>`,{saveLabel:'Listo'});
 }
 function icsLista(){const t=today(),desde=ICS.modo==='todo'?'0000':ICS.modo==='anio'?dMas(t,-365):t;return ICS.evs.filter(e=>(e.hasta||e.fecha)>=desde&&!ICS.calOff.has(e.cal))}
@@ -4478,7 +4527,7 @@ function icsPinta(){
     ${ICS.cals.length>1?`<div class="icsc">${ICS.cals.map((c,i)=>`<label class="fld chk"><input type="checkbox" data-icscal="${i}"${ICS.calOff.has(c)?'':' checked'}><span>${esc(c||'Sin nombre')}</span></label>`).join('')}</div>`:''}
     <label class="fld" style="margin-top:10px"><span>¿De quién son?</span><select id="icsDe">${opts(peopleOpts(ICS.de).slice(1),ICS.de)}</select></label>
     <div class="icsl">${L.length?L.slice(0,400).map(e=>`<label class="icsr"><input type="checkbox" data-icsid="${e.id}"${ICS.off.has(e.id)?'':' checked'}><span class="f">${fdate(e.fecha)}${e.fecha.slice(0,4)!==y?' '+e.fecha.slice(2,4):''}${e.hora?' · '+e.hora:''}</span><b>${esc(e.titulo)}</b></label>`).join(''):'<p class="hint" style="padding:12px">No hay eventos en ese período. Probá con «También el último año».</p>'}${L.length>400?`<p class="hint" style="padding:10px">…y ${L.length-400} más, que entran también.</p>`:''}</div>
-    <p class="hint" style="margin-top:10px">Lo que importes lo ve todo tu equipo en el Calendario. Destildá lo que sea personal.</p>`;
+    <p class="hint" style="margin-top:10px">Cada calendario de Google cae en uno de Olumi: el que se llama como un correo va a Personal (lo ves solo vos); los demás, a Operaciones. Se cambia después en «Dónde va lo traído de Google».</p>`;
   icsBoton();
 }
 document.addEventListener('change',async e=>{

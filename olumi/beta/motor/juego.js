@@ -6,7 +6,7 @@
 //  4. Reglas de ubicar: una cosa no entra adentro de otra ni atraviesa una pared («No entra ahí»), y lo que va arriba de una mesa se apoya en la mesa.
 // Este módulo no guarda nada del jugador: los ajustes cuelgan de `motor` (motor.aj, motor.canon), porque un módulo importado con dos direcciones
 // distintas se carga dos veces. Los paneles se arman acá adentro, sin depender de quién los abre, para poder dibujarlos mañana en un plano 3D (VR).
-import { THREE } from './nucleo.js?v=04a115e9';
+import { THREE } from './nucleo.js?v=eb3c83a2';
 
 export function juego(M) {
   const { motor, objs, TIPOS, svg, esc, raiz, app, host, toast, canvas } = M, $ = (s, r = document) => r.querySelector(s);
@@ -126,7 +126,7 @@ export function juego(M) {
       <p class="mpn" id="mpaviso" hidden></p><button type="button" class="mpb chico" data-p="fabrica">Volver a las teclas de fábrica</button>
       <h4>Construcción</h4><div class="mpf"><span>Dejar encimar cosas<small>Apagado, una cosa no entra adentro de otra ni atraviesa una pared.</small></span>${sw('encimar', aj.encimar)}</div>
       ${M.puede ? '<button type="button" class="mpb chico" data-p="barra">Volver a la barra rápida de fábrica</button>' : ''}
-      ${host && host.personaje ? '' : `<h4>Mi personaje</h4><label class="mpf"><span>Cómo me ven al recorrer<small>Cambia la próxima vez que entres a recorrer.</small></span><select id="mpper" aria-label="Mi personaje">${M.personajes.map(([k, n]) => `<option value="${k}"${(aj.personaje || 'tec-h-epp') === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`}
+      ${host && host.personaje ? '' : `<h4>Mi personaje</h4><label class="mpf"><span>Cómo me ven al recorrer<small>Cambia la próxima vez que entres a recorrer.</small></span><select id="mpper" aria-label="Mi personaje">${M.personajes.map(([k, n]) => `<option value="${k}"${(aj.personaje || 'tec-h') === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`}
       </div>`; }
   function pausa(on, v) { if (on === !PA.hidden && (!on || !v || v === vista)) return; if (on) { M.cancelarAgarre(); retoma = M.RC.R.on && M.RC.puedeMira(); if (motor.mirando) motor.mira(false); M.RC.R.k = {}; vista = v || 'menu'; pide = null; dibuja(); PA.hidden = false; document.documentElement.classList.add('mpausada'); const b = hoja.querySelector('button'); b && b.focus(); }
     else { PA.hidden = true; pide = null; document.documentElement.classList.remove('mpausada'); canvas.focus({ preventScroll: true }); } motor.dirty = true; }
