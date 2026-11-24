@@ -271,7 +271,20 @@ function texMuro(k) { if (TEX_MURO[k]) return TEX_MURO[k]; const D = MUROS[k], N
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return TEX_MURO[k] = t; }
 // plantas de un edificio armado a mano (como en Los Sims): cada pieza guarda su planta en «nivel» (0 = planta baja) y sube ALTO_PLANTA por planta.
 // 2,8 m = paredes de 2,6 m más la losa de 0,2 m: así la pared de abajo llega justo a la losa de arriba. Los planos que guardaban la altura en «y» (3, 6, 9 m) se leen igual.
-export const ALTO_PLANTA = 2.8;
+export let ALTO_PLANTA = 2.8;   // de piso a piso; cada maqueta puede tener la suya (escena.altoPlanta)
+export function altoPlanta(h) { ALTO_PLANTA = +h >= 2.2 && +h <= 8 ? +h : 2.8; return ALTO_PLANTA; }
+// el dibujo de una escalera de interior: tramos (a lo largo de x o z, con su sentido) y descansos, centrado en el punto de la pieza
+export function escaleraPlan(p) { const w = +p.ancho || 1.0, H = +p.alto || ALTO_PLANTA, hue = +p.huella || 0.27, n = Math.max(3, Math.round(H / 0.175)), s = H / n, tr = [], ds = [], forma = p.forma || 'u3';
+  const tramo = (ax, d, a0, c0, c1, k, y0) => { tr.push({ ax, d, a0, c0, c1, k, y0, s, hue }); return a0 + d * k * hue; };
+  if (forma === 'u3') { const c = Math.max(0.2, +p.centro || 1.7), nB = n >= 12 ? 4 : 2, nA = Math.floor((n - nB) / 2), nC = n - nA - nB, W = 2 * w + c, D = w + Math.max(nA, nC) * hue, xb = nB * hue / 2;
+    tramo('z', -1, D / 2, W / 2 - w, W / 2, nA, 0); ds.push({ x0: xb, x1: W / 2, z0: -D / 2, z1: -D / 2 + w, y: nA * s });
+    tramo('x', -1, xb, -D / 2, -D / 2 + w, nB, nA * s); ds.push({ x0: -W / 2, x1: -xb, z0: -D / 2, z1: -D / 2 + w, y: (nA + nB) * s });
+    tramo('z', 1, -D / 2 + w, -W / 2, -W / 2 + w, nC, (nA + nB) * s); return { tramos: tr, descansos: ds, caja: [-W / 2, -D / 2, W / 2, D / 2] }; }
+  if (forma === 'u') { const nA = Math.floor(n / 2), W = 2 * w + 0.1, D = w + nA * hue; tramo('z', -1, D / 2, W / 2 - w, W / 2, nA, 0); ds.push({ x0: -W / 2, x1: W / 2, z0: -D / 2, z1: -D / 2 + w, y: nA * s });
+    tramo('z', 1, -D / 2 + w, -W / 2, -W / 2 + w, n - nA, nA * s); return { tramos: tr, descansos: ds, caja: [-W / 2, -D / 2, W / 2, D / 2] }; }
+  if (forma === 'l') { const nA = Math.floor(n / 2), nB = n - nA, D = nA * hue + w, W = w + nB * hue; tramo('z', -1, D / 2, -W / 2, -W / 2 + w, nA, 0); ds.push({ x0: -W / 2, x1: -W / 2 + w, z0: -D / 2, z1: -D / 2 + w, y: nA * s });
+    tramo('x', 1, -W / 2 + w, -D / 2, -D / 2 + w, nB, nA * s); return { tramos: tr, descansos: ds, caja: [-W / 2, -D / 2, W / 2, D / 2] }; }
+  const D = n * hue; tramo('z', -1, D / 2, -w / 2, w / 2, n, 0); return { tramos: tr, descansos: ds, caja: [-w / 2, -D / 2, w / 2, D / 2] }; }
 export const nivelDe = q => q.nivel != null ? +q.nivel || 0 : q.t === 'plano' ? Math.round((+q.y || 0) / 3) : 0;
 export const NOM_PLANTA = n => n === 0 ? 'Planta baja' : ['', 'Primer piso', 'Segundo piso', 'Tercer piso', 'Cuarto piso', 'Quinto piso'][n] || n + '.º piso';
 export const PLANTAS = [0, 1, 2, 3, 4, 5].map(n => [n, NOM_PLANTA(n)]);
@@ -944,21 +957,37 @@ export const TIPOS = {
       if (L.length) { const k = new THREE.Mesh(mergeGeometries(L), m); k.castShadow = true; g.add(k); }
       if (V.length) { const k = new THREE.Mesh(mergeGeometries(V), mat('#6d747a', { roughness: 0.5, metalness: 0.6 })); k.userData.noChoca = true; g.add(k); }
       g.userData.sinAplanar = true; return g; } },
-  // escalera entre plantas: recta, sube desde el punto hacia adelante. Con descanso si se elige en L o en U
-  escaleraInt: { n: 'Escalera de interior (entre plantas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 1.1, alto: 2.8, forma: 'recta', baranda: true, color: '#d8d6d1' },
-    variantes: [{ n: 'Escalera recta', o: { forma: 'recta' } }, { n: 'Escalera en U (con descanso)', o: { forma: 'u' } }, { n: 'Escalera en L', o: { forma: 'l' } }],
-    campos: [F.nombre, { k: 'forma', n: 'Forma', t: 'sel', ops: [['recta', 'Recta'], ['u', 'En U, con descanso a la mitad'], ['l', 'En L, con descanso']] }, { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.6, max: 3, paso: 0.05 }, F.alto('Sube (m)', 0.5, 6, 0.05), F.color('Color'), { k: 'baranda', n: 'Con baranda', t: 'bool' }, F.r],
-    armar(p) { const g = new THREE.Group(), w = +p.ancho || 1.1, H = +p.alto || 2.8, n = Math.max(3, Math.round(H / 0.175)), sube = H / n, hue = 0.28, me = mat(oscuro() ? mix(p.color || '#d8d6d1', '#000', 0.4) : (p.color || '#d8d6d1'), { roughness: 0.75 }), mb = mat('#30363b', { roughness: 0.42, metalness: 0.55 }), L = [], B = [];
-      const tramo = (k0, k1, x0, z0, dx, dz, giro) => { for (let k = k0; k < k1; k++) { const i = k - k0, c = new THREE.BoxGeometry(w, sube * (k + 1), hue); c.translate(0, sube * (k + 1) / 2, 0); c.rotateY(giro); c.translate(x0 + dx * (i + 0.5) * hue, 0, z0 + dz * (i + 0.5) * hue); L.push(c); }
-        if (p.baranda) for (const sd of [-1, 1]) { const ox = Math.cos(giro) * sd * (w / 2 - 0.03), oz = -Math.sin(giro) * sd * (w / 2 - 0.03), a = new THREE.Vector3(x0 + ox, sube * (k0 + 1) + 0.9, z0 + oz), b = new THREE.Vector3(x0 + dx * (k1 - k0) * hue + ox, sube * k1 + 0.9, z0 + dz * (k1 - k0) * hue + oz), d = b.clone().sub(a), c = new THREE.CylinderGeometry(0.02, 0.02, d.length(), 6);
-          c.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()), new THREE.Vector3(1, 1, 1))); B.push(c);
-          for (const [px, py, pz] of [[a.x, a.y, a.z], [b.x, b.y, b.z]]) { const v = new THREE.CylinderGeometry(0.015, 0.015, 0.9, 6); v.translate(px, py - 0.45, pz); B.push(v); } } };
-      if (p.forma === 'u' || p.forma === 'l') { const m1 = Math.floor(n / 2), dsc = new THREE.BoxGeometry(w * (p.forma === 'u' ? 2 + 0.1 : 1), sube * m1, w); const zl = m1 * hue; tramo(0, m1, 0, 0, 0, -1, 0);
-        dsc.translate(p.forma === 'u' ? w / 2 + 0.05 : 0, sube * m1 / 2, -zl - w / 2); L.push(dsc);
-        if (p.forma === 'u') tramo(m1, n, w + 0.1, -zl, 0, 1, Math.PI); else tramo(m1, n, w / 2, -zl - w / 2, 1, 0, -Math.PI / 2); }
-      else tramo(0, n, 0, 0, 0, -1, 0);
-      if (L.length) g.add(sombra(new THREE.Mesh(mergeGeometries(L.map(q => q.index ? q.toNonIndexed() : q)), me)));
-      if (B.length) { const k = new THREE.Mesh(mergeGeometries(B.map(q => q.index ? q.toNonIndexed() : q)), mb); k.userData.noChoca = true; g.add(k); }
+  // escalera de interior entre plantas. «En U alrededor del ascensor» = tres tramos (sube, cruza y baja del otro lado) como la del plano de oficinas;
+  // de hierro (zancas, peldaños de chapa y baranda de caño) o de hormigón. Sube la altura de una planta y se camina: cada tramo es una rampa y cada descanso un piso.
+  // La losa de la planta de arriba se abre sola donde llega la escalera.
+  escaleraInt: { n: 'Escalera de interior (entre plantas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 1.0, forma: 'u3', centro: 1.7, huella: 0.27, material: 'hierro', baranda: true, color: '#2f3438' },
+    variantes: [{ n: 'Escalera en U alrededor del ascensor (tres tramos)', o: { forma: 'u3' } }, { n: 'Escalera recta', o: { forma: 'recta' } }, { n: 'Escalera en U (dos tramos y descanso)', o: { forma: 'u' } }, { n: 'Escalera en L', o: { forma: 'l' } }],
+    campos: [F.nombre, { k: 'forma', n: 'Forma', t: 'sel', ops: [['u3', 'En U alrededor del ascensor (tres tramos)'], ['recta', 'Recta'], ['u', 'En U, dos tramos con descanso'], ['l', 'En L, con descanso']] },
+      { k: 'material', n: 'Estructura', t: 'sel', ops: [['hierro', 'Hierro (zancas, peldaños de chapa)'], ['hormigon', 'Hormigón (maciza)']] },
+      { k: 'ancho', n: 'Ancho de cada tramo (m)', t: 'num', min: 0.6, max: 3, paso: 0.05 }, { k: 'centro', n: 'Hueco del medio, para el ascensor (m)', t: 'num', min: 0.2, max: 4, paso: 0.05 },
+      { k: 'huella', n: 'Fondo de cada escalón (m)', t: 'num', min: 0.2, max: 0.4, paso: 0.01 }, { k: 'alto', n: 'Sube (m; vacío = la altura de la planta)', t: 'num', min: 0.5, max: 8, paso: 0.05 },
+      F.color('Color del hierro'), { k: 'baranda', n: 'Con baranda', t: 'bool' }, F.r],
+    armar(p) { const g = new THREE.Group(), E = escaleraPlan(p), hierro = p.material !== 'hormigon', mh = mat(oscuro() ? mix(p.color || '#2f3438', '#000', 0.2) : (p.color || '#2f3438'), { roughness: 0.45, metalness: 0.65 }),
+        mp = hierro ? mat(oscuro() ? '#4b5258' : '#7b838a', { roughness: 0.55, metalness: 0.6 }) : mat(oscuro() ? '#7a7f84' : '#d8d6d1', { roughness: 0.75 }), L = [], H = [], up = new THREE.Vector3(0, 1, 0);
+      const caja2 = (lst, x0, y0, z0, x1, y1, z1) => { const b = new THREE.BoxGeometry(Math.max(0.005, x1 - x0), Math.max(0.005, y1 - y0), Math.max(0.005, z1 - z0)); b.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); lst.push(b); };
+      const barra = (lst, a, b, r) => { const d = b.clone().sub(a), c = new THREE.CylinderGeometry(r, r, d.length(), 8); c.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(up, d.normalize()), new THREE.Vector3(1, 1, 1))); lst.push(c); };
+      const V = (x, y, z) => new THREE.Vector3(x, y, z);
+      for (const T of E.tramos) { const { ax, d, a0, c0, c1, k, y0, s, hue } = T, P = (u, y, c) => ax === 'z' ? V(c, y, u) : V(u, y, c);   // u = a lo largo del tramo, c = a lo ancho
+        for (let i = 0; i < k; i++) { const u0 = a0 + d * i * hue, u1 = a0 + d * (i + 1) * hue, yt = y0 + (i + 1) * s, lo = Math.min(u0, u1), hi = Math.max(u0, u1);
+          if (hierro) { if (ax === 'z') caja2(L, c0 + 0.02, yt - 0.04, lo, c1 - 0.02, yt, hi); else caja2(L, lo, yt - 0.04, c0 + 0.02, hi, yt, c1 - 0.02); }
+          else if (ax === 'z') caja2(L, c0, 0, lo, c1, yt, hi); else caja2(L, lo, 0, c0, hi, yt, c1); }
+        const uf = a0 + d * k * hue, yf = y0 + k * s;
+        if (hierro) for (const c of [c0 + 0.01, c1 - 0.01]) { const a = P(a0, y0 - 0.12, c), b = P(uf, yf - 0.12, c), dd = b.clone().sub(a), z = new THREE.BoxGeometry(0.012, 0.24, dd.length()), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dd.clone().normalize());
+          z.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1))); H.push(z); }   // las dos zancas
+        if (p.baranda !== false) for (const c of [c0 + 0.03, c1 - 0.03]) { barra(H, P(a0, y0 + 0.9, c), P(uf, yf + 0.9, c), 0.022); for (const [u, y] of [[a0, y0], [uf, yf]]) barra(H, P(u, y, c), P(u, y + 0.92, c), 0.018); } }
+      for (const D of E.descansos) { if (hierro) { caja2(L, D.x0, D.y - 0.05, D.z0, D.x1, D.y, D.z1); for (const [x, z] of [[D.x0 + 0.04, D.z0 + 0.04], [D.x1 - 0.04, D.z0 + 0.04], [D.x0 + 0.04, D.z1 - 0.04], [D.x1 - 0.04, D.z1 - 0.04]]) caja2(H, x - 0.03, 0, z - 0.03, x + 0.03, D.y - 0.05, z + 0.03); }
+        else caja2(L, D.x0, 0, D.z0, D.x1, D.y, D.z1); }
+      const pon = (l, m) => { if (!l.length) return; const k = new THREE.Mesh(mergeGeometries(l.map(q => q.index ? q.toNonIndexed() : q)), m); k.castShadow = k.receiveShadow = true; k.userData.noChoca = true; g.add(k); l.forEach(q => q.dispose()); };
+      pon(L, mp); pon(H, mh);
+      // se camina: cada tramo es una rampa (por debajo se pasa donde da la altura) y cada descanso, un piso
+      g.userData.pisables = [...E.tramos.map(T => { const lo = Math.min(T.a0, T.a0 + T.d * T.k * T.hue), hi = Math.max(T.a0, T.a0 + T.d * T.k * T.hue), uf = T.a0 + T.d * T.k * T.hue;
+          return T.ax === 'z' ? { rampa: 'z', x0: T.c0, x1: T.c1, z0: lo, z1: hi, za: T.a0, zb: uf, y0: T.y0, y1: T.y0 + T.k * T.s, abierta: 0.35 } : { rampa: true, x0: lo, x1: hi, z0: T.c0, z1: T.c1, xa: T.a0, xb: uf, y0: T.y0, y1: T.y0 + T.k * T.s, abierta: 0.35 }; }),
+        ...E.descansos.map(D => ({ x0: D.x0, x1: D.x1, z0: D.z0, z1: D.z1, y: D.y, base: D.y - 0.06 }))];
       g.userData.sinAplanar = true; return g; } },
   calle: { n: 'Calle o ruta', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 8, tipo: 'asfalto', linea: 'discontinua', borde: 'auto', mano: 'doble' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['corta', 'Discontinua corta (calle de barrio)'], ['continua', 'Continua'], ['no', 'Sin línea']] }, { k: 'borde', n: 'Borde', t: 'sel', ops: [['auto', 'Cordón donde da al pasto'], ['cordon', 'Cordón en todo el largo'], ['vereda', 'Cordón y vereda a los dos lados'], ['vereda-izq', 'Vereda de un lado'], ['vereda-der', 'Vereda del otro lado'], ['no', 'Sin cordón']] }, { k: 'mano', n: 'Mano (para los camiones)', t: 'sel', ops: [['doble', 'Doble mano'], ['unica', 'Mano única, en el sentido en que se dibujó']] }],
@@ -1198,9 +1227,15 @@ export const TIPOS = {
   recinto: { n: 'Recinto (habitación)', g: 'Construcción', forma: 'area', capa: 'base', herramienta: 'recinto', etiqueta: p => p.nombre, def: { alto: 2.6, grosor: 0.15, tipo: 'maciza', color: '#eceeef', piso: 'ceramica' },
     campos: [F.nombre, F.alto('Alto de las paredes (m)', 0.3, 12), { k: 'grosor', n: 'Grosor (m)', t: 'num', min: 0.05, max: 0.6, paso: 0.05 }, { k: 'tipo', n: 'Paredes', t: 'sel', ops: PAREDES }, F.color('Color de las paredes'), { k: 'aluminio', n: 'Color del aluminio (marcos, puertas y ventanas)', t: 'sel', ops: [['', 'Negro'], ['#c9ccce', 'Natural (anodizado)'], ['#f2f3f2', 'Blanco'], ['#6f5a45', 'Bronce'], ['#7d8186', 'Gris'], ['#a8794e', 'Símil madera']] }, { k: 'piso', n: 'Piso', t: 'sel', ops: PISOS }, { k: 'colorPiso', n: 'Color del piso', t: 'color' }, { k: 'techo', n: 'Techo', t: 'sel', ops: [['', 'Sin techo (abierto arriba)'], ['losa', 'Losa de hormigón'], ['chapa', 'Chapa']] }, { k: 'luz', n: 'Luz encendida de noche', t: 'bool' }],
     armar(p, ctx) { const g = new THREE.Group(), segs = [], P = p.pts, n = P.length; if (n < 3) return g; const y = p.y || 0, alto = altoVista(p.alto, ctx, p), dentro = areaSig(P) > 0 ? 1 : -1;
-      if (p.piso !== 'sin') area(g, P, y + 0.045, p.colorPiso ? tenido(matPiso(p.piso), p.colorPiso) : matPiso(p.piso));
-      if (nivelDe(p) > 0 && p.piso !== 'sin') { const sh = new THREE.Shape(inflar(P, (+p.grosor || 0.15) / 2).map(q => new THREE.Vector2(q[0], -q[1]))), lo = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.25, bevelEnabled: false }).rotateX(-Math.PI / 2), mat(oscuro() ? mix(p.color || '#eceeef', '#000', 0.45) : (p.color || '#eceeef'), { roughness: 0.92 }));   /* del color de las paredes: de afuera el canto de la losa sigue la fachada */
-        lo.position.y = y - 0.21; lo.castShadow = lo.receiveShadow = true; lo.userData.losa = true; g.add(lo); }   // la losa: piso de esta planta y techo de la de abajo
+      if (p.piso !== 'sin') area(g, P, y + 0.045, p.colorPiso ? tenido(matPiso(p.piso), p.colorPiso) : matPiso(p.piso), nivelDe(p) > 0 ? huecosEscalera(p, ctx) : null);
+      if (nivelDe(p) > 0 && p.piso !== 'sin') { const sh = new THREE.Shape(inflar(P, (+p.grosor || 0.15) / 2).map(q => new THREE.Vector2(q[0], -q[1]))), hs = huecosEscalera(p, ctx), dep = Math.max(0.25, ALTO_PLANTA - 2.55);
+        for (const h of hs) sh.holes.push(new THREE.Path(h.map(q => new THREE.Vector2(q[0], -q[1]))));
+        let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (const [x, z] of P) { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); bz0 = Math.min(bz0, z); bz1 = Math.max(bz1, z); }
+        const hz = hs.length ? hs[0].reduce((b, [x, z]) => [Math.min(b[0], x), Math.min(b[1], z), Math.max(b[2], x), Math.max(b[3], z)], [1e9, 1e9, -1e9, -1e9]) : null;
+        g.userData.pisables = [{ x0: bx0, x1: bx1, z0: bz0, z1: bz1, y: y + 0.045, base: y + 0.04 - dep, ...(hz ? { hueco: hz } : {}) }];   // el piso de esta planta se camina (menos el hueco de la escalera)
+        for (const h of hs) segs.push(...barandaHueco(g, h, y + 0.045));   // y la baranda del hueco no se atraviesa
+        const lo = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: dep, bevelEnabled: false }).rotateX(-Math.PI / 2), mat(oscuro() ? mix(p.color || '#eceeef', '#000', 0.45) : (p.color || '#eceeef'), { roughness: 0.92 }));   /* del color de las paredes: de afuera el canto de la losa sigue la fachada */
+        lo.position.y = y + 0.04 - dep; lo.castShadow = lo.receiveShadow = true; lo.userData.losa = true; g.add(lo); }   // la losa: piso de esta planta y techo de la de abajo
       if (p.luz && oscuro()) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }   // de noche, la luz del ambiente encendida (cálida, como la de las luminarias)
         // Un foco que apunta al piso, alto (5,2 m) y con el cono justo para la sala. Alto, para que alumbre parejo: más bajo, lo que está más cerca
         // (la tapa de un escritorio) recibía mucha más luz que el piso y quedaba quemado. Con cono, para que no se sume la luz de las salas vecinas
@@ -1536,6 +1571,25 @@ function inflar(P, d) { const n = P.length, of = k => P.map((c, i) => { const a 
     const n1 = [-(c[1] - a[1]) / l1, (c[0] - a[0]) / l1], n2 = [-(b[1] - c[1]) / l2, (b[0] - c[0]) / l2], m = [n1[0] + n2[0], n1[1] + n2[1]], ml = Math.hypot(m[0], m[1]) || 1, cs = Math.max(0.35, (m[0] * n1[0] + m[1] * n1[1]) / ml);
     return [c[0] + k * d * m[0] / ml / cs, c[1] + k * d * m[1] / ml / cs]; });
   const A = of(1), B = of(-1); return Math.abs(areaSig(A)) > Math.abs(areaSig(B)) ? A : B; }
+// las escaleras de interior que llegan a la planta de este recinto: el hueco que dejan en su losa (contorno en el mundo)
+function huecosEscalera(p, ctx) { const L = ctx && ctx.piezas ? ctx.piezas().filter(q => q.t === 'escaleraInt' && nivelDe(q) === nivelDe(p) - 1) : [], out = [];
+  for (const q of L) { const [x0, z0, x1, z1] = escaleraPlan(q).caja, r = q.r || 0, c = Math.cos(r), sn = Math.sin(r);
+    const pts = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => [q.x + x * c + z * sn, q.z - x * sn + z * c]);
+    if (pts.some(([x, z]) => { let d = false; const P = p.pts; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) d = !d; } return d; })) { pts.esc = q; out.push(pts); } }
+  return out; }
+// baranda alrededor del hueco de la escalera en la planta de arriba, salvo el lado por donde se llega (el final del último tramo)
+function barandaHueco(g, h, y) { const q = h.esc, E = escaleraPlan(q), [x0, z0, x1, z1] = E.caja, T = E.tramos[E.tramos.length - 1], uf = T.a0 + T.d * T.k * T.hue, r = q.r || 0, c = Math.cos(r), sn = Math.sin(r);
+  const W = (x, z) => [q.x + x * c + z * sn, q.z - x * sn + z * c], L = [], up = new THREE.Vector3(0, 1, 0), m = mat('#30363b', { roughness: 0.42, metalness: 0.55 });
+  const lados = [[[x0, z0], [x1, z0]], [[x1, z0], [x1, z1]], [[x1, z1], [x0, z1]], [[x0, z1], [x0, z0]]], tramos = [];
+  for (const [a, b] of lados) { const enEje = T.ax === 'z' ? Math.abs(a[1] - uf) < 0.01 && Math.abs(b[1] - uf) < 0.01 : Math.abs(a[0] - uf) < 0.01 && Math.abs(b[0] - uf) < 0.01;
+    if (!enEje) { tramos.push([a, b]); continue; } const k = T.ax === 'z' ? 0 : 1, lo = Math.min(T.c0, T.c1), hi = Math.max(T.c0, T.c1), A = Math.min(a[k], b[k]), B = Math.max(a[k], b[k]), pt = v => k === 0 ? [v, a[1]] : [a[0], v];
+    if (lo - A > 0.05) tramos.push([pt(A), pt(lo)]); if (B - hi > 0.05) tramos.push([pt(hi), pt(B)]); }
+  const barra = (P0, P1, rr) => { const d = P1.clone().sub(P0), cy = new THREE.CylinderGeometry(rr, rr, d.length(), 8); cy.applyMatrix4(new THREE.Matrix4().compose(P0.clone().add(P1).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(up, d.normalize()), new THREE.Vector3(1, 1, 1))); L.push(cy); };
+  for (const [a, b] of tramos) { const [ax, az] = W(...a), [bx, bz] = W(...b), n = Math.max(1, Math.round(Math.hypot(bx - ax, bz - az) / 1.2));
+    barra(new THREE.Vector3(ax, y + 0.95, az), new THREE.Vector3(bx, y + 0.95, bz), 0.022); barra(new THREE.Vector3(ax, y + 0.5, az), new THREE.Vector3(bx, y + 0.5, bz), 0.012);
+    for (let i = 0; i <= n; i++) { const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t; barra(new THREE.Vector3(x, y, z), new THREE.Vector3(x, y + 0.97, z), 0.018); } }
+  if (L.length) { const k = new THREE.Mesh(mergeGeometries(L.map(q2 => q2.toNonIndexed())), m); k.castShadow = true; g.add(k); L.forEach(q2 => q2.dispose()); }
+  return tramos.map(([a, b]) => { const [ax, az] = W(...a), [bx, bz] = W(...b); return [ax, az, bx, bz, 0.04, y, y + 1.0]; }); }
 function offset(pts, d) { return pts.map((c, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [c[0] - (b[1] - a[1]) / l * d, c[1] + (b[0] - a[0]) / l * d]; }); }
 // cinta parada a una altura (riel, cable)
 function cintaVertical(pts, alto, y) { const v = [], ix = []; for (let i = 0; i < pts.length; i++) { v.push(pts[i][0], y - alto / 2, pts[i][1], pts[i][0], y + alto / 2, pts[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
