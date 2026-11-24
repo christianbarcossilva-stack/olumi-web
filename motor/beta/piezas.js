@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=19';
+import { THREE } from './nucleo.js?v=20';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=15';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=16';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=5';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -268,6 +268,12 @@ function texMuro(k) { if (TEX_MURO[k]) return TEX_MURO[k]; const D = MUROS[k], N
   if (k === 'hormigon') { x.fillStyle = 'rgba(80,80,76,.5)'; for (const [a, bb] of [[0.3, 0.3], [0.9, 0.3], [0.3, 0.9], [0.9, 0.9]]) for (const ox of [0, 1.2]) { x.beginPath(); x.arc((a + ox) * sx * 0.5 + 0.15 * sx, bb * sx * 0.5, 3, 0, 7); x.fill(); } }
   if (k === 'chapa') { const g = x.createLinearGradient(0, 0, pw, 0); g.addColorStop(0, 'rgba(0,0,0,.18)'); g.addColorStop(0.35, 'rgba(255,255,255,.12)'); g.addColorStop(1, 'rgba(0,0,0,.05)'); for (let i = 0; i * pw < N; i++) { x.save(); x.translate(i * pw, 0); x.fillStyle = g; x.fillRect(0, 0, pw, c.height); x.restore(); } }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return TEX_MURO[k] = t; }
+// plantas de un edificio armado a mano (como en Los Sims): cada pieza guarda su planta en «nivel» (0 = planta baja) y sube ALTO_PLANTA por planta.
+// 2,8 m = paredes de 2,6 m más la losa de 0,2 m: así la pared de abajo llega justo a la losa de arriba. Los planos que guardaban la altura en «y» (3, 6, 9 m) se leen igual.
+export const ALTO_PLANTA = 2.8;
+export const nivelDe = q => q.nivel != null ? +q.nivel || 0 : q.t === 'plano' ? Math.round((+q.y || 0) / 3) : 0;
+export const NOM_PLANTA = n => n === 0 ? 'Planta baja' : ['', 'Primer piso', 'Segundo piso', 'Tercer piso', 'Cuarto piso', 'Quinto piso'][n] || n + '.º piso';
+export const PLANTAS = [0, 1, 2, 3, 4, 5].map(n => [n, NOM_PLANTA(n)]);
 export const PISOS = [['ceramica', 'Cerámica'], ['porcelanato', 'Porcelanato gris'], ['madera', 'Madera'], ['alfombra', 'Alfombra'], ['hormigon', 'Hormigón alisado'], ['goma', 'Goma técnica'], ['sin', 'Sin piso']];
 export const areaSig = P => { let a = 0; for (let i = 0, n = P.length; i < n; i++) { const p = P[i], q = P[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
 // vistas de pared, como en Los Sims: altas, cortadas (para ver adentro) o al ras
@@ -1030,6 +1036,8 @@ export const TIPOS = {
     campos: [F.nombre, F.alto('Alto de las paredes (m)', 0.3, 12), { k: 'grosor', n: 'Grosor (m)', t: 'num', min: 0.05, max: 0.6, paso: 0.05 }, { k: 'tipo', n: 'Paredes', t: 'sel', ops: PAREDES }, F.color('Color de las paredes'), { k: 'piso', n: 'Piso', t: 'sel', ops: PISOS }, { k: 'luz', n: 'Luz encendida de noche', t: 'bool' }],
     armar(p, ctx) { const g = new THREE.Group(), segs = [], P = p.pts, n = P.length; if (n < 3) return g; const y = p.y || 0, alto = altoVista(p.alto, ctx, p), dentro = areaSig(P) > 0 ? 1 : -1;
       if (p.piso !== 'sin') area(g, P, y + 0.045, matPiso(p.piso));
+      if (nivelDe(p) > 0 && p.piso !== 'sin') { const sh = new THREE.Shape(P.map(q => new THREE.Vector2(q[0], -q[1]))), lo = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: false }).rotateX(-Math.PI / 2), mat('#c3c5c7', { roughness: 0.92 }));
+        lo.position.y = y - 0.2 + 0.04; lo.castShadow = lo.receiveShadow = true; lo.userData.losa = true; g.add(lo); }   // la losa: piso de esta planta y techo de la de abajo
       if (p.luz && oscuro()) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }   // de noche, la luz del ambiente encendida (cálida, como la de las luminarias)
         // Un foco que apunta al piso, alto (5,2 m) y con el cono justo para la sala. Alto, para que alumbre parejo: más bajo, lo que está más cerca
         // (la tapa de un escritorio) recibía mucha más luz que el piso y quedaba quemado. Con cono, para que no se sume la luz de las salas vecinas
@@ -1282,11 +1290,11 @@ export const TIPOS = {
 
 
   // ---------- plano del lugar y control de acceso ----------
-  plano: { n: 'Plano del lugar (imagen)', g: 'Terreno', forma: 'punto', capa: 'plano', fondo: true, archivo: 'image/*', def: { ancho: 60, aspecto: 0.62, opacidad: 1, fijo: false, y: 0 },
-    campos: [F.nombre, F.ancho('Ancho real (m)', 2, 3000), { k: 'y', n: 'Piso del edificio', t: 'sel', ops: [[0, 'Planta baja'], [3, 'Primer piso (a 3 m)'], [6, 'Segundo piso (a 6 m)'], [9, 'Tercer piso (a 9 m)'], [12, 'Cuarto piso (a 12 m)']] }, { k: 'opacidad', n: 'Opacidad', t: 'num', min: 0.2, max: 1, paso: 0.05 }, { k: 'fijo', n: 'Fijo: no se mueve al arrastrar', t: 'bool' }, F.r],
+  plano: { n: 'Plano del lugar (imagen)', g: 'Terreno', forma: 'punto', capa: 'plano', fondo: true, archivo: 'image/*', def: { ancho: 60, aspecto: 0.62, opacidad: 1, fijo: false },
+    campos: [F.nombre, F.ancho('Ancho real (m)', 2, 3000), { k: 'nivel', n: 'Planta de este plano', t: 'sel', ops: PLANTAS }, { k: 'opacidad', n: 'Opacidad', t: 'num', min: 0.2, max: 1, paso: 0.05 }, { k: 'fijo', n: 'Fijo: no se mueve al arrastrar', t: 'bool' }, F.r],
     armar(p, ctx) { const g = new THREE.Group(), w = p.ancho, d = p.ancho * (p.aspecto || 0.62), os = oscuro(), op = Math.min(1, Math.max(0.2, p.opacidad ?? 1));
       const m = new THREE.MeshBasicMaterial({ map: p.img ? texPlano(p.img, os, ctx && ctx.dirty) : hojaVacia(os), transparent: op < 1, opacity: op, depthWrite: op >= 1, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
-      const k = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), m); k.position.y = 0.04 + (+p.y || 0); g.add(k);   // el plano de un piso alto queda a su altura, para calcar encima las paredes de ese piso
+      const k = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), m); k.position.y = 0.04; g.add(k);   // el plano de un piso alto sube con su planta (armarPieza), para calcar encima las paredes de ese piso
       caja(g, -w / 2 - 0.12, 0, -d / 2 - 0.12, w / 2 + 0.12, 0.034, d / 2 + 0.12, mat(os ? '#0b0c0f' : '#c3c8cf', { roughness: 0.9 }), false);   // el canto: se lee como una hoja apoyada
       g.userData.sinAplanar = true; return g; } },
   acceso: { n: 'Puerta con control de acceso', g: 'Control de acceso', forma: 'punto', capa: 'acceso', vivo: true, siempre: true, etiqueta: p => p.nombre, def: { clase: 'puerta', muro: true, lector: 'afuera' },
@@ -1517,6 +1525,7 @@ function aplanar(g) { g.updateMatrixWorld(true); _inv.copy(g.matrixWorld).invert
 // ---------- armar una pieza completa en su lugar ----------
 export function armarPieza(p, ctx = {}) { const T = TIPOS[p.t]; if (!T) return null; const q = { ...T.def, ...p };
   const g = T.armar(q, ctx) || new THREE.Group(); if (!g.userData.sinAplanar) aplanar(g); if (T.forma === 'punto') { const E = q.t !== 'playa' && q.t !== 'relieve' && entorno(ctx); g.position.set(q.x || 0, E && E.playas.length ? E.cota(q.x || 0, q.z || 0) : 0, q.z || 0); g.rotation.y = q.t === 'relieve' ? 0 : q.r || 0; if (q.t === 'relieve') entorno(ctx); } else if (q.t === 'loma' || q.t === 'playa') entorno(ctx);   // el terreno que sube también se pisa, aunque no haya otra pieza que lo calcule
+  const nv = nivelDe(q); if (nv) g.position.y += nv * ALTO_PLANTA;   // los equipos guardan su altura desde el piso de su planta
   g.userData.pieza = p; g.userData.tipo = T; g.traverse(o => { o.userData.dueño = g; }); return g; }
 // centro de una pieza (para etiquetas, enfocar y calcular el "lugar")
 export function centro(p) { if (p.pts && p.pts.length) { if (TIPOS[p.t] && TIPOS[p.t].forma === 'area') { const n = p.pts.length; return [p.pts.reduce((a, q) => a + q[0], 0) / n, p.pts.reduce((a, q) => a + q[1], 0) / n]; } const m = p.pts[Math.floor(p.pts.length / 2)]; return [m[0], m[1]]; } return [p.x || 0, p.z || 0]; }

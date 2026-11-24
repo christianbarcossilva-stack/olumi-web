@@ -145,7 +145,8 @@ export function crearMotor(canvas, o = {}) {
   // rayos: punto del piso bajo el mouse y piezas tocadas
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   motor.rayo = (x, y) => { const r = canvas.getBoundingClientRect(); ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); return ray; };
-  motor.enPiso = (x, y, h = 0) => { piso.constant = -h; const p = new THREE.Vector3(); return motor.rayo(x, y).ray.intersectPlane(piso, p) ? p : null; };
+  motor.pisoY = 0; motor.enPiso = (x, y, h = motor.pisoY) => {   // editando en una planta alta, el puntero cae sobre el piso de esa planta
+   piso.constant = -h; const p = new THREE.Vector3(); return motor.rayo(x, y).ray.intersectPlane(piso, p) ? p : null; };
   motor.tocar = (x, y, objs) => motor.rayo(x, y).intersectObjects(objs, true);
   motor.aPantalla = v => { const p = v.clone().project(cam), r = canvas.getBoundingClientRect(); return { x: (p.x + 1) / 2 * r.width, y: (1 - p.y) / 2 * r.height, z: p.z }; };
 
