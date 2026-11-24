@@ -723,6 +723,38 @@ export function camionGeo() { if (CAMION) return CAMION; const seg = FINO ? 18 :
   CAMION = { remolque: R.fin(), lisa: F.fin(), contenedor: C.fin(), cabina: K.fin(), tractor: D.fin() }; return CAMION; }
 // materiales compartidos: el que toma el color de cada pieza y el de los detalles
 const MAT_CAM = {};
+// reach stacker (tipo Kalmar): chasis y contrapeso del color de la pieza, cabina en el medio, pluma gris que nace atrás arriba del motor,
+// dos cilindros de levante, rotador en la punta y spreader atravesado (los contenedores se llevan de costado). Adelante (+x) va el spreader.
+const RUEDA = new THREE.CylinderGeometry(0.5, 0.5, 1, 22).rotateX(Math.PI / 2), LLANTA = new THREE.CylinderGeometry(0.5, 0.5, 1, 12).rotateX(Math.PI / 2);
+function viga(g, a, b, w, h, m) { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), k = new THREE.Mesh(CAJA, m); k.scale.set(L, h, w); k.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, a[2] || 0); k.rotation.z = Math.atan2(dy, dx); g.add(sombra(k)); return k; }
+function reachStacker(g, p) {
+  const os = oscuro(), C = mat(os ? mix(p.color || '#c23b2a', '#000', 0.35) : (p.color || '#c23b2a'), { roughness: 0.55, metalness: 0.25 }), GR = mat(os ? '#3d4246' : '#5c6267', { roughness: 0.6, metalness: 0.45 }),
+    N = mat('#1e2124', { roughness: 0.8, metalness: 0.3 }), GOMA = mat('#17191b', { roughness: 0.95 }), LL = mat('#8d9296', { roughness: 0.5, metalness: 0.6 }), CR = mat('#d9dde0', { roughness: 0.2, metalness: 0.9 }),
+    VI = mat('#2a3a46', { roughness: 0.08, metalness: 0.6, transparent: true, opacity: 0.72 }), OX = mat(os ? '#4a3328' : '#7b4b36', { roughness: 0.85, metalness: 0.3 }), AM = mat('#ffb020', { emissive: '#ff8a00', emissiveIntensity: 0.6 });
+  const rueda = (x, z, r, w) => { const t = new THREE.Mesh(RUEDA, GOMA); t.scale.set(r * 2, r * 2, w); t.position.set(x, r, z); g.add(sombra(t)); const l = new THREE.Mesh(LLANTA, LL); l.scale.set(r * 1.15, r * 1.15, w + 0.02); l.position.copy(t.position); g.add(l); };
+  for (const s of [-1, 1]) { rueda(1.3, s * 1.32, 0.82, 0.56); rueda(1.3, s * 1.92, 0.82, 0.56); rueda(-4.6, s * 1.3, 0.7, 0.55); }   // eje de adelante con duales, atrás el que dobla
+  caja(g, -5.7, 0.55, -1.05, 2.1, 1.55, 1.05, C);                                          // chasis
+  for (const s of [-1, 1]) { caja(g, 0.25, 1.62, s > 0 ? 1.05 : -2.3, 2.35, 1.74, s > 0 ? 2.3 : -1.05, C); caja(g, -5.5, 1.45, s > 0 ? 1.05 : -1.7, -3.7, 1.55, s > 0 ? 1.7 : -1.05, C); }   // guardabarros
+  caja(g, -6.75, 0.5, -1.45, -5.55, 2.55, 1.45, C); caja(g, -6.82, 0.45, -1.5, -6.7, 0.95, 1.5, N);   // contrapeso y paragolpes
+  caja(g, -5.55, 1.55, -0.95, -2.35, 2.65, 0.95, C); for (let i = 0; i < 5; i++) caja(g, -5.2 + i * 0.55, 2.66, -0.7, -4.9 + i * 0.55, 2.68, 0.7, N, false);   // capot con rejillas
+  // cabina: base roja, vidrios, parantes y techo oscuros, baliza naranja
+  caja(g, -2.3, 1.55, -0.98, -0.35, 2.3, 0.98, C); caja(g, -2.25, 2.3, -0.93, -0.4, 4.0, 0.93, VI);
+  for (const [x, z] of [[-2.28, -0.95], [-2.28, 0.95], [-0.38, -0.95], [-0.38, 0.95]]) caja(g, x - 0.05, 2.3, z - 0.05, x + 0.05, 4.05, z + 0.05, N);
+  caja(g, -2.38, 4.0, -1.02, -0.3, 4.18, 1.02, N); cil(g, -1.3, 4.18, 0.6, 0.1, 0.16, AM);
+  for (let i = 0; i < 4; i++) caja(g, -1.6, 0.45 + i * 0.38, -1.38, -1.0, 0.5 + i * 0.38, -1.05, N);   // escalera de la cabina
+  for (const s of [-1, 1]) caja(g, -0.32, 3.2, s * 1.0 - 0.02, -0.26, 3.6, s * 1.0 + 0.02, N);
+  // pluma: nace atrás (torre sobre el motor), sube hacia adelante; tramo de afuera y tramo que sale
+  const P = [-4.35, 3.05], A = 0.4, ca = Math.cos(A), sa = Math.sin(A), en = d => [P[0] + ca * d, P[1] + sa * d], T = en(12.2);
+  for (const s of [-1, 1]) caja(g, -4.85, 1.55, s * 0.62 - 0.12, -3.85, 3.25, s * 0.62 + 0.12, C);
+  viga(g, [P[0] - 0.4, P[1] - 0.15], en(8.6), 0.82, 1.0, GR); viga(g, en(8.2), T, 0.62, 0.74, GR); viga(g, en(1), en(8.4), 0.84, 0.08, N).position.y += 0.5;   // tramos y canaleta de mangueras
+  // cilindros de levante: de adelante del chasis a la mitad de la pluma, inclinados hacia atrás
+  const B = en(5.2); for (const s of [-1, 1]) { const z = s * 0.56, a = [1.75, 1.7, z], m = [1.75 + (B[0] - 1.75) * 0.55, 1.7 + (B[1] - 1.7) * 0.55, z]; viga(g, a, m, 0.36, 0.36, N); viga(g, m, [B[0], B[1] - 0.45, z], 0.2, 0.2, CR); }
+  // rotador y spreader atravesado (20 pies, con los twistlocks en las puntas)
+  caja(g, T[0] - 0.45, T[1] - 0.9, -0.5, T[0] + 0.45, T[1] + 0.35, 0.5, GR); caja(g, T[0] - 0.14, T[1] - 2.0, -0.14, T[0] + 0.14, T[1] - 0.9, 0.14, N);
+  const Y = T[1] - 2.55; caja(g, T[0] - 0.55, Y, -0.95, T[0] + 0.55, Y + 0.55, 0.95, OX); caja(g, T[0] - 0.24, Y + 0.05, -3.05, T[0] + 0.24, Y + 0.42, 3.05, OX);
+  for (const s of [-1, 1]) { caja(g, T[0] - 0.5, Y - 0.05, s * 3.05 - 0.28, T[0] + 0.5, Y + 0.48, s * 3.05 + 0.28, OX); caja(g, T[0] - 0.45, Y - 0.18, s * 3.05 - 0.2, T[0] + 0.45, Y - 0.05, s * 3.05 + 0.2, N); }
+  return g; }
+
 export function matCamion() { if (!MAT_CAM.t) { MAT_CAM.t = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.5, metalness: 0.22 }); MAT_CAM.d = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.62, metalness: 0.3 }); } return MAT_CAM; }
 // un camión o un semirremolque quieto, armado como pieza (color de carga vacío = chasis solo)
 function camionQuieto(g, carga, cabina) { const G = camionGeo(), M = matCamion(), pinta = hex => { const m = M.t.clone(); m.color.set(oscuro() ? mix(hex, '#000', 0.4) : hex); return m; }, pon = (geo, m, s = true) => { const k = new THREE.Mesh(geo, m); k.castShadow = s; k.receiveShadow = true; g.add(k); return k; };
@@ -1204,7 +1236,7 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
       caja(g, -3.2 * (big ? 1 : 0.5), 0.6, -1.4 * (big ? 1 : 0.6), 2.2 * (big ? 1 : 0.5), 2.2 * (big ? 1 : 0.7), 1.4 * (big ? 1 : 0.6), c); caja(g, -1.6, 2.2, -0.9, 0, 4.4, 0.9, mat('#2c3e4f', { roughness: 0.15, metalness: 0.5 }));
-      if (p.tipo === 'reach') { const b = caja(g, -2, 3, -0.35, 6.5, 3.8, 0.35, c); b.rotation.z = 0.32; caja(g, 6, 4.5, -1.3, 6.6, 5.2, 1.3, n); }
+      if (p.tipo === 'reach') return reachStacker(g, p);
       else { for (const z of [-0.9, 0.9]) caja(g, 2.3, 0.4, z - 0.15, 2.6, big ? 16 : 4.5, z + 0.15, n); caja(g, 2.6, big ? 12 : 1.2, -1.3, 3.1, big ? 12.5 : 1.4, 1.3, n); }
       for (const [x, z] of [[-2.4, -1.3], [-2.4, 1.3], [1.5, -1.3], [1.5, 1.3]]) { const w = cil(g, x * (big ? 1 : 0.5), 0, z * (big ? 1 : 0.6), big ? 0.75 : 0.35, 0.6, n); w.rotation.x = Math.PI / 2; w.position.y = big ? 0.75 : 0.35; } return g; } },
   vehiculo: { n: 'Vehículo', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', def: { modelo: 'suv', color: '' },
