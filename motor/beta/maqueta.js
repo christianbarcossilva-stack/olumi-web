@@ -14,9 +14,9 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=74';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=75';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
-import { svg } from './iconos.js?v=4';
+import { svg } from './iconos.js?v=5';
 import { construir } from './construir.js?v=63';
 import { juego } from './juego.js?v=8';
 import { recorrer } from './recorrer.js?v=23';
@@ -26,7 +26,9 @@ import { extras } from './extras.js?v=5';
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
 // los equipos se prenden y apagan por clase: cámaras, Wi-Fi, racks y gabinetes, fibra, y el resto
-const CAPA_DE = { camara: 'camaras', ap: 'wifi', rack: 'racks', gabinete: 'racks', fibra: 'fibra' }, CAPAS_EQ = ['camaras', 'campos', 'wifi', 'racks', 'fibra', 'equipos'];
+// sacar capas de la obra, de a una: techo, el piso de arriba, paredes cortadas, paredes al ras (botón de la barra y «Ver por dentro» en Capas)
+const PELAR = [['Todo puesto'], ['Sin techo'], ['Sin el piso de arriba'], ['Paredes cortadas'], ['Paredes al ras']];
+const CAPA_DE = { camara: 'camaras', ap: 'wifi', rack: 'racks', gabinete: 'racks', fibra: 'fibra', bandeja: 'fibra' }, CAPAS_EQ = ['camaras', 'campos', 'wifi', 'racks', 'fibra', 'equipos'];
 const SIN_CAPA = { kliva: ['logistica', ...CAPAS_EQ] };
 const EQ_DE = { cam: 'camara', ap: 'ap', sw: 'switch', gw: 'router', sen: 'sensor', otro: 'ups' };
 const ESTADO = e => ['online', 'en_linea', 'abierta', 'cerrada'].includes(e) ? 'ok' : ['offline', 'caido'].includes(e) ? 'crit' : ['alerting', 'atencion'].includes(e) ? 'warn' : 'off';
@@ -57,9 +59,9 @@ export async function abrirMaqueta(o) {
   raiz.insertAdjacentHTML('beforeend', `<canvas id="m3d" tabindex="0" aria-label="Maqueta 3D de ${esc(E.nombre)}. Arrastrá para mover; rueda o dos dedos para acercar; clic derecho, o dos dedos de costado, para girar."></canvas><div id="mlbl" aria-hidden="true"></div>
   <header class="mbar vidrio"><div class="mmarca">${LOGO[app] || `<i class="mapp mapp-${app}"></i>`}<div><b id="mnom">${esc(E.nombre)}</b><span id="mguar">${puede ? (host && host.guarda === false ? 'Simulación: los cambios no se guardan' : 'Los cambios se guardan solos') : 'Solo lectura'}</span></div></div>
     <label class="mbus">${svg('buscar', 16)}<input id="mq" type="search" placeholder="${BUSCA[app] || 'Buscar fila, galpón, equipo o IP'}" autocomplete="off" aria-label="Buscar"><div id="mres" class="vidrio" hidden></div></label>
-    <div class="mbtns">${host && host.tema ? '' : `<button id="btema" data-tecla="L" class="mbtn" aria-label="Cambiar la hora del día" title="Hora del día: mañana, mediodía, hora azul, noche u hora real (L)">${svg('tema')}</button>`}<button id="bcapas" data-tecla="J" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes (J)">${svg('capas')}</button><button id="bplano" data-tecla="T" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta) (T)">${svg('plano')}</button><button id="bvista" data-tecla="U" class="mbtn" aria-label="Vista general" title="Vista general (U)">${svg('vista')}</button><button id="bpaseo" data-tecla="C" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando (C)">${svg('caminar')}</button><button id="bfull" data-tecla="O" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa (O)">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
+    <div class="mbtns">${host && host.tema ? '' : `<button id="btema" data-tecla="L" class="mbtn" aria-label="Cambiar la hora del día" title="Hora del día: mañana, mediodía, hora azul, noche u hora real (L)">${svg('tema')}</button>`}<button id="bcapas" data-tecla="J" class="mbtn" aria-label="Capas y paredes" title="Capas y paredes (J)">${svg('capas')}</button><button id="bpelar" data-tecla="X" class="mbtn" aria-label="Sacar capas de la obra" title="Sacar capas: techo, piso de arriba, paredes. Cada toque saca una; con Mayúscula vuelve a poner (X)">${svg('pelar')}</button><button id="bplano" data-tecla="T" class="mbtn" aria-pressed="false" aria-label="Ver desde arriba" title="Ver desde arriba (planta) (T)">${svg('plano')}</button><button id="bvista" data-tecla="U" class="mbtn" aria-label="Vista general" title="Vista general (U)">${svg('vista')}</button><button id="bpaseo" data-tecla="C" class="mbtn" aria-pressed="false" aria-label="Recorrer caminando" title="Recorrer caminando (C)">${svg('caminar')}</button><button id="bfull" data-tecla="O" class="mbtn" aria-label="Pantalla completa" title="Pantalla completa (O)">${svg('full')}</button>${puede ? `<button id="bedit" class="mbtn pri" aria-pressed="false" title="Editar (F)">${svg('editar')}<span>Editar</span></button>` : ''}</div></header>
   <div id="mcapas" class="vidrio mpop" hidden><button class="mbtn mpresb" id="bpres">${svg('ojo', 16)}Recorrido de presentación</button><div class="mseg mclima" role="group" aria-label="Clima"><span>Clima</span><div>${[['real', 'Real'], ['despejado', 'Sol'], ['nublado', 'Nubes'], ['lluvia', 'Lluvia'], ['niebla', 'Niebla']].map(([k, n]) => `<button data-clima="${k}" aria-pressed="${k === 'despejado'}">${n}</button>`).join('')}</div></div>${CAPAS.filter(([k]) => !(SIN_CAPA[app] || []).includes(k) && !(k === 'transito' && app !== 'ondi')).map(([k, n]) => `<label class="msw"><span>${n}</span><input type="checkbox" data-capa="${k}" checked><i></i></label>`).join('')}
-    <div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><div id="mlug"></div><p class="mvacio" id="mocultos" hidden></p><p class="mayuda">Con «Techos» apagado se ve cada nave por dentro.</p></div>
+    <div class="mseg mpelar" role="group" aria-label="Ver por dentro"><span>Ver por dentro</span><div>${PELAR.map(([n], i) => `<button data-pelar="${i}" aria-pressed="${i === 0}" title="${n}">${i ? '−' + i : 'Todo'}</button>`).join('')}</div></div><div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><div id="mlug"></div><p class="mvacio" id="mocultos" hidden></p><p class="mayuda">Con «Techos» apagado se ve cada nave por dentro.</p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas"><span id="mbarra" role="group" aria-label="Barra rápida: teclas 1 a 0"></span><span class="msep"></span><button data-h="catalogo" aria-pressed="false" title="Inventario (Tab): arrastrá a la barra lo que uses seguido" aria-label="Inventario">${svg('catalogo')}</button>${host && host.puertas ? `<button id="beq" title="Puertas para ubicar" aria-label="Puertas para ubicar">${svg('puerta')}</button>` : host && host.equipos ? `<button id="beq" title="Equipos del cliente" aria-label="Equipos del cliente">${svg('equipos')}</button>` : ''}
     <span class="msep"></span><span class="mplanta" role="group" aria-label="Planta"><button id="bplbaja" title="Planta de abajo (Av Pág)" aria-label="Planta de abajo">▾</button><b id="bplnom" title="Planta en la que estás dibujando">Planta baja</b><button id="bplsube" title="Planta de arriba (Re Pág)" aria-label="Planta de arriba">▴</button></span>
@@ -162,9 +164,10 @@ export async function abrirMaqueta(o) {
   try { const g = JSON.parse(localStorage.getItem('motor.capas.' + app) || '{}'); for (const k in capas) if (g[k] === false) capas[k] = false; } catch (e) {}
   for (const c of raiz.querySelectorAll('[data-capa]')) c.checked = capas[c.dataset.capa] !== false;
   const LUG = new Set();   // lugares cuyas puertas están ocultas
+  const PEL = { k: 0, max: 99 }, nivelTope = () => E.piezas.reduce((m, p) => conPlanta(p.t) && p.t !== 'plano' ? Math.max(m, nivelDe(p)) : m, 0);
   const PL = { act: 0 }, NACEN = new Set(), conPlanta = t => t === 'plano' || !!(TIPOS[t] && TIPOS[t].g !== 'Terreno');
   const plAct = () => motor.caminando ? 0 : PL.act;   // a pie se está en planta baja: todavía no hay escalera de interior
-  const enPlanta = p => { if (!p || !conPlanta(p.t)) return true; const n = nivelDe(p); return p.t === 'plano' ? n === plAct() : !ED.on || n <= plAct(); };
+  const enPlanta = p => { if (!p || !conPlanta(p.t)) return true; const n = nivelDe(p); return p.t === 'plano' ? n === plAct() : ED.on ? n <= plAct() : n <= PEL.max; };
   const elegible = p => !ED.on || !p || (conPlanta(p.t) ? nivelDe(p) === plAct() : plAct() === 0);
   function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))) && enPlanta(p); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; if (k.userData.interior) k.visible = !capas.techos; }); }
   motor.alTema.push(() => { armarTodo(); });
@@ -186,7 +189,10 @@ export async function abrirMaqueta(o) {
   function rotulos(id) { for (const e of etq) if (e.p.puerta === id) { const T = TIPOS[e.p.t]; rotulo(e.el, e.p, T, T.etiqueta({ ...T.def, ...e.p })); e.w = 0; } motor.dirty = true; }
   let lejosAntes = null;
   motor.despues.push(() => { const d = motor.C.d, lejos = d > 75, w = canvas.clientWidth, h = canvas.clientHeight, pase = RC.R.on; lbl.classList.toggle('lejos', lejos); if (lejos !== lejosAntes) { lejosAntes = lejos; for (const e of etq) e.w = 0; }
-    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p && !(ED.on && PL.act && conPlanta(e.p.t) && nivelDe(e.p) < PL.act);   /* editando arriba, los nombres de abajo no tapan */ if (!vis) { e.fuera = true; continue; }
+    const tope = ED.on ? 0 : Math.min(PEL.max, nivelTope());   /* mirando: los nombres de un piso de abajo que queda bajo la losa de uno de arriba no se muestran (si no, se pisan con los de arriba) */
+    const losas = tope ? E.piezas.filter(q => q.t === 'recinto' && q.piso !== 'sin' && q.pts && nivelDe(q) > 0 && nivelDe(q) <= tope) : [];
+    const tapado = p => { if (!losas.length || !conPlanta(p.t)) return false; const n = nivelDe(p), c = centro(p); return losas.some(q => nivelDe(q) > n && dentroDe(c, q.pts)); };
+    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p && !(ED.on && PL.act && conPlanta(e.p.t) && nivelDe(e.p) < PL.act) && !tapado(e.p);   /* editando arriba, los nombres de abajo no tapan */ if (!vis) { e.fuera = true; continue; }
       if (e.p.pts) { const [x, z] = centro(e.p); e.v.set(x, e.v.y, z); } else e.v.set(e.p.x || 0, e.v.y, e.p.z || 0);
       const s = motor.aPantalla(e.v); let fuera = s.z > 1 || s.x < -60 || s.y < -30 || s.x > w + 60 || s.y > h + 30 || (e.eq && d > 700 && !e.siempre);
       if (pase && Math.hypot(e.v.x - RC.R.x, e.v.z - RC.R.z) > (e.eq ? 16 : 70)) fuera = true;
@@ -282,7 +288,7 @@ export async function abrirMaqueta(o) {
   // ---------- capas, buscar, vista, pantalla completa ----------
   $('#bcapas').onclick = () => { $('#mcapas').hidden = !$('#mcapas').hidden; };
   $('#mcapas').addEventListener('change', e => { const L = e.target.dataset.lugar; if (L != null) { if (e.target.checked) LUG.delete(L); else LUG.add(L); for (const g of objs.values()) aplicarCapas(g); if (RC.R.on) RC.obstaculos(); motor.dirty = true; return; } const k = e.target.dataset.capa; capas[k] = e.target.checked; try { localStorage.setItem('motor.capas.' + app, JSON.stringify(capas)); } catch (err) {} if (k === 'transito') { if (TR) TR.ver(capas[k]); return; } for (const g of objs.values()) aplicarCapas(g); motor.dirty = true; });
-  $('#mcapas').addEventListener('click', e => { const b = e.target.closest('[data-pared]'); if (b) paredes(b.dataset.pared); const cl = e.target.closest('[data-clima]'); if (cl) XT.ponerClima(cl.dataset.clima); const f = e.target.closest('[data-ir]'); if (f) irLugar(f.dataset.ir); });
+  $('#mcapas').addEventListener('click', e => { const b = e.target.closest('[data-pared]'); if (b) paredes(b.dataset.pared); const pe = e.target.closest('[data-pelar]'); if (pe) pelar(+pe.dataset.pelar); const cl = e.target.closest('[data-clima]'); if (cl) XT.ponerClima(cl.dataset.clima); const f = e.target.closest('[data-ir]'); if (f) irLugar(f.dataset.ir); });
   // las puertas agrupadas por lugar (el galpón, la oficina o la zona donde están): se muestran u ocultan por lugar y se puede ir a cada uno
   function capasLugar() { const box = $('#mlug'); if (!box) return; const c = new Map(); for (const p of E.piezas) if (TIPOS[p.t] && TIPOS[p.t].vivo && veo(p) && !p._p) { const L = lugarPuerta(p); c.set(L, (c.get(L) || 0) + 1); }
     for (const L of [...LUG]) if (!c.has(L)) LUG.delete(L);
@@ -344,7 +350,12 @@ export async function abrirMaqueta(o) {
   motor.cada.push(() => { if (!!motor.caminando !== !!PL.vista && objs.size) verPlantas(); return false; });
   $('#bplsube').onclick = () => planta(PL.act + 1); $('#bplbaja').onclick = () => planta(PL.act - 1);
   // vistas de pared, como en Los Sims: altas, cortadas (se ve adentro) o al ras del piso
-  function paredes(v) { ctx.paredes = v; document.querySelectorAll('[data-pared]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pared === v)); for (const p of E.piezas) if (CON.esMuro(p) && objs.has(p.id)) rehacer(p); CON.marcar(); toast({ alta: 'Paredes altas', corte: 'Paredes cortadas', baja: 'Paredes al ras' }[v]); }
+  function pelar(k, aviso = true) { const top = nivelTope(), N = PELAR.length; k = ((k % N) + N) % N; if (k === 2 && top === 0) k = PEL.k < 2 ? 3 : 1;   // sin pisos de arriba, ese paso se saltea
+    PEL.k = k; PEL.max = k >= 2 ? Math.max(0, top - 1) : 99; capas.techos = k < 1; const ct = raiz.querySelector('[data-capa="techos"]'); if (ct) ct.checked = capas.techos;
+    const pv = k >= 4 ? 'baja' : k >= 3 ? 'corte' : 'alta'; if (ctx.paredes !== pv && !(pv === 'alta' && !ctx.paredes)) paredes(pv, false);
+    document.querySelectorAll('[data-pelar]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.pelar === k)); for (const g of objs.values()) aplicarCapas(g); motor.dirty = true; if (aviso) toast(PELAR[k][0]); }
+  $('#bpelar').onclick = e => pelar(PEL.k + (e.shiftKey ? -1 : 1));
+  function paredes(v, aviso = true) { ctx.paredes = v; document.querySelectorAll('[data-pared]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pared === v)); for (const p of E.piezas) if (CON.esMuro(p) && objs.has(p.id)) rehacer(p); CON.marcar(); if (aviso) toast({ alta: 'Paredes altas', corte: 'Paredes cortadas', baja: 'Paredes al ras' }[v]); }
 
   // catálogo: cada tipo de pieza (y sus variantes: cámara domo, rack de pared…) con su dibujo, lo más usado arriba, y las aberturas, que van sobre una pared
   const USO = (() => { try { return JSON.parse(localStorage.getItem('motor.usados')) || {}; } catch (e) { return {}; } })(); let CATO = new Map();
@@ -729,6 +740,7 @@ export async function abrirMaqueta(o) {
     if (k === 'p' && !mod) { paredes({ alta: 'corte', corte: 'baja', baja: 'alta' }[ctx.paredes]); return; }
     // cada botón de la pantalla tiene su letra (así no hace falta soltar el mouse para usarlos) y M suelta o vuelve a tomar el mouse recorriendo
     if (!mod && !e.repeat) { if (k === 'm' && RC.R.on && RC.puedeMira()) { if (motor.mirando) motor.mira(false); else { $('#mcat').hidden = true; motor.mira(true); } return; }
+      if (k === 'x' && !ED.linea) { pelar(PEL.k + (e.shiftKey ? -1 : 1)); return; }
       const bk = { l: 'btema', j: 'bcapas', u: 'bvista', c: 'bpaseo', o: 'bfull', t: !ED.linea && !ED.colocar && !CON.T.h ? 'bplano' : '' }[k], bb = bk && $('#' + bk); if (bb) { bb.click(); return; } }
     if (!ED.on) return;
     if (mod && k === 'z') { e.preventDefault(); volver(e.shiftKey ? redo : undo, e.shiftKey ? undo : redo); return; } if (mod && k === 'y') { e.preventDefault(); volver(redo, undo); return; } if (mod && k === 'd') { e.preventDefault(); duplicar(); return; }
@@ -792,6 +804,7 @@ export async function abrirMaqueta(o) {
   const api = { multi: () => [...MULTI].map(q => q.id), importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, XT, PASEO: RC.R, paseo: RC.paseo, fisica: RC, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, juego: J, cancelarAgarre, salir, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
+function dentroDe([x, z], P) { let d = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, zi] = P[i], [xj, zj] = P[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) d = !d; } return d; }
 function normal(e) { e = JSON.parse(JSON.stringify(e || {})); e.v = 1; e.piezas = (e.piezas || []).filter(p => p && p.t && TIPOS[p.t]); let n = 0; const ids = new Set(); for (const p of e.piezas) { if (!p.id) p.id = p.t.slice(0, 3) + 'x' + (n++); if (ids.has(p.id)) { let i = 2; while (ids.has(p.id + '-' + i)) i++; p.id += '-' + i; } ids.add(p.id); } return e; }
 // las personas del catálogo vienen con los brazos abiertos: se bajan al costado del cuerpo
 function brazos(p) { p.updateMatrixWorld(true); const B = {}; p.traverse(o => { if (o.isBone) B[o.name.replace(/^mixamorig:?/, '')] = o; }); if (!B.LeftArm) return;

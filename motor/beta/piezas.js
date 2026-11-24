@@ -913,7 +913,7 @@ export const TIPOS = {
       else if (mont === 'techo') { const y = p.y ?? 2.55; pl.rotation.x = Math.PI / 2; pl.position.set(0, y, 0); g.add(pl); const k = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.03, 20), mat('#f3f4f2', { roughness: 0.5 })); k.position.y = y - 0.03; g.add(sombra(k)); }
       else { pl.position.set(0, p.y ?? 0.35, 0.007); g.add(pl); }
       g.userData.sinAplanar = true; return g; } },
-  puesto: { n: 'Puesto de trabajo (mesa con jacks)', g: 'Equipos', forma: 'punto', capa: 'equipos', etiqueta: p => p.nombre || jacksDe(p).join(' '), def: { ancho: 1.4, fondo: 0.7, tipo: 'puesto', color: '#e8e2d6' },
+  puesto: { n: 'Puesto de trabajo (mesa con jacks)', g: 'Equipos', forma: 'punto', capa: 'equipos', etiqueta: p => jacksDe(p).join(' ') || p.nombre, def: { ancho: 1.4, fondo: 0.7, tipo: 'puesto', color: '#e8e2d6' },
     variantes: [{ n: 'Puesto de trabajo', o: { tipo: 'puesto', ancho: 1.4, fondo: 0.7 } }, { n: 'Mesa de reunión', o: { tipo: 'mesa', ancho: 2.4, fondo: 1.1 } }],
     campos: [F.nombre, { k: 'jacks', n: 'Jacks (como en el plano: B01 B02)', t: 'txt' }, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['puesto', 'Puesto (una silla)'], ['mesa', 'Mesa de reunión (sillas a los dos lados)']] }, F.ancho('Largo (m)', 0.6, 6), F.fondo('Fondo (m)', 0.4, 2), F.color('Color de la tapa'), { k: 'rack', n: 'Va al rack', t: 'txt' },
       { k: 'bandeja', n: 'Bandeja para cables debajo de la tapa', t: 'bool' }, { k: 'columna', n: 'Columna por donde suben los cables del piso', t: 'sel', ops: [['', 'Ninguna'], ['centro', 'Al medio, atrás (en la mesa de reunión, al centro)'], ['izq', 'En la esquina de atrás, a la izquierda'], ['der', 'En la esquina de atrás, a la derecha']] }, F.r],
@@ -930,6 +930,35 @@ export const TIPOS = {
       const silla = (x, z, giro) => { const h = new THREE.Group(), ms = mat('#2b2f33', { roughness: 0.7 }); caja(h, -0.23, 0.42, -0.23, 0.23, 0.48, 0.23, ms); caja(h, -0.22, 0.48, 0.19, 0.22, 0.95, 0.24, ms); cil(h, 0, 0.05, 0, 0.03, 0.37, mf); cil(h, 0, 0, 0, 0.28, 0.05, mf); h.position.set(x, 0, z); h.rotation.y = giro; g.add(h); };
       if (p.tipo === 'mesa') { const ns = Math.max(1, Math.floor(w / 0.75)); for (let i = 0; i < ns; i++) { const x = -w / 2 + (i + 0.5) * w / ns; silla(x, d / 2 + 0.35, 0); silla(x, -d / 2 - 0.35, Math.PI); } }
       else silla(0, d / 2 + 0.4, 0);
+      g.userData.sinAplanar = true; return g; } },
+  // bandeja portacables aérea: se dibuja como una línea, a la altura que se elija, colgada del techo con varillas
+  bandeja: { n: 'Bandeja portacables (aérea)', g: 'Equipos', forma: 'linea', capa: 'equipos', etiqueta: () => '', def: { ancho: 0.3, y: 2.4, tipo: 'rejilla', techo: 2.6 },
+    campos: [F.nombre, { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.05, max: 0.9, paso: 0.05 }, { k: 'y', n: 'Altura (m)', t: 'num', min: 0, max: 12, paso: 0.05 }, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['rejilla', 'De rejilla (alambre)'], ['chapa', 'De chapa perforada'], ['ducto', 'Ducto cerrado']] }, { k: 'techo', n: 'Altura del techo, para las varillas (m)', t: 'num', min: 0, max: 15, paso: 0.05 }, { k: 'notas', n: 'Notas', t: 'area' }],
+    armar(p) { const g = new THREE.Group(); if (!p.pts || p.pts.length < 2) return g; const w = Math.max(0.05, +p.ancho || 0.3), y = +p.y || 2.4, hb = p.tipo === 'ducto' ? 0.08 : 0.06, L = [], V = [], th = +p.techo || 0;
+      const m = mat(p.tipo === 'chapa' ? '#b8bec4' : p.tipo === 'ducto' ? '#e9ebec' : '#9aa2a9', { roughness: 0.45, metalness: p.tipo === 'ducto' ? 0 : 0.7, side: THREE.DoubleSide });
+      for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz); if (l < 0.01) continue; const ang = Math.atan2(-dz, dx), cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2;
+        const pon = (gx, gy, gz, ox, oy, oz) => { const k = new THREE.BoxGeometry(gx, gy, gz); k.translate(ox, oy, oz); k.rotateY(ang); k.translate(cx, 0, cz); L.push(k); };
+        pon(l + 0.02, 0.006, w, 0, y, 0); for (const sz of [-1, 1]) pon(l + 0.02, hb, 0.006, 0, y + hb / 2, sz * w / 2);   // fondo y los dos costados
+        if (p.tipo === 'ducto') pon(l + 0.02, 0.006, w, 0, y + hb, 0);   // tapa
+        if (th > y + 0.05) for (let s2 = 0.3; s2 < l; s2 += 1.5) for (const sz of [-1, 1]) { const k = new THREE.CylinderGeometry(0.004, 0.004, th - y, 5); k.translate(-l / 2 + s2, y + (th - y) / 2, sz * (w / 2 + 0.01)); k.rotateY(ang); k.translate(cx, 0, cz); V.push(k); } }   // varillas al techo cada 1,5 m
+      if (L.length) { const k = new THREE.Mesh(mergeGeometries(L), m); k.castShadow = true; g.add(k); }
+      if (V.length) { const k = new THREE.Mesh(mergeGeometries(V), mat('#6d747a', { roughness: 0.5, metalness: 0.6 })); k.userData.noChoca = true; g.add(k); }
+      g.userData.sinAplanar = true; return g; } },
+  // escalera entre plantas: recta, sube desde el punto hacia adelante. Con descanso si se elige en L o en U
+  escaleraInt: { n: 'Escalera de interior (entre plantas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 1.1, alto: 2.8, forma: 'recta', baranda: true, color: '#d8d6d1' },
+    variantes: [{ n: 'Escalera recta', o: { forma: 'recta' } }, { n: 'Escalera en U (con descanso)', o: { forma: 'u' } }, { n: 'Escalera en L', o: { forma: 'l' } }],
+    campos: [F.nombre, { k: 'forma', n: 'Forma', t: 'sel', ops: [['recta', 'Recta'], ['u', 'En U, con descanso a la mitad'], ['l', 'En L, con descanso']] }, { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.6, max: 3, paso: 0.05 }, F.alto('Sube (m)', 0.5, 6, 0.05), F.color('Color'), { k: 'baranda', n: 'Con baranda', t: 'bool' }, F.r],
+    armar(p) { const g = new THREE.Group(), w = +p.ancho || 1.1, H = +p.alto || 2.8, n = Math.max(3, Math.round(H / 0.175)), sube = H / n, hue = 0.28, me = mat(oscuro() ? mix(p.color || '#d8d6d1', '#000', 0.4) : (p.color || '#d8d6d1'), { roughness: 0.75 }), mb = mat('#30363b', { roughness: 0.42, metalness: 0.55 }), L = [], B = [];
+      const tramo = (k0, k1, x0, z0, dx, dz, giro) => { for (let k = k0; k < k1; k++) { const i = k - k0, c = new THREE.BoxGeometry(w, sube * (k + 1), hue); c.translate(0, sube * (k + 1) / 2, 0); c.rotateY(giro); c.translate(x0 + dx * (i + 0.5) * hue, 0, z0 + dz * (i + 0.5) * hue); L.push(c); }
+        if (p.baranda) for (const sd of [-1, 1]) { const ox = Math.cos(giro) * sd * (w / 2 - 0.03), oz = -Math.sin(giro) * sd * (w / 2 - 0.03), a = new THREE.Vector3(x0 + ox, sube * (k0 + 1) + 0.9, z0 + oz), b = new THREE.Vector3(x0 + dx * (k1 - k0) * hue + ox, sube * k1 + 0.9, z0 + dz * (k1 - k0) * hue + oz), d = b.clone().sub(a), c = new THREE.CylinderGeometry(0.02, 0.02, d.length(), 6);
+          c.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()), new THREE.Vector3(1, 1, 1))); B.push(c);
+          for (const [px, py, pz] of [[a.x, a.y, a.z], [b.x, b.y, b.z]]) { const v = new THREE.CylinderGeometry(0.015, 0.015, 0.9, 6); v.translate(px, py - 0.45, pz); B.push(v); } } };
+      if (p.forma === 'u' || p.forma === 'l') { const m1 = Math.floor(n / 2), dsc = new THREE.BoxGeometry(w * (p.forma === 'u' ? 2 + 0.1 : 1), sube * m1, w); const zl = m1 * hue; tramo(0, m1, 0, 0, 0, -1, 0);
+        dsc.translate(p.forma === 'u' ? w / 2 + 0.05 : 0, sube * m1 / 2, -zl - w / 2); L.push(dsc);
+        if (p.forma === 'u') tramo(m1, n, w + 0.1, -zl, 0, 1, Math.PI); else tramo(m1, n, w / 2, -zl - w / 2, 1, 0, -Math.PI / 2); }
+      else tramo(0, n, 0, 0, 0, -1, 0);
+      if (L.length) g.add(sombra(new THREE.Mesh(mergeGeometries(L.map(q => q.index ? q.toNonIndexed() : q)), me)));
+      if (B.length) { const k = new THREE.Mesh(mergeGeometries(B.map(q => q.index ? q.toNonIndexed() : q)), mb); k.userData.noChoca = true; g.add(k); }
       g.userData.sinAplanar = true; return g; } },
   calle: { n: 'Calle o ruta', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 8, tipo: 'asfalto', linea: 'discontinua', borde: 'auto', mano: 'doble' },
     campos: [F.nombre, F.ancho('Ancho (m)', 2, 60), { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['asfalto', 'Asfalto'], ['ruta', 'Ruta (con banquinas)'], ['hormigon', 'Hormigón'], ['tierra', 'Tierra o balasto']] }, { k: 'linea', n: 'Línea del medio', t: 'sel', ops: [['discontinua', 'Discontinua'], ['corta', 'Discontinua corta (calle de barrio)'], ['continua', 'Continua'], ['no', 'Sin línea']] }, { k: 'borde', n: 'Borde', t: 'sel', ops: [['auto', 'Cordón donde da al pasto'], ['cordon', 'Cordón en todo el largo'], ['vereda', 'Cordón y vereda a los dos lados'], ['vereda-izq', 'Vereda de un lado'], ['vereda-der', 'Vereda del otro lado'], ['no', 'Sin cordón']] }, { k: 'mano', n: 'Mano (para los camiones)', t: 'sel', ops: [['doble', 'Doble mano'], ['unica', 'Mano única, en el sentido en que se dibujó']] }],
@@ -1167,11 +1196,11 @@ export const TIPOS = {
       if (p.losa && alto >= p.alto - 0.01) losaPared(g, P, (p.y || 0) + p.alto, p.losa === true ? 0.7 : +p.losa);
       g.userData.segs = segs; return g; } },
   recinto: { n: 'Recinto (habitación)', g: 'Construcción', forma: 'area', capa: 'base', herramienta: 'recinto', etiqueta: p => p.nombre, def: { alto: 2.6, grosor: 0.15, tipo: 'maciza', color: '#eceeef', piso: 'ceramica' },
-    campos: [F.nombre, F.alto('Alto de las paredes (m)', 0.3, 12), { k: 'grosor', n: 'Grosor (m)', t: 'num', min: 0.05, max: 0.6, paso: 0.05 }, { k: 'tipo', n: 'Paredes', t: 'sel', ops: PAREDES }, F.color('Color de las paredes'), { k: 'aluminio', n: 'Color del aluminio (marcos, puertas y ventanas)', t: 'sel', ops: [['', 'Negro'], ['#c9ccce', 'Natural (anodizado)'], ['#f2f3f2', 'Blanco'], ['#6f5a45', 'Bronce'], ['#7d8186', 'Gris'], ['#a8794e', 'Símil madera']] }, { k: 'piso', n: 'Piso', t: 'sel', ops: PISOS }, { k: 'colorPiso', n: 'Color del piso', t: 'color' }, { k: 'luz', n: 'Luz encendida de noche', t: 'bool' }],
+    campos: [F.nombre, F.alto('Alto de las paredes (m)', 0.3, 12), { k: 'grosor', n: 'Grosor (m)', t: 'num', min: 0.05, max: 0.6, paso: 0.05 }, { k: 'tipo', n: 'Paredes', t: 'sel', ops: PAREDES }, F.color('Color de las paredes'), { k: 'aluminio', n: 'Color del aluminio (marcos, puertas y ventanas)', t: 'sel', ops: [['', 'Negro'], ['#c9ccce', 'Natural (anodizado)'], ['#f2f3f2', 'Blanco'], ['#6f5a45', 'Bronce'], ['#7d8186', 'Gris'], ['#a8794e', 'Símil madera']] }, { k: 'piso', n: 'Piso', t: 'sel', ops: PISOS }, { k: 'colorPiso', n: 'Color del piso', t: 'color' }, { k: 'techo', n: 'Techo', t: 'sel', ops: [['', 'Sin techo (abierto arriba)'], ['losa', 'Losa de hormigón'], ['chapa', 'Chapa']] }, { k: 'luz', n: 'Luz encendida de noche', t: 'bool' }],
     armar(p, ctx) { const g = new THREE.Group(), segs = [], P = p.pts, n = P.length; if (n < 3) return g; const y = p.y || 0, alto = altoVista(p.alto, ctx, p), dentro = areaSig(P) > 0 ? 1 : -1;
       if (p.piso !== 'sin') area(g, P, y + 0.045, p.colorPiso ? tenido(matPiso(p.piso), p.colorPiso) : matPiso(p.piso));
-      if (nivelDe(p) > 0 && p.piso !== 'sin') { const sh = new THREE.Shape(P.map(q => new THREE.Vector2(q[0], -q[1]))), lo = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: false }).rotateX(-Math.PI / 2), mat('#c3c5c7', { roughness: 0.92 }));
-        lo.position.y = y - 0.2 + 0.04; lo.castShadow = lo.receiveShadow = true; lo.userData.losa = true; g.add(lo); }   // la losa: piso de esta planta y techo de la de abajo
+      if (nivelDe(p) > 0 && p.piso !== 'sin') { const sh = new THREE.Shape(inflar(P, (+p.grosor || 0.15) / 2).map(q => new THREE.Vector2(q[0], -q[1]))), lo = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.25, bevelEnabled: false }).rotateX(-Math.PI / 2), mat(oscuro() ? mix(p.color || '#eceeef', '#000', 0.45) : (p.color || '#eceeef'), { roughness: 0.92 }));   /* del color de las paredes: de afuera el canto de la losa sigue la fachada */
+        lo.position.y = y - 0.21; lo.castShadow = lo.receiveShadow = true; lo.userData.losa = true; g.add(lo); }   // la losa: piso de esta planta y techo de la de abajo
       if (p.luz && oscuro()) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }   // de noche, la luz del ambiente encendida (cálida, como la de las luminarias)
         // Un foco que apunta al piso, alto (5,2 m) y con el cono justo para la sala. Alto, para que alumbre parejo: más bajo, lo que está más cerca
         // (la tapa de un escritorio) recibía mucha más luz que el piso y quedaba quemado. Con cono, para que no se sume la luz de las salas vecinas
@@ -1187,6 +1216,9 @@ export const TIPOS = {
         for (const [x, z] of P) caja(g, x - 0.09, y, z - 0.09, x + 0.09, H + 0.07, z + 0.09, fr);
         if (alto >= p.alto - 0.01) { const t = area(g, P, H + 0.06, mat(oc ? mix(p.color || '#e6eaed', '#000', 0.6) : mix(p.color || '#e6eaed', '#000', 0.08), { roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide })); if (t) t.userData.techo = true; }
         area(g, P, y + 0.012, mat(oc ? '#1b1f23' : '#5b6167', { roughness: 0.9 })); }
+      if (p.techo && alto >= p.alto - 0.01) { const H = (p.y || 0) + (+p.alto || 2.6), sh = new THREE.Shape(inflar(P, (+p.grosor || 0.15) / 2 + (p.techo === 'chapa' ? 0.15 : 0)).map(q => new THREE.Vector2(q[0], -q[1]))), ch = p.techo === 'chapa', e = ch ? 0.06 : 0.2;
+        const t = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: e, bevelEnabled: false }).rotateX(-Math.PI / 2), mat(ch ? (oscuro() ? '#5b636b' : '#b9c0c6') : '#c3c5c7', { roughness: ch ? 0.45 : 0.92, metalness: ch ? 0.5 : 0 }));
+        t.position.y = H - 0.01; t.castShadow = t.receiveShadow = true; t.userData.techo = true; g.add(t); }   // techo del recinto: se saca con la capa «Techos» o al pelar la maqueta
       g.userData.segs = segs; return g; } },
   tanque: { n: 'Tanque o silo', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { radio: 6, alto: 10, color: '#d9dde0' },
     campos: [F.nombre, { k: 'radio', n: 'Radio (m)', t: 'num', min: 0.5, max: 60, paso: 0.5 }, F.alto('Alto (m)', 1, 60, 0.5), F.color('Color'), F.r],
@@ -1499,6 +1531,11 @@ function tendido3d(p) { const g = new THREE.Group(), utp = p.tipo === 'utp', r =
   const mc = new THREE.MeshBasicMaterial({ color: oscuro() ? '#3b3f44' : '#a9a69d', transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -13, polygonOffsetUnits: -8 });
   for (const q of tramos) { const k = new THREE.Mesh(cinta(q, Math.max(0.05, r * 4), PISO + 0.004), mc); k.renderOrder = 2; k.raycast = () => {}; g.add(k); }
   g.userData.sinAplanar = true; return g; }
+// el contorno agrandado d metros para afuera (esquinas en inglete): para que una losa o un techo tapen el grosor de las paredes
+function inflar(P, d) { const n = P.length, of = k => P.map((c, i) => { const a = P[(i - 1 + n) % n], b = P[(i + 1) % n], l1 = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, l2 = Math.hypot(b[0] - c[0], b[1] - c[1]) || 1;
+    const n1 = [-(c[1] - a[1]) / l1, (c[0] - a[0]) / l1], n2 = [-(b[1] - c[1]) / l2, (b[0] - c[0]) / l2], m = [n1[0] + n2[0], n1[1] + n2[1]], ml = Math.hypot(m[0], m[1]) || 1, cs = Math.max(0.35, (m[0] * n1[0] + m[1] * n1[1]) / ml);
+    return [c[0] + k * d * m[0] / ml / cs, c[1] + k * d * m[1] / ml / cs]; });
+  const A = of(1), B = of(-1); return Math.abs(areaSig(A)) > Math.abs(areaSig(B)) ? A : B; }
 function offset(pts, d) { return pts.map((c, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [c[0] - (b[1] - a[1]) / l * d, c[1] + (b[0] - a[0]) / l * d]; }); }
 // cinta parada a una altura (riel, cable)
 function cintaVertical(pts, alto, y) { const v = [], ix = []; for (let i = 0; i < pts.length; i++) { v.push(pts[i][0], y - alto / 2, pts[i][1], pts[i][0], y + alto / 2, pts[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
