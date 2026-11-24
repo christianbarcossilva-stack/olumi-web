@@ -14,7 +14,7 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA } from './piezas.js?v=77';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe } from './piezas.js?v=78';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=5';
 import { construir } from './construir.js?v=63';
@@ -154,6 +154,15 @@ export async function abrirMaqueta(o) {
   function cercos() { clearTimeout(tCer); tCer = setTimeout(() => { const fi = E.piezas.filter(q => CORTAN.test(q.t)).map(q => [q.id, q.x, q.z, q.r, q.ancho, q.fondo, q.lado, q.pilares, q.clase, q.nivel].join()).join('|'); if (fi === firmaC) return; firmaC = fi;
     rehVec = true; try { for (const q of E.piezas) if (q.t === 'cerco' && objs.has(q.id)) rehacer(q); } finally { rehVec = false; } }, 120); }
   /* un portón o un pilar que se suelta a menos de 1,5 m de un cerco se pega a la línea; el portón además toma su dirección (de los dos sentidos, el más cercano al que tenía) */
+  /* en qué tramo de la línea cae un punto (índice del punto de partida; en un cerco cerrado, el último tramo vuelve al primero) */
+  function tramoDe(p, [x, z]) { const P = p.cerrado ? [...p.pts, p.pts[0]] : p.pts; let bi = 0, bd = Infinity;
+    for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz || 1e-9, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / L2)), d = Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z); if (d < bd) { bd = d; bi = i - 1; } }
+    return bi; }
+  /* cortar un cerco en un poste: queda en dos (o, si era cerrado, abierto en ese punto), cada parte con su punta para separarla */
+  function cortarCerco(p, pt) { const i = tramoDe(p, pt), P = p.pts, q = [+pt[0].toFixed(3), +pt[1].toFixed(3)];
+    if (p.cerrado) { p.pts = [q, ...P.slice(i + 1), ...P.slice(0, i + 1), q.slice()]; p.cerrado = false; rehacer(p); }
+    else { const b = { ...JSON.parse(JSON.stringify(p)), id: nuevoId('cerco'), pts: [q.slice(), ...P.slice(i + 1)] }; delete b.candado; p.pts = [...P.slice(0, i + 1), q]; E.piezas.push(b); rehacer(p); rehacer(b); }
+    cambio(); puntos(); marcar(); toast('Cortado en ese poste: arrastrá la punta para separarlo'); }
   function pegarAlCerco(p) { if (!p || !/^(porton|pilar)$/.test(p.t) || nivelDe(p)) return false; let best = null; const px = p.x || 0, pz = p.z || 0;
     for (const c of E.piezas) { if (c.t !== 'cerco' || !c.pts || c.pts.length < 2) continue; const P = c.cerrado ? [...c.pts, c.pts[0]] : c.pts;
       for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz; if (L2 < 1e-6) continue;
@@ -569,7 +578,7 @@ export async function abrirMaqueta(o) {
   const dentro = (x, z, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
 
   // manijas: en líneas y áreas, cada punto se arrastra (el del medio agrega uno, doble clic lo saca); en lo demás, una para girar y, si tiene altura, otra para subirlo o bajarlo
-  const manijas = new THREE.Group(); motor.scene.add(manijas); const MAN = new THREE.SphereGeometry(1, 14, 10), MANm = new THREE.MeshBasicMaterial({ color: 0x1d9bf0, depthTest: false }), MEDm = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true, opacity: 0.85 }), ALTm = new THREE.MeshBasicMaterial({ color: 0xffb020, depthTest: false }), LINm = new THREE.LineBasicMaterial({ color: 0x1d9bf0, depthTest: false, transparent: true, opacity: 0.7 }), GIRm = new THREE.LineBasicMaterial({ color: 0xff8a1f, depthTest: false, transparent: true, opacity: 0.9 }), GIRm2 = new THREE.MeshBasicMaterial({ color: 0xff8a1f, depthTest: false });
+  const manijas = new THREE.Group(); motor.scene.add(manijas); const POSm = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false }); const MAN = new THREE.SphereGeometry(1, 14, 10), MANm = new THREE.MeshBasicMaterial({ color: 0x1d9bf0, depthTest: false }), MEDm = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true, opacity: 0.85 }), ALTm = new THREE.MeshBasicMaterial({ color: 0xffb020, depthTest: false }), LINm = new THREE.LineBasicMaterial({ color: 0x1d9bf0, depthTest: false, transparent: true, opacity: 0.7 }), GIRm = new THREE.LineBasicMaterial({ color: 0xff8a1f, depthTest: false, transparent: true, opacity: 0.9 }), GIRm2 = new THREE.MeshBasicMaterial({ color: 0xff8a1f, depthTest: false });
   // lo que hay en el frente de un galpón y se puede correr: andenes (también los sin rampa), portones a nivel puestos a mano y puertas de personal
   const puertaPunta = p => (p.anexo === 'izq') !== (p.puerta === 'otra') ? p.ancho - 2.2 : 2.2;
   function fachada(p) { const out = [], AN = andenesDe(p), L = p.ancho, nv = (p.nivelEn || []).length, nr = (p.rampaEn || []).length;
@@ -590,7 +599,9 @@ export async function abrirMaqueta(o) {
       // flechitas a los dos lados de la manija: se entiende que se arrastra en círculo
       for (const sg of [-1, 1]) { const b = a + sg * 0.96, q = []; q.push(new THREE.Vector3(cx + Math.sin(b) * rad, 0.3, cz + Math.cos(b) * rad)); const pu = q[q.length - 1], ta = new THREE.Vector3(Math.cos(b) * sg, 0, -Math.sin(b) * sg), ra = new THREE.Vector3(Math.sin(b), 0, Math.cos(b)), k = Math.min(rad * 0.12, s * 4);
         q.push(pu.clone().addScaledVector(ta, -k).addScaledVector(ra, k), pu, pu.clone().addScaledVector(ta, -k).addScaledVector(ra, -k)); const f = new THREE.Line(new THREE.BufferGeometry().setFromPoints(q), GIRm); f.renderOrder = 9; manijas.add(f); } };
-    if (SEL.pts) { const P = SEL.pts, cerr = TIPOS[SEL.t].forma === 'area' || SEL.cerrado; P.forEach((q, i) => pon(q[0], 0.5, q[1], MANm, { vertice: i })); for (let i = 0; i < P.length - (cerr ? 0 : 1); i++) { const a = P[i], b = P[(i + 1) % P.length]; pon((a[0] + b[0]) / 2, 0.5, (a[1] + b[1]) / 2, MEDm, { medio: i + 1 }, 0.65); }
+    if (SEL.pts) { const P = SEL.pts, cerr = TIPOS[SEL.t].forma === 'area' || SEL.cerrado; P.forEach((q, i) => pon(q[0], 0.5, q[1], MANm, { vertice: i }));
+      // en el cerco, una manija chica en cada poste: arrastrarla corre solo ese poste (el resto queda quieto); doble clic corta el cerco ahí para separarlo
+      if (SEL.t === 'cerco') for (const [px, pz] of postesDe(SEL, ctx)) if (!P.some(q => Math.hypot(q[0] - px, q[1] - pz) < 0.3)) pon(px, 0.5, pz, POSm, { poste: [px, pz] }, 0.75); for (let i = 0; i < P.length - (cerr ? 0 : 1); i++) { const a = P[i], b = P[(i + 1) % P.length]; pon((a[0] + b[0]) / 2, 0.5, (a[1] + b[1]) / 2, MEDm, { medio: i + 1 }, 0.65); }
       if (!SEL.fijo) { const [cx, cz] = centro(SEL), rad = Math.min(motor.C.d * 0.09, Math.max(...P.map(q => Math.hypot(q[0] - cx, q[1] - cz))) + Math.max(1.2, s * 5)); pon(cx, 0.3, cz + rad, GIRm2, { giroPts: [cx, cz] }, 1.5); anillo(cx, cz, rad, 0); } return; }
     if (SEL.t === 'galpon' && SEL.estilo === 'logistico') for (const f of fachada(SEL)) { const v = alFrente(SEL, f.u, f.y); pon(v.x, v.y, v.z, f.k === 'puerta' ? GIRm2 : f.k === 'nivel' || f.k === 'rampa' ? ALTm : MEDm, { fach: f }, 1.3); }
     const T = TIPOS[SEL.t], x = SEL.x || 0, z = SEL.z || 0, r = SEL.r || 0, b = cajaDe(objs.get(SEL.id), new THREE.Box3()), rad = Math.min(motor.C.d * 0.09, Math.max(0.9, Math.hypot(b.max.x - b.min.x, b.max.z - b.min.z) / 2 + Math.max(0.5, s * 3)));
@@ -630,6 +641,7 @@ export async function abrirMaqueta(o) {
     const mh = SEL && ED.h === 'mano' && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0];
     if (mh) { const ud = mh.object.userData; if (ud.fach) { ED.drag = { fach: ud.fach, m: mh.object }; return true; } if (ud.giro) ED.drag = { giro: true }; else if (ud.giroPts) ED.drag = { giroPts: ud.giroPts, a0: Math.atan2(p0.x - ud.giroPts[0], p0.z - ud.giroPts[1]), hecho: 0 }; else if (ud.altura) { const n = new THREE.Vector3(Math.sin(motor.C.yaw), 0, Math.cos(motor.C.yaw)); ED.drag = { altura: new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(SEL.x || 0, 0, SEL.z || 0)) }; }
       else if (ud.medida) { const q = { ...TIPOS[SEL.t].def, ...SEL }; ED.drag = { medida: ud.medida, lado: ud.lado, w0: +q[ud.medida], x0: SEL.x || 0, z0: SEL.z || 0 }; }
+      else if (ud.poste) ED.drag = { posteP: ud.poste };   /* el punto se agrega recién al arrastrar: así un doble clic en el poste lo corta */
       else if (ud.medio != null) { SEL.pts.splice(ud.medio, 0, [pegar(p0.x, e.altKey), pegar(p0.z, e.altKey)]); CON.insertado(SEL, ud.medio); ED.drag = { v: ud.medio }; rehacer(SEL); } else ED.drag = { v: ud.vertice }; return true; }
     if (ED.h === 'varias' || (ED.h === 'mano' && modif(e) && e.pointerType !== 'touch')) { const hv = hallar(e); if (hv && MULTI.has(hv.p) && !modif(e)) { tomar(hv.p, p0, e); return true; }
       if (!hv || hv.p.t === 'terreno' || hv.p.fijo || hv.p.candado) { recuadro = { x0: p0.x, z0: p0.z, suma: modif(e) }; return true; } return false; /* sobre una pieza suelta: el toque la suma y arrastrar mueve la vista */ }
@@ -668,6 +680,7 @@ export async function abrirMaqueta(o) {
       const cp = TIPOS[SEL.t].campos.find(k => k.k === D.medida), w = Math.max(cp.min || 1, Math.min(cp.max || 600, Math.round(D.lado * (borde - opu) * 100) / 100)), cl = opu + D.lado * w / 2;
       SEL[D.medida] = w; SEL.x = Math.round((D.x0 + (eje ? cl * sn : cl * c)) * 100) / 100; SEL.z = Math.round((D.z0 + (eje ? cl * c : -cl * sn)) * 100) / 100; D.movido = true; rehacer(SEL); puntos(); marcar(); hint(`${cp.n.replace(/ \(m\)/, '')}: <b>${fmt(w)} m</b> · <kbd>Alt</kbd> sin imán`); return; }
     if (D.giro) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, r = Math.round(Math.atan2(p.x - (SEL.x || 0), p.z - (SEL.z || 0)) / paso) * paso; if (r !== (SEL.r || 0)) { D.con = D.con || CON.contenido(SEL); rotarCon(SEL, r - (SEL.r || 0), D.con); SEL.r = r; D.movido = true; const g = objs.get(SEL.id); if (g) g.rotation.y = r; marcar(); } return; }
+    if (D.posteP) { if (Math.hypot(p.x - D.posteP[0], p.z - D.posteP[1]) < Math.max(0.12, motor.C.d * 0.004)) return; const i = tramoDe(SEL, D.posteP); SEL.pts.splice(i + 1, 0, [D.posteP[0], D.posteP[1]]); CON.insertado(SEL, i + 1); D.v = i + 1; D.posteP = null; hint('Moviendo un poste: el resto del cerco queda quieto · doble clic en un poste lo corta ahí'); }
     if (D.v != null) { SEL.pts[D.v] = [pegar(p.x, e.altKey), pegar(p.z, e.altKey), ...SEL.pts[D.v].slice(2)]; rehacer(SEL); CON.marcar(); return; }
     const dx = p.x - D.x0, dz = p.z - D.z0; if (!D.movido && Math.hypot(dx, dz) < motor.C.d * 0.004) return; D.movido = true; canvas.classList.add('lleva'); manijas.visible = false;
     // las líneas, áreas y recintos se corren enteros (el salto se pega a la grilla, la forma no se toca) y un recinto se lleva lo que tiene adentro
@@ -724,6 +737,7 @@ export async function abrirMaqueta(o) {
   // doble clic: mirando, acerca a lo que se toca (o vuela a ese lugar del piso) y abre la documentación de un rack; editando, saca un punto de una línea
   motor.alDoble = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
     if (ED.on && SEL && SEL.t === 'galpon') { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { const f = mf.object.userData.fach; fachFijar(SEL, f); fachLista(SEL, f.k).splice(f.i, 1); rehacer(SEL); cambio(); puntos(); toast(NOMF[f.k] + ': sacado'); return; } }
+    if (ED.on && SEL && SEL.t === 'cerco') { const mp = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.poste))[0]; if (mp) { cortarCerco(SEL, mp.object.userData.poste); return; } }
     if (ED.on) { const mh = SEL && SEL.pts && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0], i = mh && mh.object.userData.vertice; if (i != null) { if (SEL.pts.length <= (TIPOS[SEL.t].forma === 'area' ? 3 : 2)) { toast('No se puede sacar: quedaría sin forma'); return; } SEL.pts.splice(i, 1); CON.quitado(SEL, i); rehacer(SEL); CON.marcar(); cambio(); return; } }
     if (h && TIPOS[h.p.t].protegido && host && host.abrirDoc) { host.abrirDoc(h.p); return; } if (ED.on) return;
     if (h && TIPOS[h.p.t].forma === 'punto') { elegir(h.p, true); return; } const p = motor.enPiso(e.clientX, e.clientY); if (p) motor.ir({ tx: p.x, tz: p.z, d: Math.max(motor.C.min * 3, motor.C.d * 0.55) }, 0.6); };

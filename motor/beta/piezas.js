@@ -734,8 +734,18 @@ function caseta(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2
   if (p.aire) { const lado = p.puerta === 'der' ? -1 : 1, x = lado * (w + e / 2); caja(g, lado > 0 ? x : x - 0.26, 1.85, -0.42, lado > 0 ? x + 0.26 : x, 2.18, 0.42, mat(os ? '#9aa0a5' : '#f3f4f5', { roughness: 0.5 }));
     for (let zz = -0.36; zz <= 0.37; zz += 0.06) caja(g, lado > 0 ? x + 0.26 : x - 0.265, 1.9, zz - 0.008, lado > 0 ? x + 0.265 : x - 0.26, 2.12, zz + 0.008, mat('#9aa1a7'), false); }
   return g; }
+// dónde quedan los postes de un cerco, tal como se arma (con sus cortes): el editor pone una manija en cada uno
+export function postesDe(p, ctx) { const q = { ...TIPOS.cerco.def, ...p }; if (!q.pts || q.pts.length < 2) return []; const paso = { premoldeado: 2, baranda: 2.4, guardarrail: 4, vidrio: 1.5 }[q.tipo] || 3, P0 = q.cerrado ? [...q.pts, q.pts[0]] : q.pts;
+  return cortarLinea(P0, cortesCerco(ctx)).flatMap(P => P.length > 1 ? aLoLargo(P, paso).map(([x, z]) => [x, z]) : []); }
 // un tramo de cerco (entre dos cortes)
 function cercoTramo(g, p, P, h, gr) {
+      // paneles de vidrio entre parantes de metal cada 1,5 m, con pasamanos arriba
+      if (p.tipo === 'vidrio') { const os = oscuro(), me = mat(p.color ? (os ? mix(p.color, '#000', 0.4) : p.color) : (os ? '#5d646b' : '#8f979d'), { roughness: 0.4, metalness: 0.55 });
+        lote(g, CAJA, me, aLoLargo(P, 1.5).map(([x, z, d]) => [x, h / 2, z, d, 0.06, h, 0.06]));
+        const v = [], ix = []; for (let i = 0; i < P.length; i++) { v.push(P[i][0], 0.08, P[i][1], P[i][0], h - 0.06, P[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals();
+        g.add(new THREE.Mesh(geo, mat(os ? '#7f9aa8' : '#bcd3df', { transparent: true, opacity: os ? 0.35 : 0.28, roughness: 0.05, metalness: 0.15, side: THREE.DoubleSide, depthWrite: false })));
+        g.add(sombra(new THREE.Mesh(cintaVertical(P, 0.05, h), mat(os ? '#5d646b' : '#8f979d', { roughness: 0.4, metalness: 0.55, side: THREE.DoubleSide })))); return; }
       if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return; }
       // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
       if (p.tipo === 'premoldeado') { const os = oscuro(), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), v = [], uv = [], ix = [];
@@ -1230,7 +1240,7 @@ export const TIPOS = {
       // la isla va por encima de las calles que cruzan por el centro (más alta y dibujada adelante)
       if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const cir = r => { const l = []; for (let k = 0; k < 48; k++) l.push([r * Math.cos(k / 48 * 6.2832), -r * Math.sin(k / 48 * 6.2832)]); return l; }; try { bordeIsla(g, cir(p.isla + 0.62), cir(p.isla + 0.02), 0.058, 0.33, p.flechas === 'no' ? '' : (p.flechas || 'anti'), ad); } catch (e) { console.warn('borde', e); } g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)'], ['vidrio', 'Paneles de vidrio']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
     // lo que se pone sobre la línea del cerco (portón, pilar, caseta, puerta con control) le abre el paso: el cerco se corta ahí solo
     armar(p, ctx) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P0 = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
       for (const P of cortarLinea(P0, cortesCerco(ctx))) if (P.length > 1) cercoTramo(g, p, P, h, gr); return g; } },
