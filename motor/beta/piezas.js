@@ -1254,6 +1254,18 @@ export const TIPOS = {
     armar: equipo((g, p, ec) => { caja(g, -0.22, -0.05, -0.18, 0.22, 0.05, 0.18, negro()); caja(g, 0.12, -0.02, 0.18, 0.18, 0.02, 0.185, led(ec), false); }) },
   router: { n: 'Router o firewall', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'router', equipo: 'gw', etiqueta: p => p.nombre, def: { y: 1.2 }, campos: EQ_CAMPOS,
     armar: equipo((g, p, ec) => { caja(g, -0.2, -0.04, -0.14, 0.2, 0.04, 0.14, blanco()); caja(g, -0.16, 0.04, 0.12, 0.16, 0.05, 0.14, led(ec), false); }) },
+  // la entrada de internet del cliente: el equipo que pone el proveedor (Antel, Tigo, Claro, Dedicado…). Es lo primero que se mira cuando «no hay internet»
+  proveedor: { n: 'Equipo del proveedor de internet', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'router', equipo: 'gw', etiqueta: p => p.nombre, def: { y: 1.2, proveedor: 'antel', tipo: 'ont', montaje: 'pared' },
+    variantes: [{ n: 'Router de fibra de Antel (ZTE F6600 / F680)', o: { proveedor: 'antel', tipo: 'ont', modelo: 'ZTE F6600' } }, { n: 'Wi-Fi Max de Antel (repetidor)', o: { proveedor: 'antel', tipo: 'mesh', modelo: 'Wi-Fi Max ZTE', y: 1.6 } },
+      { n: 'Router 4G/5G (Tigo, Claro, Antel)', o: { proveedor: 'tigo', tipo: 'lte' } }, { n: 'Antena de radio (Dedicado)', o: { proveedor: 'dedicado', tipo: 'radio', montaje: 'poste', y: 6 } }],
+    campos: [F.nombre, { k: 'proveedor', n: 'Proveedor', t: 'sel', ops: [['antel', 'Antel'], ['tigo', 'Tigo (antes Movistar)'], ['claro', 'Claro'], ['dedicado', 'Dedicado'], ['starlink', 'Starlink'], ['otro', 'Otro']] },
+      { k: 'tipo', n: 'Equipo', t: 'sel', ops: [['ont', 'Router de fibra (ONT)'], ['mesh', 'Repetidor Wi-Fi del proveedor'], ['lte', 'Router 4G / 5G'], ['radio', 'Antena de radio'], ['sat', 'Antena satelital']] },
+      { k: 'modelo', n: 'Modelo', t: 'txt' }, { k: 'servicio', n: 'Número de servicio o de cliente', t: 'txt' }, { k: 'ippub', n: 'IP pública (si tiene fija)', t: 'txt' }, ...EQ_CAMPOS.slice(3)],
+    armar: equipo((g, p, ec) => { const b = blanco(), os = oscuro(), ng = mat(os ? '#2a2f34' : '#3b4248', { roughness: 0.6 });
+      if (p.tipo === 'radio') { caja(g, -0.16, -0.2, -0.05, 0.16, 0.2, 0.05, b); caja(g, -0.05, -0.05, -0.12, 0.05, 0.05, -0.05, ng); caja(g, -0.1, 0.12, 0.05, 0.1, 0.13, 0.055, led(ec), false); return; }   // panel direccional en el poste
+      if (p.tipo === 'sat') { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.24, 0.04, 28), b); d.rotation.x = -0.9; g.add(sombra(d)); caja(g, -0.03, -0.25, -0.03, 0.03, 0, 0.03, ng); return; }
+      if (p.tipo === 'mesh' || p.tipo === 'lte') { caja(g, -0.06, -0.11, -0.06, 0.06, 0.11, 0.06, b); caja(g, -0.035, 0.07, 0.06, 0.035, 0.08, 0.065, led(ec), false); return; }   // torre chica parada
+      caja(g, -0.13, -0.11, -0.04, 0.13, 0.11, 0.04, b); caja(g, -0.1, 0.06, 0.04, 0.1, 0.065, 0.045, led(ec), false); for (const x of [-0.09, 0.09]) caja(g, x - 0.012, 0.11, -0.012, x + 0.012, 0.27, 0.012, ng); }) },   // ONT de fibra con sus dos antenas
   sensor: { n: 'Sensor', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'sensor_mov', equipo: 'sen', etiqueta: p => p.nombre, def: { y: 2.2, clase: 'mov', montaje: 'pared' },
     campos: [...EQ_CAMPOS.slice(0, 1), { k: 'clase', n: 'Tipo', t: 'sel', ops: SENSORES }, ...EQ_CAMPOS.slice(1)],
     variantes: [{ n: 'Sensor de movimiento', o: { clase: 'mov' } }, { n: 'Sensor de humo', o: { clase: 'humo', montaje: 'techo', y: 3 } }, { n: 'Temperatura y humedad', o: { clase: 'temp', y: 1.6 } }, { n: 'Control de acceso', o: { clase: 'acceso', y: 1.2 } }, { n: 'Sirena', o: { clase: 'sirena', y: 2.6 } }],
