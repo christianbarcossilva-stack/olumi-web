@@ -7,12 +7,12 @@
      "interval": [
       {
        "field": "cronExpression",
-       "expression": "40 7 * * 1-5"
+       "expression": "40 7-19/2 * * 1-5"
       }
      ]
     }
    },
-   "name": "Cada mañana (lunes a viernes, 7:40)",
+   "name": "Cada dos horas (lunes a viernes, 7:40 a 19:40)",
    "type": "n8n-nodes-base.scheduleTrigger",
    "typeVersion": 1.2,
    "position": [
@@ -54,9 +54,9 @@
   },
   {
    "parameters": {
-    "jsCode": "\nconst FUERTES = ['videovigilancia', 'cctv', 'cámaras de seguridad', 'camaras de seguridad', 'cámaras ip', 'camaras ip', 'nvr', 'dvr', 'cableado estructurado',\n  'fibra óptica', 'fibra optica', 'red de datos', 'redes de datos', 'access point', 'puntos de acceso', 'wifi', 'wi-fi', 'control de acceso', 'molinete',\n  'portero eléctrico', 'portero electrico', 'videoportero', 'intercomunicador', 'alarma', 'telefonía ip', 'telefonia ip', 'central telefónica', 'central telefonica',\n  'rack', 'switch', 'utp', 'cat 6', 'cat6', 'patchera', 'sistema de seguridad electrónica', 'seguridad electronica'];\nconst DEBILES = ['cámaras', 'camaras', 'cableado', 'fibra', 'redes', 'telefonía', 'telefonia', 'datos', 'seguridad'];\nconst FUERA = ['fibra de vidrio', 'alimento', 'fibra textil', 'cámara frigorífica', 'camara frigorifica', 'neumático', 'neumatico', 'cámara de aire'];\n\n// el canal trae los últimos llamados como RSS: cada <item> con título, enlace y descripción\nconst xml = String(($input.first().json.data ?? $input.first().json.body ?? '') || '');\nconst tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\\\s\\\\S]*?)</' + t + '>', 'i')); return m ? m[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/<[^>]+>/g, ' ').trim() : ''; };\nconst items = (xml.match(/<item[\\s>][\\s\\S]*?<\\/item>/gi) || []).map(s => ({ titulo: tag(s, 'title'), enlace: tag(s, 'link'), texto: tag(s, 'description'), fecha: tag(s, 'pubDate'), id: tag(s, 'guid') || tag(s, 'link') }));\nconst memo = $getWorkflowStaticData('global'); memo.vistos = memo.vistos || {};\nconst hoy = Date.now(), out = [];\nfor (const it of items) {\n  if (!it.id || memo.vistos[it.id]) continue;\n  const t = (it.titulo + ' ' + it.texto).toLowerCase();\n  if (FUERA.some(k => t.includes(k))) continue;\n  const fuertes = FUERTES.filter(k => t.includes(k)), debiles = DEBILES.filter(k => t.includes(k)), puntos = fuertes.length * 3 + debiles.length;\n  if (puntos < 3) continue;\n  out.push({ json: { ...it, puntos, porque: [...fuertes, ...debiles].slice(0, 5).join(', ') } });\n}\n// lo que se revisó queda anotado (también lo que no servía), y la memoria se limpia a los 60 días\nfor (const it of items) if (it.id && !memo.vistos[it.id]) memo.vistos[it.id] = hoy;\nfor (const k in memo.vistos) if (hoy - memo.vistos[k] > 60 * 864e5) delete memo.vistos[k];\nout.sort((a, b) => b.json.puntos - a.json.puntos);\nreturn out.length ? out.slice(0, 15) : [{ json: { nada: true, revisados: items.length } }];\n"
+    "jsCode": "\nconst xml = String(($input.first().json.data ?? $input.first().json.body ?? '') || '');\nconst tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\\\s\\\\S]*?)</' + t + '>', 'i')); return m ? m[1].trim() : ''; };\nconst memo = $getWorkflowStaticData('global'); memo.vistos = memo.vistos || {};\nconst hoy = Date.now(), out = [];\nfor (const s of (xml.match(/<item[\\s>][\\s\\S]*?<\\/item>/gi) || [])) {\n  if (tag(s, 'category') !== 'tender') continue;   // solo llamados nuevos (no aclaraciones ni adjudicaciones)\n  const id = tag(s, 'guid'), compra = (tag(s, 'title').match(/id_compra:(\\d+)/) || [])[1] || '';\n  if (!id || memo.vistos[id]) continue; memo.vistos[id] = hoy; out.push({ json: { id, compra, enlace: tag(s, 'link') } });\n}\nfor (const k in memo.vistos) if (hoy - memo.vistos[k] > 60 * 864e5) delete memo.vistos[k];\nreturn out.length ? out : [{ json: { nada: true } }];\n"
    },
-   "name": "Elegir los del rubro",
+   "name": "Llamados nuevos",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
@@ -89,7 +89,7 @@
     },
     "options": {}
    },
-   "name": "¿Hay alguno del rubro?",
+   "name": "¿Hay llamados nuevos?",
    "type": "n8n-nodes-base.if",
    "typeVersion": 2.2,
    "position": [
@@ -101,7 +101,13 @@
    "parameters": {
     "url": "={{ $json.enlace }}",
     "options": {
-     "timeout": 60000
+     "timeout": 60000,
+     "batching": {
+      "batch": {
+       "batchSize": 5,
+       "batchInterval": 1000
+      }
+     }
     }
    },
    "name": "Leer el llamado",
@@ -116,14 +122,59 @@
   },
   {
    "parameters": {
-    "jsCode": "\nconst base = $('Elegir los del rubro').all().map(i => i.json), det = $input.all().map(i => i.json);\nconst fmt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString('es-UY', { timeZone: 'America/Montevideo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); };\nconst lineas = base.map((b, i) => {\n  const j = det[i] || {}, r = (j.releases && j.releases[0]) || (j.records && j.records[0] && (j.records[0].compiledRelease || j.records[0])) || j, t = r.tender || {};\n  const quien = (r.buyer && r.buyer.name) || (t.procuringEntity && t.procuringEntity.name) || '';\n  const que = t.title || b.titulo, cierra = fmt(t.tenderPeriod && t.tenderPeriod.endDate), tipo = t.procurementMethodDetails || '';\n  const pliego = ((t.documents || []).find(d => /pliego/i.test((d.title || '') + ' ' + (d.documentType || ''))) || (t.documents || [])[0] || {}).url || '';\n  return `${i + 1}. ${quien ? quien + ' · ' : ''}${que}` + (tipo || cierra ? `\\n   ${[tipo, cierra && 'cierra ' + cierra].filter(Boolean).join(' · ')}` : '') + `\\n   ${pliego || b.enlace}` + `\\n   (por: ${b.porque})`;\n});\nreturn [{ json: { text: `📋 Licitaciones nuevas que pueden servir (${base.length})\\n\\n` + lineas.join('\\n\\n') + '\\n\\nModo prueba: nadie más recibe esto. Decime cuáles sirven y cuáles no, así afino los rubros.' } }];\n"
+    "jsCode": "\nconst FUERTES = ['videovigilancia', 'cctv', 'cámaras de seguridad', 'camaras de seguridad', 'cámaras ip', 'camaras ip', 'nvr', 'dvr', 'cableado estructurado',\n  'fibra óptica', 'fibra optica', 'red de datos', 'redes de datos', 'access point', 'puntos de acceso', 'wifi', 'wi-fi', 'control de acceso', 'molinete',\n  'portero eléctrico', 'portero electrico', 'videoportero', 'intercomunicador', 'alarma', 'telefonía ip', 'telefonia ip', 'central telefónica', 'central telefonica',\n  'rack', 'switch de red', 'switch poe', 'switch administrable', 'switches de red', 'utp', 'cat 6', 'cat6', 'patchera', 'seguridad electrónica', 'seguridad electronica', 'cámara de vigilancia', 'camara de vigilancia', 'cámaras de vigilancia', 'camaras de vigilancia'];\nconst DEBILES = ['cámaras', 'camaras', 'cableado', 'fibra', 'redes', 'switch', 'telefonía', 'telefonia', 'informática', 'informatica', 'seguridad'];\nconst FUERA = ['fibra de vidrio', 'alimento', 'fibra textil', 'cámara frigorífica', 'camara frigorifica', 'cámara de aire', 'cámara fotográfica', 'camara fotografica', 'repuesto y/o accesorio para motor'];\n\nconst base = $('Llamados nuevos').all().map(i => i.json), det = $input.all().map(i => i.json), out = [];\nconst fmt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString('es-UY', { timeZone: 'America/Montevideo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); };\ndet.forEach((j, i) => {\n  const r = (j.releases && j.releases[0]) || (j.records && j.records[0] && (j.records[0].compiledRelease || j.records[0])) || j, t = r.tender || {};\n  const arts = (t.items || []).map(x => [x.description, x.classification && x.classification.description].filter(Boolean).join(' ')).join(' · ');\n  const texto = [t.title, t.description, arts].filter(Boolean).join(' ').toLowerCase();\n  if (!texto || FUERA.some(k => texto.includes(k))) return;\n  const fuertes = FUERTES.filter(k => texto.includes(k)), debiles = DEBILES.filter(k => texto.includes(k)), puntos = fuertes.length * 3 + debiles.length;\n  if (puntos < 3) return;\n  const docs = t.documents || [], pliego = (docs.find(d => /pliego|biddingDocuments/i.test((d.id || '') + ' ' + (d.title || '') + ' ' + (d.documentType || ''))) || docs[0] || {}).url || '';\n  out.push({ json: { puntos, porque: [...fuertes, ...debiles].slice(0, 5).join(', '), quien: (r.buyer && r.buyer.name) || (t.procuringEntity && t.procuringEntity.name) || '',\n    que: (t.description || t.title || ('Compra ' + (base[i] || {}).compra)).replace(/\\s+/g, ' ').slice(0, 180), tipo: t.title || t.procurementMethodDetails || '', cierra: fmt(t.tenderPeriod && t.tenderPeriod.endDate),\n    enlace: pliego || (base[i] || {}).enlace || '', compra: (base[i] || {}).compra || '' } });\n});\nout.sort((a, b) => b.json.puntos - a.json.puntos);\nreturn out.length ? out.slice(0, 15) : [{ json: { nada: true, revisados: det.length } }];\n"
    },
-   "name": "Armar el resumen",
+   "name": "Elegir los del rubro",
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
     1200,
     200
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !$json.nada }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Hay alguno del rubro?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    1440,
+    200
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst L = $input.all().map(i => i.json);\nconst lineas = L.map((b, i) => `${i + 1}. ${b.quien ? b.quien + ' · ' : ''}${b.que}` + (b.tipo || b.cierra ? `\\n   ${[b.tipo, b.cierra && 'cierra ' + b.cierra].filter(Boolean).join(' · ')}` : '') + (b.enlace ? `\\n   ${b.enlace}` : '') + `\\n   (por: ${b.porque})`);\nreturn [{ json: { text: `📋 Licitaciones nuevas que pueden servir (${L.length})\\n\\n` + lineas.join('\\n\\n') + '\\n\\nModo prueba: nadie más recibe esto. Decime cuáles sirven y cuáles no, así afino los rubros.' } }];\n"
+   },
+   "name": "Armar el resumen",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1680,
+    100
    ]
   },
   {
@@ -139,8 +190,8 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    1440,
-    200
+    1920,
+    100
    ],
    "onError": "continueRegularOutput",
    "alwaysOutputData": true,
@@ -168,8 +219,8 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    1680,
-    200
+    2160,
+    100
    ],
    "credentials": {
     "httpHeaderAuth": {
@@ -205,8 +256,8 @@
    "type": "n8n-nodes-base.httpRequest",
    "typeVersion": 4.2,
    "position": [
-    1200,
-    420
+    1680,
+    340
    ],
    "credentials": {
     "anthropicApi": {
@@ -219,7 +270,7 @@
   }
  ],
  "connections": {
-  "Cada mañana (lunes a viernes, 7:40)": {
+  "Cada dos horas (lunes a viernes, 7:40 a 19:40)": {
    "main": [
     [
      {
@@ -245,6 +296,39 @@
    "main": [
     [
      {
+      "node": "Llamados nuevos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Llamados nuevos": {
+   "main": [
+    [
+     {
+      "node": "¿Hay llamados nuevos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay llamados nuevos?": {
+   "main": [
+    [
+     {
+      "node": "Leer el llamado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer el llamado": {
+   "main": [
+    [
+     {
       "node": "Elegir los del rubro",
       "type": "main",
       "index": 0
@@ -264,17 +348,6 @@
    ]
   },
   "¿Hay alguno del rubro?": {
-   "main": [
-    [
-     {
-      "node": "Leer el llamado",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Leer el llamado": {
    "main": [
     [
      {

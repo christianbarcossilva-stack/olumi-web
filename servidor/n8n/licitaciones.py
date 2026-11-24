@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Flujo NUEVO y separado: "Ventas · Licitaciones (prueba)". Primer paso del vendedor externo.
-#   · Cada mañana de semana lee los llamados nuevos de Compras Estatales (datos abiertos, formato OCDS) y se queda con los del rubro
+#   · Cada dos horas (días de semana) lee los llamados nuevos de Compras Estatales (datos abiertos, formato OCDS), abre cada uno y se queda con los del rubro
 #     (cámaras, cableado, fibra, redes, control de acceso, porteros, alarmas, telefonía IP).
 #   · Te manda el resumen a tu propio chat de WhatsApp: organismo, qué piden, cuándo cierra y el enlace. No le escribe a nadie más.
 #   · No usa IA todavía: el nodo «Resumir el pliego (Claude)» queda apagado hasta que haya clave y tope en la consola de Claude.
@@ -36,70 +36,78 @@ def get(name, pos, url, texto=False, credkey=None):
     return node(name, "n8n-nodes-base.httpRequest", 4.2, p, pos, **kw)
 
 # ============ disparadores ============
-cada = node("Cada mañana (lunes a viernes, 7:40)", "n8n-nodes-base.scheduleTrigger", 1.2, {"rule": {"interval": [{"field": "cronExpression", "expression": "40 7 * * 1-5"}]}}, (0, 200))
+# el canal muestra los últimos 500 avisos (un día, más o menos): se revisa cada dos horas para no perder ninguno
+cada = node("Cada dos horas (lunes a viernes, 7:40 a 19:40)", "n8n-nodes-base.scheduleTrigger", 1.2, {"rule": {"interval": [{"field": "cronExpression", "expression": "40 7-19/2 * * 1-5"}]}}, (0, 200))
 probar = node("Probar ahora", "n8n-nodes-base.manualTrigger", 1, {}, (0, 400))
 
 leer = get("Leer llamados (Compras Estatales)", (240, 300), FEED, texto=True)
 link(cada, leer); link(probar, leer)
 
-# ============ quedarse con los del rubro ============
+# ============ los llamados nuevos (el canal solo trae el número de compra y qué tipo de novedad es) ============
+nuevos = code("Llamados nuevos", (480, 300), r"""
+const xml = String(($input.first().json.data ?? $input.first().json.body ?? '') || '');
+const tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\s\\S]*?)</' + t + '>', 'i')); return m ? m[1].trim() : ''; };
+const memo = $getWorkflowStaticData('global'); memo.vistos = memo.vistos || {};
+const hoy = Date.now(), out = [];
+for (const s of (xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [])) {
+  if (tag(s, 'category') !== 'tender') continue;   // solo llamados nuevos (no aclaraciones ni adjudicaciones)
+  const id = tag(s, 'guid'), compra = (tag(s, 'title').match(/id_compra:(\d+)/) || [])[1] || '';
+  if (!id || memo.vistos[id]) continue; memo.vistos[id] = hoy; out.push({ json: { id, compra, enlace: tag(s, 'link') } });
+}
+for (const k in memo.vistos) if (hoy - memo.vistos[k] > 60 * 864e5) delete memo.vistos[k];
+return out.length ? out : [{ json: { nada: true } }];
+""")
+link(leer, nuevos)
+hay = iff("¿Hay llamados nuevos?", (720, 300), "={{ !$json.nada }}")
+link(nuevos, hay)
+detalle = get("Leer el llamado", (960, 200), "={{ $json.enlace }}")
+nodes[-1]["parameters"]["options"]["batching"] = {"batch": {"batchSize": 5, "batchInterval": 1000}}
+link(hay, detalle, 0)
+
+# ============ quedarse con los del rubro, mirando el título, la descripción y los artículos del llamado ============
 RUBROS = r"""
 const FUERTES = ['videovigilancia', 'cctv', 'cámaras de seguridad', 'camaras de seguridad', 'cámaras ip', 'camaras ip', 'nvr', 'dvr', 'cableado estructurado',
   'fibra óptica', 'fibra optica', 'red de datos', 'redes de datos', 'access point', 'puntos de acceso', 'wifi', 'wi-fi', 'control de acceso', 'molinete',
   'portero eléctrico', 'portero electrico', 'videoportero', 'intercomunicador', 'alarma', 'telefonía ip', 'telefonia ip', 'central telefónica', 'central telefonica',
-  'rack', 'switch', 'utp', 'cat 6', 'cat6', 'patchera', 'sistema de seguridad electrónica', 'seguridad electronica'];
-const DEBILES = ['cámaras', 'camaras', 'cableado', 'fibra', 'redes', 'telefonía', 'telefonia', 'datos', 'seguridad'];
-const FUERA = ['fibra de vidrio', 'alimento', 'fibra textil', 'cámara frigorífica', 'camara frigorifica', 'neumático', 'neumatico', 'cámara de aire'];
+  'rack', 'switch de red', 'switch poe', 'switch administrable', 'switches de red', 'utp', 'cat 6', 'cat6', 'patchera', 'seguridad electrónica', 'seguridad electronica', 'cámara de vigilancia', 'camara de vigilancia', 'cámaras de vigilancia', 'camaras de vigilancia'];
+const DEBILES = ['cámaras', 'camaras', 'cableado', 'fibra', 'redes', 'switch', 'telefonía', 'telefonia', 'informática', 'informatica', 'seguridad'];
+const FUERA = ['fibra de vidrio', 'alimento', 'fibra textil', 'cámara frigorífica', 'camara frigorifica', 'cámara de aire', 'cámara fotográfica', 'camara fotografica', 'repuesto y/o accesorio para motor'];
 """
-elegir = code("Elegir los del rubro", (480, 300), RUBROS + r"""
-// el canal trae los últimos llamados como RSS: cada <item> con título, enlace y descripción
-const xml = String(($input.first().json.data ?? $input.first().json.body ?? '') || '');
-const tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\s\\S]*?)</' + t + '>', 'i')); return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/<[^>]+>/g, ' ').trim() : ''; };
-const items = (xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || []).map(s => ({ titulo: tag(s, 'title'), enlace: tag(s, 'link'), texto: tag(s, 'description'), fecha: tag(s, 'pubDate'), id: tag(s, 'guid') || tag(s, 'link') }));
-const memo = $getWorkflowStaticData('global'); memo.vistos = memo.vistos || {};
-const hoy = Date.now(), out = [];
-for (const it of items) {
-  if (!it.id || memo.vistos[it.id]) continue;
-  const t = (it.titulo + ' ' + it.texto).toLowerCase();
-  if (FUERA.some(k => t.includes(k))) continue;
-  const fuertes = FUERTES.filter(k => t.includes(k)), debiles = DEBILES.filter(k => t.includes(k)), puntos = fuertes.length * 3 + debiles.length;
-  if (puntos < 3) continue;
-  out.push({ json: { ...it, puntos, porque: [...fuertes, ...debiles].slice(0, 5).join(', ') } });
-}
-// lo que se revisó queda anotado (también lo que no servía), y la memoria se limpia a los 60 días
-for (const it of items) if (it.id && !memo.vistos[it.id]) memo.vistos[it.id] = hoy;
-for (const k in memo.vistos) if (hoy - memo.vistos[k] > 60 * 864e5) delete memo.vistos[k];
-out.sort((a, b) => b.json.puntos - a.json.puntos);
-return out.length ? out.slice(0, 15) : [{ json: { nada: true, revisados: items.length } }];
-""")
-link(leer, elegir)
-hay = iff("¿Hay alguno del rubro?", (720, 300), "={{ !$json.nada }}")
-link(elegir, hay)
-
-# ============ detalle de cada llamado (organismo, cierre, pliego) ============
-detalle = get("Leer el llamado", (960, 200), "={{ $json.enlace }}")
-link(hay, detalle, 0)
-armar = code("Armar el resumen", (1200, 200), r"""
-const base = $('Elegir los del rubro').all().map(i => i.json), det = $input.all().map(i => i.json);
+elegir = code("Elegir los del rubro", (1200, 200), RUBROS + r"""
+const base = $('Llamados nuevos').all().map(i => i.json), det = $input.all().map(i => i.json), out = [];
 const fmt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString('es-UY', { timeZone: 'America/Montevideo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); };
-const lineas = base.map((b, i) => {
-  const j = det[i] || {}, r = (j.releases && j.releases[0]) || (j.records && j.records[0] && (j.records[0].compiledRelease || j.records[0])) || j, t = r.tender || {};
-  const quien = (r.buyer && r.buyer.name) || (t.procuringEntity && t.procuringEntity.name) || '';
-  const que = t.title || b.titulo, cierra = fmt(t.tenderPeriod && t.tenderPeriod.endDate), tipo = t.procurementMethodDetails || '';
-  const pliego = ((t.documents || []).find(d => /pliego/i.test((d.title || '') + ' ' + (d.documentType || ''))) || (t.documents || [])[0] || {}).url || '';
-  return `${i + 1}. ${quien ? quien + ' · ' : ''}${que}` + (tipo || cierra ? `\n   ${[tipo, cierra && 'cierra ' + cierra].filter(Boolean).join(' · ')}` : '') + `\n   ${pliego || b.enlace}` + `\n   (por: ${b.porque})`;
+det.forEach((j, i) => {
+  const r = (j.releases && j.releases[0]) || (j.records && j.records[0] && (j.records[0].compiledRelease || j.records[0])) || j, t = r.tender || {};
+  const arts = (t.items || []).map(x => [x.description, x.classification && x.classification.description].filter(Boolean).join(' ')).join(' · ');
+  const texto = [t.title, t.description, arts].filter(Boolean).join(' ').toLowerCase();
+  if (!texto || FUERA.some(k => texto.includes(k))) return;
+  const fuertes = FUERTES.filter(k => texto.includes(k)), debiles = DEBILES.filter(k => texto.includes(k)), puntos = fuertes.length * 3 + debiles.length;
+  if (puntos < 3) return;
+  const docs = t.documents || [], pliego = (docs.find(d => /pliego|biddingDocuments/i.test((d.id || '') + ' ' + (d.title || '') + ' ' + (d.documentType || ''))) || docs[0] || {}).url || '';
+  out.push({ json: { puntos, porque: [...fuertes, ...debiles].slice(0, 5).join(', '), quien: (r.buyer && r.buyer.name) || (t.procuringEntity && t.procuringEntity.name) || '',
+    que: (t.description || t.title || ('Compra ' + (base[i] || {}).compra)).replace(/\s+/g, ' ').slice(0, 180), tipo: t.title || t.procurementMethodDetails || '', cierra: fmt(t.tenderPeriod && t.tenderPeriod.endDate),
+    enlace: pliego || (base[i] || {}).enlace || '', compra: (base[i] || {}).compra || '' } });
 });
-return [{ json: { text: `📋 Licitaciones nuevas que pueden servir (${base.length})\n\n` + lineas.join('\n\n') + '\n\nModo prueba: nadie más recibe esto. Decime cuáles sirven y cuáles no, así afino los rubros.' } }];
+out.sort((a, b) => b.json.puntos - a.json.puntos);
+return out.length ? out.slice(0, 15) : [{ json: { nada: true, revisados: det.length } }];
 """)
-link(detalle, armar)
+link(detalle, elegir)
+hay2 = iff("¿Hay alguno del rubro?", (1440, 200), "={{ !$json.nada }}")
+link(elegir, hay2)
+armar = code("Armar el resumen", (1680, 100), r"""
+const L = $input.all().map(i => i.json);
+const lineas = L.map((b, i) => `${i + 1}. ${b.quien ? b.quien + ' · ' : ''}${b.que}` + (b.tipo || b.cierra ? `\n   ${[b.tipo, b.cierra && 'cierra ' + b.cierra].filter(Boolean).join(' · ')}` : '') + (b.enlace ? `\n   ${b.enlace}` : '') + `\n   (por: ${b.porque})`);
+return [{ json: { text: `📋 Licitaciones nuevas que pueden servir (${L.length})\n\n` + lineas.join('\n\n') + '\n\nModo prueba: nadie más recibe esto. Decime cuáles sirven y cuáles no, así afino los rubros.' } }];
+""")
+link(hay2, armar, 0)
 
 # ============ mandármelo a mi propio chat ============
-yo = get("Mi número (Evolution)", (1440, 200), f"{EVO}/instance/fetchInstances?instanceName={INST}", credkey="evo")
+yo = get("Mi número (Evolution)", (1920, 100), f"{EVO}/instance/fetchInstances?instanceName={INST}", credkey="evo")
 link(armar, yo)
 mandar = node("Mandarme el resumen", "n8n-nodes-base.httpRequest", 4.2, {"method": "POST", "url": f"{EVO}/message/sendText/{INST}", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
     "sendBody": True, "specifyBody": "json", "options": {"timeout": 60000},
     "jsonBody": "={{ JSON.stringify({ number: String((([].concat($json))[0] || {}).ownerJid || (([].concat($json))[0] || {}).owner || '').split('@')[0], text: $('Armar el resumen').first().json.text }) }}"},
-    (1680, 200), credentials=cred("evo", "httpHeaderAuth"), onError="continueRegularOutput")
+    (2160, 100), credentials=cred("evo", "httpHeaderAuth"), onError="continueRegularOutput")
 link(yo, mandar)
 
 # ============ apagado hasta tener la clave de Claude con tope ============
@@ -107,7 +115,7 @@ node("Resumir el pliego (Claude)", "n8n-nodes-base.httpRequest", 4.2, {"method":
     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "anthropic-version", "value": "2023-06-01"}]},
     "sendBody": True, "specifyBody": "json", "options": {"timeout": 120000},
     "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 1200, system: 'Sos el vendedor de una empresa uruguaya de instalaciones (cámaras, cableado, fibra, redes, control de acceso). Resumí el llamado en español rioplatense, sin tecnicismos: qué piden, cantidades, plazo, garantía, visita obligatoria, fecha de apertura y si conviene presentarse. No inventes precios.', messages: [{ role: 'user', content: JSON.stringify($json).slice(0, 60000) }] }) }}"},
-    (1200, 420), credentials=cred("anthropic", "anthropicApi"), disabled=True, notes="Se prende cuando esté la clave de la consola de Claude, en su propio espacio con tope de gasto.")
+    (1680, 340), credentials=cred("anthropic", "anthropicApi"), disabled=True, notes="Se prende cuando esté la clave de la consola de Claude, en su propio espacio con tope de gasto.")
 
 print(json.dumps({"name": "Ventas · Licitaciones (prueba)", "nodes": nodes, "connections": conns,
     "settings": {"executionOrder": "v1", "saveDataSuccessExecution": "all", "saveDataErrorExecution": "all", "timezone": "America/Montevideo"}}, ensure_ascii=False, indent=1))
