@@ -14,13 +14,13 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=19';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=63';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=64';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=53';
+import { construir } from './construir.js?v=54';
 import { juego } from './juego.js?v=6';
 import { recorrer } from './recorrer.js?v=22';
-import { transito } from './transito.js?v=53';
+import { transito } from './transito.js?v=54';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -437,8 +437,11 @@ export async function abrirMaqueta(o) {
     let src = c.toDataURL('image/webp', 0.86); if (!src.startsWith('data:image/webp')) src = c.toDataURL('image/jpeg', 0.86); return { img: src, aspecto: c.height / c.width }; }
   async function subirPlano(f) { if (!f) return; let r; try { r = await leerImagen(f); } catch (er) { toast(er.message); return; }
     if (cambiarImagen && E.piezas.includes(cambiarImagen)) { const p = cambiarImagen; cambiarImagen = null; Object.assign(p, r); rehacer(p); cambio(); elegir(p); toast('Imagen cambiada. Si la escala no es la misma, medí de nuevo'); return; }
-    if (!ED.on) editar(true); const p = { id: nuevoId('plano'), t: 'plano', nombre: f.name.replace(/\.[^.]+$/, '').slice(0, 60) || 'Plano del lugar', x: Math.round(motor.C.tx), z: Math.round(motor.C.tz), ancho: Math.round(Math.min(300, Math.max(20, motor.C.d * 0.9))), ...r };
-    E.piezas.unshift(p); rehacer(p); cambio(); elegir(p); motor.ir({ tx: p.x, tz: p.z, d: p.ancho * 1.1, pitch: 1.2 }, 0.6); medir(p); }
+    if (!ED.on) editar(true); const otros = E.piezas.filter(q => q.t === 'plano'), ult = otros[0];
+    const p = { id: nuevoId('plano'), t: 'plano', nombre: f.name.replace(/\.[^.]+$/, '').slice(0, 60) || 'Plano del lugar', x: Math.round(motor.C.tx), z: Math.round(motor.C.tz), ancho: Math.round(Math.min(300, Math.max(20, motor.C.d * 0.9))), ...r };
+    // con otro plano ya puesto (por ejemplo planta baja y primer piso): el nuevo va al lado, con la misma escala, para que no queden encimados
+    if (ult) { p.ancho = ult.ancho; const der = Math.max(...otros.map(q => (q.x || 0) + q.ancho / 2)); p.x = Math.round(der + 8 + p.ancho / 2); p.z = Math.round(ult.z || 0); }
+    E.piezas.unshift(p); rehacer(p); cambio(); elegir(p); motor.ir({ tx: p.x, tz: p.z, d: p.ancho * 1.1, pitch: 1.2 }, 0.6); if (ult) toast('Quedó al lado del otro plano, con la misma escala. Si es un piso de arriba, elegí el piso en su ficha y arrastralo encima'); else medir(p); }
   $('#mimg').addEventListener('change', e => { subirPlano(e.target.files[0]); e.target.value = ''; });
   // ajustar la escala: se tocan dos puntos de algo que se conoce (una pared, un portón) y se escribe cuánto mide; el plano (y lo que tiene arriba) se agranda o achica desde el primer punto
   const MED = { p: null, pts: [], g: new THREE.Group() }; motor.scene.add(MED.g);
