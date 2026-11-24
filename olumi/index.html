@@ -2,7 +2,7 @@
 <html lang="es-UY" class="n">
 <head>
 <meta charset="utf-8">
-<script>try{if(localStorage.getItem('unity.tema')==='dia')document.documentElement.classList.remove('n')}catch(e){}</script>
+<script>try{localStorage.removeItem('unity.tema');if(sessionStorage.getItem('olumi.web.tema')==='dia')document.documentElement.classList.remove('n')}catch(e){}</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <title>Olumi · Tu empresa virtual, viva</title>
@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 <style>
 /* Olumi web v6 (pública desde el 23/11; vista previa del 22/11): la identidad de la app (negro, vidrio y el naranja del punto del logo; un solo movimiento), la historia sobre el
-   motor común, el CRM nuevo y la seguridad contada al bajar. Día o noche se elige arriba a la derecha y queda guardado (unity.tema). */
+   motor común, el CRM nuevo y la seguridad contada al bajar. Arranca siempre de noche (Christian 23/11); el día se elige arriba a la derecha y dura esa visita (sessionStorage olumi.web.tema). En día, las capturas pasan a sus versiones claras (img/*-claro.webp). */
 :root{--bg:#E3E6EA;--ink:#111215;--ink2:rgba(17,18,21,.64);--ink3:rgba(17,18,21,.42);--line:rgba(17,18,21,.09);--line2:rgba(17,18,21,.16);
   --glass:rgba(255,255,255,.58);--glass2:rgba(255,255,255,.78);--hi:rgba(255,255,255,.9);--sh:0 1px 0 rgba(255,255,255,.7) inset,0 24px 60px -28px rgba(20,24,32,.35);
   --acc:#FF7A1A;--graf:#1E1F23;--acc-ink:#9E3706;--ok:#1f9d55;--red:#d92d20;--amb:#b26b00;
@@ -56,8 +56,8 @@ section{padding:clamp(80px,11vw,150px) 0}
 :focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 /* barra de arriba: una cápsula de vidrio */
 .top{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:0;right:0;z-index:30;pointer-events:none}
-.top .wrap{display:flex;align-items:center;gap:12px;height:60px;padding:0 10px 0 16px;border-radius:999px;pointer-events:auto;transition:background .5s var(--e),box-shadow .5s,border-color .5s;border:1px solid transparent}
-.top.sc .wrap{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(1.7);backdrop-filter:blur(24px) saturate(1.7);border-color:var(--line);box-shadow:var(--sh)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:60px;padding:0 10px 0 16px;border-radius:999px;pointer-events:auto;transition:background .5s var(--e),box-shadow .5s,border-color .5s;border:1px solid var(--line);box-shadow:var(--sh)}
+.top .wrap,.top.sc .wrap{background:var(--glass2);-webkit-backdrop-filter:blur(24px) saturate(1.7);backdrop-filter:blur(24px) saturate(1.7);border-color:var(--line);box-shadow:var(--sh)}
 .logo{display:inline-flex;align-items:center;gap:10px;font:700 21px/1 var(--f);letter-spacing:-.04em;text-decoration:none;color:var(--ink)}
 .logo svg{width:32px;height:32px;border-radius:9px}
 .logo small{font:500 12px var(--f);color:var(--ink3);letter-spacing:0;margin-left:2px}
@@ -152,6 +152,22 @@ html:not(.n) .cine .bg{background:radial-gradient(80% 70% at 65% 40%,#f4f5f7,#cf
   .cine .bg::after{background:linear-gradient(0deg,var(--bg) 0%,var(--bg) 30%,color-mix(in srgb,var(--bg) 86%,transparent) 54%,transparent 76%)}
   .cine .bg iframe{top:-26%}.ch.hero .mini{display:none}
   .tkt{right:-8px;bottom:-30px;width:250px}.iph{--w:250px}.stats{grid-template-columns:1fr}}
+/* modo día: las pantallas de ejemplo también en claro (Christian 23/11: «si no queda raro»); el teléfono pasa a plateado */
+html:not(.n) .iph{background:linear-gradient(145deg,#d9dadf,#b9bbc2 40%,#cfd1d6);box-shadow:0 0 0 1.5px #a9abb2,0 40px 80px -30px rgba(20,24,32,.45)}
+html:not(.n) .iph .scr{background:#fff;color:#111215}
+html:not(.n) .wa-h{background:#f0f2f5}html:not(.n) .wa-h .av{background:#dfe5e7;color:#54656f}html:not(.n) .wa-h small{color:#667781}
+html:not(.n) .wa-b{background:#efeae2 radial-gradient(rgba(0,0,0,.04) 1px,transparent 1.2px) 0 0/14px 14px}
+html:not(.n) .bub{color:#111b21;box-shadow:0 1px .5px rgba(11,20,26,.13)}html:not(.n) .bub small{color:#667781}
+html:not(.n) .bub.in{background:#fff}html:not(.n) .bub.out{background:#d9fdd3}
+html:not(.n) .wa-f{background:#f0f2f5}html:not(.n) .wa-f span{background:#fff}
+html:not(.n) .lock{background:radial-gradient(120% 80% at 30% 0%,#f4f6fa 0%,#d6dbe4 55%,#b8c0cc 100%)}
+html:not(.n) .lock .day{color:rgba(17,18,21,.7)}html:not(.n) .lock .hr{color:#111215}
+html:not(.n) .nt{background:rgba(255,255,255,.66);box-shadow:0 6px 20px -10px rgba(20,24,32,.3)}html:not(.n) .nt .h{color:rgba(17,18,21,.5)}html:not(.n) .nt span{color:rgba(17,18,21,.75)}
+html:not(.n) .rep{background:#f2f3f5!important}html:not(.n) .rep .cli{color:rgba(17,18,21,.55)}
+html:not(.n) .rep .c{background:#fff;box-shadow:0 1px 2px rgba(20,24,32,.06)}html:not(.n) .rep .c small{color:rgba(17,18,21,.5)}
+html:not(.n) .rep .sig svg{stroke:#111215}html:not(.n) .rep .ok{color:#1f9d55}html:not(.n) .rep .ok i{background:#1f9d55}
+html:not(.n) .ph{background:#c9ccd3;border-color:rgba(17,18,21,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 30px 70px -24px rgba(20,24,32,.35)}html:not(.n) .ph img{background:#eef0f3}
+html:not(.n) .crm .big img{box-shadow:0 20px 50px -24px rgba(20,24,32,.35)}
 /* ---------- el CRM ---------- */
 .crm .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .crm .big{grid-column:1/-1;padding:clamp(14px,2vw,22px);display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:22px;align-items:center}
@@ -441,7 +457,7 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
     <p class="lede">Olumi trae de fábrica la forma que creemos más rápida para trabajar, la que pulimos todos los días en nuestras obras. Si alguien prefiere otra cosa, la cambia para él, viendo antes qué cambia.</p></div>
   <div class="grid">
     <article class="big gl">
-      <img src="/olumi/img/escritorio-crm.webp" width="1280" height="800" loading="lazy" alt="El CRM en tablero: oportunidades con número, servicio, prioridad, cliente, obra, monto y próxima actividad, en columnas por etapa">
+      <img src="/olumi/img/escritorio-crm.webp" data-claro="/olumi/img/escritorio-crm-claro.webp" width="1280" height="800" loading="lazy" alt="El CRM en tablero: oportunidades con número, servicio, prioridad, cliente, obra, monto y próxima actividad, en columnas por etapa">
       <div class="txt"><h3>Todas tus oportunidades, en un tablero.</h3><p>Cada una con su número, el servicio, las estrellas de prioridad y lo próximo que hay que hacer. La pasás de etapa con un toque.</p>
         <ul><li>Baja la pantalla entera: los títulos quedan arriba.</li><li>«Finalizado» plegado, para ver lo que está vivo.</li><li>Pronóstico del mes y lista, a un toque.</li></ul></div>
     </article>
@@ -490,12 +506,12 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
 
 <section id="app" class="vista"><div class="wrap">
   <div class="head"><h2>Así se ve.<span class="two">En la compu y en el celular.</span></h2><p class="lede">Las pantallas de Olumi tal cual son, con datos de ejemplo. Negro, vidrio y un solo color para lo importante.</p></div>
-  <figure class="desk"><img src="/olumi/img/escritorio-tickets.webp" width="1280" height="800" loading="lazy" alt="Tickets en tablero: Sin asignar y una columna por técnico, con su carga del día"><figcaption><b>Tickets en tablero</b>Soltás el ticket en un técnico y queda agendado en su primer hueco libre, en el Calendario.</figcaption></figure>
+  <figure class="desk"><img src="/olumi/img/escritorio-tickets.webp" data-claro="/olumi/img/escritorio-tickets-claro.webp" width="1280" height="800" loading="lazy" alt="Tickets en tablero: Sin asignar y una columna por técnico, con su carga del día"><figcaption><b>Tickets en tablero</b>Soltás el ticket en un técnico y queda agendado en su primer hueco libre, en el Calendario.</figcaption></figure>
   <div class="phones">
-    <figure><div class="ph"><img src="/olumi/img/bandeja.webp" width="390" height="844" loading="lazy" alt="Bandeja de entrada en tablero"></div><figcaption><b>Bandeja</b>WhatsApp, correo y llamadas, ordenados por paso o por urgencia.</figcaption></figure>
-    <figure><div class="ph"><img src="/olumi/img/tickets.webp" width="390" height="844" loading="lazy" alt="Tickets de un técnico en el celular"></div><figcaption><b>Tickets</b>Primero lo urgente; el abono desempata.</figcaption></figure>
-    <figure><div class="ph"><img src="/olumi/img/calendario.webp" width="390" height="844" loading="lazy" alt="Calendario por horas de tres días"></div><figcaption><b>Calendario</b>Día, tres días o semana. Arrastrás y avisás al cliente.</figcaption></figure>
-    <figure><div class="ph"><img src="/olumi/img/mi-dia.webp" width="390" height="844" loading="lazy" alt="Mi día del técnico"></div><figcaption><b>Mi día</b>El técnico sabe a dónde ir y cierra con foto y firma.</figcaption></figure>
+    <figure><div class="ph"><img src="/olumi/img/bandeja.webp" data-claro="/olumi/img/bandeja-claro.webp" width="390" height="844" loading="lazy" alt="Bandeja de entrada en tablero"></div><figcaption><b>Bandeja</b>WhatsApp, correo y llamadas, ordenados por paso o por urgencia.</figcaption></figure>
+    <figure><div class="ph"><img src="/olumi/img/tickets.webp" data-claro="/olumi/img/tickets-claro.webp" width="390" height="844" loading="lazy" alt="Tickets de un técnico en el celular"></div><figcaption><b>Tickets</b>Primero lo urgente; el abono desempata.</figcaption></figure>
+    <figure><div class="ph"><img src="/olumi/img/calendario.webp" data-claro="/olumi/img/calendario-claro.webp" width="390" height="844" loading="lazy" alt="Calendario por horas de tres días"></div><figcaption><b>Calendario</b>Día, tres días o semana. Arrastrás y avisás al cliente.</figcaption></figure>
+    <figure><div class="ph"><img src="/olumi/img/mi-dia.webp" data-claro="/olumi/img/mi-dia-claro.webp" width="390" height="844" loading="lazy" alt="Mi día del técnico"></div><figcaption><b>Mi día</b>El técnico sabe a dónde ir y cierra con foto y firma.</figcaption></figure>
   </div>
 </div></section>
 
@@ -581,7 +597,9 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
 (function(){
   var H=document.documentElement,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   // ---- día o noche (uno solo para toda la página, queda guardado) ----
-  var mb=document.getElementById('modo');function modo(n){H.classList.toggle('n',n);mb.setAttribute('aria-label',n?'Cambiar a modo día':'Cambiar a modo noche');try{localStorage.setItem('unity.tema',n?'noche':'dia')}catch(e){}}
+  var mb=document.getElementById('modo');function modo(n){H.classList.toggle('n',n);mb.setAttribute('aria-label',n?'Cambiar a modo día':'Cambiar a modo noche');try{sessionStorage.setItem('olumi.web.tema',n?'noche':'dia')}catch(e){}capturas(n)}
+  function capturas(n){[].forEach.call(document.querySelectorAll('img[data-claro]'),function(i){if(!i.dataset.noche)i.dataset.noche=i.getAttribute('src');var u=n?i.dataset.noche:i.dataset.claro;if(i.getAttribute('src')!==u)i.setAttribute('src',u)})}
+  if(!H.classList.contains('n')){capturas(false);mb.setAttribute('aria-label','Cambiar a modo noche')}
   mb.addEventListener('click',function(){modo(!H.classList.contains('n'))});
   // ---- barra: vidrio al bajar y la pastilla que sigue la sección ----
   var top=document.getElementById('top'),tabs=[].slice.call(document.querySelectorAll('.tabs a')),pill=document.querySelector('.tabs .pill');
