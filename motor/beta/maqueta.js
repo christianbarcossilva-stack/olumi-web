@@ -19,7 +19,7 @@ import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
 import { construir } from './construir.js?v=53';
 import { juego } from './juego.js?v=6';
-import { recorrer } from './recorrer.js?v=21';
+import { recorrer } from './recorrer.js?v=22';
 import { transito } from './transito.js?v=53';
 import { extras } from './extras.js?v=5';
 
@@ -204,6 +204,12 @@ export async function abrirMaqueta(o) {
   const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && !m.userData.noPica && m !== g.userData.aro) b.expandByObject(m); }); return b; };
   function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaDe(g, caja.box).expandByScalar(0.15); puntos(); motor.dirty = true; }
   function elegir(p, enfocar) { if (!p) soltarMulti(); SEL = p; CON.alElegir(p); marcar(); info(); if (enfocar && p) { const [x, z] = centro(p); motor.ir({ tx: x, tz: z, d: Math.min(motor.C.d, TIPOS[p.t].equipo ? 45 : 140) }); } }
+  // un equipo chico y lejos (un AP en el techo de un galpón) casi no tiene superficie para el rayo: se acepta el equipo cuyo centro cae cerca del toque en pantalla
+  const _v = new THREE.Vector3(), _bb = new THREE.Box3();
+  function equipoCerca(cx, cy, px = 34) { const r = canvas.getBoundingClientRect(); let mejor = null, md = px;
+    for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t] || !TIPOS[p.t].equipo) continue; _bb.setFromObject(g); if (_bb.isEmpty()) continue; _bb.getCenter(_v);
+      if (_v.distanceTo(motor.cam.position) > 90) continue; _v.project(motor.cam); if (_v.z > 1) continue;
+      const d = Math.hypot(r.left + (_v.x + 1) / 2 * r.width - cx, r.top + (1 - _v.y) / 2 * r.height - cy); if (d < md) { md = d; mejor = p; } } return mejor; }
   function hallar(e) { const hit = motor.tocar(e.clientX, e.clientY, [...objs.values()].filter(g => g.visible)); for (const h of hit) { const g = h.object.userData.dueño; if (g && g.visible) { if (h.object.userData.campo || g.userData.pieza._p || (!ED.on && g.userData.tipo.fondo)) continue; return { p: g.userData.pieza, h }; } } return null; }
   function info() { const box = $('#minfo'); if (!SEL) { box.hidden = true; return; } const T = TIPOS[SEL.t], q = { ...T.def, ...SEL }, cerrar = `<button class="mx" data-sel="no" aria-label="Cerrar">${svg('cerrar', 16)}</button>`;
     box.hidden = false; box.classList.toggle('abierta', UI.abierta); const propia = ED.on && puede && CON.ficha(); if (propia) { box.classList.add('abierta'); box.innerHTML = propia; return; }
@@ -648,11 +654,11 @@ export async function abrirMaqueta(o) {
   motor.alTocar = e => { const retoma = RC.R.on && !motor.mirando && e.pointerType === 'mouse' && RC.puedeMira(), h = hallar(e);
     // recorriendo en la compu, el mundo se toca con la mira y el puntero suelto es para los paneles: un clic en la maqueta con el mouse suelto lo retoma
     // (salvo que se esté ubicando o dibujando algo con el puntero, o que se toque un equipo sin estar editando: ahí se abre su ficha)
-    if (retoma && !ED.colocar && !ED.linea && !CON.T.h && !MED.p && (ED.on || !(h && TIPOS[h.p.t].equipo))) { motor.mira(true); return; }
+    if (retoma && !ED.colocar && !ED.linea && !CON.T.h && !MED.p && (ED.on || !(h && TIPOS[h.p.t].equipo) && !equipoCerca(e.clientX, e.clientY))) { motor.mira(true); return; }
     if (ED.on) { toqueEd(e); return; }
-    if (RC.R.on) { if (h && TIPOS[h.p.t].equipo) { elegir(h.p); motor.mira(false); return; } if (motor.mirando) return; const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; }
+    if (RC.R.on) { const eq = h && TIPOS[h.p.t].equipo ? h.p : equipoCerca(e.clientX, e.clientY); if (eq) { elegir(eq); motor.mira(false); return; } if (motor.mirando) return; const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; }
     if (host && host.alTocar) { const q = motor.enPiso(e.clientX, e.clientY); if (host.alTocar(h ? h.p : null, q ? [q.x, q.z] : null)) return; }   // la app puede quedarse con el toque (Olumi abre el área de la sala)
-    elegir(h ? h.p : null); };
+    elegir(h && TIPOS[h.p.t].equipo ? h.p : equipoCerca(e.clientX, e.clientY, 22) || (h ? h.p : null)); };
   // doble clic: mirando, acerca a lo que se toca (o vuela a ese lugar del piso) y abre la documentación de un rack; editando, saca un punto de una línea
   motor.alDoble = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
     if (ED.on && SEL && SEL.t === 'galpon') { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { const f = mf.object.userData.fach; fachFijar(SEL, f); fachLista(SEL, f.k).splice(f.i, 1); rehacer(SEL); cambio(); puntos(); toast(NOMF[f.k] + ': sacado'); return; } }
@@ -714,7 +720,7 @@ export async function abrirMaqueta(o) {
 
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
-  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
+  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
     avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
   // «Salir de la maqueta» (menú de pausa): deja de recorrer y de editar, sale de la pantalla completa y le avisa a la app (host.salir); sola, vuelve a la vista general
