@@ -915,7 +915,8 @@ export const TIPOS = {
       g.userData.sinAplanar = true; return g; } },
   puesto: { n: 'Puesto de trabajo (mesa con jacks)', g: 'Equipos', forma: 'punto', capa: 'equipos', etiqueta: p => p.nombre || jacksDe(p).join(' '), def: { ancho: 1.4, fondo: 0.7, tipo: 'puesto', color: '#e8e2d6' },
     variantes: [{ n: 'Puesto de trabajo', o: { tipo: 'puesto', ancho: 1.4, fondo: 0.7 } }, { n: 'Mesa de reunión', o: { tipo: 'mesa', ancho: 2.4, fondo: 1.1 } }],
-    campos: [F.nombre, { k: 'jacks', n: 'Jacks (como en el plano: B01 B02)', t: 'txt' }, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['puesto', 'Puesto (una silla)'], ['mesa', 'Mesa de reunión (sillas a los dos lados)']] }, F.ancho('Largo (m)', 0.6, 6), F.fondo('Fondo (m)', 0.4, 2), F.color('Color de la tapa'), { k: 'rack', n: 'Va al rack', t: 'txt' }, F.r],
+    campos: [F.nombre, { k: 'jacks', n: 'Jacks (como en el plano: B01 B02)', t: 'txt' }, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['puesto', 'Puesto (una silla)'], ['mesa', 'Mesa de reunión (sillas a los dos lados)']] }, F.ancho('Largo (m)', 0.6, 6), F.fondo('Fondo (m)', 0.4, 2), F.color('Color de la tapa'), { k: 'rack', n: 'Va al rack', t: 'txt' },
+      { k: 'bandeja', n: 'Bandeja para cables debajo de la tapa', t: 'bool' }, { k: 'columna', n: 'Columna por donde suben los cables del piso', t: 'sel', ops: [['', 'Ninguna'], ['centro', 'Al medio, atrás (en la mesa de reunión, al centro)'], ['izq', 'En la esquina de atrás, a la izquierda'], ['der', 'En la esquina de atrás, a la derecha']] }, F.r],
     armar(p) { const g = new THREE.Group(), w = +p.ancho || 1.4, d = +p.fondo || 0.7, top = 0.74, mt = mat(p.color || '#e8e2d6', { roughness: 0.6 }), mf = mat('#3a3f44', { roughness: 0.45, metalness: 0.6 }), J = jacksDe(p);
       caja(g, -w / 2, top - 0.025, -d / 2, w / 2, top, d / 2, mt);
       for (const sx of [-1, 1]) { const x = sx * (w / 2 - 0.05); caja(g, x - 0.025, 0, -d / 2 + 0.05, x + 0.025, top - 0.025, -d / 2 + 0.1, mf); caja(g, x - 0.025, 0, d / 2 - 0.1, x + 0.025, top - 0.025, d / 2 - 0.05, mf); caja(g, x - 0.025, 0, -d / 2 + 0.05, x + 0.025, 0.04, d / 2 - 0.05, mf); }
@@ -923,6 +924,9 @@ export const TIPOS = {
       // caja de mesa con los jacks (atrás al medio; en la mesa de reunión, al centro)
       const cz = p.tipo === 'mesa' ? 0 : -d / 2 + 0.09; caja(g, -0.1, top, cz - 0.04, 0.1, top + 0.03, cz + 0.04, mat('#2f3337', { roughness: 0.4, metalness: 0.5 }));
       if (J.length) { const pl = placa(J, J.length); pl.rotation.x = -Math.PI / 2; pl.position.set(0, top + 0.032, cz); pl.scale.setScalar(0.9); g.add(pl); }
+      const mb = mat('#4a5056', { roughness: 0.5, metalness: 0.7 });
+      if (p.bandeja) { const bz = p.tipo === 'mesa' ? 0 : -d / 2 + 0.09; caja(g, -w / 2 + 0.06, top - 0.16, bz - 0.06, w / 2 - 0.06, top - 0.15, bz + 0.06, mb, false); for (const s of [-1, 1]) caja(g, -w / 2 + 0.06, top - 0.16, bz + s * 0.06 - 0.003, w / 2 - 0.06, top - 0.11, bz + s * 0.06 + 0.003, mb, false); }   // bandeja de alambre colgada debajo de la tapa
+      if (p.columna) { const cx = p.columna === 'izq' ? -w / 2 : p.columna === 'der' ? w / 2 : 0, cz2 = p.columna === 'centro' ? cz : -d / 2; caja(g, cx - 0.045, 0, cz2 - 0.045, cx + 0.045, top - 0.025, cz2 + 0.045, mat('#30353a', { roughness: 0.5, metalness: 0.5 })); }   // columna pasacables: por acá suben los cables que vienen picados por el piso
       const silla = (x, z, giro) => { const h = new THREE.Group(), ms = mat('#2b2f33', { roughness: 0.7 }); caja(h, -0.23, 0.42, -0.23, 0.23, 0.48, 0.23, ms); caja(h, -0.22, 0.48, 0.19, 0.22, 0.95, 0.24, ms); cil(h, 0, 0.05, 0, 0.03, 0.37, mf); cil(h, 0, 0, 0, 0.28, 0.05, mf); h.position.set(x, 0, z); h.rotation.y = giro; g.add(h); };
       if (p.tipo === 'mesa') { const ns = Math.max(1, Math.floor(w / 0.75)); for (let i = 0; i < ns; i++) { const x = -w / 2 + (i + 0.5) * w / ns; silla(x, d / 2 + 0.35, 0); silla(x, -d / 2 - 0.35, Math.PI); } }
       else silla(0, d / 2 + 0.4, 0);
@@ -1421,7 +1425,8 @@ export const TIPOS = {
     armar: equipo((g, p, ec) => { caja(g, -0.12, 0, -0.22, 0.12, 0.42, 0.22, negro()); caja(g, -0.04, 0.32, 0.22, 0.04, 0.36, 0.225, led(ec), false); }) },
   fibra: { n: 'Tendido de fibra o cable', g: 'Equipos', forma: 'linea', capa: 'equipos', def: { y: 0, color: '#ff8a00', hilos: 12 },
     campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['', 'Fibra óptica'], ['utp', 'Cable UTP (cobre)']] }, { k: 'hilos', n: 'Hilos o cables', t: 'num', min: 1, max: 288, paso: 1 }, { k: 'y', n: 'Altura (0 = subterráneo)', t: 'num', min: 0, max: 30, paso: 0.5 }, F.color('Color'), { k: 'notas', n: 'Notas', t: 'area' }],
-    armar(p, ctx) { const g = new THREE.Group(), y = p.y || 0, F = carrilesFibra(ctx), k = F.car.get(p.id) || 0, off = k ? (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.62 : 0, color = (!p.color || p.color === '#ff8a00') && F.idx.size > 1 ? COL_FIBRA[(F.idx.get(p.id) || 0) % COL_FIBRA.length] : p.color, pts = off && !y ? offset(p.pts, off) : p.pts, m = new THREE.MeshBasicMaterial({ color });
+    armar(p, ctx) { if (p.pts && p.pts.some(q => q.length > 2)) return tendido3d(p);   /* con altura en cada punto: baja por la pared, corre por el piso, sube por la mesa */
+      const g = new THREE.Group(), y = p.y || 0, F = carrilesFibra(ctx), k = F.car.get(p.id) || 0, off = k ? (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.62 : 0, color = (!p.color || p.color === '#ff8a00') && F.idx.size > 1 ? COL_FIBRA[(F.idx.get(p.id) || 0) % COL_FIBRA.length] : p.color, pts = off && !y ? offset(p.pts, off) : p.pts, m = new THREE.MeshBasicMaterial({ color });
       if (y) { const c = new THREE.CatmullRomCurve3(pts.map(q => new THREE.Vector3(q[0], y, q[1])), false, 'catmullrom', 0); g.add(new THREE.Mesh(new THREE.TubeGeometry(c, Math.max(8, pts.length * 8), p.tipo === 'utp' ? 0.008 + 0.004 * Math.sqrt(p.hilos || 1) : 0.06, 6), m)); }   // UTP: el mazo de cables, del grueso que da la cantidad
       else { const po = { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -8 }, c = new THREE.Mesh(cinta(pts, 0.46, 0.085), new THREE.MeshBasicMaterial({ color, opacity: 0.92, ...po })); c.renderOrder = 2; g.add(c);
         // el pulso de luz que corre por la fibra: se ve que está viva y hacia dónde va
@@ -1479,6 +1484,21 @@ function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], ma = { c
   lote(g, TRONCO, mat(T ? '#3b3026' : '#6b5440', { roughness: 1 }), tr); const fo = [lote(g, HOJAS, mat(T ? '#5d6b5a' : '#ffffff', { roughness: 1, vertexColors: true }), co), lote(g, CONO2, mat(T ? '#5d6b5a' : '#ffffff', { roughness: 1 }), pi),
   lote(g, CONO, mat(T ? '#22361f' : '#6f9a5c', { roughness: 1, flatShading: true }), pa.map(q => { q[5] *= -1; return q; }))]; for (const k of fo) if (k) k.userData.follaje = true; }   // las copas: se pasa por abajo de las que arrancan arriba de la cintura
 // línea corrida hacia un costado (bordes de ruta)
+// tendido con altura en cada punto [x, z, y]: el mazo es un tubo recto por tramo (las esquinas en ángulo, como se tiende de verdad).
+// y = 0: va picado en el piso, se marca la canaleta tapada con mortero y el mazo apenas asomando para que se lea el recorrido.
+// Los tramos verticales van por adentro de la pared de yeso o suben por la columna de la mesa.
+function tendido3d(p) { const g = new THREE.Group(), utp = p.tipo === 'utp', r = utp ? 0.008 + 0.004 * Math.sqrt(p.hilos || 1) : 0.03, PISO = 0.075,
+    enPiso = q => !(q.length > 2 && q[2] > 0), P = p.pts.map(q => new THREE.Vector3(q[0], enPiso(q) ? PISO + r : q[2], q[1])), L = [[], []], up = new THREE.Vector3(0, 1, 0);
+  for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], d = b.clone().sub(a), l = d.length(), k2 = enPiso(p.pts[i - 1]) && enPiso(p.pts[i]) ? 1 : 0; if (l < 0.002) continue;
+    const c = new THREE.CylinderGeometry(r, r, l, 7, 1, true); c.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(up, d.normalize()), new THREE.Vector3(1, 1, 1))); L[k2].push(c);
+    if (i < P.length - 1) { const k = new THREE.SphereGeometry(r, 7, 5); k.translate(b.x, b.y, b.z); L[k2].push(k); } }
+  /* lo que va por el piso se dibuja por encima de la canaleta y del plano; lo que va por adentro de la pared, sin empujar, para que la pared lo tape */
+  L.forEach((l, k2) => { if (!l.length) return; const k = new THREE.Mesh(mergeGeometries(l.map(q => q.index ? q.toNonIndexed() : q)), mat(p.color || '#1f6fd6', { roughness: 0.55, ...(k2 ? { polygonOffset: true, polygonOffsetFactor: -15, polygonOffsetUnits: -10 } : {}) })); k.userData.noChoca = true; g.add(k); l.forEach(q => q.dispose()); });
+  // las canaletas del piso: los tramos seguidos que van por el piso
+  const tramos = []; let t = []; p.pts.forEach(q => { if (!(q.length > 2 && q[2] > 0)) t.push([q[0], q[1]]); else { if (t.length > 1) tramos.push(t); t = []; } }); if (t.length > 1) tramos.push(t);
+  const mc = new THREE.MeshBasicMaterial({ color: oscuro() ? '#3b3f44' : '#a9a69d', transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -13, polygonOffsetUnits: -8 });
+  for (const q of tramos) { const k = new THREE.Mesh(cinta(q, Math.max(0.05, r * 4), PISO + 0.004), mc); k.renderOrder = 2; k.raycast = () => {}; g.add(k); }
+  g.userData.sinAplanar = true; return g; }
 function offset(pts, d) { return pts.map((c, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [c[0] - (b[1] - a[1]) / l * d, c[1] + (b[0] - a[0]) / l * d]; }); }
 // cinta parada a una altura (riel, cable)
 function cintaVertical(pts, alto, y) { const v = [], ix = []; for (let i = 0; i < pts.length; i++) { v.push(pts[i][0], y - alto / 2, pts[i][1], pts[i][0], y + alto / 2, pts[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }

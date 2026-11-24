@@ -14,7 +14,7 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=73';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=74';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
 import { construir } from './construir.js?v=63';
@@ -434,8 +434,8 @@ export async function abrirMaqueta(o) {
   // equipo adosado a una columna de luz: va sin poste propio, mirando hacia afuera; cada uno nuevo queda un cuarto de vuelta más allá, y se mueve con la columna
   function adosar(col, t) { const ya = E.piezas.filter(q => !q.pts && TIPOS[q.t] && TIPOS[q.t].equipo && Math.hypot((q.x || 0) - (col.x || 0), (q.z || 0) - (col.z || 0)) < 1.6).length, r = (col.r || 0) + ya * Math.PI / 2, H = { ...TIPOS.columna.def, ...col }.alto;
     const c = { ...TIPOS[t].def, t, id: nuevoId(t), x: Math.round(((col.x || 0) + Math.sin(r) * 0.3) * 100) / 100, z: Math.round(((col.z || 0) + Math.cos(r) * 0.3) * 100) / 100, r, montaje: 'pared', y: Math.max(3, Math.round((Math.min(H - 1.5, t === 'camara' ? 8 : 7) - ya * 0.6) * 10) / 10) }; E.piezas.push(c); rehacer(c); elegir(c); cambio(); toast('Quedó adosado a la columna. Se gira con la manija celeste.'); }
-  function duplicar() { if (!SEL) return; const c = JSON.parse(JSON.stringify(SEL)); c.id = nuevoId(c.t); delete c.uid; delete c.doc; if (c.pts) c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4]); else { c.x = (c.x || 0) + 4; c.z = (c.z || 0) + 4; } E.piezas.push(c); rehacer(c); elegir(c); cambio(); }
-  let copia = null; function pegarCopia() { if (!copia) return; const c = JSON.parse(copia); delete c.id; delete c.uid; delete c.doc; if (c.pts) { c.id = nuevoId(c.t); c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4]); E.piezas.push(c); rehacer(c); elegir(c); cambio(); } else empezar(c); }
+  function duplicar() { if (!SEL) return; const c = JSON.parse(JSON.stringify(SEL)); c.id = nuevoId(c.t); delete c.uid; delete c.doc; if (c.pts) c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4, ...q.slice(2)]); else { c.x = (c.x || 0) + 4; c.z = (c.z || 0) + 4; } E.piezas.push(c); rehacer(c); elegir(c); cambio(); }
+  let copia = null; function pegarCopia() { if (!copia) return; const c = JSON.parse(copia); delete c.id; delete c.uid; delete c.doc; if (c.pts) { c.id = nuevoId(c.t); c.pts = c.pts.map(q => [q[0] + 4, q[1] + 4, ...q.slice(2)]); E.piezas.push(c); rehacer(c); elegir(c); cambio(); } else empezar(c); }
   function girarSel(giro) { const p = ED.colocar ? ED.colocar.p || (ED.colocar.tpl.r = (ED.colocar.tpl.r || 0) + giro, null) : SEL; if (!p) return; if (p.candado) { toast('Tiene candado: sacalo para girarla'); return; }
     if (p.pts) { if (ED.colocar || ED.linea) return; CON.girar(p, giro); CON.marcar(); marcar(); cambio(); return; }
     const antes = p.r || 0, con = ED.colocar ? [] : CON.contenido(p); p.r = Math.round((antes + giro) / (Math.PI / 4)) * Math.PI / 4; const g = objs.get(p.id); if (g) g.rotation.y = p.r; if (ED.colocar) ED.colocar.tpl.r = p.r; else { rotarCon(p, p.r - antes, con); marcar(); cambio(); info(); } motor.dirty = true; }
@@ -444,7 +444,7 @@ export async function abrirMaqueta(o) {
   // importar piezas de un archivo .json (una escena entera, una lista de piezas o una sola): caen juntas donde se está mirando y con identificadores nuevos si hacen falta
   function importar(txt) { let j; try { j = JSON.parse(txt); } catch (e) { toast('Ese archivo no es un .json válido'); return; } const L = (Array.isArray(j) ? j : (j.escena && j.escena.piezas) || j.piezas || (j.t ? [j] : [])).filter(q => q && TIPOS[q.t]); if (!L.length) { toast('No encontré piezas en ese archivo'); return; }
     const C2 = L.filter(q => q.t !== 'terreno').map(centro), n = Math.max(1, C2.length), cx = C2.reduce((a, q) => a + q[0], 0) / n, cz = C2.reduce((a, q) => a + q[1], 0) / n, dx = Math.round(motor.C.tx - cx), dz = Math.round(motor.C.tz - cz); let n2 = 0, grande = null;
-    for (const q0 of L) { if (q0.t === 'terreno' && L.length > 1) continue; const q = JSON.parse(JSON.stringify(q0)); delete q._p; if (!q.id || E.piezas.some(z => z.id === q.id)) q.id = nuevoId(q.t); if (q.pts) q.pts = q.pts.map(k => [k[0] + dx, k[1] + dz]); else { q.x = (q.x || 0) + dx; q.z = (q.z || 0) + dz; }
+    for (const q0 of L) { if (q0.t === 'terreno' && L.length > 1) continue; const q = JSON.parse(JSON.stringify(q0)); delete q._p; if (!q.id || E.piezas.some(z => z.id === q.id)) q.id = nuevoId(q.t); if (q.pts) q.pts = q.pts.map(k => [k[0] + dx, k[1] + dz, ...k.slice(2)]); else { q.x = (q.x || 0) + dx; q.z = (q.z || 0) + dz; }
       E.piezas.push(q); rehacer(q); n2++; if (['edificio', 'galpon', 'recinto'].includes(q.t) && !grande) grande = q; }
     cambio(); if (grande) elegir(grande); toast(`${n2} pieza${n2 > 1 ? 's' : ''} importada${n2 > 1 ? 's' : ''}${grande ? ': mové o girá el edificio y sus equipos van con él' : ''}`); }
   let cambiarImagen = null;
@@ -641,11 +641,11 @@ export async function abrirMaqueta(o) {
       const cp = TIPOS[SEL.t].campos.find(k => k.k === D.medida), w = Math.max(cp.min || 1, Math.min(cp.max || 600, Math.round(D.lado * (borde - opu) * 100) / 100)), cl = opu + D.lado * w / 2;
       SEL[D.medida] = w; SEL.x = Math.round((D.x0 + (eje ? cl * sn : cl * c)) * 100) / 100; SEL.z = Math.round((D.z0 + (eje ? cl * c : -cl * sn)) * 100) / 100; D.movido = true; rehacer(SEL); puntos(); marcar(); hint(`${cp.n.replace(/ \(m\)/, '')}: <b>${fmt(w)} m</b> · <kbd>Alt</kbd> sin imán`); return; }
     if (D.giro) { const paso = e.altKey ? Math.PI / 180 : Math.PI / 12, r = Math.round(Math.atan2(p.x - (SEL.x || 0), p.z - (SEL.z || 0)) / paso) * paso; if (r !== (SEL.r || 0)) { D.con = D.con || CON.contenido(SEL); rotarCon(SEL, r - (SEL.r || 0), D.con); SEL.r = r; D.movido = true; const g = objs.get(SEL.id); if (g) g.rotation.y = r; marcar(); } return; }
-    if (D.v != null) { SEL.pts[D.v] = [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]; rehacer(SEL); CON.marcar(); return; }
+    if (D.v != null) { SEL.pts[D.v] = [pegar(p.x, e.altKey), pegar(p.z, e.altKey), ...SEL.pts[D.v].slice(2)]; rehacer(SEL); CON.marcar(); return; }
     const dx = p.x - D.x0, dz = p.z - D.z0; if (!D.movido && Math.hypot(dx, dz) < motor.C.d * 0.004) return; D.movido = true; canvas.classList.add('lleva'); manijas.visible = false;
     // las líneas, áreas y recintos se corren enteros (el salto se pega a la grilla, la forma no se toca) y un recinto se lleva lo que tiene adentro
     let mx = pegar(dx, e.altKey), mz = pegar(dz, e.altKey);
-    if (D.p.pts) { D.p.pts = D.orig.map(q => [Math.round((q[0] + mx) * 1000) / 1000, Math.round((q[1] + mz) * 1000) / 1000]); rehacer(D.p); }
+    if (D.p.pts) { D.p.pts = D.orig.map(q => [Math.round((q[0] + mx) * 1000) / 1000, Math.round((q[1] + mz) * 1000) / 1000, ...q.slice(2)]);   /* la altura de cada punto (cables) se conserva */ rehacer(D.p); }
     else { const casa = !e.altKey && Math.hypot(dx, dz) < 0.3;   // cerca de donde estaba, vuelve justo ahí (aunque no estuviera en la grilla)
       D.p.x = casa ? D.orig[0] : pegar(D.orig[0] + dx, e.altKey); D.p.z = casa ? D.orig[1] : pegar(D.orig[1] + dz, e.altKey); mx = D.p.x - D.orig[0]; mz = D.p.z - D.orig[1]; let g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z);
       if (J) { J.probar(D.p, D, { ign: D.ign || (D.ign = new Set(D.con.map(c => c.q))), base: D.apoyado ? null : (D.y0 ?? null) }); g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z); if (!D.mal) D.bien = [D.p.x, D.p.z, D.p.y]; }
