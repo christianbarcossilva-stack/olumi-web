@@ -1,0 +1,317 @@
+{
+ "name": "Ventas · Licitaciones (prueba)",
+ "nodes": [
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "cronExpression",
+       "expression": "40 7 * * 1-5"
+      }
+     ]
+    }
+   },
+   "name": "Cada mañana (lunes a viernes, 7:40)",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    200
+   ]
+  },
+  {
+   "parameters": {},
+   "name": "Probar ahora",
+   "type": "n8n-nodes-base.manualTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    400
+   ]
+  },
+  {
+   "parameters": {
+    "url": "http://www.comprasestatales.gub.uy/ocds/rss",
+    "options": {
+     "timeout": 60000,
+     "response": {
+      "response": {
+       "responseFormat": "text"
+      }
+     }
+    }
+   },
+   "name": "Leer llamados (Compras Estatales)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    240,
+    300
+   ],
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst FUERTES = ['videovigilancia', 'cctv', 'cámaras de seguridad', 'camaras de seguridad', 'cámaras ip', 'camaras ip', 'nvr', 'dvr', 'cableado estructurado',\n  'fibra óptica', 'fibra optica', 'red de datos', 'redes de datos', 'access point', 'puntos de acceso', 'wifi', 'wi-fi', 'control de acceso', 'molinete',\n  'portero eléctrico', 'portero electrico', 'videoportero', 'intercomunicador', 'alarma', 'telefonía ip', 'telefonia ip', 'central telefónica', 'central telefonica',\n  'rack', 'switch', 'utp', 'cat 6', 'cat6', 'patchera', 'sistema de seguridad electrónica', 'seguridad electronica'];\nconst DEBILES = ['cámaras', 'camaras', 'cableado', 'fibra', 'redes', 'telefonía', 'telefonia', 'datos', 'seguridad'];\nconst FUERA = ['fibra de vidrio', 'alimento', 'fibra textil', 'cámara frigorífica', 'camara frigorifica', 'neumático', 'neumatico', 'cámara de aire'];\n\n// el canal trae los últimos llamados como RSS: cada <item> con título, enlace y descripción\nconst xml = String(($input.first().json.data ?? $input.first().json.body ?? '') || '');\nconst tag = (s, t) => { const m = s.match(new RegExp('<' + t + '[^>]*>([\\\\s\\\\S]*?)</' + t + '>', 'i')); return m ? m[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/<[^>]+>/g, ' ').trim() : ''; };\nconst items = (xml.match(/<item[\\s>][\\s\\S]*?<\\/item>/gi) || []).map(s => ({ titulo: tag(s, 'title'), enlace: tag(s, 'link'), texto: tag(s, 'description'), fecha: tag(s, 'pubDate'), id: tag(s, 'guid') || tag(s, 'link') }));\nconst memo = $getWorkflowStaticData('global'); memo.vistos = memo.vistos || {};\nconst hoy = Date.now(), out = [];\nfor (const it of items) {\n  if (!it.id || memo.vistos[it.id]) continue;\n  const t = (it.titulo + ' ' + it.texto).toLowerCase();\n  if (FUERA.some(k => t.includes(k))) continue;\n  const fuertes = FUERTES.filter(k => t.includes(k)), debiles = DEBILES.filter(k => t.includes(k)), puntos = fuertes.length * 3 + debiles.length;\n  if (puntos < 3) continue;\n  out.push({ json: { ...it, puntos, porque: [...fuertes, ...debiles].slice(0, 5).join(', ') } });\n}\n// lo que se revisó queda anotado (también lo que no servía), y la memoria se limpia a los 60 días\nfor (const it of items) if (it.id && !memo.vistos[it.id]) memo.vistos[it.id] = hoy;\nfor (const k in memo.vistos) if (hoy - memo.vistos[k] > 60 * 864e5) delete memo.vistos[k];\nout.sort((a, b) => b.json.puntos - a.json.puntos);\nreturn out.length ? out.slice(0, 15) : [{ json: { nada: true, revisados: items.length } }];\n"
+   },
+   "name": "Elegir los del rubro",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    480,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 2
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !$json.nada }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Hay alguno del rubro?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.2,
+   "position": [
+    720,
+    300
+   ]
+  },
+  {
+   "parameters": {
+    "url": "={{ $json.enlace }}",
+    "options": {
+     "timeout": 60000
+    }
+   },
+   "name": "Leer el llamado",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    960,
+    200
+   ],
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true
+  },
+  {
+   "parameters": {
+    "jsCode": "\nconst base = $('Elegir los del rubro').all().map(i => i.json), det = $input.all().map(i => i.json);\nconst fmt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString('es-UY', { timeZone: 'America/Montevideo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); };\nconst lineas = base.map((b, i) => {\n  const j = det[i] || {}, r = (j.releases && j.releases[0]) || (j.records && j.records[0] && (j.records[0].compiledRelease || j.records[0])) || j, t = r.tender || {};\n  const quien = (r.buyer && r.buyer.name) || (t.procuringEntity && t.procuringEntity.name) || '';\n  const que = t.title || b.titulo, cierra = fmt(t.tenderPeriod && t.tenderPeriod.endDate), tipo = t.procurementMethodDetails || '';\n  const pliego = ((t.documents || []).find(d => /pliego/i.test((d.title || '') + ' ' + (d.documentType || ''))) || (t.documents || [])[0] || {}).url || '';\n  return `${i + 1}. ${quien ? quien + ' · ' : ''}${que}` + (tipo || cierra ? `\\n   ${[tipo, cierra && 'cierra ' + cierra].filter(Boolean).join(' · ')}` : '') + `\\n   ${pliego || b.enlace}` + `\\n   (por: ${b.porque})`;\n});\nreturn [{ json: { text: `📋 Licitaciones nuevas que pueden servir (${base.length})\\n\\n` + lineas.join('\\n\\n') + '\\n\\nModo prueba: nadie más recibe esto. Decime cuáles sirven y cuáles no, así afino los rubros.' } }];\n"
+   },
+   "name": "Armar el resumen",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1200,
+    200
+   ]
+  },
+  {
+   "parameters": {
+    "url": "http://evolution:8080/instance/fetchInstances?instanceName=christian",
+    "options": {
+     "timeout": 60000
+    },
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth"
+   },
+   "name": "Mi número (Evolution)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1440,
+    200
+   ],
+   "onError": "continueRegularOutput",
+   "alwaysOutputData": true,
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "",
+     "name": "evo"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "http://evolution:8080/message/sendText/christian",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendBody": true,
+    "specifyBody": "json",
+    "options": {
+     "timeout": 60000
+    },
+    "jsonBody": "={{ JSON.stringify({ number: String((([].concat($json))[0] || {}).ownerJid || (([].concat($json))[0] || {}).owner || '').split('@')[0], text: $('Armar el resumen').first().json.text }) }}"
+   },
+   "name": "Mandarme el resumen",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1680,
+    200
+   ],
+   "credentials": {
+    "httpHeaderAuth": {
+     "id": "",
+     "name": "evo"
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "anthropicApi",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "anthropic-version",
+       "value": "2023-06-01"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "options": {
+     "timeout": 120000
+    },
+    "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 1200, system: 'Sos el vendedor de una empresa uruguaya de instalaciones (cámaras, cableado, fibra, redes, control de acceso). Resumí el llamado en español rioplatense, sin tecnicismos: qué piden, cantidades, plazo, garantía, visita obligatoria, fecha de apertura y si conviene presentarse. No inventes precios.', messages: [{ role: 'user', content: JSON.stringify($json).slice(0, 60000) }] }) }}"
+   },
+   "name": "Resumir el pliego (Claude)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1200,
+    420
+   ],
+   "credentials": {
+    "anthropicApi": {
+     "id": "",
+     "name": "anthropic"
+    }
+   },
+   "disabled": true,
+   "notes": "Se prende cuando esté la clave de la consola de Claude, en su propio espacio con tope de gasto."
+  }
+ ],
+ "connections": {
+  "Cada mañana (lunes a viernes, 7:40)": {
+   "main": [
+    [
+     {
+      "node": "Leer llamados (Compras Estatales)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Probar ahora": {
+   "main": [
+    [
+     {
+      "node": "Leer llamados (Compras Estatales)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer llamados (Compras Estatales)": {
+   "main": [
+    [
+     {
+      "node": "Elegir los del rubro",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Elegir los del rubro": {
+   "main": [
+    [
+     {
+      "node": "¿Hay alguno del rubro?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay alguno del rubro?": {
+   "main": [
+    [
+     {
+      "node": "Leer el llamado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer el llamado": {
+   "main": [
+    [
+     {
+      "node": "Armar el resumen",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Armar el resumen": {
+   "main": [
+    [
+     {
+      "node": "Mi número (Evolution)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Mi número (Evolution)": {
+   "main": [
+    [
+     {
+      "node": "Mandarme el resumen",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "timezone": "America/Montevideo"
+ }
+}
