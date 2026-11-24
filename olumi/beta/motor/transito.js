@@ -3,8 +3,8 @@
 // (no son datos de una empresa): se prende y se apaga en Capas, y no se guarda con la maqueta.
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
-import { THREE } from './nucleo.js?v=b68ad782';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=b68ad782';
+import { THREE } from './nucleo.js?v=957f7798';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=957f7798';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -90,7 +90,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     return false; }
   // ---------- lo que estorba en la calle: si alguien deja algo mal puesto, los camiones frenan antes, como en la vida real ----------
   // Cuenta lo que llega a menos de 3,9 m del piso (un camión pasa abajo de un alero o del brazo de una columna); cercos y paredes van como tramos.
-  const NOEST = new Set(['calle', 'terreno', 'vereda', 'playa', 'estacionamiento', 'rayado', 'senda', 'rotonda', 'cancha', 'plano', 'balanza', 'barrera', 'persona', 'vehiculo', 'galpon', 'camion', 'chasis', 'tendido', 'fibra', 'arboles', 'monte', 'cantero', 'luminaria', 'plafon', 'aplique', 'zona', 'montículo']);
+  const NOEST = new Set(['calle', 'pintura', 'losas', 'terreno', 'vereda', 'playa', 'estacionamiento', 'rayado', 'senda', 'rotonda', 'cancha', 'plano', 'balanza', 'barrera', 'persona', 'vehiculo', 'galpon', 'camion', 'chasis', 'tendido', 'fibra', 'arboles', 'monte', 'cantero', 'luminaria', 'plafon', 'aplique', 'zona', 'montículo']);
   const E3 = new THREE.Box3(), E4 = new THREE.Box3(); let EST = new Map(), estT = 0; const celda = (x, z) => Math.floor(x / 20) + ':' + Math.floor(z / 20);
   function estorbos() { const out = new Map(), objs = M.objs, poner = o => { const xs = [Math.floor(o.x0 / 20), Math.floor(o.x1 / 20)], zs = [Math.floor(o.z0 / 20), Math.floor(o.z1 / 20)]; for (let i = xs[0]; i <= xs[1]; i++) for (let j = zs[0]; j <= zs[1]; j++) { const k = i + ':' + j; (out.get(k) || out.set(k, []).get(k)).push(o); } };
     if (!objs) return out;
@@ -98,12 +98,14 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       if ((p.t === 'cerco' || p.t === 'pared' || p.t === 'recinto') && p.pts && p.pts.length > 1) { const P = p.cerrado || p.t === 'recinto' ? [...p.pts, p.pts[0]] : p.pts; for (let i = 1; i < P.length; i++) { const [a, b] = [P[i - 1], P[i]]; poner({ s: [a, b], x0: Math.min(a[0], b[0]) - 1, x1: Math.max(a[0], b[0]) + 1, z0: Math.min(a[1], b[1]) - 1, z1: Math.max(a[1], b[1]) + 1, p }); } continue; }
       const g = objs.get(p.id); if (!g) continue; g.updateMatrixWorld(true);
       g.traverse(k => { if (!k.isMesh || k.isInstancedMesh || !k.visible || k.userData.noChoca) return; if (!k.geometry.boundingBox) k.geometry.computeBoundingBox(); E3.copy(k.geometry.boundingBox).applyMatrix4(k.matrixWorld);
-        if (E3.min.y > 3.9 || E3.max.y < 0.12 || (E3.max.x - E3.min.x) * (E3.max.z - E3.min.z) > 900) return; poner({ x0: E3.min.x, x1: E3.max.x, z0: E3.min.z, z1: E3.max.z, p }); }); }
+        if (E3.min.y > 3.9 || E3.max.y < 0.12) return; const bb = k.geometry.boundingBox, s3 = new THREE.Vector3(); k.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), s3); if ((bb.max.x - bb.min.x) * s3.x * (bb.max.z - bb.min.z) * s3.z > 900) return;
+        poner({ x0: E3.min.x, x1: E3.max.x, z0: E3.min.z, z1: E3.max.z, y: (E3.min.y + E3.max.y) / 2, inv: k.matrixWorld.clone().invert(), bb, p }); }); }
     return out; }
   const dSeg = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / L)); return Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz); };
+  const V3 = new THREE.Vector3(); function dentro(o, x, z) { if (!o.inv) return true; V3.set(x, o.y, z).applyMatrix4(o.inv); const b = o.bb; return V3.x > b.min.x - 0.15 && V3.x < b.max.x + 0.15 && V3.z > b.min.z - 0.15 && V3.z < b.max.z + 0.15; }
   function estorbo(c, tr) { const at = !!tr.atras, f = at ? -1 : 1, fx = Math.cos(c.h) * f, fz = -Math.sin(c.h) * f, lx = -fz, lz = fx;
     for (const k of at ? [9, 12, 15] : [3, 6, 9]) for (const l of [-1.25, 0, 1.25]) { const x = c.x + fx * k + lx * l, z = c.z + fz * k + lz * l, L = EST.get(celda(x, z)); if (!L) continue;
-      for (const o of L) { if (o.s ? dSeg(x, z, o.s[0], o.s[1]) < 0.35 : (x > o.x0 - 0.15 && x < o.x1 + 0.15 && z > o.z0 - 0.15 && z < o.z1 + 0.15)) return o.p; } }
+      for (const o of L) { if (o.s ? dSeg(x, z, o.s[0], o.s[1]) < 0.35 : (x > o.x0 - 0.15 && x < o.x1 + 0.15 && z > o.z0 - 0.15 && z < o.z1 + 0.15 && dentro(o, x, z))) return o.p; } }
     return null; }
   let avisoEst = 0;
   function paso(dt) { if (!T.on || !T.andenes.length || document.hidden) return false; dt = Math.min(dt, 0.1); let movio = false;
@@ -117,7 +119,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       const tr = c.cola[0]; if (!tr) { if (c.estado === 'va') { c.estado = 'anden'; c.t = rnd(45, 200); c.x = c.anden.x; c.z = c.anden.z; c.h = c.anden.h; c.lado = 0; c.art = 0; ubicar(c); avisar(); } else { c.estado = 'chau'; c.t = 1; } movio = true; continue; }
       if (c.esc < 1) c.esc = Math.min(1, c.esc + dt * 1.5);
       if (tapado(c, tr) && (c.esp = (c.esp || 0) + dt) < 25) continue; c.esp = 0;
-      const est = EST.size ? estorbo(c, tr) : null; if (est) { c.parado = est; if (M.aviso && performance.now() - avisoEst > 20000) { avisoEst = performance.now(); M.aviso('Tránsito parado: ' + (est.nombre || 'algo') + ' quedó en el camino de los camiones. Movelo y siguen.'); } continue; } c.parado = null;
+      const est = EST.size ? estorbo(c, tr) : null; if (est) { if (c.parado !== est) c.tPar = 0; c.parado = est; if ((c.tPar = (c.tPar || 0) + dt) > 20) { if (c.anden && c.anden.cam === c) c.anden.cam = null; c.estado = 'chau'; c.t = 1; avisar(); continue; } if (M.aviso && performance.now() - avisoEst > 20000) { avisoEst = performance.now(); M.aviso('Tránsito parado: ' + (est.nombre || 'algo') + ' quedó en el camino de los camiones. Movelo y siguen.'); } continue; } c.parado = null;
       // velocidad: más despacio en las curvas y al llegar al final del tramo
       const queda = tr.largo - c.s, vmax = tr.atras ? tr.v : (tr.carril ? 6 : tr.v), v = Math.max(0.9, Math.min(vmax, queda * 0.6 + 0.9) * (c.gira > 0.25 ? 0.55 : 1)); c.s += v * dt;
       if (c.s >= tr.largo) { c.cola.shift(); c.s = 0; if (c.estado === 'sale' && !c.cola.length) { c.estado = 'chau'; c.t = 1; } if (c.cola[0] && c.estado === 'sale' && c.anden) { if (c.anden.cam === c) c.anden.cam = null; avisar(); } continue; }

@@ -42,6 +42,11 @@ svg.mapp{background:none;box-shadow:none;border-radius:0;display:block}
 .mic{width:32px;height:32px;border-radius:9px;border:0;background:none;display:grid;place-items:center;cursor:pointer;flex:none;color:var(--ink)}.mic:hover{background:var(--fill)}.mic:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .mic.peligro{color:var(--crit)}.mic[aria-expanded=true]{background:var(--fill)}.mic[data-acc=mas] svg{transition:transform .18s}html:not(.editando) .mic[data-acc=mas][aria-expanded=true] svg{transform:rotate(180deg)}
 .mmas{display:none;margin:8px 4px 0 0;padding-top:8px;border-top:1px solid var(--line)}#minfo.abierta .mmas{display:block}
+/* editando, los ajustes de lo elegido siempre a la vista (antes había que abrirlos con el botón de ajustes y a veces quedaban escondidos) */
+html.editando #minfo .mmas{display:block}html.editando #minfo .mic[data-acc=mas]{display:none}html.editando #minfo{padding-bottom:12px;width:340px}
+/* la ficha se lleva agarrándola de arriba (en la compu) y recuerda dónde quedó */
+@media (min-width:861px){#minfo .mfila{cursor:grab}#minfo.llevando{transition:none;user-select:none}#minfo.llevando .mfila{cursor:grabbing}#minfo .mnom,#minfo .mic{cursor:auto}#minfo .mic{cursor:pointer}}
+html.editando .mtit b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .mhead{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:2px 0 10px}.mhead>div{display:grid;min-width:0}.mhead small{color:var(--muted);font-size:11.5px}.mhead b{font:600 15px/1.25 "Instrument Sans",-apple-system,system-ui,sans-serif;letter-spacing:-.01em}
 .mx{width:28px;height:28px;border-radius:50%;border:0;background:var(--fill);display:grid;place-items:center;cursor:pointer;flex:none;color:var(--muted)}.mx:hover{color:var(--ink)}
 .mdl{margin:0;display:grid}.mdl div{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}.mdl div:first-child{border-top:0;padding-top:0}.mdl dt{color:var(--muted)}.mdl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;word-break:break-word}
@@ -183,3 +188,22 @@ html.marrastra,html.marrastra *{cursor:grabbing!important;user-select:none;-webk
 .msw2[aria-checked=true]{background:var(--acc);border-color:transparent}.msw2[aria-checked=true] i{transform:translateX(16px)}
 html.mpausada #mmira,html.mpausada #mhint{display:none}
 @media (prefers-reduced-motion:reduce){.mpb,.msw2,.msw2 i,#mtool .mslot{transition:none}}
+
+/* poniendo o dibujando algo, la ficha se corre para no tapar la escena */
+html.ubicando #minfo{opacity:0;pointer-events:none;transition:opacity .15s}
+.mic.trabada{color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,transparent)}.mtrab{margin:8px 4px 2px 0;font-size:12.5px;color:var(--muted)}
+#minfo .mfila2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}#minfo .mfila2 .mbtn{margin:0;justify-content:center;font-size:12.5px;padding:8px 6px}
+/* la letra de cada botón de arriba, chiquita en la esquina (en la compu): así se usan sin soltar el mouse */
+.mbtns .mbtn[data-tecla]{position:relative}
+.mbtns .mbtn[data-tecla]::after{content:attr(data-tecla);position:absolute;right:3px;bottom:2px;font:600 9px/1 Inter,system-ui,sans-serif;letter-spacing:0;opacity:.55;pointer-events:none}
+@media (pointer:coarse){.mbtns .mbtn[data-tecla]::after{display:none}}
+/* paneles flotantes en la compu: rayita para arrastrar, ancho desde la esquina, minimizados a un renglón */
+@media (pointer:fine) and (min-width:900px){
+  #minfo.mflota,.mhoja.mflota{resize:horizontal;min-width:250px;max-width:640px;padding-top:18px}
+  .mhoja.mflota{overflow:hidden}
+  .mflota::before{content:'';position:absolute;left:50%;top:6px;width:42px;height:4px;margin-left:-21px;border-radius:3px;background:var(--line);cursor:grab}
+  .mflota:hover::before{background:var(--muted)}
+  .mflota.marrastre{cursor:grabbing;user-select:none;opacity:.92}
+  .mflota.mchico{height:54px!important;max-height:54px!important;overflow:hidden!important;resize:none}
+  .mflota.mchico::before{background:var(--acc);width:56px;margin-left:-28px}
+}

@@ -107,13 +107,28 @@ export function crearMotor(canvas, o = {}) {
   motor.casa = () => ({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   motor.vista = () => motor.ir({ tx: HOME.tx, tz: HOME.tz, yaw: HOME.yaw, pitch: HOME.pitch, d: HOME.d });
   const SD = new THREE.Vector3(-1.1, 2.2, 1.4).normalize(); // de dónde viene el sol (cambia con la hora)
-  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0; const cerca = C.d < 6 || motor.caminando ? 0.06 : 0.5;   /* recorriendo (a pie o en vuelo) la cámara pasa al lado de la gente y los muebles: con el plano cercano a 0,5 m se veían cortados */ if (cam.near !== cerca) { cam.near = cerca; cam.updateProjectionMatrix(); }
+  // plano cercano: de él depende que dos pisos casi a la misma altura (pasto y hormigón, a 2 cm) no se mezclen a lo lejos. Con 6 cm, a 200 m la
+  // placa confunde la profundidad de a 4 a 8 cm; con 80 cm, de a milímetros (medido el 21/11 en la maqueta más grande). Va lo más lejos que se
+  // pueda sin cortar lo que la cámara tiene al lado: a pie sigue en 6 cm (pasa junto a la gente y los muebles; con 50 cm se veían cortados) y
+  // crece con la altura sobre el piso que se pisa (motor.piso, que lo avisa recorrer.js) al volar; mirando de arriba, con la altura de la cámara.
+  const planoCercano = alto => motor.caminando ? Math.max(0.06, Math.min(1, (alto - (motor.piso || 0) - 1.5) * 0.04)) : C.d < 6 ? 0.06 : Math.max(0.5, Math.min(4, (alto - (C.ty || 0)) * 0.04));
+  const LX = new THREE.Vector3(), LY = new THREE.Vector3(), ARRIBA = new THREE.Vector3(0, 1, 0);
+  function ubicarCam() { const cp = Math.cos(C.pitch); const ty = C.ty || 0, camY = ty + C.d * Math.sin(C.pitch), cerca = planoCercano(camY); if (Math.abs(cam.near - cerca) > cam.near * 0.04) { cam.near = cerca; cam.updateProjectionMatrix(); }
     if (motor.borde) { const B = motor.borde; C.tx = Math.min(B.x1, Math.max(B.x0, C.tx)); C.tz = Math.min(B.z1, Math.max(B.z0, C.tz)); }
     if (motor.bruma) { const e = motor.espesa; scene.fog.near = e ? Math.max(e[0], C.d * e[2]) : Math.max(motor.bruma[0], C.d * 1.6); scene.fog.far = e ? Math.max(e[1], C.d * e[3]) : Math.max(motor.bruma[1], C.d * 5); }
-    cam.position.set(C.tx + C.d * cp * Math.sin(C.yaw), ty + C.d * Math.sin(C.pitch), C.tz + C.d * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
-    // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca)
-    const r = Math.min(700, Math.max(40, C.d * 0.85)); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
-    sol.position.set(C.tx + SD.x * r * 2.8, SD.y * r * 2.8, C.tz + SD.z * r * 2.8); sol.target.position.set(C.tx, 0, C.tz); }
+    // recorriendo, la cámara puede bajar para mirar hacia arriba (una columna, un foco, un techo): si llega al piso se acerca al muñeco en vez de atravesarlo
+    let dd = C.d, yy = camY; if (motor.caminando && C.pitch < 0) { const suelo = (motor.piso || 0) + 0.25; if (yy < suelo) { dd = Math.max(0.3, (ty - suelo) / -Math.sin(C.pitch)); yy = ty + dd * Math.sin(C.pitch); } }
+    cam.position.set(C.tx + dd * cp * Math.sin(C.yaw), yy, C.tz + dd * cp * Math.cos(C.yaw)); cam.lookAt(C.tx, ty, C.tz);
+    // la sombra sigue a lo que se mira y se ajusta al zoom (más nítida de cerca). Recorriendo (a pie o en vuelo) la cámara está encima de lo que
+    // mira y ve lejos: la caja crece con la altura y se corre hacia adelante (antes era un cuadrado de 40 m alrededor del que vuela y, más allá,
+    // nada tenía sombra). Crece de a escalones y se mueve de a puntos enteros del mapa de sombras, para que las sombras no tiemblen al avanzar.
+    let r = Math.max(40, C.d * 0.85), sx = C.tx, sz = C.tz;
+    if (motor.caminando) { r = Math.max(60, (camY - (motor.piso || 0)) * 5); r = 40 * Math.pow(1.25, Math.ceil(Math.log(r / 40) / Math.log(1.25) - 1e-6));
+      const ade = r * 0.55 * Math.min(1, Math.max(0, 1 - (C.pitch - 0.3) / 0.9)); sx -= Math.sin(C.yaw) * ade; sz -= Math.cos(C.yaw) * ade; }
+    r = Math.min(700, r); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: r * 6 }); sol.shadow.camera.updateProjectionMatrix();
+    const paso = 2 * r / sol.shadow.mapSize.x; LX.crossVectors(ARRIBA, SD).normalize(); LY.crossVectors(SD, LX);
+    const u = sx * LX.x + sz * LX.z, v = sx * LY.x + sz * LY.z, du = Math.round(u / paso) * paso - u, dv = Math.round(v / paso) * paso - v, px = sx + LX.x * du + LY.x * dv, py = LY.y * dv, pz = sz + LX.z * du + LY.z * dv;
+    sol.position.set(px + SD.x * r * 2.8, py + SD.y * r * 2.8, pz + SD.z * r * 2.8); sol.target.position.set(px, py, pz); }
 
   motor.horas = Object.keys(HORAS).map(k => [k, HORAS[k].n]); motor.climas = Object.keys(CLIMAS).map(k => [k, CLIMAS[k].n]); motor.clima = 'despejado';
   // cambiar el clima: solo se mueve la luz y el cielo (las piezas no se rearman)
@@ -223,7 +238,7 @@ export function crearMotor(canvas, o = {}) {
   motor._mira = ponMira;   // para las pruebas (el navegador de pruebas no siempre deja tomar el mouse)
   document.addEventListener('pointerlockchange', () => ponMira(document.pointerLockElement === canvas));
   // si el navegador no deja tomar el mouse nunca (dos intentos y ninguno anduvo), se sigue como antes: mirar arrastrando
-  document.addEventListener('pointerlockerror', () => { if (!MI.ok && ++MI.falla >= 2) { motor.sinMira = true; motor.alMira && motor.alMira(false); } });
+  document.addEventListener('pointerlockerror', () => { if (!MI.ok && ++MI.falla >= 2) { motor.sinMira = true; motor.alMira && motor.alMira(false); } else motor.alMiraFalla && motor.alMiraFalla(); });   // el navegador no dejó tomar el mouse esta vez: se avisa cómo seguir
   const tope = v => Math.max(-120, Math.min(120, v || 0));
   for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'dblclick']) addEventListener(t, e => { if (!motor.mirando || sint.has(e) || e.target !== canvas || (e.pointerType && e.pointerType !== 'mouse')) return;
     e.stopImmediatePropagation(); if (t === 'pointermove') { MI.x += tope(e.movementX); MI.y += tope(e.movementY); return; } MI.btn = e.buttons || 0; alCentro(t, e); }, true);
@@ -245,7 +260,7 @@ export function crearMotor(canvas, o = {}) {
     const v = C.d * 0.8 * dt, fx = -Math.sin(C.yaw), fz = -Math.cos(C.yaw), K = teclas, mueve = (a, b) => { C.tx += a; C.tz += b; motor.dirty = true; viaje = null; };
     if (!motor.caminando) { if (K.w || K.arrowup) mueve(fx * v, fz * v); if (K.s || K.arrowdown) mueve(-fx * v, -fz * v); if (K.a || K.arrowleft) mueve(fz * v, -fx * v); if (K.d || K.arrowright) mueve(-fz * v, fx * v);
       if (K.z) zoomHacia(Math.exp(-dt * 1.6)); if (K.x) zoomHacia(Math.exp(dt * 1.6)); }
-    if (!motor.editando && !motor.caminando) { const g = (K.q ? 1 : 0) - (K.e ? 1 : 0); if (g) { C.yaw += g * dt * 1.5; viaje = null; motor.dirty = true; } }
+    if (!motor.caminando) { const g = (K.q ? 1 : 0) - (K.e ? 1 : 0); if (g) { C.yaw += g * dt * 1.5; viaje = null; motor.dirty = true; } }
     // la rueda acerca en varios cuadros y lo que se soltó en movimiento frena de a poco
     if (Math.abs(rueda.k) > 1e-4) { const p = rueda.k * (1 - Math.exp(-dt * 16)); rueda.k -= p; zoomHacia(Math.exp(p), rueda.x, rueda.y); } else rueda.k = 0;
     if (!arr && !gesto && (vel.yaw || vel.pitch || vel.tx || vel.tz)) { const f = Math.exp(-dt * 5.5); C.yaw += vel.yaw * dt; C.pitch = incl(C.pitch + vel.pitch * dt); C.tx += vel.tx * dt; C.tz += vel.tz * dt;

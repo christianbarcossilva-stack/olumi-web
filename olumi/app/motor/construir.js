@@ -3,11 +3,12 @@
 //   Pared (B):    tocar punto por punto; cerrar sobre el primero arma un recinto. Enter termina, Retroceso deshace, Shift traba a 45°.
 //   Recinto (N):  arrastrar de una esquina a la otra (o tocar las dos esquinas).
 //   Abertura:     pasar por una pared y tocar. Después se desliza a lo largo de la pared.
+//   Pincel de terreno: arrastrar sube (Alt baja); nivelar lleva a la altura donde se empezó; alisar empareja. + y − (o [ y ]) cambian el tamaño.
 //   Con la mano:  tocar una pared la elige (tipo, color, aberturas, arrastrarla estira el recinto); tocar el piso elige el recinto entero,
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
-import { THREE } from './nucleo.js?v=bb659e6f';
-import { ABERTURAS, PAREDES, areaSig, centro } from './piezas.js?v=bb659e6f';
+import { THREE } from './nucleo.js?v=957f7798';
+import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=957f7798';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');
@@ -36,12 +37,51 @@ export function construir(M) {
   const punto = (x, z) => { const m = new THREE.Mesh(BOL, mB); m.scale.setScalar(Math.max(0.12, motor.C.d * 0.005)); m.position.set(x, 0.3, z); m.renderOrder = 9; guias.add(m); motor.dirty = true; };
 
   // ---------- herramientas ----------
-  function empezar(h, k) { cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
-    if (h === 'pared') { T.pts = []; T.p = null; M.hint('<b>Pared</b>: tocá punto por punto. Si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Esc</kbd> sale'); }
+  function empezar(h, k) { const antes = M.SEL; cancelar(); SUB = null; T.h = h; T.zona = false; M.elegir(null);
+    if (h === 'pared') { T.pts = []; T.p = null; T.arr = null; M.hint('<b>Pared</b>: arrastrá de punta a punta, como en Los Sims (o tocá punto por punto). Si arrancás en la punta sigue la misma pared; si cerrás sobre el primero queda un recinto. <kbd>Enter</kbd> termina · <kbd>Retroceso</kbd> deshace · <kbd>Shift</kbd> 45° · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Q</kbd>/<kbd>E</kbd> giran · <kbd>Esc</kbd> sale'); }
     if (h === 'recinto') { T.a = null; T.p = null; T.zona = k === 'zona'; M.hint(T.zona ? '<b>Zona</b>: arrastrá de una esquina a la otra sobre el sector que querés nombrar (una oficina, un depósito). No lleva paredes ni piso. <kbd>Esc</kbd> sale' : '<b>Recinto</b>: arrastrá de una esquina a la otra, o tocá las dos esquinas. <kbd>Esc</kbd> sale'); }
+    if (h === 'piso') { T.losa = antes && antes.t === 'losas' && !antes.candado ? antes : null; T.base = k && typeof k === 'object' ? k : {}; M.hint('<b>Piso por sector</b>: arrastrá un rectángulo y se pinta (reemplaza lo que había, sin encimar) · tocá un cuadro para sumar uno solo · con <kbd>Alt</kbd> borra · si había un piso elegido, se suma a ese · el material se cambia en su ficha · <kbd>Espacio</kbd>+arrastrar mueve la vista · <kbd>Esc</kbd> sale'); }
+    if (h === 'relieve') { T.modo = (k && PINCEL[k.modo] && k.modo) || T.modo || 'subir'; T.radio = T.radio || 6; T.mat = (k && k.mat) || 'pasto'; pincelPista(); }
     if (h === 'abertura') { T.k = ABERTURAS[k] ? k : 'puerta'; T.en = null; M.hint(`<b>${ABERTURAS[T.k].n}</b>: pasá por una pared y tocá donde va. <kbd>Shift</kbd> pone varias · <kbd>Esc</kbd> sale`); }
     M.herrVis(h === 'abertura' ? T.k : h); }
-  function cancelar() { if (!T.h) return false; if (T.p) M.quitar(T.p, true); quitaPrev(); T.h = null; T.p = null; T.pts = []; T.a = null; guias.clear(); medir(''); marcar(); M.herrVis(null); return true; }
+  // ---------- piso por losas ----------
+  // el cuadro (i, j) de un punto, en la grilla del piso (su x, z es la esquina de la celda 0, 0)
+  const celdaDe = (L, x, z) => { const c = L.celda || 5; return [Math.floor((x - (L.x || 0)) / c), Math.floor((z - (L.z || 0)) / c)]; };
+  function losaNueva(x, z) { const b = T.base || {}, c = b.celda || 5;
+    const L = { id: M.nuevoId('losas'), t: 'losas', mat: b.mat || 'hormigon', celda: c, x: 0, z: 0, celdas: [] }; M.E.piezas.push(L); return L; }
+  function losaPinta(L, cel, borra) { const k = cel.join(','), C = L.celdas, i = C.findIndex(q => q[0] === cel[0] && q[1] === cel[1]); if (borra) { if (i < 0) return false; C.splice(i, 1); return true; } if (i >= 0) return false; C.push(cel); return true; }
+  function losaPaso(e, p) { const A = T.pint; if (!A) return; const cel = celdaDe(A.L, p.x, p.z); let cambio = false;
+    { A.L.celdas = A.antes.map(q => [...q]); const [i0, j0] = A.c0; for (let i = Math.min(i0, cel[0]); i <= Math.max(i0, cel[0]); i++) for (let j = Math.min(j0, cel[1]); j <= Math.max(j0, cel[1]); j++) losaPinta(A.L, [i, j], A.borra); cambio = true;
+      const c = A.L.celda || 5; medir(`${Math.abs(cel[0] - i0) + 1} × ${Math.abs(cel[1] - j0) + 1} losas · ${fmt((Math.abs(cel[0] - i0) + 1) * c)} × ${fmt((Math.abs(cel[1] - j0) + 1) * c)} m`, p.x, p.z, 1); }
+    if (cambio) M.rehacer(A.L); }
+  // ---------- pincel de terreno ----------
+  // Un solo relieve por maqueta: crece donde se pinta. Mientras se mantiene apretado sigue subiendo (o bajando), como en Los Sims.
+  const PINCEL = { subir: 'Subir', bajar: 'Bajar', nivelar: 'Nivelar', alisar: 'Alisar' };
+  const anillo = new THREE.Mesh(new THREE.RingGeometry(0.95, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x1d9bf0, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
+  anillo.renderOrder = 9; anillo.visible = false; motor.scene.add(anillo);
+  const pincelPista = () => M.hint(`<b>Pincel de terreno · ${PINCEL[T.modo]}</b>: ${{ subir: 'mantené apretado y pasá por donde querés que suba', bajar: 'mantené apretado y pasá por donde querés que baje (hasta el nivel del piso)', nivelar: 'empezá donde está la altura que querés y arrastrá: lo demás queda a esa altura', alisar: 'pasá por encima para emparejar los pozos y los picos' }[T.modo]} · <kbd>Alt</kbd> ${T.modo === 'bajar' ? 'sube' : 'baja'} · <kbd>+</kbd> <kbd>−</kbd> tamaño (${fmt(T.radio * 2)} m) · <kbd>Esc</kbd> sale`);
+  // dónde cae el puntero sobre el terreno (con lomas y relieve, no sobre el plano del piso)
+  function enTerreno(e) { let p = motor.enPiso(e.clientX, e.clientY); if (!p) return null; for (let k = 0; k < 3; k++) { const q = motor.enPiso(e.clientX, e.clientY, cotaEn(p.x, p.z)); if (!q) break; p = q; } return p; }
+  function verAnillo(p) { anillo.visible = !!p; if (p) { anillo.position.set(p.x, cotaEn(p.x, p.z) + 0.15, p.z); anillo.scale.setScalar(T.radio); } motor.dirty = true; }
+  function relieveParaPintar() { const R = M.E.piezas.find(q => q.t === 'relieve'); if (R && (R.candado || R.fijo)) { M.toast('El relieve tiene candado: tocalo en su ficha para poder pintarlo'); return null; } if (R) return R;
+    const N = { id: M.nuevoId('relieve'), t: 'relieve', mat: T.mat || 'pasto', celda: 2, x: 0, z: 0, alt: {} }; M.E.piezas.push(N); return N; }
+  function pincelAplica() { const A = T.pin; if (!A || !A.p) return; const R = A.R, c = R.celda || 2, rad = T.radio, x = A.p.x - (R.x || 0), z = A.p.z - (R.z || 0), alt = R.alt || (R.alt = {}), H = (i, j) => alt[i + ',' + j] || 0;
+    const modo = A.alt ? { subir: 'bajar', bajar: 'subir' }[A.modo] || A.modo : A.modo, cambios = [], ahora = performance.now(), paso = 1.5 * Math.min(0.25, A.t ? (ahora - A.t) / 1000 : 0.06); let hubo = false; A.t = ahora;   // 1,5 m por segundo en el centro, vaya rápida o lenta la compu
+    for (let i = Math.floor((x - rad) / c); i <= Math.ceil((x + rad) / c); i++) for (let j = Math.floor((z - rad) / c); j <= Math.ceil((z + rad) / c); j++) {
+      const d = Math.hypot(i * c - x, j * c - z); if (d > rad) continue; const w0 = 1 - (d / rad) ** 2, w = w0 * w0, h = H(i, j); let n = h;
+      if (modo === 'subir') n = h + paso * w; else if (modo === 'bajar') n = h - paso * w; else if (modo === 'nivelar') n = h + (A.nivel - h) * Math.min(1, 0.35 * w + 0.05);
+      else n = h + ((H(i - 1, j) + H(i + 1, j) + H(i, j - 1) + H(i, j + 1)) / 4 - h) * 0.5 * w;
+      n = Math.max(0, Math.min(40, Math.round(n * 100) / 100)); if (n !== h) cambios.push([i + ',' + j, n]); }
+    for (const [k, n] of cambios) { if (n < 0.01) delete alt[k]; else alt[k] = n; hubo = true; }
+    A.toco = A.toco || [1e9, 1e9, -1e9, -1e9]; A.toco = [Math.min(A.toco[0], A.p.x - rad), Math.min(A.toco[1], A.p.z - rad), Math.max(A.toco[2], A.p.x + rad), Math.max(A.toco[3], A.p.z + rad)];
+    if (hubo) { R.v = (R.v | 0) + 1; A.mov = true; M.rehacer(R); } verAnillo(A.p); const y = cotaEn(A.p.x, A.p.z); medir(`${PINCEL[modo]} · ${fmt(y)} m de alto`, A.p.x, A.p.z, y + 1.6); }
+  function pincelEmpieza(e) { const p = enTerreno(e), R = p && relieveParaPintar(); if (!R) return; T.pin = { R, p, modo: T.modo, alt: e.altKey, nivel: cotaEn(p.x, p.z), mov: false }; pincelAplica();
+    clearInterval(T.reloj); if (T.modo !== 'alisar') T.reloj = setInterval(pincelAplica, 60); }
+  function pincelFin() { clearInterval(T.reloj); T.reloj = null; const A = T.pin; T.pin = null; medir(''); if (!A) return;
+    if (A.R.alt && !Object.keys(A.R.alt).length) { M.quitar(A.R, true); return; }
+    if (A.mov) { // lo que estaba apoyado en lo que se pintó acompaña al terreno
+      const b = A.toco; for (const q of M.E.piezas) if (q !== A.R && q.x != null && !q.pts && q.t !== 'losas' && q.x >= b[0] && q.x <= b[2] && q.z >= b[1] && q.z <= b[3]) M.rehacer(q); M.cambio(); } }
+  function cancelar() { if (!T.h) return false; if (T.h === 'relieve') { pincelFin(); verAnillo(null); } if (T.p) M.quitar(T.p, true); quitaPrev(); T.h = null; T.p = null; T.pts = []; T.a = null; guias.clear(); medir(''); marcar(); M.herrVis(null); return true; }
   // pared
   function paredPasar(p, e) { if (!T.pts.length) return; const a = T.pts[T.pts.length - 1], q = iman(p, e, a), pts = [...T.pts, q];
     if (!T.p) { T.p = { id: M.nuevoId('pared'), t: 'pared', pts, _p: 1 }; M.E.piezas.push(T.p); } T.p.pts = pts; M.rehacer(T.p); medir(fmt(Math.hypot(q[0] - a[0], q[1] - a[1])) + ' m', (a[0] + q[0]) / 2, (a[1] + q[1]) / 2, 3); }
@@ -102,25 +142,50 @@ export function construir(M) {
   function tocar(hit) { const s = sobre(hit); if (!s) { if (SUB) { SUB = null; marcar(); } return false; } SUB = s.j >= 0 ? { id: s.p.id, hueco: s.j } : { id: s.p.id, lado: s.l.i }; M.elegir(s.p); marcar(); M.ficha(); return true; }
   function agarrar(e, p0, hit) {
     if (T.h === 'recinto') { if (!T.a) { T.a = iman(p0, e); T.recien = true; punto(T.a[0], T.a[1]); } return true; }
-    if (T.h) return false;   // con pared o abertura, arrastrar mueve la vista; el toque es el que pone el punto
+    // pared: arrastrar dibuja un tramo (de punta a punta). Recién al moverse se decide si sigue la pared de antes (arrancó en su punta) o empieza otra
+    if (T.h === 'pared') { T.arr = { q0: iman(p0, e, null), x: e.clientX, y: e.clientY, mov: false }; return true; }
+    if (T.h === 'relieve') { pincelEmpieza(e); return true; }
+    if (T.h === 'piso') { const L = T.losa && M.E.piezas.includes(T.losa) ? T.losa : (T.losa = losaNueva(p0.x, p0.z)); T.pint = { L, borra: e.altKey, c0: celdaDe(L, p0.x, p0.z), antes: L.celdas.map(q => [...q]), ult: null }; losaPaso(e, p0); return true; }
+    if (T.h) return false;   // con abertura, arrastrar mueve la vista; el toque es el que la pone
     // una pared o una abertura se arrastra solo si ya estaba elegida (se elige con un toque): así arrastrar para moverse nunca corre nada por error
-    const s = sobre(hit); if (!s || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
+    const s = sobre(hit); if (!s || s.p.candado || !SUB || SUB.id !== s.p.id || (s.j >= 0 ? SUB.hueco !== s.j : SUB.lado !== s.l.i)) return false; const { p, l, j } = s;
     if (j >= 0) D = { p, h: p.huecos[j], off: l.s - p.huecos[j].a }; else if (p.t === 'recinto') D = { p, lado: l.i, x0: p0.x, z0: p0.z, orig: p.pts.map(q => [...q]) }; else return false;   // una pared suelta se mueve entera, como cualquier pieza
     return true; }
   function mover(e) { const p = motor.enPiso(e.clientX, e.clientY); if (!p) return !!(D || T.h);
-    if (T.h === 'recinto' && T.a) { recPrev(p, e); return true; } if (T.h) return true; if (!D) return false;
+    if (T.h === 'recinto' && T.a) { recPrev(p, e); return true; }
+    if (T.h === 'piso' && T.pint) { losaPaso(e, p); return true; }
+    if (T.h === 'relieve') { const q = enTerreno(e); if (T.pin && q) { T.pin.p = q; pincelAplica(); } else verAnillo(q); return true; }
+    if (T.h === 'pared' && T.arr) { const A = T.arr; if (!A.mov) { if (Math.hypot(e.clientX - A.x, e.clientY - A.y) < 7) return true; A.mov = true; const ult = T.pts[T.pts.length - 1];
+        if (!ult || Math.hypot(A.q0[0] - ult[0], A.q0[1] - ult[1]) > 0.3) { if (T.pts.length >= 2) paredFin(); else { if (T.p) M.quitar(T.p, true); T.p = null; guias.clear(); } T.pts = [A.q0]; punto(A.q0[0], A.q0[1]); } }
+      paredPasar(p, e); return true; }
+    if (T.h) return true; if (!D) return false;
     if (D.h) { const l = ladoDe(D.p, p.x, p.z, D.h.s), w = anchoDe(D.h), a = Math.max(0.1, Math.min(l.len - w - 0.1, gr(l.s - D.off, e.altKey))); if (a !== D.h.a && entra(D.p, D.h.s, a, w, D.h)) { D.h.a = a; D.mov = true; M.rehacer(D.p); marcar(); } return true; }
     const P = D.orig, n = P.length, i = D.lado, a = P[i], b = P[(i + 1) % n], len = Math.hypot(b[0] - a[0], b[1] - a[1]), nx = -(b[1] - a[1]) / len, nz = (b[0] - a[0]) / len, k = gr((p.x - D.x0) * nx + (p.z - D.z0) * nz, e.altKey);
     if (!D.mov && Math.abs(k) < 0.01) return true; D.mov = true; const pts = P.map(q => [...q]); for (const j of [i, (i + 1) % n]) pts[j] = [Math.round((P[j][0] + nx * k) * 100) / 100, Math.round((P[j][1] + nz * k) * 100) / 100];
     D.p.pts = pts; M.rehacer(D.p); marcar(); const ant = pts[(i - 1 + n) % n]; medir(fmt(Math.hypot(pts[i][0] - ant[0], pts[i][1] - ant[1])) + ' m', (pts[i][0] + ant[0]) / 2, (pts[i][1] + ant[1]) / 2, 3); return true; }
   function soltar(e) {
+    if (T.h === 'relieve') { pincelFin(); return true; }
+    if (T.h === 'piso' && T.pint) { const A = T.pint, L = A.L; T.pint = null; medir('');
+      // lo que se pintó deja de ser de los otros pisos pintados: nunca quedan dos encimados. Un piso con candado no se toca: se le respeta su lugar.
+      if (!A.borra && L.celdas.length) { const antes = new Set(A.antes.map(q => q.join(','))), nuevas = new Set(L.celdas.map(q => q.join(',')).filter(k => !antes.has(k))); let sacadas = 0, trabadas = 0;
+        for (const O of M.E.piezas.slice()) { if (O === L || O.t !== 'losas' || (O.celda || 5) !== (L.celda || 5) || (O.x || 0) !== (L.x || 0) || (O.z || 0) !== (L.z || 0)) continue;
+          const quedan = O.celdas.filter(q => !nuevas.has(q.join(','))); if (quedan.length === O.celdas.length) continue;
+          if (O.candado || O.fijo) { const suyas = new Set(O.celdas.map(q => q.join(','))); trabadas += L.celdas.length - (L.celdas = L.celdas.filter(q => !suyas.has(q.join(',')))).length; continue; }
+          sacadas += O.celdas.length - quedan.length; O.celdas = quedan; if (!quedan.length) M.quitar(O, true); else M.rehacer(O); }
+        if (trabadas) M.rehacer(L); if (sacadas || trabadas) M.toast(`${sacadas ? `Reemplazó ${sacadas} cuadros de otro piso` : ''}${sacadas && trabadas ? ' · ' : ''}${trabadas ? `${trabadas} cuadros quedaron como estaban (ese piso tiene candado)` : ''}`); }
+      if (!L.celdas.length) { M.quitar(L, true); T.losa = null; } else M.cambio(); return true; }
+    if (T.h === 'pared' && T.arr) { const A = T.arr; T.arr = null; if (!A.mov) return true;   // fue un toque: lo pone el clic, punto por punto
+      const p = motor.enPiso(e.clientX, e.clientY); if (!p) return true; const prev = T.pts[T.pts.length - 1], q = iman(p, e, prev); if (Math.hypot(q[0] - prev[0], q[1] - prev[1]) < 0.2) return true;
+      if (T.pts.length > 2 && Math.hypot(q[0] - T.pts[0][0], q[1] - T.pts[0][1]) < 0.05) { recintoDe(T.pts); return true; } T.pts.push(q); punto(q[0], q[1]); paredPasar(p, e); return true; }
     if (T.h === 'recinto') { const p = motor.enPiso(e.clientX, e.clientY), ok = p && T.a && recPrev(p, e); if (ok) { const pz = T.p; delete pz._p; pz.nombre = nombreNuevo(); T.p = null; T.a = null; guias.clear(); medir(''); M.rehacer(pz); M.cambio(); M.toast(`${pz.nombre}: ${fmt(Math.abs(areaSig(pz.pts)))} m². Tocá el piso para moverlo entero`); } else if (!T.recien) M.toast('Muy chico: estiralo un poco más'); T.recien = false; return true; }
     if (T.h) return true; if (!D) return false; const d = D; D = null; medir(''); if (d.mov) M.cambio(); else M.ficha(); return true; }
   function pasar(e) { if (!T.h) return false; const p = motor.enPiso(e.clientX, e.clientY); if (!p) return true;
+    if (T.h === 'relieve') { verAnillo(enTerreno(e)); return true; }
     if (T.h === 'pared') paredPasar(p, e); else if (T.h === 'recinto' && T.a) recPrev(p, e); else if (T.h === 'abertura') abPasar(p, e); return true; }
   function clic(e, p) { if (!T.h) return false; if (T.h === 'pared') paredClic(p, e); else if (T.h === 'abertura') abClic(p, e); return true; }
   function tecla(e, k) {
     if (T.h === 'pared') { if (k === 'enter') { paredFin(); return true; } if (k === 'backspace') { e.preventDefault(); T.pts.pop(); if (T.p) { if (T.pts.length) { T.p.pts = [...T.pts, T.p.pts[T.p.pts.length - 1]]; M.rehacer(T.p); } else { M.quitar(T.p, true); T.p = null; guias.clear(); medir(''); } } return true; } }
+    if (T.h === 'relieve' && ['+', '=', ']', '-', '_', '['].includes(k)) { e.preventDefault(); T.radio = Math.max(2, Math.min(40, T.radio * (['+', '=', ']'].includes(k) ? 1.25 : 0.8))); T.radio = Math.round(T.radio * 4) / 4; if (anillo.visible) anillo.scale.setScalar(T.radio); motor.dirty = true; pincelPista(); return true; }
     if (T.h) return false; const p = SUB && pieza(SUB.id);
     if ((k === 'delete' || k === 'backspace') && p) { e.preventDefault(); borrarSub(p); return true; }
     return false; }
