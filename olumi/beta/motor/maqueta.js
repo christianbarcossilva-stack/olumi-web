@@ -13,15 +13,15 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=957f7798';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=957f7798';
-import { ve, dominio, DOMINIOS } from './plano.js?v=957f7798';
-import { svg } from './iconos.js?v=957f7798';
-import { construir } from './construir.js?v=957f7798';
-import { juego } from './juego.js?v=957f7798';
-import { recorrer } from './recorrer.js?v=957f7798';
-import { transito } from './transito.js?v=957f7798';
-import { extras } from './extras.js?v=957f7798';
+import { THREE, crearMotor } from './nucleo.js?v=04a115e9';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, nivelDe, NOM_PLANTA } from './piezas.js?v=04a115e9';
+import { ve, dominio, DOMINIOS } from './plano.js?v=04a115e9';
+import { svg } from './iconos.js?v=04a115e9';
+import { construir } from './construir.js?v=04a115e9';
+import { juego } from './juego.js?v=04a115e9';
+import { recorrer } from './recorrer.js?v=04a115e9';
+import { transito } from './transito.js?v=04a115e9';
+import { extras } from './extras.js?v=04a115e9';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -62,6 +62,7 @@ export async function abrirMaqueta(o) {
     <div class="mseg" role="group" aria-label="Paredes"><span>Paredes</span><div>${[['alta', 'Altas'], ['corte', 'Cortadas'], ['baja', 'Al ras']].map(([k, n]) => `<button data-pared="${k}" aria-pressed="${k === 'alta'}">${n}</button>`).join('')}</div></div><div id="mlug"></div><p class="mvacio" id="mocultos" hidden></p><p class="mayuda">Con «Techos» apagado se ve cada nave por dentro.</p></div>
   <aside id="minfo" class="vidrio" hidden></aside>
   <nav id="mtool" class="vidrio" hidden aria-label="Herramientas"><span id="mbarra" role="group" aria-label="Barra rápida: teclas 1 a 0"></span><span class="msep"></span><button data-h="catalogo" aria-pressed="false" title="Inventario (Tab): arrastrá a la barra lo que uses seguido" aria-label="Inventario">${svg('catalogo')}</button>${host && host.puertas ? `<button id="beq" title="Puertas para ubicar" aria-label="Puertas para ubicar">${svg('puerta')}</button>` : host && host.equipos ? `<button id="beq" title="Equipos del cliente" aria-label="Equipos del cliente">${svg('equipos')}</button>` : ''}
+    <span class="msep"></span><span class="mplanta" role="group" aria-label="Planta"><button id="bplbaja" title="Planta de abajo (Av Pág)" aria-label="Planta de abajo">▾</button><b id="bplnom" title="Planta en la que estás dibujando">Planta baja</b><button id="bplsube" title="Planta de arriba (Re Pág)" aria-label="Planta de arriba">▴</button></span>
     <span class="msep"></span><button id="bundo" title="Deshacer (Ctrl+Z)" aria-label="Deshacer">${svg('deshacer')}</button><button id="bredo" title="Rehacer (Ctrl+Y)" aria-label="Rehacer">${svg('rehacer')}</button><button id="bgrid" aria-pressed="true" title="Grilla (G)" aria-label="Grilla">${svg('grilla')}</button><button id="bpared" title="Paredes altas, cortadas o al ras (P)" aria-label="Vista de las paredes">${svg('paredes')}</button><button id="bpap" title="Papelera: recuperar lo sacado" aria-label="Papelera">${svg('restaurar')}</button></nav>
   <section id="mcat" class="vidrio mhoja" hidden aria-label="Inventario"><div class="mhead"><b>Inventario</b><input id="mcq" type="search" placeholder="Buscar" aria-label="Buscar en el inventario"><button class="mx" data-cerrar="mcat" aria-label="Cerrar">${svg('cerrar', 16)}</button></div><div id="mcl"></div><label class="mimp">${svg('mas', 16)}Importar piezas de un archivo (.json)<input id="mimp" type="file" accept=".json,application/json" hidden></label><input id="mimg" type="file" accept="image/*" hidden></section>
   <section id="meq" class="vidrio mhoja" hidden aria-label="${host && host.puertas ? 'Puertas para ubicar' : 'Equipos del cliente'}"><div class="mhead"><b>${host && host.puertas ? 'Puertas' : 'Equipos del cliente'}</b><input id="meqq" type="search" placeholder="${host && host.puertas ? 'Nombre de la puerta o del equipo' : 'Nombre, modelo o IP'}" aria-label="Buscar"><button class="mx" data-cerrar="meq" aria-label="Cerrar">${svg('cerrar', 16)}</button></div><div id="meql"></div></section>
@@ -71,7 +72,7 @@ export async function abrirMaqueta(o) {
   const canvas = $('#m3d'), motor = crearMotor(canvas, { tema: o.tema, ruedaConCtrl: o.ruedaConCtrl }), mundo = new THREE.Group(); motor.scene.add(mundo); motor.cota = cotaEn;
   let J = null;   // la capa de juego (juego.js): barra rápida, pausa, ajustes y reglas de ubicar; se arma más abajo, cuando ya está todo lo demás
   const objs = new Map(), lbl = $('#mlbl');
-  let tostT; const toast = m => { const t = $('#mtoast'); t.textContent = m; t.hidden = false; clearTimeout(tostT); tostT = setTimeout(() => t.hidden = true, 2800); };
+  let tostT; const toast = (m, ms = 2800) => { const t = $('#mtoast'); t.textContent = m; t.hidden = false; clearTimeout(tostT); tostT = setTimeout(() => t.hidden = true, ms); };
   // la pista de la herramienta se muestra chica y a los segundos se aclara sola, para no tapar
   // en la Mac la tecla Alt se llama Option (⌥): la ayuda la nombra como está escrita en el teclado
   const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent); let hintT; const hint = m => { const h = $('#mhint'); clearTimeout(hintT); h.hidden = !m; h.classList.remove('tenue'); if (m) { h.innerHTML = MAC ? String(m).replace(/<kbd>Alt<\/kbd>/g, '<kbd>⌥ Option</kbd>') : m; hintT = setTimeout(() => h.classList.add('tenue'), 9000); } };
@@ -140,13 +141,15 @@ export async function abrirMaqueta(o) {
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
-      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=957f7798'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=04a115e9'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
         if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
 
   // ---------- armar la escena ----------
-  function rehacer(p) { const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); if (g.userData.anima) { POSE.delete(p.id); mover(p); } motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); if (!rehVec && /^(calle|rotonda|terreno|estacionamiento|galpon|edificio|modulo|recinto)$/.test(p.t)) vecinos(); }
+  function rehacer(p) { if (p.t === 'plano' && p.y != null && p.nivel == null) { p.nivel = Math.round((+p.y || 0) / 3); delete p.y; }
+    if (NACEN.has(p.id)) { NACEN.delete(p.id); if (PL.act && p.nivel == null && conPlanta(p.t)) p.nivel = PL.act; }
+    const v = objs.get(p.id); if (v) { mundo.remove(v); limpiar(v); } const g = armarPieza(p, ctx); if (!g) return; objs.set(p.id, g); mundo.add(g); aplicarCapas(g); if (g.userData.anima) { POSE.delete(p.id); mover(p); } motor.dirty = true; if (SEL === p) marcar(); if (TIPOS[p.t].etiqueta) etiquetas(); if (!rehVec && /^(calle|rotonda|terreno|estacionamiento|galpon|edificio|modulo|recinto)$/.test(p.t)) vecinos(); }
   // cordones, veredas, esquinas y matas de pasto dependen de lo que tienen al lado: un rato después de un cambio se rehacen calles y pastos
   let rehVec = false, tVec = 0; function vecinos() { clearTimeout(tVec); tVec = setTimeout(() => { rehVec = true; try { for (const q of E.piezas) if (objs.has(q.id) && (q.t === 'calle' || (q.t === 'terreno' && /pasto|monte/.test(q.mat || '')))) rehacer(q); } finally { rehVec = false; } }, 900); }
   // cada app muestra su parte del plano; lo que no muestra queda guardado tal cual para la app que lo usa
@@ -159,7 +162,10 @@ export async function abrirMaqueta(o) {
   try { const g = JSON.parse(localStorage.getItem('motor.capas.' + app) || '{}'); for (const k in capas) if (g[k] === false) capas[k] = false; } catch (e) {}
   for (const c of raiz.querySelectorAll('[data-capa]')) c.checked = capas[c.dataset.capa] !== false;
   const LUG = new Set();   // lugares cuyas puertas están ocultas
-  function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; if (k.userData.interior) k.visible = !capas.techos; }); }
+  const PL = { act: 0 }, NACEN = new Set(), conPlanta = t => t === 'plano' || !!(TIPOS[t] && TIPOS[t].g !== 'Terreno');
+  const enPlanta = p => { if (!p || !conPlanta(p.t)) return true; const n = nivelDe(p); return p.t === 'plano' ? n === PL.act : !ED.on || n <= PL.act; };
+  const elegible = p => !ED.on || !p || (conPlanta(p.t) ? nivelDe(p) === PL.act : PL.act === 0);
+  function aplicarCapas(g) { const T = g.userData.tipo, p = g.userData.pieza; g.visible = capas[(p && CAPA_DE[p.t]) || T.capa] !== false && !(T.vivo && LUG.size && LUG.has(lugarPuerta(p))) && enPlanta(p); g.traverse(k => { if (k.userData.techo) k.visible = capas.techos; if (k.userData.campo) k.visible = capas.campos; if (k.userData.interior) k.visible = !capas.techos; }); }
   motor.alTema.push(() => { armarTodo(); });
   function encuadre() { const b = new THREE.Box3(); for (const p of E.piezas) { const [x, z] = centro(p); if (p.pts) for (const q of p.pts) b.expandByPoint(new THREE.Vector3(q[0], 0, q[1])); else b.expandByPoint(new THREE.Vector3(x, 0, z)); }
     if (b.isEmpty()) return { tx: 0, tz: 0, yaw: 0.7, pitch: 0.75, d: 160 }; const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3()); return { tx: c.x, tz: c.z, yaw: 0.7, pitch: 0.72, d: Math.max(60, Math.max(s.x, s.z) * 1.05) }; }
@@ -171,7 +177,7 @@ export async function abrirMaqueta(o) {
   function etiquetas() { lbl.innerHTML = ''; etq = [];
     for (const p of E.piezas) { const T = TIPOS[p.t]; if (!T || !T.etiqueta || !veo(p)) continue; const txt = T.etiqueta({ ...T.def, ...p }); if (!txt && !T.equipo) continue;
       const el = document.createElement('button'); el.tabIndex = -1; rotulo(el, p, T, txt); el.addEventListener('click', () => elegir(p, true)); lbl.appendChild(el);
-      const [x, z] = centro(p); etq.push({ p, el, v: new THREE.Vector3(x, altoDe(p) + (T.equipo ? 0.25 : T.vivo ? 0 : 2), z), eq: !!(T.equipo || T.vivo), cap: T.capa, siempre: !!T.siempre }); }
+      const [x, z] = centro(p); etq.push({ p, el, v: new THREE.Vector3(x, altoDe(p) + nivelDe(p) * ALTO_PLANTA + (T.equipo ? 0.25 : T.vivo ? 0 : 2), z), eq: !!(T.equipo || T.vivo), cap: T.capa, siempre: !!T.siempre }); }
     motor.dirty = true; }
   function rotulo(el, p, T, txt) { if (T.vivo) { const v = vivoDe(p), quien = v.ev && v.hasta > Date.now() ? (v.ev === 'pasa' ? v.quien || 'Pasó' : 'Rechazado') : '';
       el.className = 'metq eq pu ' + pest(v.estado)[1] + (quien ? ' ' + v.ev : ''); el.innerHTML = `<i></i><span>${esc(txt || T.n)}</span>${quien ? `<small>${esc(quien)}</small>` : ''}`; return; }
@@ -179,7 +185,7 @@ export async function abrirMaqueta(o) {
   function rotulos(id) { for (const e of etq) if (e.p.puerta === id) { const T = TIPOS[e.p.t]; rotulo(e.el, e.p, T, T.etiqueta({ ...T.def, ...e.p })); e.w = 0; } motor.dirty = true; }
   let lejosAntes = null;
   motor.despues.push(() => { const d = motor.C.d, lejos = d > 75, w = canvas.clientWidth, h = canvas.clientHeight, pase = RC.R.on; lbl.classList.toggle('lejos', lejos); if (lejos !== lejosAntes) { lejosAntes = lejos; for (const e of etq) e.w = 0; }
-    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p; if (!vis) { e.fuera = true; continue; }
+    for (const e of etq) { const g = objs.get(e.p.id), vis = capas.etiquetas && g && g.visible && !e.p._p && !(ED.on && PL.act && conPlanta(e.p.t) && nivelDe(e.p) < PL.act);   // editando arriba, los nombres de abajo no tapan if (!vis) { e.fuera = true; continue; }
       if (e.p.pts) { const [x, z] = centro(e.p); e.v.set(x, e.v.y, z); } else e.v.set(e.p.x || 0, e.v.y, e.p.z || 0);
       const s = motor.aPantalla(e.v); let fuera = s.z > 1 || s.x < -60 || s.y < -30 || s.x > w + 60 || s.y > h + 30 || (e.eq && d > 700 && !e.siempre);
       if (pase && Math.hypot(e.v.x - RC.R.x, e.v.z - RC.R.z) > (e.eq ? 16 : 70)) fuera = true;
@@ -204,7 +210,13 @@ export async function abrirMaqueta(o) {
   const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && !m.userData.noPica && m !== g.userData.aro) b.expandByObject(m); }); return b; };
   function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaDe(g, caja.box).expandByScalar(0.15); puntos(); motor.dirty = true; }
   function elegir(p, enfocar) { if (!p) soltarMulti(); SEL = p; CON.alElegir(p); marcar(); info(); if (enfocar && p) { const [x, z] = centro(p); motor.ir({ tx: x, tz: z, d: Math.min(motor.C.d, TIPOS[p.t].equipo ? 45 : 140) }); } }
-  function hallar(e) { const hit = motor.tocar(e.clientX, e.clientY, [...objs.values()].filter(g => g.visible)); for (const h of hit) { const g = h.object.userData.dueño; if (g && g.visible) { if (h.object.userData.campo || g.userData.pieza._p || (!ED.on && g.userData.tipo.fondo)) continue; return { p: g.userData.pieza, h }; } } return null; }
+  // un equipo chico y lejos (un AP en el techo de un galpón) casi no tiene superficie para el rayo: se acepta el equipo cuyo centro cae cerca del toque en pantalla
+  const _v = new THREE.Vector3(), _bb = new THREE.Box3();
+  function equipoCerca(cx, cy, px = 34) { const r = canvas.getBoundingClientRect(); let mejor = null, md = px;
+    for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t] || !TIPOS[p.t].equipo) continue; _bb.setFromObject(g); if (_bb.isEmpty()) continue; _bb.getCenter(_v);
+      if (_v.distanceTo(motor.cam.position) > 90) continue; _v.project(motor.cam); if (_v.z > 1) continue;
+      const d = Math.hypot(r.left + (_v.x + 1) / 2 * r.width - cx, r.top + (1 - _v.y) / 2 * r.height - cy); if (d < md) { md = d; mejor = p; } } return mejor; }
+  function hallar(e) { const hit = motor.tocar(e.clientX, e.clientY, [...objs.values()].filter(g => g.visible && elegible(g.userData.pieza))); for (const h of hit) { const g = h.object.userData.dueño; if (g && g.visible) { if (h.object.userData.campo || g.userData.pieza._p || (!ED.on && g.userData.tipo.fondo)) continue; return { p: g.userData.pieza, h }; } } return null; }
   function info() { const box = $('#minfo'); if (!SEL) { box.hidden = true; return; } const T = TIPOS[SEL.t], q = { ...T.def, ...SEL }, cerrar = `<button class="mx" data-sel="no" aria-label="Cerrar">${svg('cerrar', 16)}</button>`;
     box.hidden = false; box.classList.toggle('abierta', UI.abierta); const propia = ED.on && puede && CON.ficha(); if (propia) { box.classList.add('abierta'); box.innerHTML = propia; return; }
     const d = SEL.uid && EQ.porUid.get(SEL.uid), est = T.equipo ? ctx.estado(SEL) : null, g = objs.get(SEL.id);
@@ -212,7 +224,7 @@ export async function abrirMaqueta(o) {
     const mas = n => `<button class="mic" data-acc="mas" aria-expanded="${UI.abierta}" title="${n}" aria-label="${n}">${svg(ED.on ? 'ajustes' : 'abajo')}</button>`;
     if (ED.on && puede) { const conNombre = T.campos.some(c => c.k === 'nombre');
       box.innerHTML = `<div class="mfila"><div class="mtit"><small>${esc(T.n)}${SEL.t === 'recinto' ? ' · ' + fmt(Math.abs(areaSig(SEL.pts))) + ' m²' : ''}</small>${conNombre ? `<input class="mnom" data-k="nombre" value="${esc(q.nombre || '')}" placeholder="Nombre" aria-label="Nombre"${q.candado ? ' readonly' : ''}>` : ''}</div>
-        <button class="mic${(q.candado || q.fijo) ? ' trabada' : ''}" data-acc="candado" aria-pressed="${!!(q.candado || q.fijo)}" title="${(q.candado || q.fijo) ? 'Tiene candado: no se mueve, no gira, no se borra ni se cambia. Tocá para sacarlo' : 'Poner candado: queda fija (no se mueve, no gira ni se borra)'}" aria-label="${(q.candado || q.fijo) ? 'Sacar candado' : 'Poner candado'}">${svg('candado')}</button>${(q.candado || q.fijo) ? `${doc}${cerrar}</div><p class="mtrab">Con candado: no se mueve ni se cambia. Tocá el candado para editarla.</p>` : `${T.archivo ? `<button class="mic" data-acc="medir" title="Ajustar la escala: medir algo que conozcas" aria-label="Ajustar la escala">${svg('regla')}</button><button class="mic" data-acc="imagen" title="Cambiar la imagen" aria-label="Cambiar la imagen">${svg('imagen')}</button>` : ''}${T.forma === 'linea' ? `<button class="mic" data-acc="seguir" title="Seguir dibujando desde la punta" aria-label="Seguir dibujando">${svg('editar')}</button>` : ''}<button class="mic" data-acc="girar" title="Girar 90° (R) · o arrastrá la manija naranja" aria-label="Girar 90°">${svg('girar')}</button>${T.archivo ? '' : `<button class="mic" data-acc="duplicar" title="Duplicar (Ctrl+D)" aria-label="Duplicar">${svg('duplicar')}</button>`}${doc}<button class="mic peligro" data-acc="borrar" title="Sacar (Supr)${T.protegido ? ': pide la clave' : ''}" aria-label="Sacar">${svg(T.protegido ? 'candado' : 'borrar')}</button>${mas('Propiedades')}${cerrar}</div>`}
+        <button class="mic${(q.candado || q.fijo) ? ' trabada' : ''}" data-acc="candado" aria-pressed="${!!(q.candado || q.fijo)}" title="${(q.candado || q.fijo) ? 'Tiene candado: no se mueve, no gira, no se borra ni se cambia. Tocá para sacarlo' : 'Poner candado: queda fija (no se mueve, no gira ni se borra)'}" aria-label="${(q.candado || q.fijo) ? 'Sacar candado' : 'Poner candado'}">${svg('candado')}</button>${(q.candado || q.fijo) ? `${doc}${cerrar}</div><p class="mtrab">Con candado: no se mueve ni se cambia. Tocá el candado para editarla.</p>` : `${T.archivo ? `<button class="mic" data-acc="medir" title="Ajustar la escala: medir algo que conozcas" aria-label="Ajustar la escala">${svg('regla')}</button><button class="mic" data-acc="imagen" title="Cambiar la imagen" aria-label="Cambiar la imagen">${svg('imagen')}</button><button class="mic" data-acc="contorno" title="Dibujar el contorno del edificio en esta planta: salen el piso y las paredes de afuera" aria-label="Dibujar el contorno">${svg('paredes')}</button>` : ''}${T.forma === 'linea' ? `<button class="mic" data-acc="seguir" title="Seguir dibujando desde la punta" aria-label="Seguir dibujando">${svg('editar')}</button>` : ''}<button class="mic" data-acc="girar" title="Girar 90° (R) · o arrastrá la manija naranja" aria-label="Girar 90°">${svg('girar')}</button>${T.archivo ? '' : `<button class="mic" data-acc="duplicar" title="Duplicar (Ctrl+D)" aria-label="Duplicar">${svg('duplicar')}</button>`}${doc}<button class="mic peligro" data-acc="borrar" title="Sacar (Supr)${T.protegido ? ': pide la clave' : ''}" aria-label="Sacar">${svg(T.protegido ? 'candado' : 'borrar')}</button>${mas('Propiedades')}${cerrar}</div>`}
         ${q.candado ? '' : `<div class="mmas"><div class="mform">${T.campos.filter(c => c.k !== 'nombre').map(c => campo(c, q)).join('')}${T.equipo && EQ.lista.length ? vinculo(q) : ''}${T.vivo && host && host.puertas ? vinculoPuerta(q) : ''}${T.equipo && !q.uid && host && host.crearEquipo ? `<button class="mbtn" data-acc="alta">${svg('mas', 16)}Sumarlo a la lista de equipos del cliente</button>` : ''}${SEL.t === 'galpon' && q.estilo === 'logistico' ? `<p class="mtrab">En el frente: arrastrá las manijas para correr andenes, portones y puertas; doble clic saca.</p><div class="mfila2"><button class="mbtn" data-acc="fachada" data-v="puerta">+ Puerta de personal</button><button class="mbtn" data-acc="fachada" data-v="nivel">+ Portón a nivel</button><button class="mbtn" data-acc="fachada" data-v="anden">+ Andén</button><button class="mbtn" data-acc="fachada" data-v="simple">+ Portón sin rampa</button><button class="mbtn" data-acc="fachada" data-v="rampa">+ Rampa</button></div>` : ''}${SEL.t === 'losas' ? `<p class="mtrab">${(q.celdas || []).length} cuadros de ${q.celda || 5} m · ${fmt((q.celdas || []).length * (q.celda || 5) ** 2)} m²${q.mat === 'estacionamiento' ? ` · <b>entran ${cajones(q).n} autos</b> (cajones de 2,5 × 5 m, pasillo de 6 m)` : ''}</p><button class="mbtn" data-acc="pintar">${svg('editar', 16)}Pintar más en este piso</button><button class="mbtn" data-acc="separar">${svg('duplicar', 16)}Separar en partes sueltas</button>` : ''}</div></div>`}`; return; }
     if (T.vivo) { const v = vivoDe(SEL), [tx, cl] = pest(v.estado), dr = SEL.puerta && PU.porId.get(SEL.puerta), puede2 = host && host.abrir && SEL.puerta && !['caida', 'sin'].includes(v.estado);
       const ult = v.at ? `${v.ev === 'pasa' ? esc(v.quien || 'Alguien pasó') : 'Rechazo'} · ${new Date(v.at).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' })}` : '';
@@ -245,7 +257,9 @@ export async function abrirMaqueta(o) {
   $('#minfo').addEventListener('input', e => { if (CON.entrada(e.target)) return; const el = e.target.closest('[data-k]'); if (!el || !SEL || SEL.candado) return; let v = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? null : +el.value) : el.value; if (el.dataset.ang) v = (+el.value || 0) * Math.PI / 180;
     if (el.dataset.k === 'uid') { const d = EQ.porUid.get(v); if (d) Object.assign(SEL, { nombre: d.nombre, modelo: d.modelo || SEL.modelo, ip: d.ip || SEL.ip, mac: d.mac || SEL.mac }); }
     if (el.dataset.k === 'puerta') { const d = PU.porId.get(v); if (d) SEL.nombre = d.nombre; }
+    if (el.dataset.k === 'nivel') v = +v || 0;
     if (v === null || v === '') delete SEL[el.dataset.k]; else SEL[el.dataset.k] = v;
+    if (el.dataset.k === 'nivel') { const p = SEL; setTimeout(() => { if (nivelDe(p) !== PL.act) { planta(nivelDe(p), false); elegir(p); } verPlantas(); toast(`${p.nombre || TIPOS[p.t].n}: ${NOM_PLANTA(nivelDe(p))}`); }, 0); }
     if (MEDIDAS.includes(el.dataset.k) && typeof v === 'number') { try { const M2 = JSON.parse(localStorage.getItem('motor.medidas') || '{}'), k = SEL.t + (SEL.estilo ? ':' + SEL.estilo : ''); M2[k] = { ...(M2[k] || {}), [el.dataset.k]: v }; localStorage.setItem('motor.medidas', JSON.stringify(M2)); } catch (er) {} } rehacer(SEL); cambio(true, el.type === 'text' || el.tagName === 'TEXTAREA'); if (el.dataset.k === 'uid' || el.dataset.k === 'puerta' || el.tagName === 'SELECT') info(); if (el.dataset.k === 'puerta') { capasLugar(); if (!$('#meq').hidden) listaPuertas(); } });
   $('#minfo').addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.sel === 'no') { CON.sub = null; elegir(null); return; } if (b.dataset.c) { CON.accion(b); return; } if (b.dataset.sin) { delete SEL[b.dataset.sin]; SEL[b.dataset.sin] = ''; rehacer(SEL); cambio(); info(); return; }
     const a = b.dataset.acc; if (a === 'ver') { if (RC.R.on) RC.paseo(false); XT.verCamara(SEL); return; }
@@ -256,7 +270,7 @@ export async function abrirMaqueta(o) {
     // abrir a distancia: el primer toque arma (3 s) y el segundo abre; queda armado aunque la ficha se redibuje por algo que llegó en vivo
     if (a === 'abrir') { if (!(ARMA.id === SEL.id && ARMA.hasta > Date.now())) { ARMA = { id: SEL.id, hasta: Date.now() + 3000 }; info(); toast('Tocá de nuevo para abrir'); setTimeout(() => { if (ARMA.hasta <= Date.now()) { ARMA = {}; if (SEL) info(); } }, 3050); return; }
       const id = SEL.puerta; ARMA = {}; b.disabled = true; try { await host.abrir(id); toast('Puerta abierta'); } catch (er) { toast((er && er.message) || 'No se pudo abrir'); } finally { b.disabled = false; if (SEL) info(); } return; }
-    if (a === 'medir') { medir(SEL); return; } if (a === 'imagen') { cambiarImagen = SEL; $('#mimg').click(); return; }
+    if (a === 'medir') { medir(SEL); return; } if (a === 'contorno') { const n = nivelDe(SEL); if (n !== PL.act) planta(n, false); CON.empezar('pared', 'contorno'); return; } if (a === 'imagen') { cambiarImagen = SEL; $('#mimg').click(); return; }
     if (a === 'fachada') { ED.fach = { p: SEL, k: b.dataset.v }; hint(`<b>${b.textContent.replace('+ ', '')}</b>: tocá en el frente del galpón dónde va · <kbd>Esc</kbd> cancela`); return; }
     if (a === 'pintar') { CON.empezar('piso'); return; }
     if (a === 'separar') { const P = SEL, C = P.celdas || [], vis = new Set(), partes = []; const k = q => q[0] + ',' + q[1], hay = new Map(C.map(q => [k(q), q]));
@@ -298,7 +312,7 @@ export async function abrirMaqueta(o) {
         float linea(float paso) { vec2 q = vP / paso, g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), vec2(1e-4)); return 1.0 - min(min(g.x, g.y), 1.0); }
         void main() { float f = 1.0 - smoothstep(0.5, 1.0, length(vP - cen) / rad); float a = max(max(linea(25.0) * 0.9, linea(5.0) * 0.6), linea(1.0) * 0.32 * fino) * f; if (a < 0.01) discard; gl_FragColor = vec4(col, a); }` });
     const g = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m); g.renderOrder = 2; g.frustumCulled = false; g.visible = false; motor.scene.add(g); return g; })();
-  motor.cada.push(() => { if (!grilla.visible) return false; const C = motor.C, U = grilla.material.uniforms, rad = RC.R.on ? 30 : Math.max(20, Math.min(320, C.d * 0.9)), y = Math.max(0, motor.cota ? motor.cota(C.tx, C.tz) : 0) + 0.08;
+  motor.cada.push(() => { if (!grilla.visible) return false; const C = motor.C, U = grilla.material.uniforms, rad = RC.R.on ? 30 : Math.max(20, Math.min(320, C.d * 0.9)), y = (motor.pisoY || Math.max(0, motor.cota ? motor.cota(C.tx, C.tz) : 0)) + 0.08;
     grilla.position.set(C.tx, y, C.tz); grilla.scale.set(rad * 2.2, 1, rad * 2.2); U.cen.value.set(C.tx, C.tz); U.rad.value = rad; U.fino.value = Math.max(0, Math.min(1, 1 - (C.d - 45) / 90));
     const ac = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim(); if (ac && ac !== grilla.userData.ac) { grilla.userData.ac = ac; U.col.value.set(ac); } return false; });
   // lo que se guarda y se deshace nunca lleva lo que todavía se está ubicando (piezas y aberturas marcadas con _p)
@@ -308,7 +322,7 @@ export async function abrirMaqueta(o) {
   function volver(de, a) { if (!de.length) { toast(de === undo ? 'No hay nada para deshacer' : 'No hay nada para rehacer'); return; } CON.cancelar(); cancelar(true); a.push({ s: foto, t: 0 }); foto = de.pop().s; E.piezas = JSON.parse(foto); SEL = SEL && E.piezas.find(p => p.id === SEL.id) || null; armarTodo(); CON.alElegir(SEL); marcar(); info(); guardar(); }
   function editar(on) { if (!puede) return; if (!on && MED.p) finMedir(); ED.on = on; motor.editando = on; document.documentElement.classList.toggle('editando', on); $('#mtool').hidden = !on; $('#bedit').setAttribute('aria-pressed', on); $('#bedit').querySelector('span').textContent = on ? 'Listo' : 'Editar';
     if (on) { ED.grilla = true; $('#bgrid').setAttribute('aria-pressed', true); }   // al entrar a editar la cuadrícula aparece siempre (G la apaga)
-    grilla.visible = on && ED.grilla; cuadricula = on && ED.grilla; pintaSuelo(); if (!on) { cancelarAgarre(); CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); CON.marcar(); marcar(); info(); motor.dirty = true; motor.alEditar && motor.alEditar(on); }
+    grilla.visible = on && ED.grilla; cuadricula = on && ED.grilla; pintaSuelo(); if (!on) { cancelarAgarre(); CON.cancelar(); cancelar(true); $('#mcat').hidden = true; $('#meq').hidden = true; menu(null); hint(''); } else herramienta('mano'); verPlantas(); CON.marcar(); marcar(); info(); motor.dirty = true; motor.alEditar && motor.alEditar(on); }
   if (puede) $('#bedit').onclick = () => editar(!ED.on);
   const PISTA = { varias: '<b>Elegir varias</b>: tocá las piezas para sumarlas o arrastrá un recuadro en el piso. Después arrastrá cualquiera de las elegidas y se mueven todas juntas. Con la mano también se puede: Mayús o ⌘ + clic', mano: '<b>Mano</b>: arrastrá el piso para moverte. Tocá algo para elegirlo y arrastralo para correrlo. Clic derecho abre su menú', maza: '<b>Maza</b>: tocá lo que quieras sacar', gotero: '<b>Gotero</b>: tocá algo para copiarlo y ubicar la copia' };
   function herramienta(h) { CON.cancelar(); cancelar(true); if (h === 'pared' || h === 'recinto') { CON.empezar(h); return; } if (h === 'puerta' || h === 'ventana') { CON.empezar('abertura', h); return; } if (h === 'catalogo') { catalogo($('#mcat').hidden); return; } ED.h = h; herrVis(null); }
@@ -319,7 +333,14 @@ export async function abrirMaqueta(o) {
     if (b.id === 'bgrid') { ED.grilla = !ED.grilla; b.setAttribute('aria-pressed', ED.grilla); grilla.visible = ED.on && ED.grilla; cuadricula = grilla.visible; pintaSuelo(); motor.dirty = true; } });
   document.addEventListener('click', e => { const b = e.target.closest('[data-cerrar]'); if (b) $('#' + b.dataset.cerrar).hidden = true; });
   const pegar = (v, alt) => alt ? Math.round(v * 100) / 100 : Math.round(v * 2) / 2;
-  let nid = 1; const nuevoId = t => { let id; do id = t.slice(0, 3) + (nid++).toString(36); while (E.piezas.some(p => p.id === id)); return id; };
+  let nid = 1; const nuevoId = t => { let id; do id = t.slice(0, 3) + (nid++).toString(36); while (E.piezas.some(p => p.id === id)); NACEN.add(id); return id; };
+  // ---------- plantas (como en Los Sims): Re Pág / Av Pág o las flechitas de la barra cambian la planta en la que se dibuja ----------
+  // Lo que se pone nace en la planta activa y sube 2,8 m por planta. Editando se ven la planta activa y las de abajo; de cada plano, solo el de la planta activa.
+  // El terreno (pasto, calles, lomas) es siempre de la planta baja.
+  function verPlantas() { for (const g of objs.values()) aplicarCapas(g); motor.pisoY = ED.on ? PL.act * ALTO_PLANTA : 0; $('#bplnom').textContent = NOM_PLANTA(PL.act); $('#bplbaja').disabled = PL.act <= 0; $('#bplsube').disabled = PL.act >= 5; motor.dirty = true; }
+  function planta(n, aviso = true) { n = Math.max(0, Math.min(5, n)); if (n === PL.act) return; PL.act = n; CON.cancelar(); cancelar(true); if (SEL && !elegible(SEL)) elegir(null); verPlantas(); motor.ir({ ty: n * ALTO_PLANTA }, 0.35);
+    if (aviso) { const hay = E.piezas.some(q => q.t !== 'plano' && conPlanta(q.t) && nivelDe(q) === n), pl = E.piezas.some(q => q.t === 'plano' && nivelDe(q) === n); toast(NOM_PLANTA(n) + (hay ? '' : pl ? ': vacía. Dibujá encima del plano: el contorno con Pared (B), cerrando en la primera esquina' : ': vacía. Podés subir su plano desde el inventario (Plano del lugar)')); } }
+  $('#bplsube').onclick = () => planta(PL.act + 1); $('#bplbaja').onclick = () => planta(PL.act - 1);
   // vistas de pared, como en Los Sims: altas, cortadas (se ve adentro) o al ras del piso
   function paredes(v) { ctx.paredes = v; document.querySelectorAll('[data-pared]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pared === v)); for (const p of E.piezas) if (CON.esMuro(p) && objs.has(p.id)) rehacer(p); CON.marcar(); toast({ alta: 'Paredes altas', corte: 'Paredes cortadas', baja: 'Paredes al ras' }[v]); }
 
@@ -350,6 +371,8 @@ export async function abrirMaqueta(o) {
     if (miniCola.length) miniT = requestAnimationFrame(miniPaso); else motor.dirty = true; }
   // `tarde(url)`: un mueble llega en dos tiempos (primero una caja gris, después el modelo). Si el modelo todavía no llegó, devuelve null y avisa por `tarde` cuando la foto está.
   function fotoPieza(o, tarde) { const T = o.T, p = { ...T.def, ...o.o, id: 'mini', t: o.t, nombre: '' }; let espera = null;
+    if (T.herramienta === 'piso' && !(p.celdas && p.celdas.length)) { p.celdas = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]]; p.celda = 2; }   // un piso vacío no tiene foto: se muestra un pedazo
+    if (T.herramienta === 'relieve') { const A = {}, m = p.modo || 'subir'; for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) { const r = Math.hypot(i, j * 1.2), b = Math.max(0, 1 - r / 4.2); A[i + ',' + j] = m === 'bajar' ? 1.6 - 1.4 * b * b : m === 'nivelar' ? (r < 2.6 ? 1.2 : 1.2 * Math.max(0, 1 - (r - 2.6) / 1.6)) : m === 'alisar' ? 0.35 + 0.9 * b * b * (1 + 0.25 * Math.sin(i * 1.7 + j)) : 2.2 * b * b; } p.alt = A; }   // el pincel muestra una loma de ejemplo
     if (T.forma === 'punto') { p.x = 0; p.z = 0; p.r = T.equipo ? 0.5 : -0.5; if (T.equipo) { p.alcance = 0; if (p.montaje !== 'techo') p.y = Math.min(p.y ?? 2, 2.2); } } else p.pts = T.forma === 'area' ? [[-4, -3], [4, -3], [4, 3], [-4, 3]] : [[-5, 0], [5, 0]];
     const g = armarPieza(p, { estado: () => 'ok', paredes: 'alta', vivo: () => ({ estado: 'cerrada' }), dirty: () => { if (espera) { const q = espera; espera = null; let u = ''; try { u = fotoDe(q); } catch (er) {} tarde(u); } } }); if (!g) return '';
     if (o.t === 'mueble' && tarde && !g.children.some(k => k.isMesh && k.geometry.type !== 'BoxGeometry')) { espera = g; return null; }
@@ -357,7 +380,7 @@ export async function abrirMaqueta(o) {
   function fotoDe(g) { const W = 336, H = 252;
     if (!rt) { rt = new THREE.WebGLRenderTarget(W, H); escM = new THREE.Scene(); escM.add(new THREE.HemisphereLight(0xffffff, 0x7a828a, 0.85)); const l = new THREE.DirectionalLight(0xffffff, 1.25); l.position.set(-3, 6, 4); escM.add(l); camM = new THREE.PerspectiveCamera(28, W / H, 0.05, 2000); }
     escM.environment = motor.scene.environment; escM.add(g); const b = cajaDe(g, new THREE.Box3()); if (b.isEmpty()) { escM.remove(g); return ''; }
-    const c = b.getCenter(new THREE.Vector3()), dist = Math.max(0.15, b.getSize(new THREE.Vector3()).length() / 2) / Math.sin(14 * Math.PI / 180) * 1.04;
+    const c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), chato = sz.y < 0.06 * Math.max(sz.x, sz.z), dist = Math.max(0.15, sz.length() / 2) / Math.sin(14 * Math.PI / 180) * (chato ? 0.72 : 1.04);   // lo chato (un piso, una pintura) se mira más de cerca
     camM.position.set(c.x + dist * 0.55, c.y + dist * 0.42, c.z + dist * 0.72); camM.lookAt(c); camM.near = dist / 60; camM.far = dist * 4; camM.updateProjectionMatrix();
     const R = motor.renderer, antes = R.getRenderTarget(), col = R.getClearColor(new THREE.Color()), al = R.getClearAlpha(), px = new Uint8Array(W * H * 4);
     R.setRenderTarget(rt); R.setClearColor(0x000000, 0); R.clear(); R.render(escM, camM); R.readRenderTargetPixels(rt, 0, 0, W, H, px); R.setRenderTarget(antes); R.setClearColor(col, al); escM.remove(g); limpiar(g);
@@ -423,31 +446,48 @@ export async function abrirMaqueta(o) {
       E.piezas.push(q); rehacer(q); n2++; if (['edificio', 'galpon', 'recinto'].includes(q.t) && !grande) grande = q; }
     cambio(); if (grande) elegir(grande); toast(`${n2} pieza${n2 > 1 ? 's' : ''} importada${n2 > 1 ? 's' : ''}${grande ? ': mové o girá el edificio y sus equipos van con él' : ''}`); }
   let cambiarImagen = null;
-  async function leerImagen(f) { if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) throw new Error('El PDF no se puede leer acá: exportá el plano como imagen (PNG o JPG) o sacale una captura'); if (!/^image\//.test(f.type)) throw new Error('Tiene que ser una imagen (PNG o JPG)');
+  async function leerImagen(f) { if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) throw new Error('El PDF no se puede leer acá: exportá el plano como imagen (PNG o JPG) o sacale una captura'); if (!/^image\//.test(f.type) && !/\.(png|jpe?g|webp|gif)$/i.test(f.name)) throw new Error('Tiene que ser una imagen (PNG o JPG)');
     const bm = await createImageBitmap(f), k = Math.min(1, 2400 / Math.max(bm.width, bm.height)), c = document.createElement('canvas'); c.width = Math.round(bm.width * k); c.height = Math.round(bm.height * k);
-    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close();
-    let src = c.toDataURL('image/webp', 0.86); if (!src.startsWith('data:image/webp')) src = c.toDataURL('image/jpeg', 0.86); return { img: src, aspecto: c.height / c.width }; }
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bm, 0, 0, c.width, c.height); const px = bm.width; bm.close && bm.close();
+    let src = c.toDataURL('image/webp', 0.86); if (!src.startsWith('data:image/webp')) src = c.toDataURL('image/jpeg', 0.86); return { img: src, aspecto: c.height / c.width, px }; }
   async function subirPlano(f) { if (!f) return; let r; try { r = await leerImagen(f); } catch (er) { toast(er.message); return; }
     if (cambiarImagen && E.piezas.includes(cambiarImagen)) { const p = cambiarImagen; cambiarImagen = null; Object.assign(p, r); rehacer(p); cambio(); elegir(p); toast('Imagen cambiada. Si la escala no es la misma, medí de nuevo'); return; }
-    if (!ED.on) editar(true); const p = { id: nuevoId('plano'), t: 'plano', nombre: f.name.replace(/\.[^.]+$/, '').slice(0, 60) || 'Plano del lugar', x: Math.round(motor.C.tx), z: Math.round(motor.C.tz), ancho: Math.round(Math.min(300, Math.max(20, motor.C.d * 0.9))), ...r };
-    E.piezas.unshift(p); rehacer(p); cambio(); elegir(p); motor.ir({ tx: p.x, tz: p.z, d: p.ancho * 1.1, pitch: 1.2 }, 0.6); medir(p); }
+    if (!ED.on) editar(true); const otros = E.piezas.filter(q => q.t === 'plano'); let n = PL.act;
+    // con otro plano ya puesto, se pregunta de qué planta es: cada plano se ve solo en su planta, así no se enciman
+    if (otros.length) { const max = Math.min(5, Math.max(...otros.map(nivelDe)) + 1), libre = [0, 1, 2, 3, 4, 5].find(k => !otros.some(q => nivelDe(q) === k));
+      n = await pideOpcion('¿De qué planta es este plano?', 'Cada plano va en su planta y se ve solo cuando dibujás en ella, así no quedan encimados.', [0, 1, 2, 3, 4, 5].filter(k => k <= max).map(k => [k, NOM_PLANTA(k) + (otros.some(q => nivelDe(q) === k) ? ' · ya tiene un plano' : '')]), libre); if (n == null) return; }
+    const p = { id: nuevoId('plano'), t: 'plano', nombre: f.name.replace(/\.[^.]+$/, '').slice(0, 60) || 'Plano del lugar', nivel: n, x: Math.round(motor.C.tx), z: Math.round(motor.C.tz), ancho: Math.round(Math.min(300, Math.max(20, motor.C.d * 0.9))), ...r };
+    const mismo = otros.filter(q => nivelDe(q) === n), base = otros.filter(q => nivelDe(q) !== n).sort((a, b) => Math.abs(nivelDe(a) - n) - Math.abs(nivelDe(b) - n))[0];
+    if (mismo.length || base) { const ref = base || mismo[0]; p.ancho = ref.px && r.px ? Math.round(ref.ancho / ref.px * r.px * 100) / 100 : ref.ancho; p.r = ref.r || 0; }
+    if (mismo.length) { const der = Math.max(...mismo.map(q => (q.x || 0) + q.ancho / 2)); p.x = Math.round(der + 8 + p.ancho / 2); p.z = Math.round(mismo[0].z || 0); }   // otra hoja de la misma planta: al lado
+    else if (base) { p.x = base.x || 0; p.z = base.z || 0; if (n > 0) p.opacidad = 0.7; }   // otra planta: encima, semitransparente, para calzarlo con lo de abajo
+    E.piezas.unshift(p); if (n !== PL.act) planta(n, false); rehacer(p); cambio(); elegir(p); motor.ir({ tx: p.x, tz: p.z, d: p.ancho * 1.1, pitch: 1.2, ty: n * ALTO_PLANTA }, 0.6);
+    if (mismo.length) toast(`Otra hoja ${n ? 'del ' + NOM_PLANTA(n).toLowerCase() : 'de la planta baja'}: quedó al lado, con la misma escala`, 5000);
+    else if (base) toast(`${NOM_PLANTA(n)}: quedó encima del plano ${nivelDe(base) ? 'del ' + NOM_PLANTA(nivelDe(base)).toLowerCase() : 'de la planta baja'}, con la misma escala y semitransparente. Arrastralo (y giralo con R) hasta que calce con las paredes de abajo; después, el contorno desde su ficha`, 9000);
+    else medir(p); }
+  // elegir entre varias opciones (un botón por opción); devuelve el valor o null
+  function pideOpcion(titulo, detalle, ops, def) { return new Promise(listo => { const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p><div class="mopciones">${ops.map(([v, t]) => `<button class="mbtn${v === def ? ' pri' : ''}" type="button" data-v="${esc(v)}">${esc(t)}</button>`).join('')}</div><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button></div></form>`; box.hidden = false;
+      const fin = v => { box.hidden = true; box.innerHTML = ''; removeEventListener('keydown', tecla, true); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(null); } };
+      box.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const o = ops.find(([v]) => String(v) === b.dataset.v); fin(o ? o[0] : null); }); box.querySelector('[data-no]').onclick = () => fin(null); addEventListener('keydown', tecla, true); setTimeout(() => (box.querySelector('.pri') || box.querySelector('[data-v]')).focus(), 30); }); }
   $('#mimg').addEventListener('change', e => { subirPlano(e.target.files[0]); e.target.value = ''; });
   // ajustar la escala: se tocan dos puntos de algo que se conoce (una pared, un portón) y se escribe cuánto mide; el plano (y lo que tiene arriba) se agranda o achica desde el primer punto
   const MED = { p: null, pts: [], g: new THREE.Group() }; motor.scene.add(MED.g);
-  function medir(p) { cancelar(true); CON.cancelar(); MED.p = p; MED.pts = []; MED.g.clear(); herrVis('regla'); hint('<b>Escala</b>: tocá el comienzo y el final de algo que sepas cuánto mide en la realidad (una pared, un portón, un lado del terreno). <kbd>Esc</kbd> deja la escala como está'); }
+  function medir(p) { cancelar(true); CON.cancelar(); MED.p = p; MED.pts = []; MED.g.clear(); herrVis('regla'); hint('<b>Escala</b>: tocá el comienzo y el final de algo que sepas cuánto mide en la realidad. Si no tenés medidas, tocá los dos lados de una puerta del plano. <kbd>Esc</kbd> deja la escala como está'); }
   function medirPunto(q) { const P = MED.pts; P.push(q); const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 10), new THREE.MeshBasicMaterial({ color: getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea', depthTest: false, toneMapped: false }));
-    const r = Math.max(0.12, motor.C.d * 0.006); m.scale.setScalar(r * 2); m.position.set(q[0], 0.2, q[1]); m.renderOrder = 9; MED.g.add(m);
-    if (P.length === 2) { const ln = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), m.material); const L = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]); ln.scale.set(L, r * 0.6, r * 0.6); ln.position.set((P[0][0] + P[1][0]) / 2, 0.2, (P[0][1] + P[1][1]) / 2); ln.rotation.y = Math.atan2(-(P[1][1] - P[0][1]), P[1][0] - P[0][0]); ln.renderOrder = 9; MED.g.add(ln); }
+    const r = Math.max(0.12, motor.C.d * 0.006); m.scale.setScalar(r * 2); m.position.set(q[0], (motor.pisoY || 0) + 0.2, q[1]); m.renderOrder = 9; MED.g.add(m);
+    if (P.length === 2) { const ln = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), m.material); const L = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]); ln.scale.set(L, r * 0.6, r * 0.6); ln.position.set((P[0][0] + P[1][0]) / 2, (motor.pisoY || 0) + 0.2, (P[0][1] + P[1][1]) / 2); ln.rotation.y = Math.atan2(-(P[1][1] - P[0][1]), P[1][0] - P[0][0]); ln.renderOrder = 9; MED.g.add(ln); }
     motor.dirty = true; if (P.length < 2) { hint('<b>Escala</b>: ahora tocá el final'); return; } const L = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]); if (L < 0.05) { MED.pts = []; MED.g.clear(); hint('<b>Escala</b>: los dos puntos están muy juntos. Tocá de nuevo el comienzo'); return; }
-    pideNumero('¿Cuánto mide en la realidad?', `En el plano, de punta a punta hay ${fmt(L)} m con la escala de ahora.`, 'metros').then(real => { const p = MED.p; finMedir(); if (!real || !p || !E.piezas.includes(p)) return; const k = real / L, [ax, az] = P[0];
+    pideNumero('¿Cuánto mide en la realidad?', `En el plano, de punta a punta hay ${fmt(L)} m con la escala de ahora. Si no tenés medidas, elegí qué marcaste.`, 'metros', [[0.9, 'Una puerta común (0,90 m)'], [0.8, 'La puerta de un baño (0,80 m)'], [2.5, 'Un cajón de estacionamiento (2,50 m)']]).then(real => { const p = MED.p; finMedir(); if (!real || !p || !E.piezas.includes(p)) return; const k = real / L, [ax, az] = P[0];
       const lleva = CON.contenido(p); for (const q of [p, ...lleva]) { if (q.pts) q.pts = q.pts.map(c => [Math.round((ax + (c[0] - ax) * k) * 100) / 100, Math.round((az + (c[1] - az) * k) * 100) / 100]); else { q.x = Math.round((ax + ((q.x || 0) - ax) * k) * 100) / 100; q.z = Math.round((az + ((q.z || 0) - az) * k) * 100) / 100; } rehacer(q); }
       p.ancho = Math.round(p.ancho * k * 100) / 100; rehacer(p); cambio(); elegir(p); info(); toast(`Escala ajustada: el plano mide ${fmt(p.ancho)} m de ancho`);
       // con la escala lista, lo siguiente es ubicar las puertas que todavía no están en el plano
-      if (host && host.puertas && PU.lista.some(d => !E.piezas.some(q => q.puerta === d.id))) { panelEquipos(true); hint('<b>Puertas</b>: tocá una de la lista y después el lugar del plano donde está. <kbd>R</kbd> la gira'); } }); }
+      if (host && host.puertas && PU.lista.some(d => !E.piezas.some(q => q.puerta === d.id))) { panelEquipos(true); hint('<b>Puertas</b>: tocá una de la lista y después el lugar del plano donde está. <kbd>R</kbd> la gira'); }
+      // con la escala lista y la planta vacía, lo siguiente es el contorno del edificio
+      else if (!E.piezas.some(q => q.t !== 'plano' && conPlanta(q.t) && nivelDe(q) === nivelDe(p))) { if (nivelDe(p) !== PL.act) planta(nivelDe(p), false); CON.empezar('pared', 'contorno'); } }); }
   function finMedir() { MED.p = null; MED.pts = []; MED.g.clear(); herrVis(null); motor.dirty = true; }
-  function pideNumero(titulo, detalle, unidad) { return new Promise(listo => { const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p><label class="mnum"><input type="number" inputmode="decimal" step="0.01" min="0.1" required aria-label="${esc(titulo)}"><span>${esc(unidad)}</span></label><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button><button class="mbtn pri" type="submit">${svg('check', 16)}Ajustar</button></div></form>`; box.hidden = false;
+  function pideNumero(titulo, detalle, unidad, atajos = []) { return new Promise(listo => { const box = $('#mconf'); box.innerHTML = `<form class="vidrio mdialog" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><b>${esc(titulo)}</b><p>${esc(detalle)}</p>${atajos.length ? `<div class="mopciones">${atajos.map(([v, t]) => `<button class="mbtn" type="button" data-v="${v}">${esc(t)}</button>`).join('')}</div>` : ''}<label class="mnum"><input type="number" inputmode="decimal" step="0.01" min="0.1" required aria-label="${esc(titulo)}"><span>${esc(unidad)}</span></label><div class="macts"><button class="mbtn" type="button" data-no>Cancelar</button><button class="mbtn pri" type="submit">${svg('check', 16)}Ajustar</button></div></form>`; box.hidden = false;
       const f = box.querySelector('form'), inp = f.querySelector('input'), fin = v => { box.hidden = true; box.innerHTML = ''; removeEventListener('keydown', tecla, true); listo(v); }, tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); fin(null); } };
-      f.onsubmit = e => { e.preventDefault(); const v = parseFloat(String(inp.value).replace(',', '.')); if (v > 0) fin(v); }; f.querySelector('[data-no]').onclick = () => fin(null); addEventListener('keydown', tecla, true); setTimeout(() => inp.focus(), 30); }); }
+      f.onsubmit = e => { e.preventDefault(); const v = parseFloat(String(inp.value).replace(',', '.')); if (v > 0) fin(v); }; f.querySelector('[data-no]').onclick = () => fin(null); f.querySelectorAll('[data-v]').forEach(b => b.onclick = () => fin(+b.dataset.v)); addEventListener('keydown', tecla, true); setTimeout(() => inp.focus(), 30); }); }
   const lee = f => { if (!f) return; if (/^image\//.test(f.type) || /\.pdf$/i.test(f.name)) { cambiarImagen = null; subirPlano(f); return; } if (!/\.json$/i.test(f.name)) { toast('Tiene que ser un archivo .json o la imagen de un plano'); return; } const r = new FileReader(); r.onload = () => importar(String(r.result)); r.readAsText(f); };
   canvas.addEventListener('dragover', e => { if (ED.on) e.preventDefault(); }); canvas.addEventListener('drop', e => { if (!ED.on) return; e.preventDefault(); lee(e.dataTransfer.files[0]); });
   $('#mimp').addEventListener('change', e => { lee(e.target.files[0]); e.target.value = ''; $('#mcat').hidden = true; });
@@ -544,13 +584,15 @@ export async function abrirMaqueta(o) {
         else if (n.y < 0) s = { k: 'techo', x: hit.point.x, z: hit.point.z, y, montaje: 'techo' };
         else s = { k: 'sobre', x: hit.point.x, z: hit.point.z, piso: y, y: y + ((T.def.y ?? 0) > 2 ? 1.2 : 0.02) }; }
       if (!s) { const col = E.piezas.find(q => COLUMNAS.has(q.t) && Math.hypot((q.x || 0) - p.x, (q.z || 0) - p.z) < 4.5); if (col) { let nx = p.x - (col.x || 0), nz = p.z - (col.z || 0); const l = Math.hypot(nx, nz); if (l < 0.05) { nx = 0; nz = 1; } else { nx /= l; nz /= l; } s = { k: 'col', x: (col.x || 0) + nx * 0.3, z: (col.z || 0) + nz * 0.3, r: Math.atan2(nx, nz), montaje: 'pared', y: C.tpl.y ?? Math.max(3, (col.alto || { ...TIPOS[col.t].def }.alto || 10) - (P.t === 'camara' ? 4 : 6)) }; } } }
+    if (s && nivelDe(P)) { const off = nivelDe(P) * ALTO_PLANTA; if (s.y != null) s.y = Math.round((s.y - off) * 10) / 10; if (s.piso != null) s.piso = Math.round((s.piso - off) * 100) / 100; }
     for (const k of ['y', 'montaje', 'piso']) { if (s && s[k] != null) P[k] = s[k]; else if (C.tpl[k] == null) delete P[k]; else P[k] = C.tpl[k]; }
     if (s) { P.x = Math.round(s.x * 100) / 100; P.z = Math.round(s.z * 100) / 100; if (s.r != null) P.r = s.r; } else { P.x = pegar(p.x, e.altKey); P.z = pegar(p.z, e.altKey); if (P._col === 'pared') P.r = C.tpl.r || 0; }
     const firma = s ? s.k + (s.y ?? '') : ''; if (firma !== (P._col || '')) { P._col = firma; rehacer(P); }
-    const g = objs.get(P.id); if (g) { g.position.set(P.x, s ? 0 : 0.25, P.z); g.rotation.y = P.r || 0; } motor.dirty = true; }
+    const g = objs.get(P.id); if (g) { g.position.set(P.x, (s ? 0 : 0.25) + nivelDe(P) * ALTO_PLANTA, P.z); g.rotation.y = P.r || 0; } motor.dirty = true; }
 
   // mouse: lo que el editor agarra no mueve la cámara
   let espacio = false; addEventListener('keydown', e => { if (e.key === ' ' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !RC.R.on) espacio = true; }, true); addEventListener('keyup', e => { if (e.key === ' ') espacio = false; }, true); addEventListener('blur', () => { espacio = false; });
+  motor.pintaConShift = () => ED.on && (CON.T.h === 'piso' || CON.T.h === 'relieve');   // los materiales se pintan con Shift (pedido de Christian): sin Shift, el arrastre mueve el mapa
   motor.agarrar = e => { if (!ED.on || espacio || ED.fach) return false;
     if (SEL && ED.h === 'mano' && !ED.colocar && !ED.linea && !CON.T.h) { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { menu(null); const f = mf.object.userData.fach; fachFijar(SEL, f); ED.drag = { fach: f, m: mf.object }; return true; } }
     const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);
@@ -645,11 +687,11 @@ export async function abrirMaqueta(o) {
   motor.alTocar = e => { const retoma = RC.R.on && !motor.mirando && e.pointerType === 'mouse' && RC.puedeMira(), h = hallar(e);
     // recorriendo en la compu, el mundo se toca con la mira y el puntero suelto es para los paneles: un clic en la maqueta con el mouse suelto lo retoma
     // (salvo que se esté ubicando o dibujando algo con el puntero, o que se toque un equipo sin estar editando: ahí se abre su ficha)
-    if (retoma && !ED.colocar && !ED.linea && !CON.T.h && !MED.p && (ED.on || !(h && TIPOS[h.p.t].equipo))) { motor.mira(true); return; }
+    if (retoma && !ED.colocar && !ED.linea && !CON.T.h && !MED.p && (ED.on || !(h && TIPOS[h.p.t].equipo) && !equipoCerca(e.clientX, e.clientY))) { motor.mira(true); return; }
     if (ED.on) { toqueEd(e); return; }
-    if (RC.R.on) { if (h && TIPOS[h.p.t].equipo) { elegir(h.p); motor.mira(false); return; } if (motor.mirando) return; const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; }
+    if (RC.R.on) { const eq = h && TIPOS[h.p.t].equipo ? h.p : equipoCerca(e.clientX, e.clientY); if (eq) { elegir(eq); motor.mira(false); return; } if (motor.mirando) return; const p = motor.enPiso(e.clientX, e.clientY, RC.R.y); if (p) RC.irA(p.x, p.z); return; }
     if (host && host.alTocar) { const q = motor.enPiso(e.clientX, e.clientY); if (host.alTocar(h ? h.p : null, q ? [q.x, q.z] : null)) return; }   // la app puede quedarse con el toque (Olumi abre el área de la sala)
-    elegir(h ? h.p : null); };
+    elegir(h && TIPOS[h.p.t].equipo ? h.p : equipoCerca(e.clientX, e.clientY, 22) || (h ? h.p : null)); };
   // doble clic: mirando, acerca a lo que se toca (o vuela a ese lugar del piso) y abre la documentación de un rack; editando, saca un punto de una línea
   motor.alDoble = e => { if ((RC.R.on && !ED.on) || ED.colocar || ED.linea || CON.T.h) return; const h = hallar(e);
     if (ED.on && SEL && SEL.t === 'galpon') { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { const f = mf.object.userData.fach; fachFijar(SEL, f); fachLista(SEL, f.k).splice(f.i, 1); rehacer(SEL); cambio(); puntos(); toast(NOMF[f.k] + ': sacado'); return; } }
@@ -681,6 +723,7 @@ export async function abrirMaqueta(o) {
       J.pausa(true); return; }   // sin nada más que cerrar, Esc abre el menú de pausa (antes salía de editar o de la pantalla completa: eso ahora está en el menú)
     if (RC.R.on && ['w', 'a', 's', 'd', 'q', 'e', 'v', ' '].includes(k)) return;   // recorriendo, esas teclas son del muñeco
     if (k === 'f' && !mod && puede) { editar(!ED.on); return; }
+    if ((k === 'pageup' || k === 'pagedown') && ED.on) { e.preventDefault(); planta(PL.act + (k === 'pageup' ? 1 : -1)); return; }
     if (k === 'p' && !mod) { paredes({ alta: 'corte', corte: 'baja', baja: 'alta' }[ctx.paredes]); return; }
     // cada botón de la pantalla tiene su letra (así no hace falta soltar el mouse para usarlos) y M suelta o vuelve a tomar el mouse recorriendo
     if (!mod && !e.repeat) { if (k === 'm' && RC.R.on && RC.puedeMira()) { if (motor.mirando) motor.mira(false); else { $('#mcat').hidden = true; motor.mira(true); } return; }
@@ -697,7 +740,7 @@ export async function abrirMaqueta(o) {
     if (k === 'enter' && ED.linea) terminarLinea(); if (k === 'backspace' && ED.linea) { e.preventDefault(); ED.linea.pts.pop(); if (ED.linea.p) { ED.linea.p.pts = [...ED.linea.pts]; if (ED.linea.pts.length >= 2) rehacer(ED.linea.p); } return; }
     if ((k === 'delete' || k === 'backspace') && SEL) { e.preventDefault(); sacar(SEL); return; }
     const giro = k === ',' ? -Math.PI / 4 : k === '.' ? Math.PI / 4 : k === 'r' ? Math.PI / 2 : 0; if (giro) girarSel(giro); });
-  const CON = construir({ motor, mundo, objs, TIPOS, canvas, ED, svg, esc, get E() { return E; }, get SEL() { return SEL; }, rehacer, quitar, cambio, elegir, nuevoId, hint, toast, herrVis, ficha: info });
+  const CON = construir({ motor, mundo, objs, TIPOS, canvas, ED, svg, esc, get E() { return E; }, get SEL() { return SEL; }, rehacer, quitar, cambio, elegir, nuevoId, hint, toast, herrVis, ficha: info, get planta() { return PL.act; }, nomPlanta: NOM_PLANTA });
 
   // ---------- guardar ----------
   let guardT = null; const estado = t => { const s = $('#mguar'); if (s) s.textContent = t; };
@@ -711,7 +754,7 @@ export async function abrirMaqueta(o) {
 
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
-  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
+  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
     avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h-epp', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
   // «Salir de la maqueta» (menú de pausa): deja de recorrer y de editar, sale de la pantalla completa y le avisa a la app (host.salir); sola, vuelve a la vista general
