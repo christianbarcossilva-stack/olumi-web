@@ -643,6 +643,118 @@ function muroPlaya(g, p, Y, os) { const P = p.pts, n = P.length, tal = +p.talud 
     if (ix.length) { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setAttribute('tierra', new THREE.Float32BufferAttribute(ti, 1)); geo.setIndex(ix); geo.computeVertexNormals();
     const k = new THREE.Mesh(geo, matLoma('pasto')); k.receiveShadow = true; g.add(k); } } }
 // casilla de control de un ingreso: pared gris, losa blanca que sobresale, ventanas con reja en los cuatro lados, vereda alta con baranda amarilla y, si se pide, semáforo
+// ---------- lo que abre el cerco: portones, pilares, casetas y puertas con control de acceso ----------
+// Cada una le saca al cerco el rectángulo que ocupa en el piso (centro, giro, medio largo y medio fondo): el cerco se corta solo ahí.
+const PILAR = { hormigon: { lado: 0.4, c: '#bfc2c4', cl: '#6e7377', n: 'Hormigón' }, ladrillo: { lado: 0.45, c: '#a45a3c', cl: '#5e3526', n: 'Ladrillo' }, revocado: { lado: 0.5, c: '#ecebe7', cl: '#6b6d70', n: 'Revocado blanco' }, metal: { lado: 0.16, c: '#3b4045', cl: '#2a2d31', n: 'Caño metálico' } };
+const ladoPilar = q => q.pilares ? (PILAR[q.pilares] || PILAR.hormigon).lado : 0.08;
+const CORTA = { porton: q => [q.ancho / 2 + ladoPilar(q), 0.7], pilar: q => [(q.lado || 0.4) / 2 + 0.03, (q.lado || 0.4) / 2 + 0.03], caseta: q => [q.ancho / 2 + 0.05, q.fondo / 2 + 0.05],
+  acceso: q => [(q.ancho || (ACC[q.clase] || ACC.puerta).w) / 2 + 0.1, 0.5] };
+function cortesCerco(ctx) { const L = ctx && ctx.piezas ? ctx.piezas() : [], out = [];
+  for (const q0 of L) { const f = CORTA[q0.t]; if (!f || nivelDe(q0)) continue; const q = { ...TIPOS[q0.t].def, ...q0 }, [hx, hz] = f(q), r = q.r || 0; out.push({ x: q.x || 0, z: q.z || 0, c: Math.cos(r), s: Math.sin(r), hx, hz }); }
+  return out; }
+// la línea P sin lo que cae adentro de los rectángulos R (recorte de cada tramo contra cada rectángulo, en su propio marco)
+export function cortarLinea(P, R) { if (!R.length || !P || P.length < 2) return [P]; const out = []; let cur = [];
+  const lp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], iv = [];
+    for (const r of R) { const loc = p => { const dx = p[0] - r.x, dz = p[1] - r.z; return [dx * r.c - dz * r.s, dx * r.s + dz * r.c]; };
+      const A = loc(a), B = loc(b), du = B[0] - A[0], dv = B[1] - A[1]; let t0 = 0, t1 = 1, ok = true;
+      for (const [pp, qq] of [[-du, A[0] + r.hx], [du, r.hx - A[0]], [-dv, A[1] + r.hz], [dv, r.hz - A[1]]]) {
+        if (Math.abs(pp) < 1e-12) { if (qq < 0) { ok = false; break; } continue; }
+        const t = qq / pp; if (pp < 0) { if (t > t1) { ok = false; break; } if (t > t0) t0 = t; } else { if (t < t0) { ok = false; break; } if (t < t1) t1 = t; } }
+      if (ok && t1 - t0 > 1e-6) iv.push([t0, t1]); }
+    if (!iv.length) { if (!cur.length) cur.push(a); cur.push(b); continue; }
+    iv.sort((x, y) => x[0] - y[0]); const m = [iv[0].slice()]; for (const v of iv.slice(1)) { const l = m[m.length - 1]; if (v[0] <= l[1]) l[1] = Math.max(l[1], v[1]); else m.push(v.slice()); }
+    let t = 0; for (const [u0, u1] of m) { if (u0 > t + 1e-6) { if (!cur.length) cur.push(lp(a, b, t)); cur.push(lp(a, b, u0)); } if (cur.length > 1) out.push(cur); cur = []; t = u1; }
+    if (t < 1 - 1e-6) cur = [lp(a, b, t), b]; }
+  if (cur.length > 1) out.push(cur); return out; }
+// un pilar con su tapa (y farol, si va): de hormigón, de ladrillo con sus juntas, revocado o un caño
+function pilarEn(g, x, z, k, alto, farol, lado) { const P = PILAR[k] || PILAR.hormigon, os = oscuro(), l = (lado || P.lado) / 2, me = k === 'metal', m = mat(os ? P.cl : P.c, { roughness: me ? 0.45 : 0.9, metalness: me ? 0.5 : 0 });
+  let top = alto;
+  if (me) { const c = new THREE.Mesh(CIL, m); c.scale.set(l * 2, alto, l * 2); c.position.set(x, alto / 2, z); g.add(sombra(c)); caja(g, x - l - 0.015, alto, z - l - 0.015, x + l + 0.015, alto + 0.025, z + l + 0.015, m); top += 0.025; }
+  else { caja(g, x - l, 0, z - l, x + l, alto, z + l, m); caja(g, x - l - 0.05, alto, z - l - 0.05, x + l + 0.05, alto + 0.08, z + l + 0.05, mat(os ? '#5a5f63' : '#d9dadb', { roughness: 0.8 })); top += 0.08;
+    if (k === 'ladrillo') { const ju = mat(os ? '#3f4245' : '#d8cfc4'); for (let y = 0.075; y < alto - 0.05; y += 0.075) caja(g, x - l - 0.004, y - 0.005, z - l - 0.004, x + l + 0.004, y + 0.005, z + l + 0.004, ju, false); } }
+  if (farol) { caja(g, x - 0.015, top, z - 0.015, x + 0.015, top + 0.1, z + 0.015, negro()); const v = mat('#fff2d6', { emissive: '#ffd79a', emissiveIntensity: os ? 1.4 : 0.12, roughness: 0.3 });
+    caja(g, x - 0.1, top + 0.1, z - 0.1, x + 0.1, top + 0.38, z + 0.1, v); caja(g, x - 0.13, top + 0.38, z - 0.13, x + 0.13, top + 0.43, z + 0.13, negro()); if (os) brillo(g, x, top + 0.24, z, 1.6, '#ffd79a', 0.85); } }
+// una hoja de portón entre x0 y x1, en su propio grupo (para correrla o girarla): marco y, adentro, barrotes, chapa o malla
+function hojaPorton(x0, x1, alto, rel, m, os) { const g = new THREE.Group(), y0 = 0.06, t = 0.05, W = x1 - x0;
+  caja(g, x0, y0, -t / 2, x1, y0 + 0.07, t / 2, m); caja(g, x0, alto - 0.07, -t / 2, x1, alto, t / 2, m); caja(g, x0, y0, -t / 2, x0 + 0.06, alto, t / 2, m); caja(g, x1 - 0.06, y0, -t / 2, x1, alto, t / 2, m);
+  if (rel === 'chapa') { caja(g, x0 + 0.06, y0 + 0.07, -0.012, x1 - 0.06, alto - 0.07, 0.012, m); for (let y = y0 + 0.32; y < alto - 0.2; y += 0.32) caja(g, x0 + 0.06, y - 0.015, -0.02, x1 - 0.06, y + 0.015, 0.02, m, false); }
+  else if (rel === 'malla') { caja(g, x0, alto / 2 - 0.03, -t / 2, x1, alto / 2 + 0.03, t / 2, m);
+    const k = new THREE.Mesh(new THREE.PlaneGeometry(Math.max(0.05, W - 0.12), alto - 0.2), new THREE.MeshStandardMaterial({ color: os ? '#8b939a' : '#4f575e', transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    k.position.set((x0 + x1) / 2, (alto + y0) / 2 + 0.02, 0); g.add(k); }
+  else { const n = Math.max(1, Math.round((W - 0.12) / 0.11)), it = []; for (let i = 1; i < n; i++) it.push([x0 + 0.06 + (W - 0.12) * i / n, (alto + y0) / 2, 0, 0, 0.022, alto - y0 - 0.1, 0.022]);
+    lote(g, CAJA, m, it); caja(g, x0, alto - 0.36, -t / 2, x1, alto - 0.31, t / 2, m, false); }
+  return g; }
+function portonArmar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, H = p.alto, est = p.estilo || 'reja', rel = p.relleno || 'barrotes';
+  const m = mat(os ? mix(p.color, '#000', 0.35) : p.color, { metalness: 0.45, roughness: 0.5 }), a = Math.max(0, Math.min(100, +p.abierto || 0)) / 100, poste = mat(os ? '#2a2d31' : '#3b4045', { metalness: 0.5, roughness: 0.45 });
+  if (p.pilares) { const l = (PILAR[p.pilares] || PILAR.hormigon).lado; for (const s of [-1, 1]) pilarEn(g, s * (w + l / 2), 0, p.pilares, H + 0.25, !!p.farol); }
+  else for (const s of [-1, 1]) caja(g, s * (w + 0.04) - 0.04, 0, -0.04, s * (w + 0.04) + 0.04, H + 0.1, 0.04, poste);
+  if (est === 'corredizo') {   // corre por detrás de la línea, sobre su riel, hacia la derecha; motor y guía al final del paso
+    const z = -0.14, L = p.ancho, hj = hojaPorton(-w, w, H, rel, m, os);
+    for (const u of [-w + 0.4, w - 0.4]) { const r = new THREE.Mesh(CILX, negro()); r.scale.set(0.13, 0.13, 0.05); r.position.set(u, 0.065, 0); hj.add(r); }
+    hj.position.set(a * L, 0, z); g.add(hj);
+    caja(g, -w, 0, z - 0.025, w + L + 0.3, 0.03, z + 0.025, mat(os ? '#5c6166' : '#9aa0a5', { metalness: 0.6, roughness: 0.4 }));
+    const xg = w + (p.pilares ? (PILAR[p.pilares] || PILAR.hormigon).lado : 0.08) + 0.12; for (const s of [-1, 1]) caja(g, xg - 0.03, 0, z + s * 0.07 - 0.03, xg + 0.03, H + 0.12, z + s * 0.07 + 0.03, poste);
+    caja(g, xg + 0.15, 0, z - 0.45, xg + 0.47, 0.42, z - 0.2, mat(os ? '#4b5055' : '#c6cacd', { roughness: 0.6 })); }
+  else if (est === 'batiente' || est === 'peatonal') {   // giran hacia adentro (lado de atrás de la línea)
+    const ang = a * Math.PI / 2 * 0.95;
+    if (est === 'batiente') { const L = hojaPorton(0, w - 0.01, H, rel, m, os); L.position.x = -w; L.rotation.y = ang; g.add(L); const R = hojaPorton(-(w - 0.01), 0, H, rel, m, os); R.position.x = w; R.rotation.y = -ang; g.add(R); }
+    else { const L = hojaPorton(0, 2 * w - 0.01, H, rel, m, os); L.position.x = -w; L.rotation.y = ang; g.add(L); } }
+  else g.add(hojaPorton(-w, w, H, rel, m, os));
+  return g; }
+// caseta de guardia: vereda, paredes con sus huecos (puerta y ventanas), losa con alero, mostrador con monitor y silla adentro, aire y luz
+function caseta(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = p.alto, est = p.estilo || 'vidriada', y0 = 0.12, e = 0.09;
+  const pa = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.8 }), osc = mat(os ? '#2f3338' : '#3a4046', { roughness: 0.5, metalness: 0.4 });
+  const vid = mat(os ? '#ffd9a3' : '#a9c3d2', { transparent: true, opacity: os ? 0.55 : 0.3, roughness: 0.08, metalness: 0.2, emissive: os ? '#ffcf8a' : '#000000', emissiveIntensity: os ? 0.35 : 0, depthWrite: false });
+  caja(g, -w - 0.4, 0, -d - 0.4, w + 0.4, y0, d + 0.4, mat(os ? '#5c6166' : '#c9cccf', { roughness: 0.95 }));
+  const LADOS = { frente: [w, d, 1, 'x'], atras: [w, d, -1, 'x'], der: [d, w, 1, 'z'], izq: [d, w, -1, 'z'] }, dw = 0.85, pv = est === 'vidriada';
+  for (const [k, [hu, hn, s, ax]] of Object.entries(LADOS)) {
+    const pon = (u0, u1, ya, yb, m, ee = e, off = 0) => { if (u1 - u0 < 0.01 || yb - ya < 0.01) return; const c = s * (hn + off); if (ax === 'x') caja(g, u0, ya, c - ee / 2, u1, yb, c + ee / 2, m, m !== vid); else caja(g, c - ee / 2, ya, u0, c + ee / 2, yb, u1, m, m !== vid); };
+    const H2 = [], pu = p.puerta === k, d1 = hu - 0.3, d0 = d1 - dw;
+    if (pu) H2.push([d0, d1, y0, 2.05, 'p']);
+    const vz = pv ? [[-hu + 0.08, pu ? d0 - 0.08 : hu - 0.08], ...(pu && d1 + 0.08 < hu - 0.2 ? [[d1 + 0.08, hu - 0.08]] : [])] : (() => { const wl = Math.min(1.3, 2 * hu - 0.9); if (wl < 0.5) return []; const c0 = pu ? Math.min(-hu + 0.35 + wl / 2, d0 - 0.25 - wl / 2) : 0; return c0 - wl / 2 > -hu + 0.2 ? [[c0 - wl / 2, c0 + wl / 2]] : []; })();
+    for (const [u0, u1] of vz) if (u1 - u0 > 0.3) H2.push([u0, u1, pv ? 0.95 : 1.05, pv ? 2.1 : 1.95, 'v']);
+    // la pared alrededor de los huecos
+    const cortes = [...new Set([-hu, hu, ...H2.flatMap(h => [h[0], h[1]])])].sort((a, b) => a - b);
+    for (let i = 1; i < cortes.length; i++) { const u0 = cortes[i - 1], u1 = cortes[i], mid = (u0 + u1) / 2; let ya = y0;
+      for (const h of H2.filter(h => h[0] < mid && mid < h[1]).sort((a, b) => a[2] - b[2])) { pon(u0, u1, ya, h[2], pa); ya = Math.max(ya, h[3]); } pon(u0, u1, ya, H, pa); }
+    for (const [u0, u1, ya, yb, t] of H2) {
+      if (t === 'v') { pon(u0, u1, ya, yb, vid, 0.03); pon(u0 - 0.03, u1 + 0.03, ya - 0.04, ya, osc, e + 0.04);   // vidrio y alféizar
+        if (est === 'mamposteria') { const n = Math.max(2, Math.round((u1 - u0) / 0.12)); for (let j = 1; j < n; j++) { const u = u0 + (u1 - u0) * j / n; pon(u - 0.012, u + 0.012, ya, yb, osc, 0.024, e / 2 + 0.04); } } }
+      else { pon(u0, u1, ya, yb, osc, 0.05); pon(u0, u1, 1.15, 1.9, vid, 0.06); const hx = s * (hn + 0.05), hu2 = u0 + 0.12; if (ax === 'x') caja(g, hu2 - 0.06, 1.0, hx - 0.02, hu2 + 0.06, 1.03, hx + 0.02, negro(), false); else caja(g, hx - 0.02, 1.0, hu2 - 0.06, hx + 0.02, 1.03, hu2 + 0.06, negro(), false);
+        if (p.luz) { const c = (u0 + u1) / 2, z = s * (hn + 0.1), lm = mat('#fff2d6', { emissive: '#ffd79a', emissiveIntensity: os ? 1.6 : 0.15 }); if (ax === 'x') caja(g, c - 0.09, 2.25, z - 0.05, c + 0.09, 2.37, z + 0.05, lm, false); else caja(g, z - 0.05, 2.25, c - 0.09, z + 0.05, 2.37, c + 0.09, lm, false);
+          if (os) { if (ax === 'x') { brillo(g, c, 2.3, z + s * 0.1, 1.4, '#ffd79a', 0.85); pozo(g, c, z + s * 1.1, 2.4, '#ffcf8a', 0.3); } else { brillo(g, z + s * 0.1, 2.3, c, 1.4, '#ffd79a', 0.85); pozo(g, z + s * 1.1, c, 2.4, '#ffcf8a', 0.3); } } } } }
+    if (pv) for (const u of [-hu, hu]) pon(u - 0.045, u + 0.045, y0, H, osc, e + 0.02); }
+  caja(g, -w - 0.3, H, -d - 0.3, w + 0.3, H + 0.16, d + 0.3, mat(os ? '#6f7478' : '#f1f2f3', { roughness: 0.7 }));
+  // adentro: mostrador contra el frente, monitor y silla
+  const cx1 = p.puerta === 'frente' ? w - 0.3 - dw - 0.1 : w - 0.12, cx0 = -w + 0.12;
+  if (cx1 - cx0 > 0.6) { const zc = d - e / 2; caja(g, cx0, y0, zc - 0.5, cx1, 0.78, zc - 0.02, mat(os ? '#4a4f55' : '#c9ccd0', { roughness: 0.6 })); caja(g, cx0, 0.78, zc - 0.55, cx1, 0.82, zc - 0.02, mat(os ? '#3a3027' : '#8a6a4c', { roughness: 0.5 }));
+    const mx = (cx0 + cx1) / 2; caja(g, mx - 0.26, 0.86, zc - 0.36, mx + 0.26, 1.18, zc - 0.33, mat('#15181b', { emissive: '#4d8dff', emissiveIntensity: os ? 0.9 : 0.25, roughness: 0.3 })); caja(g, mx - 0.03, 0.82, zc - 0.36, mx + 0.03, 0.88, zc - 0.31, negro());
+    caja(g, mx - 0.23, 0.44, zc - 1.05, mx + 0.23, 0.5, zc - 0.62, osc); caja(g, mx - 0.23, 0.5, zc - 1.08, mx + 0.23, 0.98, zc - 1.03, osc); caja(g, mx - 0.03, y0, zc - 0.87, mx + 0.03, 0.44, zc - 0.81, negro()); }
+  if (p.aire) { const lado = p.puerta === 'der' ? -1 : 1, x = lado * (w + e / 2); caja(g, lado > 0 ? x : x - 0.26, 1.85, -0.42, lado > 0 ? x + 0.26 : x, 2.18, 0.42, mat(os ? '#9aa0a5' : '#f3f4f5', { roughness: 0.5 }));
+    for (let zz = -0.36; zz <= 0.37; zz += 0.06) caja(g, lado > 0 ? x + 0.26 : x - 0.265, 1.9, zz - 0.008, lado > 0 ? x + 0.265 : x - 0.26, 2.12, zz + 0.008, mat('#9aa1a7'), false); }
+  return g; }
+// un tramo de cerco (entre dos cortes)
+function cercoTramo(g, p, P, h, gr) {
+      if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return; }
+      // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
+      if (p.tipo === 'premoldeado') { const os = oscuro(), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), v = [], uv = [], ix = [];
+        let acc = 0; for (let i = 0; i < P.length; i++) { if (i) acc += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); v.push(P[i][0], 0, P[i][1], P[i][0], h, P[i][1]); uv.push(acc / 2, 0, acc / 2, h / 0.5); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals(); g.add(sombra(new THREE.Mesh(geo, pl)));
+        lote(g, CAJA, ph, aLoLargo(P, 2).map(([x, z, d]) => [x, (h + 0.12) / 2, z, d, 0.2, h + 0.12, 0.2])); return; }
+      // bloques New Jersey sueltos, de 2 m, uno detrás del otro con una junta (los amarillos que cortan un carril)
+      if (p.tipo === 'jersey') { const hb = Math.min(1.1, p.alto || 0.8), c = p.color || '#E9C23A', it = []; for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), d = Math.atan2(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2)), l = L / n;
+          for (let j = 0; j < n; j++) { const f = (j + 0.5) / n; it.push([a[0] + (b[0] - a[0]) * f, 0, a[1] + (b[1] - a[1]) * f, d, 0.6, hb, l - 0.18]); } }
+        lote(g, JERSEY, mat(oscuro() ? mix(c, '#000', 0.45) : c, { roughness: 0.85 }), it); return; }
+      if (p.tipo === 'baranda') { const ca = p.color ? mat(oscuro() ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.5, metalness: 0.3 }) : mat(oscuro() ? '#6c747b' : '#8f979d', { roughness: 0.5, metalness: 0.4 }), it = aLoLargo(P, 2.4).map(([x, z, d]) => [x, h / 2, z, d, 0.06, h, 0.06]); for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), r = Math.atan2(b[0] - a[0], b[1] - a[1]); for (const y of [h - 0.03, h * 0.5]) it.push([(a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2, r, 0.05, 0.05, L]); } lote(g, CAJA, ca, it); return; }
+      const postes = aLoLargo(P, gr ? 4 : 3), col = gr ? '#9aa3ab' : p.tipo === 'hormigon' ? (oscuro() ? '#6e7377' : '#b8bcbf') : '#8c949b', w = p.tipo === 'hormigon' ? 0.13 : 0.07;
+      lote(g, CAJA, mat(col, { roughness: 0.7, metalness: gr ? 0.5 : 0.1 }), postes.map(([x, z, d]) => [x, h / 2, z, d, w, h, w]));
+      // malla vista como una superficie apenas visible (de lejos se lee la línea del cerco sin tapar lo de atrás)
+      if (!gr) { const v = [], ix = []; for (let i = 0; i < P.length; i++) { v.push(P[i][0], 0.05, P[i][1], P[i][0], h, P[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: oscuro() ? '#7d858c' : '#5f676e', transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })); g.add(m); }
+      const riel = new THREE.Mesh(cintaVertical(P, gr ? 0.32 : 0.06, gr ? 0.55 : h - 0.03), mat(gr ? '#c2c8cd' : col, { metalness: gr ? 0.6 : 0.1, roughness: 0.4, side: THREE.DoubleSide })); g.add(sombra(riel)); return;
+}
 function garita(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = 2.75, V = 1.3, base = p.color && p.color !== '#f5f6f7' ? p.color : '#8d949a';
   const pa = mat(os ? mix(base, '#000', 0.4) : base, { roughness: 0.85 }), losa = mat(os ? '#7d8287' : '#eef0f1', { roughness: 0.6 }), vid = mat(os ? '#3a3f45' : '#28333d', { roughness: 0.2, metalness: 0.3, emissive: os ? '#ffdcaa' : '#000000', emissiveIntensity: os ? 0.5 : 0 }), rej = mat(os ? '#6b7075' : '#b7bcc0', { metalness: 0.5, roughness: 0.5 }), am = mat(os ? '#8a6f1a' : '#f2c230', { roughness: 0.55 }), ver = mat(os ? '#5d6267' : '#c9c8c1', { roughness: 0.95 });
   caja(g, -w - V, 0, -d - V, w + V, 0.18, d + V, ver); caja(g, -w, 0.18, -d, w, H, d, pa); caja(g, -w - 0.9, H, -d - 0.9, w + 0.9, H + 0.22, d + 0.9, losa);
@@ -1119,25 +1231,9 @@ export const TIPOS = {
       if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const cir = r => { const l = []; for (let k = 0; k < 48; k++) l.push([r * Math.cos(k / 48 * 6.2832), -r * Math.sin(k / 48 * 6.2832)]); return l; }; try { bordeIsla(g, cir(p.isla + 0.62), cir(p.isla + 0.02), 0.058, 0.33, p.flechas === 'no' ? '' : (p.flechas || 'anti'), ad); } catch (e) { console.warn('borde', e); } g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
     campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
-    armar(p) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
-      if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return g; }
-      // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
-      if (p.tipo === 'premoldeado') { const os = oscuro(), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), v = [], uv = [], ix = [];
-        let acc = 0; for (let i = 0; i < P.length; i++) { if (i) acc += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); v.push(P[i][0], 0, P[i][1], P[i][0], h, P[i][1]); uv.push(acc / 2, 0, acc / 2, h / 0.5); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
-        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals(); g.add(sombra(new THREE.Mesh(geo, pl)));
-        lote(g, CAJA, ph, aLoLargo(P, 2).map(([x, z, d]) => [x, (h + 0.12) / 2, z, d, 0.2, h + 0.12, 0.2])); return g; }
-      // bloques New Jersey sueltos, de 2 m, uno detrás del otro con una junta (los amarillos que cortan un carril)
-      if (p.tipo === 'jersey') { const hb = Math.min(1.1, p.alto || 0.8), c = p.color || '#E9C23A', it = []; for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), d = Math.atan2(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2)), l = L / n;
-          for (let j = 0; j < n; j++) { const f = (j + 0.5) / n; it.push([a[0] + (b[0] - a[0]) * f, 0, a[1] + (b[1] - a[1]) * f, d, 0.6, hb, l - 0.18]); } }
-        lote(g, JERSEY, mat(oscuro() ? mix(c, '#000', 0.45) : c, { roughness: 0.85 }), it); return g; }
-      if (p.tipo === 'baranda') { const ca = p.color ? mat(oscuro() ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.5, metalness: 0.3 }) : mat(oscuro() ? '#6c747b' : '#8f979d', { roughness: 0.5, metalness: 0.4 }), it = aLoLargo(P, 2.4).map(([x, z, d]) => [x, h / 2, z, d, 0.06, h, 0.06]); for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), r = Math.atan2(b[0] - a[0], b[1] - a[1]); for (const y of [h - 0.03, h * 0.5]) it.push([(a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2, r, 0.05, 0.05, L]); } lote(g, CAJA, ca, it); return g; }
-      const postes = aLoLargo(P, gr ? 4 : 3), col = gr ? '#9aa3ab' : p.tipo === 'hormigon' ? (oscuro() ? '#6e7377' : '#b8bcbf') : '#8c949b', w = p.tipo === 'hormigon' ? 0.13 : 0.07;
-      lote(g, CAJA, mat(col, { roughness: 0.7, metalness: gr ? 0.5 : 0.1 }), postes.map(([x, z, d]) => [x, h / 2, z, d, w, h, w]));
-      // malla vista como una superficie apenas visible (de lejos se lee la línea del cerco sin tapar lo de atrás)
-      if (!gr) { const v = [], ix = []; for (let i = 0; i < P.length; i++) { v.push(P[i][0], 0.05, P[i][1], P[i][0], h, P[i][1]); if (i) { const j = i * 2; ix.push(j - 2, j - 1, j, j - 1, j + 1, j); } }
-        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: oscuro() ? '#7d858c' : '#5f676e', transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })); g.add(m); }
-      const riel = new THREE.Mesh(cintaVertical(P, gr ? 0.32 : 0.06, gr ? 0.55 : h - 0.03), mat(gr ? '#c2c8cd' : col, { metalness: gr ? 0.6 : 0.1, roughness: 0.4, side: THREE.DoubleSide })); g.add(sombra(riel)); return g; } },
+    // lo que se pone sobre la línea del cerco (portón, pilar, caseta, puerta con control) le abre el paso: el cerco se corta ahí solo
+    armar(p, ctx) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P0 = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
+      for (const P of cortarLinea(P0, cortesCerco(ctx))) if (P.length > 1) cercoTramo(g, p, P, h, gr); return g; } },
   cantero: { n: 'Cantero o seto', g: 'Vegetación', forma: 'linea', capa: 'vegetacion', def: { ancho: 1.6, alto: 0.9 },
     campos: [F.nombre, F.ancho('Ancho (m)', 0.3, 20), F.alto('Alto del seto (m)', 0, 4)],
     armar(p) { const g = new THREE.Group(); g.add(sombra(new THREE.Mesh(cinta(p.pts, p.ancho, 0.06), mat(suelo('pasto'), { polygonOffset: true, polygonOffsetFactor: -8 })), false, true));
@@ -1355,10 +1451,28 @@ export const TIPOS = {
     campos: [{ k: 'texto', n: 'Texto', t: 'txt' }, F.ancho('Ancho (m)', 0.5, 30), F.alto('Alto (m)', 0.3, 12), { k: 'altura', n: 'Altura del piso (m)', t: 'num', min: 0, max: 20, paso: 0.1 }, { k: 'fondo', n: 'Fondo', t: 'color' }, { k: 'tinta', n: 'Letra', t: 'color' }, F.r],
     armar(p) { const g = new THREE.Group(), w = p.ancho / 2, gris = mat('#8c949b', { metalness: 0.5 }); for (const x of [-w * 0.7, w * 0.7]) caja(g, x - 0.08, 0, -0.08, x + 0.08, p.altura, 0.08, gris);
       const t = textoTex(p.texto || '', p.fondo, p.tinta, 512, Math.round(512 * p.alto / p.ancho)), m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }); caja(g, -w, p.altura, -0.1, w, p.altura + p.alto, 0.1, [gris, gris, gris, gris, m, m]); return g; } },
-  porton: { n: 'Portón', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 7, alto: 2.1, color: '#E6C229' },
-    campos: [F.nombre, F.ancho('Ancho (m)', 1, 30), F.alto('Alto (m)', 0.8, 6), F.color('Color'), F.r],
-    armar(p) { const g = new THREE.Group(), w = p.ancho / 2, m = mat(p.color, { metalness: 0.4, roughness: 0.5 }); caja(g, -w, 0.1, -0.05, w, 0.2, 0.05, m); caja(g, -w, p.alto - 0.1, -0.05, w, p.alto, 0.05, m);
-      for (let x = -w; x <= w + 0.01; x += 0.25) caja(g, x - 0.02, 0.1, -0.02, x + 0.02, p.alto, 0.02, m, false); return g; } },
+  porton: { n: 'Portón', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 7, alto: 2.1, color: '#E6C229', estilo: 'reja', relleno: 'barrotes', abierto: 0, pilares: '', farol: false },
+    campos: [F.nombre, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['reja', 'Fijo (no abre)'], ['corredizo', 'Corredizo con motor'], ['batiente', 'Batiente de dos hojas'], ['peatonal', 'Puerta peatonal']] },
+      { k: 'relleno', n: 'Hoja', t: 'sel', ops: [['barrotes', 'Barrotes'], ['chapa', 'Chapa ciega'], ['malla', 'Malla']] }, { k: 'abierto', n: 'Abierto (%)', t: 'num', min: 0, max: 100, paso: 10 },
+      F.ancho('Ancho del paso (m)', 0.6, 30), F.alto('Alto (m)', 0.8, 6), { k: 'pilares', n: 'Pilares a los costados', t: 'sel', ops: [['', 'Sin pilares'], ...Object.entries(PILAR).map(([k, v]) => [k, v.n])] },
+      { k: 'farol', n: 'Farol arriba de los pilares', t: 'bool' }, F.color('Color'), F.r],
+    variantes: [{ n: 'Portón corredizo', o: { estilo: 'corredizo', ancho: 6, alto: 2.2, color: '#2f3438', pilares: 'hormigon' } },
+      { n: 'Portón batiente de dos hojas', o: { estilo: 'batiente', ancho: 4, alto: 2, color: '#2f3438', pilares: 'revocado', farol: true } },
+      { n: 'Portón corredizo de chapa', o: { estilo: 'corredizo', relleno: 'chapa', ancho: 6, alto: 2.4, color: '#d9dcdf', pilares: 'hormigon' } },
+      { n: 'Portón de malla', o: { estilo: 'batiente', relleno: 'malla', ancho: 4, alto: 2, color: '#5b636a' } },
+      { n: 'Puerta peatonal', o: { estilo: 'peatonal', ancho: 1, alto: 2.1, color: '#2f3438', pilares: 'hormigon' } }],
+    armar(p) { return portonArmar(p); } },
+  pilar: { n: 'Pilar', g: 'Construcción', forma: 'punto', capa: 'base', def: { material: 'hormigon', lado: 0.4, alto: 2.4, farol: false },
+    campos: [F.nombre, { k: 'material', n: 'Material', t: 'sel', ops: Object.entries(PILAR).map(([k, v]) => [k, v.n]) }, { k: 'lado', n: 'Lado (m)', t: 'num', min: 0.1, max: 1.5, paso: 0.05 }, F.alto('Alto (m)', 0.3, 8), { k: 'farol', n: 'Farol arriba', t: 'bool' }, F.r],
+    variantes: [{ n: 'Pilar de hormigón', o: { material: 'hormigon', lado: 0.4 } }, { n: 'Pilar de ladrillo', o: { material: 'ladrillo', lado: 0.45 } }, { n: 'Pilar con farol', o: { material: 'revocado', lado: 0.5, farol: true } }],
+    armar(p) { const g = new THREE.Group(); pilarEn(g, 0, 0, p.material, p.alto, p.farol, p.lado); return g; } },
+  caseta: { n: 'Caseta de guardia', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { estilo: 'vidriada', ancho: 2.4, fondo: 2.4, alto: 2.6, color: '#eceef0', puerta: 'der', aire: true, luz: true },
+    campos: [F.nombre, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['vidriada', 'Vidriada (vidrio en los cuatro lados)'], ['prefabricada', 'Prefabricada de paneles'], ['mamposteria', 'De mampostería con rejas']] },
+      F.ancho('Frente (m)', 1.2, 8), F.fondo('Fondo (m)', 1.2, 8), F.alto('Alto (m)', 2.3, 4), F.color('Color'), { k: 'puerta', n: 'Puerta', t: 'sel', ops: [['frente', 'Al frente'], ['der', 'A la derecha'], ['izq', 'A la izquierda'], ['atras', 'Atrás']] },
+      { k: 'aire', n: 'Aire acondicionado', t: 'bool' }, { k: 'luz', n: 'Luz sobre la puerta', t: 'bool' }, F.r],
+    variantes: [{ n: 'Caseta de guardia vidriada', o: { estilo: 'vidriada', nombre: 'Guardia' } }, { n: 'Caseta de guardia prefabricada', o: { estilo: 'prefabricada', nombre: 'Guardia', color: '#e9ecee' } },
+      { n: 'Caseta de guardia de mampostería', o: { estilo: 'mamposteria', nombre: 'Guardia', color: '#d8d4cc', ancho: 3, fondo: 2.6 } }],
+    armar(p) { return caseta(p); } },
   barrera: { n: 'Barrera', g: 'Construcción', forma: 'punto', capa: 'base', def: { ancho: 4.5, color: '#E5484D' },
     campos: [F.nombre, { k: 'estilo', n: 'Tipo', t: 'sel', ops: [['brazo', 'Barrera automática (brazo rayado)'], ['cano', 'Tranquera de caño (a mano, con rueda)']] }, F.ancho('Largo del brazo (m)', 1, 10), F.color('Color'), F.r],
     armar(p) { const g = new THREE.Group(), col = p.color || '#E5484D';
@@ -1790,5 +1904,5 @@ export function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.
     if (p.rampa === 'der' || p.rampa === 'ambas') { const u = Math.max(...us) + 5; R.push([u, Math.max(3, Math.min(lg, L - u - 2.4)), 1]); }
     if (p.rampa === 'izq' || p.rampa === 'ambas') { const u = Math.min(...us) - 5; R.push([u, Math.max(3, Math.min(lg, u - 2.4)), -1]); } }
   return R; }
-export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (q.alto || 2), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
+export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (q.alto || 2), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
 export { largoDe };
