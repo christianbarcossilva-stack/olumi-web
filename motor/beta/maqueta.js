@@ -13,14 +13,14 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=18';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=62';
+import { THREE, crearMotor } from './nucleo.js?v=19';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones } from './piezas.js?v=63';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=4';
-import { construir } from './construir.js?v=52';
-import { juego } from './juego.js?v=5';
-import { recorrer } from './recorrer.js?v=20';
-import { transito } from './transito.js?v=52';
+import { construir } from './construir.js?v=53';
+import { juego } from './juego.js?v=6';
+import { recorrer } from './recorrer.js?v=21';
+import { transito } from './transito.js?v=53';
 import { extras } from './extras.js?v=5';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -350,6 +350,8 @@ export async function abrirMaqueta(o) {
     if (miniCola.length) miniT = requestAnimationFrame(miniPaso); else motor.dirty = true; }
   // `tarde(url)`: un mueble llega en dos tiempos (primero una caja gris, después el modelo). Si el modelo todavía no llegó, devuelve null y avisa por `tarde` cuando la foto está.
   function fotoPieza(o, tarde) { const T = o.T, p = { ...T.def, ...o.o, id: 'mini', t: o.t, nombre: '' }; let espera = null;
+    if (T.herramienta === 'piso' && !(p.celdas && p.celdas.length)) { p.celdas = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]]; p.celda = 2; }   // un piso vacío no tiene foto: se muestra un pedazo
+    if (T.herramienta === 'relieve') { const A = {}, m = p.modo || 'subir'; for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) { const r = Math.hypot(i, j * 1.2), b = Math.max(0, 1 - r / 4.2); A[i + ',' + j] = m === 'bajar' ? 1.6 - 1.4 * b * b : m === 'nivelar' ? (r < 2.6 ? 1.2 : 1.2 * Math.max(0, 1 - (r - 2.6) / 1.6)) : m === 'alisar' ? 0.35 + 0.9 * b * b * (1 + 0.25 * Math.sin(i * 1.7 + j)) : 2.2 * b * b; } p.alt = A; }   // el pincel muestra una loma de ejemplo
     if (T.forma === 'punto') { p.x = 0; p.z = 0; p.r = T.equipo ? 0.5 : -0.5; if (T.equipo) { p.alcance = 0; if (p.montaje !== 'techo') p.y = Math.min(p.y ?? 2, 2.2); } } else p.pts = T.forma === 'area' ? [[-4, -3], [4, -3], [4, 3], [-4, 3]] : [[-5, 0], [5, 0]];
     const g = armarPieza(p, { estado: () => 'ok', paredes: 'alta', vivo: () => ({ estado: 'cerrada' }), dirty: () => { if (espera) { const q = espera; espera = null; let u = ''; try { u = fotoDe(q); } catch (er) {} tarde(u); } } }); if (!g) return '';
     if (o.t === 'mueble' && tarde && !g.children.some(k => k.isMesh && k.geometry.type !== 'BoxGeometry')) { espera = g; return null; }
@@ -357,7 +359,7 @@ export async function abrirMaqueta(o) {
   function fotoDe(g) { const W = 336, H = 252;
     if (!rt) { rt = new THREE.WebGLRenderTarget(W, H); escM = new THREE.Scene(); escM.add(new THREE.HemisphereLight(0xffffff, 0x7a828a, 0.85)); const l = new THREE.DirectionalLight(0xffffff, 1.25); l.position.set(-3, 6, 4); escM.add(l); camM = new THREE.PerspectiveCamera(28, W / H, 0.05, 2000); }
     escM.environment = motor.scene.environment; escM.add(g); const b = cajaDe(g, new THREE.Box3()); if (b.isEmpty()) { escM.remove(g); return ''; }
-    const c = b.getCenter(new THREE.Vector3()), dist = Math.max(0.15, b.getSize(new THREE.Vector3()).length() / 2) / Math.sin(14 * Math.PI / 180) * 1.04;
+    const c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), chato = sz.y < 0.06 * Math.max(sz.x, sz.z), dist = Math.max(0.15, sz.length() / 2) / Math.sin(14 * Math.PI / 180) * (chato ? 0.72 : 1.04);   // lo chato (un piso, una pintura) se mira más de cerca
     camM.position.set(c.x + dist * 0.55, c.y + dist * 0.42, c.z + dist * 0.72); camM.lookAt(c); camM.near = dist / 60; camM.far = dist * 4; camM.updateProjectionMatrix();
     const R = motor.renderer, antes = R.getRenderTarget(), col = R.getClearColor(new THREE.Color()), al = R.getClearAlpha(), px = new Uint8Array(W * H * 4);
     R.setRenderTarget(rt); R.setClearColor(0x000000, 0); R.clear(); R.render(escM, camM); R.readRenderTargetPixels(rt, 0, 0, W, H, px); R.setRenderTarget(antes); R.setClearColor(col, al); escM.remove(g); limpiar(g);
@@ -551,6 +553,7 @@ export async function abrirMaqueta(o) {
 
   // mouse: lo que el editor agarra no mueve la cámara
   let espacio = false; addEventListener('keydown', e => { if (e.key === ' ' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !RC.R.on) espacio = true; }, true); addEventListener('keyup', e => { if (e.key === ' ') espacio = false; }, true); addEventListener('blur', () => { espacio = false; });
+  motor.pintaConShift = () => ED.on && (CON.T.h === 'piso' || CON.T.h === 'relieve');   // los materiales se pintan con Shift (pedido de Christian): sin Shift, el arrastre mueve el mapa
   motor.agarrar = e => { if (!ED.on || espacio || ED.fach) return false;
     if (SEL && ED.h === 'mano' && !ED.colocar && !ED.linea && !CON.T.h) { const mf = motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh && q.userData.fach))[0]; if (mf) { menu(null); const f = mf.object.userData.fach; fachFijar(SEL, f); ED.drag = { fach: f, m: mf.object }; return true; } }
     const p0 = motor.enPiso(e.clientX, e.clientY); if (!p0) return false; menu(null);

@@ -158,7 +158,9 @@ export function crearMotor(canvas, o = {}) {
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('pointerdown', e => { try { canvas.setPointerCapture(e.pointerId); } catch (er) {} dedos.set(e.pointerId, { x: e.clientX, y: e.clientY }); viaje = null; frena(); rueda.k = 0;
     if (dedos.size === 2) { arr = null; clearTimeout(largo); const [a, b] = [...dedos.values()]; gesto = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, modo: null, giro: false }; Object.assign(gesto, { d0: gesto.d, ang0: gesto.ang, mx0: gesto.mx, my0: gesto.my }); motor.soltar && motor.soltar(e, true); return; }
-    if (e.button === 0 && !e.shiftKey && motor.agarrar && motor.agarrar(e)) { arr = { editor: true }; return; }
+    // con un material en la mano (piso, pincel de terreno) y el mouse, se pinta con Shift apretado; sin Shift el arrastre mueve la vista. En pantallas táctiles, el dedo pinta
+    const conShift = e.pointerType === 'mouse' && motor.pintaConShift && motor.pintaConShift();
+    if (e.button === 0 && (conShift ? e.shiftKey : !e.shiftKey) && motor.agarrar && motor.agarrar(e)) { arr = { editor: true }; return; }
     // gira: clic derecho, ruedita, Ctrl o Alt + arrastrar (en la Mac, Ctrl + clic es el clic derecho); caminando, cualquier arrastre mira alrededor
     const girar = e.button === 2 || e.button === 1 || (e.button === 0 && (e.ctrlKey || (e.altKey && !motor.editando) || motor.caminando || motor.mirando));
     arr = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, girar, btn: e.button, p: girar ? null : motor.enPiso(e.clientX, e.clientY), mov: 0, t: performance.now() }; canvas.classList.add('arrastra');

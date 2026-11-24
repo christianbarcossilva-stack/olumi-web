@@ -1,9 +1,9 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=18';
+import { THREE } from './nucleo.js?v=19';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=14';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=15';
 import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from '../texturas.js?v=5';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
@@ -82,7 +82,7 @@ function texHormigon() { if (TEX_HORM) return TEX_HORM; const N = 1024, c = docu
   x.strokeStyle = 'rgba(60,60,58,.07)'; for (let i = 0; i < 14; i++) { x.lineWidth = 6 + R() * 10; x.beginPath(); const y0 = R() * N; x.moveTo(-20, y0); x.bezierCurveTo(N * 0.3, y0 + (R() - 0.5) * 200, N * 0.7, y0 + (R() - 0.5) * 200, N + 20, y0 + (R() - 0.5) * 120); x.stroke(); }
   x.strokeStyle = 'rgba(70,70,68,.55)'; x.lineWidth = 2; for (let i = 0; i <= n; i++) { const p = i * 5 * px; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, N); x.moveTo(0, p); x.lineTo(N, p); x.stroke(); }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return TEX_HORM = t; }
-export function matSuelo(k, o = {}, escala = 1) { if (k === 'calzada' || k === 'hormigon') return piso(matTex(texHormigon(), oscuro() ? '#56606b' : '#ffffff', [1 / (HORM_M * escala), 1 / (HORM_M * escala)], Object.assign({ roughness: 0.93 }, o))); if (k === 'adoquin') return piso(matTex(texAdoquin(), oscuro() ? '#5a6470' : '#ffffff', [1 / (ADOQ_M * escala), 1 / (ADOQ_M * escala)], Object.assign({ roughness: 0.95 }, o))); const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto';
+export function matSuelo(k, o = {}, escala = 1) { if (k === 'calzada' || k === 'hormigon') return piso(matTex(texHormigon(), oscuro() ? '#56606b' : '#d4d6d8', [1 / (HORM_M * escala), 1 / (HORM_M * escala)], Object.assign({ roughness: 0.93 }, o))); if (k === 'adoquin') return piso(matTex(texAdoquin(), oscuro() ? '#5a6470' : '#ffffff', [1 / (ADOQ_M * escala), 1 / (ADOQ_M * escala)], Object.assign({ roughness: 0.95 }, o))); const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto';
   const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return piso(parejo ? calmo(b, 0.3) : b); }
 // con lluvia los pisos brillan: cada material de piso recuerda su aspereza de seco
 export const AMB = { mojado: false };
