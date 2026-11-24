@@ -121,8 +121,8 @@ a { color: inherit; }
 .fold { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--muted); transition: transform var(--t3) var(--mo); }
 kbd { font: 600 11.5px var(--text); padding: 3px 7px; border-radius: 8px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .menu { position: relative; flex: 1 0 auto; display: flex; flex-direction: column; gap: 2px; }
-.menu-label { margin: 14px 0 4px; padding: 12px 12px 0; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
-.nav { position: relative; z-index: 1; display: flex; align-items: center; gap: 13px; min-height: 42px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--fg); text-decoration: none; font-weight: 500; white-space: nowrap; transition: color var(--t2), transform var(--t1) var(--mo); }
+.menu-label { margin: 8px 0 2px; padding: 10px 12px 0; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.nav { position: relative; z-index: 1; display: flex; align-items: center; gap: 13px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--fg); text-decoration: none; font-weight: 500; white-space: nowrap; transition: color var(--t2), transform var(--t1) var(--mo); }
 .nav:active { transform: scale(.975); }
 .nav > span:first-of-type { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
 .nav[aria-current="page"] { color: var(--accent-fg); font-weight: 600; }
@@ -553,6 +553,63 @@ button.row:hover { background: var(--surface-2); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
+/* ── Personas: tablero por tipo (como el de proyectos de Olumi) ─────────────── */
+.tools { display: flex; align-items: center; gap: 8px; }
+.people-find { gap: 0; }
+.kind-filter { padding: 4px 14px 12px; overflow-x: auto; scrollbar-width: none; }
+.kind-filter .seg { flex-wrap: nowrap; }
+.board { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .2s var(--mo), background .2s var(--mo); }
+.col.drop { background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); box-shadow: inset 0 0 0 2px var(--accent); }
+.col-head { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 2px 0 6px; }
+.col-head b { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 1.2; }
+.col-n { flex: none; min-width: 24px; padding: 2px 7px; border-radius: 8px; background: var(--surface); color: var(--muted); font: 600 12px/1.4 var(--text); text-align: center; }
+.col-body { display: flex; flex-direction: column; gap: 8px; }
+.col-empty { margin: 0; padding: 8px 6px 10px; color: var(--faint); font-size: 12.5px; line-height: 1.4; }
+.pcard { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; border: 0; border-radius: 16px; text-align: left; color: var(--fg); font: inherit;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 1px 2px rgb(16 20 28 / .05); cursor: pointer; touch-action: manipulation; transition: transform .14s var(--mo), opacity .2s; }
+.pcard[data-drag="person"] { cursor: grab; }
+.pcard:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, var(--line)), 0 4px 14px -6px rgb(16 20 28 / .2); }
+.pcard.idle { opacity: .62; }
+.pcard.fresh { animation: arrive 1.6s var(--mo); }
+.pcard.lifted { opacity: .35; }
+.pcard.ghost { position: fixed; z-index: 40; pointer-events: none; cursor: grabbing; transform: rotate(-2deg) scale(1.03); box-shadow: 0 18px 40px -12px rgb(16 20 28 / .45); }
+.pcard-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pcard-top strong { min-width: 0; font-size: 14px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+.pcard-line { color: var(--muted); font-size: 12.5px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pcard-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.pcard-foot small { color: var(--faint); font-size: 11.5px; }
+@media (max-width: 1180px) { .board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 899px) { .board { grid-template-columns: 1fr; } .col-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); } }
+
+/* La ficha: el tipo arriba, las zonas como fichas, las puertas sueltas plegadas */
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.kind-opt { position: relative; }
+.kind-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.kind-opt span { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--fg); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s var(--mo), color .2s var(--mo); }
+.kind-opt input:checked + span { background: var(--accent); color: var(--accent-fg); box-shadow: none; }
+.kind-opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notice { margin: 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); font-size: 14px; }
+.access { display: grid; gap: 10px; }
+.access legend { margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.zone-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.zone-chip { position: relative; }
+.zone-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.zone-chip span { display: grid; gap: 2px; min-height: 52px; padding: 8px 12px; border-radius: 16px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+.zone-chip b { font-size: 14px; } .zone-chip small { color: var(--muted); font-size: 12px; }
+.zone-chip input:checked + span { background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.zone-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+details.loose, details.creds { border-radius: 16px; background: color-mix(in srgb, var(--surface-2) 60%, transparent); padding: 0 12px; }
+details.loose > summary, details.creds > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-height: 44px; padding: 12px 0; font-weight: 600; cursor: pointer; list-style: none; }
+details.loose > summary small { color: var(--muted); font-weight: 400; font-size: 13px; }
+details.loose[open], details.creds[open] { padding-bottom: 12px; }
+details.creds[open] { display: grid; gap: 14px; }
+#kind-fields { display: contents; }
+.pcard .chip { white-space: normal; text-align: left; }
+
 </style>
 </head>
 <body>
@@ -658,7 +715,7 @@ const hora = t => t ? new Date(t).toLocaleTimeString('es-UY', { hour: '2-digit',
 /** Una planilla para Excel o Numbers: separada por punto y coma y con la marca que les hace leer bien los tildes. */
 const filas = lista => lista.map(f => f.map(celda).join(';') + '\r\n').join('');
 const planilla = (titulos, lista) => '\ufeff' + titulos.join(';') + '\r\n' + filas(lista);
-const PLANILLA_EVENTOS = ['Fecha', 'Hora', 'Tipo', 'Persona', 'Tarjeta', 'Método', 'Puerta', 'Área', 'Detalle', 'Operador'];
+const PLANILLA_EVENTOS = ['Fecha', 'Hora', 'Tipo', 'Persona', 'Tarjeta', 'Método', 'Puerta', 'Lugar', 'Detalle', 'Operador'];
 const filaEvento = e => {
   const d = new Date(e.ts);
   return [d.toLocaleDateString('es-UY'), d.toLocaleTimeString('es-UY', { hour12: false }), KIND[e.kind] ?? e.kind, e.person_name, e.card, e.method, e.door_name, e.site_name, e.detail, e.actor];
@@ -673,9 +730,11 @@ const filasHorario = ({ days, people }) => {
       (d.minutes / 60).toFixed(2).replace('.', ','), d.late || '', d.early || '', ESTADO[d.state] ?? d.state];
   });
 };
-/** La lista para una evacuación: quién está adentro, dónde y desde cuándo. sitios: Map id de área → nombre. */
-const PLANILLA_ADENTRO = ['Persona', 'Legajo', 'Documento', 'Área', 'Entró', 'Por', 'Tipo', 'Visita a', 'Empleador'];
-const filasAdentro = (lista, sitios) => lista.map(p => [p.name, p.ref, p.document, sitios.get(p.site_id) ?? '', hora(p.since), p.door, p.kind === 'visit' ? 'Visita' : 'Personal', p.host, p.company]);
+/** La lista para una evacuación: quién está adentro, dónde y desde cuándo. sitios: Map id de lugar → nombre. */
+/** Cómo se llama cada tipo de persona (el mismo texto en la app, en las planillas y en la beta). */
+const TIPOS = { staff: 'Personal fijo', temp: 'Temporal', contractor: 'Contratista', supplier_monthly: 'Proveedor mensual', supplier_casual: 'Proveedor casual', visit: 'Invitado' };
+const PLANILLA_ADENTRO = ['Persona', 'Legajo', 'Documento', 'Lugar', 'Entró', 'Por', 'Tipo', 'Visita a', 'Empresa'];
+const filasAdentro = (lista, sitios) => lista.map(p => [p.name, p.ref, p.document, sitios.get(p.site_id) ?? '', hora(p.since), p.door, TIPOS[p.kind] ?? 'Personal fijo', p.host, p.company]);
 
 // Utilidades de la interfaz.
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -720,6 +779,9 @@ const fromLocalInput = text => text ? new Date(text).getTime() : null;
 const METHOD = { card: 'tarjeta', face: 'rostro', fingerprint: 'huella', pin: 'clave', qr: 'código QR', remote: 'remoto', button: 'botón', mixed: 'doble factor' };
 const ROLE = { admin: 'Administrador', operator: 'Operador', viewer: 'Solo lectura' };
 const ALERT_KINDS = ['door_forced', 'door_held', 'duress', 'tamper', 'alarm'];
+/** Los tipos de persona, en el orden de las columnas del tablero (los nombres salen de TIPOS, el mismo archivo que el servidor). */
+const KINDS = ['staff', 'temp', 'contractor', 'supplier_monthly', 'supplier_casual', 'visit'];
+const CLOCKED = ['staff', 'temp', 'contractor'];
 const tone = kind => ['access_granted', 'remote_open', 'exit_button'].includes(kind) ? 'pass'
   : kind === 'access_denied' ? 'deny' : ALERT_KINDS.includes(kind) || kind === 'emergency' ? 'alert' : 'quiet';
 
@@ -734,6 +796,7 @@ const ICONS = {
   integraciones: '<path d="M9 15l6-6M10.5 6.5l1-1a4.2 4.2 0 0 1 6 6l-1 1M13.5 17.5l-1 1a4.2 4.2 0 0 1-6-6l1-1"/>',
   ajustes: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  instaladora: '<path d="M14.5 6.5a4 4 0 0 0-5.3 5.1L4 16.8V20h3.2l5.2-5.2a4 4 0 0 0 5.1-5.3l-2.5 2.5-2.3-.5-.5-2.3z"/>',
   close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -770,7 +833,7 @@ const GLYPH = raw('<svg class="glyph" viewBox="0 0 64 64" aria-hidden="true"><pa
 /** base: la dirección del servidor cuando la página no la sirve él mismo (la app del teléfono). */
 function liveApi(base = '') {
   let token = saved.get('kliva.token'), view = {};
-  // Qué empresa y qué área se está mirando: el servidor recorta todo a eso (y nunca deja ver más de lo que el usuario puede).
+  // Qué empresa y qué lugar se está mirando: el servidor recorta todo a eso (y nunca deja ver más de lo que el usuario puede).
   const auth = () => ({ ...(token && { Authorization: `Bearer ${token}` }), ...(view.empresa && { 'X-Kliva-Empresa': view.empresa }), ...(view.area && { 'X-Kliva-Area': view.area }) });
 
   async function call(method, path, body) {
@@ -859,7 +922,7 @@ function demoApi() {
   const db = {
     org: 'Instalaciones Demo',
     license: { valid: true, plan: 'Profesional', customer: 'Instalaciones Demo', maxDevices: 25, expires: now() + 300 * 24 * H },
-    // Empresas inventadas. Cada una dividida en áreas: el laboratorio tiene su planta y su centro logístico.
+    // Empresas inventadas. Cada una dividida en lugares: el laboratorio tiene su planta y su centro logístico.
     companies: [
       { id: 'c1', name: 'Laboratorio Andino', legal_name: 'Laboratorio Andino S.A.', tax_id: '210000000017', address: 'Ruta 5 km 28, Canelones', phone: '2000 0101',
         email: 'administracion@andino.demo.uy', contact: 'Recursos humanos', notes: '', active: 1, created_at: now() - 90 * 24 * H },
@@ -937,12 +1000,15 @@ function demoApi() {
       ['Silvana Correa', '', ['5551190'], true, '', [4]], ['Tomás Rivero', '', ['5551215'], false, '2580', [5]], ['Valeria Duarte', '', ['5551243'], true, '', [5]]]),
   ].forEach(([name, company, cards, hasFace, pin, levels], i) => {
     const first = levels[0], frigo = first >= 4;
-    db.people.push({
+    // de qué tipo es cada uno, según la empresa de la que viene (todo inventado)
+    const [kind, purpose] = { 'Mantenimiento Industrial': ['contractor', 'Mantenimiento de planta'], 'Seguridad Atlántica': ['contractor', 'Vigilancia'],
+      'Transporte del Este': ['supplier_monthly', 'Retiro de mercadería'], 'Faena Oriental': ['temp', 'Zafra de faena'] }[company] ?? ['staff', ''];
+    db.people.push({ kind, purpose,
       id: newId('h'), ref: String(1001 + i), name, company, document: '', cards, pin, face: '', hasFace, active: 1,
       valid_from: null, valid_to: null, levels: levels.map(n => db.levels[n].id), created_at: now() - 40 * 24 * H, updated_at: now() - 2 * 24 * H,
-      // de qué empresa es, en qué área trabaja y su turno; el de seguridad es contratista y no tiene área fija ni turno
+      // de qué empresa es, en qué lugar trabaja y su turno; el de seguridad es contratista y no tiene lugar fijo ni turno
       company_id: frigo ? 'c2' : 'c1', site_id: frigo ? 's3' : levels.length > 1 ? null : first < 2 ? 's1' : 's2',
-      schedule_id: levels.length > 1 ? null : ['sch1', 'sch1', 'sch2', 'sch3', 'sch4', 'sch5'][first],
+      schedule_id: levels.length > 1 || !CLOCKED.includes(kind) ? null : ['sch1', 'sch1', 'sch2', 'sch3', 'sch4', 'sch5'][first],
     });
   });
 
@@ -953,10 +1019,11 @@ function demoApi() {
     const d = device(p.device_id);
     return { ...p, device_name: d.name, brand: d.brand, device_status: d.status, site_id: d.site_id, site_name: site(d.site_id).name };
   };
-  const doorsOf = person => new Set(person.levels.flatMap(id => db.levels.find(l => l.id === id)?.doors ?? []));
+  // las puertas de una persona: las de sus zonas más las que se le dieron una por una (igual que el servidor)
+  const doorsOf = person => new Set([...person.levels.flatMap(id => db.levels.find(l => l.id === id)?.doors ?? []), ...(person.doors ?? [])]);
   const syncRows = ref => db.devices.map(d => db.sync.get(`${ref}|${d.id}`)).filter(Boolean);
 
-  // Qué empresa y qué área se mira (lo manda la app en cada pedido): igual que store.scope() en el servidor.
+  // Qué empresa y qué lugar se mira (lo manda la app en cada pedido): igual que store.scope() en el servidor.
   let view = {};
   function scope() {
     const company = me.company_id ?? (db.companies.some(c => c.id === view.empresa) ? view.empresa : null);
@@ -972,7 +1039,7 @@ function demoApi() {
     if (!db.companies.some(c => c.id === id)) throw fail(400, 'Elegí la empresa');
     return id;
   };
-  /** Lo que llega en vivo también se recorta: cada uno ve lo de su empresa y su área. */
+  /** Lo que llega en vivo también se recorta: cada uno ve lo de su empresa y su lugar. */
   function visible(type, data) {
     const sc = scope();
     if (type === 'event') return !data.site_id || sc.sites.has(data.site_id);
@@ -1000,6 +1067,11 @@ function demoApi() {
     [['Marcos Ferreira', 'Servicios Técnicos del Sur', 'Federico Viera', 1], ['Lorena Acuña', 'Auditoría externa', 'Mariana Cabrera', 0]].forEach(([name, company, host, active], i) => db.people.push({
       id: newId('h'), ref: String(1901 + i), name, company, document: '', cards: [String(5559001 + i)], pin: '', face: '', hasFace: false, active, kind: 'visit', host,
       valid_from: null, valid_to: active ? until : now() - 40 * 60_000, levels: [db.levels[2].id], created_at: now() - 3 * H, updated_at: now() - H, company_id: 'c1', site_id: 's1', schedule_id: null }));
+    // un proveedor casual que entra solo por una puerta, hasta fin de mes (acceso puerta por puerta, sin zona)
+    const fin = (() => { const d = new Date(now()); d.setMonth(d.getMonth() + 1, 0); d.setHours(20, 0, 0, 0); return d.getTime(); })();
+    db.people.push({ id: newId('h'), ref: '1950', name: 'Andrés Morales', company: 'Gasera Oriental', purpose: 'Recarga de gas de los autoelevadores', document: '', cards: ['5559050'],
+      pin: '', face: '', hasFace: false, active: 1, kind: 'supplier_casual', host: '', valid_from: null, valid_to: fin, levels: [], doors: [db.levels[3].doors[0]],
+      created_at: now() - 5 * 24 * H, updated_at: now() - 24 * H, company_id: 'c1', site_id: 's2', schedule_id: null });
   }
   db.people.forEach(p => plan(p, true));
 
@@ -1076,7 +1148,7 @@ function demoApi() {
 
   let ticker = null, ticks = 0;
   function expireVisits() {
-    const due = db.people.filter(p => p.kind === 'visit' && p.active && p.valid_to && p.valid_to < now());
+    const due = db.people.filter(p => p.active && p.valid_to && p.valid_to < now());   // vence cualquiera con vigencia, no solo las visitas
     for (const p of due) { p.active = 0; p.updated_at = now(); plan(p); }
     if (due.length) emit('sync', {});
   }
@@ -1116,21 +1188,24 @@ function demoApi() {
   const listed = p => ({
     id: p.id, ref: p.ref, name: p.name, company: p.company, document: p.document, active: p.active, valid_from: p.valid_from, valid_to: p.valid_to,
     updated_at: p.updated_at, has_face: Number(p.hasFace), has_pin: Number(Boolean(p.pin)), cards: p.cards, levels: p.levels,
-    company_id: p.company_id, site_id: p.site_id, schedule_id: p.schedule_id, kind: p.kind ?? 'staff', host: p.host ?? '', device_face: Number(Boolean(p.device_face)),
+    company_id: p.company_id, site_id: p.site_id, schedule_id: p.schedule_id, kind: p.kind ?? 'staff', host: p.host ?? '', purpose: p.purpose ?? '', doors: p.doors ?? [],
+    device_face: Number(Boolean(p.device_face)),
     sync: syncRows(p.ref).reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] ?? 0) + 1 }), {}),
   });
 
   const newPerson = () => ({ id: newId('h'), ref: String(1001 + db.people.length + serial), name: '', company: '', document: '', cards: [], pin: '', face: '', hasFace: false,
-    active: 1, valid_from: null, valid_to: null, levels: [], created_at: now(), company_id: null, site_id: null, schedule_id: null, host: '' });
+    active: 1, valid_from: null, valid_to: null, levels: [], doors: [], created_at: now(), company_id: null, site_id: null, schedule_id: null, host: '', purpose: '' });
   function savePerson(person, input) {
     const company = person.company_id || companyFor(input.company_id);
     const area = (input.site_id === undefined ? person.site_id : input.site_id) || null, shift = (input.schedule_id === undefined ? person.schedule_id : input.schedule_id) || null;
-    if (area && site(area)?.company_id !== company) throw fail(400, 'El área elegida es de otra empresa');
+    if (area && site(area)?.company_id !== company) throw fail(400, 'El lugar elegido es de otra empresa');
     if (shift && db.schedules.find(x => x.id === shift)?.company_id !== company) throw fail(400, 'Ese turno no es de la empresa de la persona');
-    const kind = person.kind ?? (input.kind === 'visit' ? 'visit' : 'staff');
-    input = { ...input, kind, company_id: company, site_id: area, schedule_id: kind === 'visit' ? null : shift };
+    const kind = KINDS.includes(input.kind) ? input.kind : person.kind ?? 'staff';
+    input = { ...input, kind, company_id: company, site_id: area, schedule_id: CLOCKED.includes(kind) ? shift : null };
     const next = { ...person, ...input };
     if (kind === 'visit' && !next.valid_to) throw fail(400, 'Indicá hasta cuándo vale la visita');
+    if (kind === 'supplier_casual' && !next.valid_to) throw fail(400, 'Indicá hasta cuándo puede entrar el proveedor');
+    for (const d of next.doors ?? []) if (site(db.doors.find(x => x.id === d) && doorSite(d))?.company_id !== company) throw fail(400, 'Alguna de las puertas ya no existe o es de otra empresa');
     next.name = String(next.name ?? '').trim();
     next.cards = [...new Set((next.cards ?? []).map(c => String(c).trim()).filter(Boolean))];
     if (!next.name) throw fail(400, 'Falta el nombre');
@@ -1158,7 +1233,7 @@ function demoApi() {
   on('POST', '/api/logout', () => {});
   on('GET', '/api/me', () => ({ user: me, org: db.org, engine: 'sqlite', license: db.license, security: db.security, companies: companies() }));
 
-  // Empresas: cada una con sus áreas, cuántas personas y cuántos usuarios tiene.
+  // Empresas: cada una con sus lugares, cuántas personas y cuántos usuarios tiene.
   const companies = () => db.companies.filter(c => !me.company_id || c.id === me.company_id).map(c => ({ ...c,
     people: db.people.filter(p => p.company_id === c.id && p.active).length, users: db.users.filter(u => u.company_id === c.id).length,
     areas: db.sites.filter(x => x.company_id === c.id).map(x => ({ id: x.id, name: x.name, address: x.address, devices: db.devices.filter(d => d.site_id === x.id).length })) }));
@@ -1173,7 +1248,7 @@ function demoApi() {
   on('POST', '/api/companies', ({ body }) => { const c = saveCompany({ id: newId('c'), active: 1, created_at: now() }, body); db.companies.push(c); log('Alta de empresa', c.name); return { id: c.id }; });
   on('PATCH', '/api/companies/:id', ({ params, body }) => { const c = saveCompany(db.companies.find(x => x.id === params.id), body); log('Cambio en empresa', c.name); return { id: c.id }; });
   on('DELETE', '/api/companies/:id', ({ params }) => {
-    if (db.sites.some(x => x.company_id === params.id) || db.people.some(p => p.company_id === params.id)) throw fail(400, 'La empresa todavía tiene áreas o personas. Quitalas antes de eliminarla.');
+    if (db.sites.some(x => x.company_id === params.id) || db.people.some(p => p.company_id === params.id)) throw fail(400, 'La empresa todavía tiene lugares o personas. Quitalas antes de eliminarla.');
     db.companies = db.companies.filter(c => c.id !== params.id);
     db.users = db.users.filter(u => u.company_id !== params.id);
   });
@@ -1181,21 +1256,21 @@ function demoApi() {
 
   on('GET', '/api/sites', () => { const sc = scope(); return db.sites.filter(x => sc.sites.has(x.id)).map(s => ({ ...s, devices: db.devices.filter(d => d.site_id === s.id).length })); });
   on('POST', '/api/sites', ({ body }) => {
-    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del área');
+    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del lugar');
     const s = { id: newId('s'), company_id: companyFor(body.company_id), name: body.name.trim(), address: body.address ?? '', mode: 'normal', mode_at: 0, mode_by: '' };
-    log('Alta de área', s.name);
+    log('Alta de lugar', s.name);
     db.sites.push(s);
     return s;
   });
   on('PATCH', '/api/sites/:id', ({ params, body }) => { Object.assign(site(params.id), { name: body.name, address: body.address ?? '' }); });
-  // El plano de cada área: el de ejemplo hasta que se edita; lo editado queda guardado en este navegador.
+  // El plano de cada lugar: el de ejemplo hasta que se edita; lo editado queda guardado en este navegador.
   const planos = {}, doorByName = name => db.doors.find(p => p.name === name)?.id;
   const planoDe = id => {
     if (id in planos) return planos[id];
     let p = null; try { p = JSON.parse(saved.get(`kliva.demo.plano.${id}`) || 'null'); } catch { p = null; }
     return planos[id] = p || (site(id) ? planoEjemplo(site(id), doorByName) : null);
   };
-  // Emergencia en un área y quién está adentro: como en el servidor (store.setSiteMode, store.presence).
+  // Emergencia en un lugar y quién está adentro: como en el servidor (store.setSiteMode, store.presence).
   const MODES = { open: 'Evacuación: puertas abiertas', locked: 'Bloqueo: puertas cerradas', normal: 'Vuelta a la normalidad' };
   on('POST', '/api/sites/:id/mode', ({ params, body }) => {
     const s = site(params.id), mode = body.mode;
@@ -1225,7 +1300,7 @@ function demoApi() {
       .filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }
   on('GET', '/api/presence', presence);
-  on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Esa área no existe'); return { plano: planoDe(params.id), updated_at: null }; });
+  on('GET', '/api/sites/:id/plano', ({ params }) => { if (!site(params.id)) throw fail(400, 'Ese lugar no existe'); return { plano: planoDe(params.id), updated_at: null }; });
   on('PUT', '/api/sites/:id/plano', ({ params, body }) => {
     if (me.role !== 'admin') throw fail(403, 'Tu usuario no tiene permiso para hacer esto');
     planos[params.id] = body.plano; if (!cine) saved.set(`kliva.demo.plano.${params.id}`, JSON.stringify(body.plano));
@@ -1233,7 +1308,7 @@ function demoApi() {
   });
   on('GET', '/api/places', () => Object.fromEntries(db.sites.filter(x => scope().sites.has(x.id)).flatMap(s => (planoDe(s.id)?.puertas ?? []).map(x => [x.puerta, x.lugar]))));
   on('DELETE', '/api/sites/:id', ({ params }) => {
-    if (db.devices.some(d => d.site_id === params.id)) throw fail(400, 'El área todavía tiene equipos. Quitalos o movelos antes de borrarla.');
+    if (db.devices.some(d => d.site_id === params.id)) throw fail(400, 'El lugar todavía tiene equipos. Quitalos o movelos antes de borrarla.');
     db.people.forEach(p => { if (p.site_id === params.id) p.site_id = null; });
     db.sites = db.sites.filter(s => s.id !== params.id);
   });
@@ -1251,7 +1326,7 @@ function demoApi() {
   on('POST', '/api/devices', ({ body }) => {
     const b = brandOf(body.brand);
     if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del equipo');
-    if (!site(body.site_id)) throw fail(400, 'Elegí el área donde está el equipo');
+    if (!site(body.site_id)) throw fail(400, 'Elegí el lugar donde está el equipo');
     const d = addDevice(body.site_id, body.brand, body.name.trim(), body.host, b.model, 'demostración', Array.from({ length: b.doors }, (_, i) => `Puerta ${i + 1}`));
     d.port = Number(body.port) || b.defaultPort;
     log('Alta de equipo', `${d.name}, ${d.host}`);
@@ -1293,7 +1368,7 @@ function demoApi() {
   on('GET', '/api/people', ({ query }) => {
     const q = fold(query.get('q') ?? '');
     const sc = scope();
-    return db.people.filter(p => personIn(sc, p) && (fold([p.name, p.company, p.document, ...p.cards].join(' ')).includes(q) || p.ref === q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
+    return db.people.filter(p => personIn(sc, p) && (fold([p.name, p.company, p.document, p.host, p.purpose, ...p.cards].join(' ')).includes(q) || p.ref === q)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(listed);
   });
   on('POST', '/api/people/import', ({ body }) => {
     const rows = body.rows ?? [];
@@ -1302,9 +1377,9 @@ function demoApi() {
     const find = (list, text, what) => { const k = fold(String(text ?? '').trim()); if (!k) return null; const hit = list.find(x => x.company_id === company && fold(x.name) === k); if (!hit) throw fail(400, `No existe ${what} "${String(text).trim()}"`); return hit.id; };
     rows.forEach((r, i) => {
       try {
-        const level = find(db.levels, r.level, 'el nivel'), p = newPerson();
+        const level = find(db.levels, r.level, 'la zona'), p = newPerson();
         savePerson(p, { name: r.name, document: r.document ?? '', company: r.employer ?? '', company_id: company, cards: String(r.cards ?? '').split(/[\s,/|]+/).filter(Boolean),
-          site_id: find(db.sites, r.area, 'el área'), schedule_id: find(db.schedules, r.schedule, 'el turno'), levels: level ? [level] : [] });
+          site_id: find(db.sites, r.area, 'el lugar'), schedule_id: find(db.schedules, r.schedule, 'el turno'), levels: level ? [level] : [] });
         db.people.push(p);
         out.added++;
       } catch (e) { if (!e.status) throw e; out.errors.push({ row: i + 1, name: String(r.name ?? '').trim(), why: e.message }); }
@@ -1343,7 +1418,7 @@ function demoApi() {
   on('GET', '/api/people/:id', ({ params }) => {
     const p = db.people.find(x => x.id === params.id);
     if (!p) throw fail(404, 'Esa persona ya no existe');
-    return { ...p, kind: p.kind ?? 'staff', host: p.host ?? '', device_face: Number(Boolean(p.device_face)), has_face: Number(p.hasFace), sync: syncRows(p.ref) };
+    return { ...p, kind: p.kind ?? 'staff', host: p.host ?? '', purpose: p.purpose ?? '', doors: p.doors ?? [], device_face: Number(Boolean(p.device_face)), has_face: Number(p.hasFace), sync: syncRows(p.ref) };
   });
   on('POST', '/api/people', ({ body }) => {
     const p = newPerson();
@@ -1362,7 +1437,7 @@ function demoApi() {
 
   on('GET', '/api/levels', () => { const sc = scope(); return db.levels.filter(l => !sc.company || l.company_id === sc.company).map(l => ({ ...l, members: db.people.filter(p => p.levels.includes(l.id)).length })); });
   const saveLevel = (level, body) => {
-    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre del nivel');
+    if (!String(body.name ?? '').trim()) throw fail(400, 'Falta el nombre de la zona');
     Object.assign(level, { name: body.name.trim(), doors: body.doors ?? [] });
     db.people.filter(p => p.levels.includes(level.id)).forEach(p => plan(p));
   };
@@ -1423,7 +1498,7 @@ function demoApi() {
     const sc = scope(), monday = new Date(now()); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
     const from = Number(query.get('from')) || monday.getTime(), to = Math.min(Number(query.get('to')) || now() + 1, now() + 1);
     if (to - from > 93 * 24 * H) throw fail(400, 'El período máximo es de tres meses');
-    const people = db.people.filter(p => p.active && (p.kind ?? 'staff') === 'staff' && personIn(sc, p)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => ({ ...p }));
+    const people = db.people.filter(p => p.active && CLOCKED.includes(p.kind ?? 'staff') && personIn(sc, p)).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => ({ ...p }));
     const clocks = new Set(db.doors.filter(p => p.clock).map(p => p.id)), passes = new Map(people.map(p => [p.id, []]));
     for (const e of db.events) if (e.kind === 'access_granted' && clocks.has(e.door_id) && passes.has(e.person_id) && e.ts >= from - 12 * H && e.ts < to + 18 * H) passes.get(e.person_id).push(e.ts);
     passes.forEach(list => list.sort((a, b) => a - b));
@@ -1678,7 +1753,7 @@ function qrMatrix(text) {
   }));
   const bit = (value, i) => (value >>> i) & 1;
   const drawFormat = mask => {
-    let rem = mask; // nivel M = 00
+    let rem = mask; // zona M = 00
     for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
     const f = (mask << 10 | rem) ^ 0x5412;
     for (let i = 0; i <= 5; i++) set(8, i, bit(f, i));
@@ -1850,7 +1925,7 @@ const S = {
   overview: null, sites: [], devices: [], doors: [], levels: [], people: [], feed: [], events: [], notices: [],
   view: 'panel', peopleQ: '', eventGroup: 'main', settingsTab: 'empresa', lastPass: {}, doorAlert: {}, linkDown: false, draftFace: undefined, fresh: null,
   places: {}, planoSite: null, planoFocus: null, motorOk: undefined,
-  presence: [], holidays: [], peopleKind: 'staff', modeFailed: null, replay: null, importRows: null,
+  presence: [], holidays: [], peopleType: 'all', peopleView: saved.get('kliva.peopleView') === 'list' ? 'list' : 'board', modeFailed: null, replay: null, importRows: null,
   companies: [], vista: { empresa: '', area: '' }, companyOpen: null, users: null, schedules: [], attendance: null, horarioPeriod: 'semana',
 };
 const root = document.documentElement, hostTheme = root.dataset.theme;
@@ -1935,7 +2010,7 @@ function values(form) {
 async function submit(form) {
   const button = $('button[type="submit"]', form), error = $('.form-error', form);
   if (error) error.textContent = '';
-  // campos que no son de los del navegador (como el área): avisan si quedaron vacíos
+  // campos que no son de los del navegador (como el lugar): avisan si quedaron vacíos
   const missing = $$('input[type="hidden"][data-required]', form).find(i => !i.value);
   if (missing) { if (error) error.textContent = missing.dataset.required; else toast(missing.dataset.required, 'deny'); missing.closest('[data-picker]')?.querySelector('.picker-btn')?.focus(); return; }
   if (button) button.disabled = true;
@@ -2000,7 +2075,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => look
 // ── Puertas ──────────────────────────────────────────────────────────────────
 function doorLook(d) {
   const off = d.device_status !== 'online', alert = !off && S.doorAlert[d.id], last = S.lastPass[d.id];
-  const mode = !off && S.sites.find(s => s.id === d.site_id)?.mode;   // el área está en emergencia: manda sobre lo demás
+  const mode = !off && S.sites.find(s => s.id === d.site_id)?.mode;   // el lugar está en emergencia: manda sobre lo demás
   if (mode === 'open') return { state: 'open', alert: false, sub: 'Abierta por evacuación' };
   if (mode === 'locked') return { state: 'closed', alert: false, sub: 'Bloqueada' };
   const sub = off ? 'Sin conexión' : alert ? KIND[alert]
@@ -2136,7 +2211,7 @@ const palette = {
       list.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0));
       groups.push([label, list.slice(0, max)]);
     };
-    const screens = () => add(q ? 'Pantallas' : 'Ir a', NAV.filter(n => n.id && hit(n.label)).map(n => ({ icon: n.id, title: n.label, run: () => { location.hash = n.id; } })), q ? 4 : 9);
+    const screens = () => add(q ? 'Pantallas' : 'Ir a', navItems().filter(n => n.id && hit(n.label)).map(n => ({ icon: n.id, title: n.label, run: () => { location.hash = n.id; } })), q ? 4 : 9);
     if (all && !q) screens();
     if (all && q) {
       const staff = [], visits = [];
@@ -2154,10 +2229,10 @@ const palette = {
       add('Equipos', S.devices.filter(d => hit(d.name, d.brand_label, d.host, d.model, d.serial)).map(d => ({ icon: 'equipos', title: d.name, sub: [d.brand_label, d.site_name, d.host].filter(Boolean).join(', '), exact: same(d.host, d.serial),
         run: () => { location.hash = 'equipos'; if (isAdmin()) actions['device-edit']({ dataset: { id: d.id } }); } })));
       if (isGlobal() && S.companies.length > 1) add('Empresas', S.companies.filter(c => hit(c.name, c.legal_name, c.tax_id, ...c.areas.map(a => a.name))).map(c => ({ icon: 'empresa', title: c.name, exact: same(c.tax_id),
-        sub: c.areas.map(a => a.name).join(', ') || 'Sin áreas', run: () => { location.hash = 'panel'; setVista({ empresa: c.id, area: '' }); } })));
+        sub: c.areas.map(a => a.name).join(', ') || 'Sin lugares', run: () => { location.hash = 'panel'; setVista({ empresa: c.id, area: '' }); } })));
       screens();
       // como en Olumi: la búsqueda también se puede dejar puesta en la lista de personas
-      groups.push(['', [{ icon: 'search', title: `Buscar «${raw}» en Personas`, run: () => { S.peopleQ = raw; if (S.view === 'personas') { const f = $('#people-q'); if (f) f.value = raw; load('people').then(() => { setHTML($('#people-list'), peopleRows()); drawChrome(); }); } else location.hash = 'personas'; } }]]);
+      groups.push(['', [{ icon: 'search', title: `Buscar «${raw}» en Personas`, run: () => { S.peopleQ = raw; if (S.view === 'personas') { const f = $('#people-q'); if (f) f.value = raw; load('people').then(() => { drawPeople(); drawChrome(); }); } else location.hash = 'personas'; } }]]);
     }
     this.items = groups.flatMap(([, list]) => list);
     this.index = 0;
@@ -2184,8 +2259,8 @@ const head = (title, lede, extra = '') => html`<header class="view-head plain"><
 /** La acción principal de cada pantalla (va en la barra de arriba, con el color del punto). */
 const PRIMARY = {
   panel: () => canOperate() && ['Abrir una puerta', 'palette-doors', 'panel'],
-  personas: () => canOperate() && (S.peopleKind === 'visit' ? ['Nueva visita', 'visit-new', 'plus'] : ['Nueva persona', 'person-new', 'plus']),
-  niveles: () => isAdmin() && ['Nuevo nivel', 'level-new', 'plus'],
+  personas: () => canOperate() && [S.peopleType === 'all' ? 'Agregar persona' : `Agregar: ${TIPOS[S.peopleType].toLowerCase()}`, 'person-new', 'plus'],
+  niveles: () => isAdmin() && ['Nueva zona', 'level-new', 'plus'],
   equipos: () => isAdmin() && ['Agregar equipo', 'device-new', 'plus'],
   eventos: () => ['Descargar la planilla de eventos', 'events-download', 'download'],
   horario: () => ['Descargar la planilla de horario', 'horario-download', 'download'],
@@ -2194,11 +2269,11 @@ const PRIMARY = {
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 views.panel = () => html`
-  <header class="view-head"><div>${isGlobal() && viewCompany() && S.companies.length > 1 ? html`<button class="back" type="button" data-action="client-open" data-id="">${icon('left')}<span>Todas las empresas</span></button>` : ''}${canSwitch() ? html`<h1><button class="title-pick" type="button" data-action="scope" aria-label="Elegir empresa y área">${scopeTitle()}${icon('updown')}</button></h1>` : html`<h1>${scopeTitle()}</h1>`}
+  <header class="view-head"><div>${isGlobal() && viewCompany() && S.companies.length > 1 ? html`<button class="back" type="button" data-action="client-open" data-id="">${icon('left')}<span>Todas las empresas</span></button>` : ''}${canSwitch() ? html`<h1><button class="title-pick" type="button" data-action="scope" aria-label="Elegir empresa y lugar">${scopeTitle()}${icon('updown')}</button></h1>` : html`<h1>${scopeTitle()}</h1>`}
     <p class="lede" id="status">${statusText()}</p></div>${demoNote()}</header>
   ${areaBar()}
   <div class="panel-grid">
-    <div class="stack" style="gap:20px">${clientMode() ? S.companies.map(clientCard) : S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">${viewCompany() ? `${viewCompany().name} todavía no tiene áreas. Se agregan en Ajustes, en la ficha de la empresa.` : 'Todavía no hay empresas. Se agregan en Ajustes, con sus áreas y sus usuarios.'}</p></section>`}</div>
+    <div class="stack" style="gap:20px">${clientMode() ? S.companies.map(clientCard) : S.sites.length ? S.sites.map(siteCard) : html`<section class="card"><p class="empty">${viewCompany() ? `${viewCompany().name} todavía no tiene lugares. Se agregan en Ajustes, en la ficha de la empresa.` : 'Todavía no hay empresas. Se agregan en Ajustes, con sus lugares y sus usuarios.'}</p></section>`}</div>
     <section class="card flush" aria-label="Movimientos en vivo">
       <div class="card-head"><h2>Ahora</h2></div>${hoursChart(S.overview.hours)}
       <ol class="events" id="feed">${S.feed.filter(e => inGroup(e, 'main')).slice(0, 40).map(e => eventRow(e))}</ol>
@@ -2207,7 +2282,7 @@ views.panel = () => html`
   </div>`;
 
 // Mirando todas las empresas, la instaladora ve una ficha por cliente: cómo está y qué le pasa, sin entrar.
-// Tocarla lleva a ese cliente, con sus áreas y sus puertas.
+// Tocarla lleva a ese cliente, con sus lugares y sus puertas.
 const clientMode = () => isGlobal() && !viewCompany() && S.companies.length > 1;
 function clientHealth(c) {
   const areas = new Set(c.areas.map(a => a.id));
@@ -2234,7 +2309,7 @@ function clientInner(c) {
   const h = clientHealth(c);
   const line = clientLine(h);
   return html`<span class="card-head"><span class="client-name"><span class="health" data-tone="${h.tone}" aria-hidden="true"></span><b>${c.name}</b>
-      <small>${[c.areas.map(a => a.name).join(', ') || 'Sin áreas', count(h.doors.length, 'puerta', 'puertas'), count(c.people, 'persona', 'personas')].join(', ')}</small></span>${icon('right')}</span>
+      <small>${[c.areas.map(a => a.name).join(', ') || 'Sin lugares', count(h.doors.length, 'puerta', 'puertas'), count(c.people, 'persona', 'personas')].join(', ')}</small></span>${icon('right')}</span>
     <span class="client-line">${line}</span>`;
 }
 /** Con datos en vivo, cada ficha de cliente se actualiza sola, sin redibujar el panel. */
@@ -2247,7 +2322,7 @@ function siteCard(site) {
   return html`<section class="card"><div class="card-head"><h2>${site.name}<small>${[areaSub(site), count(doors.length, 'puerta', 'puertas')].filter(Boolean).join(', ')}</small></h2>
       <div class="card-tools"><button class="btn sm" type="button" data-action="inside" data-id="${site.id}" title="Quién está adentro" aria-label="${count(inside, 'persona adentro', 'personas adentro')}">${icon('adentro')}<span>${inside}</span></button>
         ${canOperate() ? html`<button class="btn sm" type="button" data-action="emergency" data-id="${site.id}" title="Emergencia" aria-label="Emergencia en ${site.name}">${icon('alert')}</button>` : ''}</div></div>
-    ${doors.length ? html`<div class="wall">${doors.map(doorTile)}</div>` : html`<p class="empty">Esta área todavía no tiene puertas. Aparecen solas al agregar un equipo.</p>`}</section>`;
+    ${doors.length ? html`<div class="wall">${doors.map(doorTile)}</div>` : html`<p class="empty">Este lugar todavía no tiene puertas. Aparecen solas al agregar un equipo.</p>`}</section>`;
 }
 
 actions.door = async el => {
@@ -2256,7 +2331,7 @@ actions.door = async el => {
   sheet.open(d.name, html`
     ${canOperate() ? html`<button class="btn go wide" type="button" data-action="door-open" data-id="${d.id}" ${off ? raw('disabled') : ''}>Abrir puerta</button>` : ''}
     ${off ? html`<p class="hint">El equipo está sin conexión. Hasta que vuelva no se puede abrir desde acá.</p>` : ''}
-    <dl class="facts"><dt>Área</dt><dd>${d.site_name}</dd>${S.places?.[d.id] && S.places[d.id] !== d.site_name ? html`<dt>Lugar</dt><dd>${S.places[d.id]}</dd>` : ''}<dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
+    <dl class="facts"><dt>Lugar</dt><dd>${d.site_name}</dd>${S.places?.[d.id] && S.places[d.id] !== d.site_name ? html`<dt>Lugar</dt><dd>${S.places[d.id]}</dd>` : ''}<dt>Equipo</dt><dd>${d.device_name}, puerta ${d.number}</dd><dt>Estado</dt><dd>${doorLook(d).sub}</dd></dl>
     <button class="btn wide" type="button" data-action="door-plan" data-id="${d.id}">${icon('plano')}<span>Ver en el plano</span></button>
     <h3>Últimos movimientos</h3>
     ${recent.length ? html`<ol class="events">${recent.map(e => eventRow(e))}</ol>` : html`<p class="empty">Sin movimientos registrados.</p>`}
@@ -2311,66 +2386,207 @@ forms['events-csv'] = async (_form, v) => {
 };
 
 // ── Personas ─────────────────────────────────────────────────────────────────
+// Todo el listado de gente en un solo lugar, en dos vistas: el tablero (como el de proyectos de Olumi: una columna por tipo y se arrastra
+// a alguien de una a otra) y la lista con filtros. Una sola ficha para todos; lo que pide cambia según el tipo.
+const KIND_HINT = {
+  staff: 'Trabaja en la empresa. Marca horario con su turno.',
+  temp: 'Trabaja por un tiempo (zafra, contrato). Marca horario y se da de baja sola al vencer.',
+  contractor: 'Viene por otra empresa a trabajar acá (obra, mantenimiento, vigilancia). Puede marcar horario.',
+  supplier_monthly: 'Viene seguido (todos los días o todas las semanas): reparto, retiro, limpieza.',
+  supplier_casual: 'Viene de vez en cuando. Se le da acceso hasta una fecha y se da de baja solo.',
+  visit: 'Viene a ver a alguien. Vale hasta la hora que le pongas y se da de baja sola.',
+};
+const kindName = k => TIPOS[k ?? 'staff'];
+const KIND_PLURAL = { staff: 'Personal fijo', temp: 'Temporales', contractor: 'Contratistas', supplier_monthly: 'Proveedores mensuales', supplier_casual: 'Proveedores casuales', visit: 'Invitados' };
+const peopleOfKind = k => S.people.filter(p => (p.kind ?? 'staff') === k);
+
 views.personas = () => html`
-  ${head('Personas', 'Cada persona se carga una vez. Kliva la lleva a los equipos de sus puertas, sea cual sea la marca.')}
-  ${areaBar()}${seg('people-kind', PEOPLE_KINDS, S.peopleKind, 'Personal o visitas')}
-  <section class="card flush">
-    <label class="top-search" style="min-height:48px">${icon('search')}<input id="people-q" type="search" placeholder="Buscar por nombre, empresa, documento o tarjeta" value="${S.peopleQ}" autocomplete="off" aria-label="Buscar personas" style="background:none;box-shadow:none;padding:0;min-height:0"></label>
-    <ul class="rows" id="people-list">${peopleRows()}</ul></section>`;
+  ${head('Personas', 'Cada persona se carga una vez. Kliva la lleva a los equipos de las puertas por donde puede entrar, sea cual sea la marca.', peopleTools())}
+  ${areaBar()}
+  <section class="card flush people-find">
+    <label class="top-search" style="min-height:48px">${icon('search')}<input id="people-q" type="search" placeholder="Nombre, legajo, tarjeta, empresa o qué viene a hacer" value="${S.peopleQ}" autocomplete="off" aria-label="Buscar personas" style="background:none;box-shadow:none;padding:0;min-height:0"></label>
+    ${S.peopleView === 'list' ? html`<div class="kind-filter">${seg('people-type', [['all', `Todos ${S.people.length}`], ...KINDS.map(k => [k, `${KIND_PLURAL[k]} ${peopleOfKind(k).length}`])], S.peopleType, 'Tipo de persona')}</div>` : ''}
+  </section>
+  <div id="people-list">${peopleBody()}</div>`;
+const peopleBody = () => S.peopleView === 'list' ? html`<section class="card flush"><ul class="rows">${peopleRows()}</ul></section>` : peopleBoard();
+/** Redibuja solo el listado (al buscar o cuando llega algo en vivo), en la vista que esté elegida. */
+function drawPeople() { const el = $('#people-list'); if (el) setHTML(el, peopleBody()); }
+
+/** Las opciones propias de la pestaña: tablero o lista, cargar una planilla y descargar el listado. */
+function peopleTools() {
+  return html`<div class="tools">${seg('people-view', [['board', 'Tablero'], ['list', 'Lista']], S.peopleView, 'Cómo ver a las personas')}
+    ${isAdmin() ? html`<button class="round" type="button" data-action="import-open" title="Cargar varias desde una planilla" aria-label="Cargar varias desde una planilla">${icon('planilla')}</button>` : ''}</div>`;
+}
+actions['people-view'] = el => { S.peopleView = el.dataset.id; saved.set('kliva.peopleView', S.peopleView); render(); };
+actions['people-type'] = el => { S.peopleType = el.dataset.id; render(); };
+
+/** Lo que se ve de una persona debajo del nombre: de dónde viene y a qué, a quién visita, o su lugar. */
+function personLine(p) {
+  const place = areaById(p.site_id)?.name ?? (viewCompany() ? '' : companyById(p.company_id)?.name);
+  const k = p.kind ?? 'staff';
+  if (k === 'visit') return [p.host && `Visita a ${p.host}`, p.company, place].filter(Boolean).join(', ') || 'Invitado';
+  if (k === 'staff') return [place, p.company].filter(Boolean).join(', ');
+  return [p.company, p.purpose, place].filter(Boolean).join(', ');
+}
+/** El estado de la derecha: si está adentro, si venció, si ya está en sus equipos. */
+function personState(p) {
+  if (!p.active) return html`<span class="chip">${(p.kind ?? 'staff') === 'visit' ? 'Se fue' : 'Deshabilitada'}</span>`;
+  if (p.valid_to && p.valid_to < Date.now()) return html`<span class="chip">Venció</span>`;
+  if (S.presence.some(x => x.id === p.id)) return html`<span class="chip" data-tone="accent">Adentro</span>`;
+  return syncChip(p);
+}
+function personAccess(p) {
+  const zonas = p.levels.map(id => S.levels.find(l => l.id === id)?.name).filter(Boolean);
+  const sueltas = (p.doors ?? []).length;
+  return [...zonas, sueltas && count(sueltas, 'puerta suelta', 'puertas sueltas')].filter(Boolean).join(', ') || 'Sin acceso a ninguna puerta';
+}
 
 function peopleRows() {
-  const visits = S.peopleKind === 'visit', list = S.people.filter(p => ((p.kind ?? 'staff') === 'visit') === visits);
-  if (!list.length) return [html`<li class="empty">${S.peopleQ ? 'Nadie coincide con esa búsqueda.' : visits ? 'Sin visitas registradas. Una visita vale hasta la hora que le pongas y después se da de baja sola.' : 'Todavía no hay personas cargadas.'}</li>`];
-  if (visits) return list.sort((a, b) => b.active - a.active || (b.valid_to ?? 0) - (a.valid_to ?? 0)).map(p => html`<li><button class="row ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}">
-    <span class="avatar ${p.active ? '' : 'idle'}">${initials(p.name)}</span>
-    <span class="row-main"><strong>${p.name}</strong><span>${[p.host && `Visita a ${p.host}`, p.company, areaById(p.site_id)?.name].filter(Boolean).join(', ') || 'Visita'}</span></span>
-    <span class="row-side">${visitChip(p)}<span>${p.valid_to ? `Hasta ${when(p.valid_to)}` : ''}</span></span></button></li>`);
+  const list = S.peopleType === 'all' ? S.people : peopleOfKind(S.peopleType);
+  if (!list.length) return [html`<li class="empty">${S.peopleQ ? 'Nadie coincide con esa búsqueda.' : S.peopleType === 'all' ? 'Todavía no hay personas cargadas.' : KIND_HINT[S.peopleType]}</li>`];
   return list.map(p => {
-    const creds = [p.cards.length && count(p.cards.length, 'tarjeta', 'tarjetas'), p.has_face && 'rostro', p.has_pin && 'clave'].filter(Boolean).join(', ');
-    const levels = p.levels.map(id => S.levels.find(l => l.id === id)?.name).filter(Boolean).join(', ');
     const manual = p.sync.unsupported && (p.sync.done || p.sync.pending || p.sync.error);
     return html`<li><button class="row ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}">
       <span class="avatar ${p.active ? '' : 'idle'}">${initials(p.name)}</span>
-      <span class="row-main"><strong>${p.name}</strong><span>${[areaById(p.site_id)?.name ?? (viewCompany() ? '' : companyById(p.company_id)?.name), p.company, creds || 'sin credenciales'].filter(Boolean).join(', ')}</span></span>
-      <span class="row-side">${syncChip(p)}<span>${levels || 'Sin nivel de acceso'}${manual ? `, carga manual en ${p.sync.unsupported}` : ''}</span></span></button></li>`;
+      <span class="row-main"><strong>${p.name}</strong><span>${[S.peopleType === 'all' && kindName(p.kind), personLine(p)].filter(Boolean).join(' · ') || 'Sin datos'}</span></span>
+      <span class="row-side">${personState(p)}<span>${p.valid_to && (p.kind ?? 'staff') !== 'staff' ? `Hasta ${when(p.valid_to)}` : personAccess(p)}${manual ? `, carga manual en ${p.sync.unsupported}` : ''}</span></span></button></li>`;
   });
 }
 
-function personSheet(p) {
+/** El tablero: una columna por tipo. Se arrastra una tarjeta a otra columna para cambiarle el tipo (se abre su ficha para completar lo que pide). */
+function peopleBoard() {
+  return html`<div class="board" id="people-board">${KINDS.map(k => {
+    const list = peopleOfKind(k);
+    return html`<section class="col" data-kind="${k}" aria-label="${KIND_PLURAL[k]}">
+      <header class="col-head"><b>${KIND_PLURAL[k]}</b><span class="col-n">${list.length}</span>
+        ${canOperate() ? html`<button class="round" type="button" data-action="person-new" data-kind="${k}" title="Agregar ${kindName(k).toLowerCase()}" aria-label="Agregar ${kindName(k).toLowerCase()}">${icon('plus')}</button>` : ''}</header>
+      <div class="col-body">${list.length ? list.map(p => html`<button class="pcard ${p.active ? '' : 'idle'} ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}" data-drag="${canOperate() ? 'person' : ''}">
+        <span class="pcard-top"><span class="avatar sm ${p.active ? '' : 'idle'}">${initials(p.name)}</span><strong>${p.name}</strong></span>
+        <span class="pcard-line">${personLine(p) || personAccess(p)}</span>
+        <span class="pcard-foot">${personState(p)}${p.valid_to && k !== 'staff' ? html`<small>Hasta ${when(p.valid_to)}</small>` : ''}</span></button>`)
+        : html`<p class="col-empty">${KIND_HINT[k]}</p>`}</div></section>`;
+  })}</div>`;
+}
+
+// Arrastrar en el tablero: con el mouse o el dedo (punteros), sin el arrastre del navegador. Un toque sin mover abre la ficha.
+const drag = { el: null, ghost: null, x: 0, y: 0, on: false };
+document.addEventListener('pointerdown', e => {
+  const card = e.target.closest?.('[data-drag="person"]');
+  if (!card || e.button !== 0 || window.matchMedia('(max-width: 899px)').matches) return;
+  Object.assign(drag, { el: card, x: e.clientX, y: e.clientY, on: false });
+});
+document.addEventListener('pointermove', e => {
+  if (!drag.el) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.on = true;
+    const r = drag.el.getBoundingClientRect();
+    drag.ghost = Object.assign(drag.el.cloneNode(true), { className: `${drag.el.className} ghost` });
+    Object.assign(drag.ghost.style, { width: `${r.width}px`, left: `${r.left}px`, top: `${r.top}px` });
+    drag.dx = e.clientX - r.left; drag.dy = e.clientY - r.top;
+    document.body.append(drag.ghost);
+    drag.el.classList.add('lifted');
+  }
+  drag.ghost.style.left = `${e.clientX - drag.dx}px`; drag.ghost.style.top = `${e.clientY - drag.dy}px`;
+  const col = document.elementFromPoint(e.clientX, e.clientY)?.closest('.col');
+  $$('.board .col').forEach(c => c.classList.toggle('drop', c === col && c !== drag.el.closest('.col')));
+});
+document.addEventListener('pointerup', async e => {
+  if (!drag.el) return;
+  const { el, on } = drag; drag.el = null;
+  if (!on) return;
+  drag.ghost?.remove(); el.classList.remove('lifted'); $$('.board .col.drop').forEach(c => c.classList.remove('drop'));
+  drag.justDropped = true; setTimeout(() => { drag.justDropped = false; }, 0);
+  const col = document.elementFromPoint(e.clientX, e.clientY)?.closest('.col'), from = el.closest('.col');
+  if (!col || col === from) return;
+  const p = await S.api.get(`/api/people/${el.dataset.id}`);
+  personSheet(p, col.dataset.kind);   // se abre la ficha con el tipo nuevo; queda recién al guardar
+});
+
+/** La ficha de una persona. kind: el tipo que se le está poniendo (al crear desde una columna o al arrastrarla). */
+function personSheet(p, kind = p?.kind ?? 'staff') {
   S.draftFace = undefined;
-  const face = p?.face ? (p.face.startsWith('data:') ? p.face : `data:image/jpeg;base64,${p.face}`) : '';
-  sheet.open(p ? p.name : 'Agregar persona', html`<form class="form" data-form="person" data-id="${p?.id ?? ''}">
-    ${!p && isAdmin() ? html`<div class="form-actions"><button class="btn sm" type="button" data-action="import-open">${icon('planilla')}<span>Cargar varias desde una planilla</span></button></div>` : ''}
+  const cid = personCompany(p), face = p?.face ? (p.face.startsWith('data:') ? p.face : `data:image/jpeg;base64,${p.face}`) : '';
+  const moving = p && kind !== (p.kind ?? 'staff');
+  sheet.open(p ? p.name : `Agregar: ${kindName(kind).toLowerCase()}`, html`<form class="form" data-form="person" data-id="${p?.id ?? ''}">
+    ${moving ? html`<p class="notice">Pasa de <b>${kindName(p.kind)}</b> a <b>${kindName(kind)}</b>. Completá lo que falta y guardá.</p>` : ''}
+    <div class="field"><span>Tipo</span><div class="kinds" role="radiogroup" aria-label="Tipo de persona">${KINDS.map(k => html`<label class="kind-opt">
+      <input type="radio" name="kind" value="${k}" ${k === kind ? raw('checked') : ''} data-redraw="kind"><span>${kindName(k)}</span></label>`)}</div>
+      <small id="kind-hint">${KIND_HINT[kind]}</small></div>
     <label class="field"><span>Nombre y apellido</span><input type="text" name="name" value="${p?.name}" required ${p ? '' : raw('autofocus')}></label>
-    <div class="form-row">
-      <label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>
-      <label class="field"><span>Contratista o empleador</span><input type="text" name="company" value="${p?.company}" placeholder="Si viene por otra empresa"></label>
-    </div>
-    ${personPlace(p)}
-    <label class="field"><span>Tarjetas</span><input type="text" name="cards" class="mono" value="${p?.cards.join(', ')}" inputmode="numeric" placeholder="5550123, 5550124">
-      <small>Los números tal como los lee el equipo, separados por coma.</small></label>
-    <label class="field"><span>Clave numérica</span><input type="text" name="pin" class="mono" value="${p?.pin}" inputmode="numeric" maxlength="8" autocomplete="off">
-      <small>De 4 a 8 dígitos. Dejala vacía si no usa clave.</small></label>
-    <div class="field"><span>Foto para reconocimiento facial</span>
-      <div class="photo"><span class="avatar lg" id="face-preview" style="${face ? `background-image:url(${face})` : ''}">${face ? '' : initials(p?.name ?? '')}</span>
-        <div class="form-actions"><button class="btn sm" type="button" data-action="face-pick">Elegir foto</button>
-          <button class="btn sm" type="button" data-action="face-clear" id="face-clear" ${face || p?.has_face ? '' : raw('hidden')}>Quitar</button></div></div>
-      <input type="file" id="face-file" accept="image/*" hidden>
-      <small id="face-hint">${p?.device_face && !face ? 'Su rostro está cargado en el equipo de donde se trajo. Si elegís una foto acá, la reemplaza.' : p?.has_face && !face ? 'Tiene una foto cargada.' : 'De frente y con buena luz. Se ajusta sola al tamaño que aceptan los equipos y se guarda cifrada.'}</small></div>
-    <fieldset id="person-levels"><legend>Niveles de acceso</legend>${personLevels(personCompany(p), p)}</fieldset>
-    <div class="form-row">
-      <label class="field"><span>Vigente desde</span><input type="datetime-local" name="valid_from" value="${toLocalInput(p?.valid_from)}"></label>
-      <label class="field"><span>Vigente hasta</span><input type="datetime-local" name="valid_to" value="${toLocalInput(p?.valid_to)}"></label>
-    </div>
+    ${!p && !viewCompany() && S.companies.length > 1 ? html`<label class="field"><span>Empresa que la da de alta</span><select name="company_id" data-redraw="person">${S.companies.map(c => html`<option value="${c.id}" ${c.id === cid ? raw('selected') : ''}>${c.name}</option>`)}</select></label>` : ''}
+    <div id="kind-fields">${kindFields(kind, p, cid)}</div>
+    <fieldset class="access" id="person-levels">${personAccessFields(cid, p)}</fieldset>
+    <details class="creds" ${p ? '' : raw('open')}><summary>Tarjeta, clave y rostro</summary>
+      <label class="field"><span>Tarjetas</span><input type="text" name="cards" class="mono" value="${p?.cards.join(', ')}" inputmode="numeric" placeholder="5550123, 5550124">
+        <small>Los números tal como los lee el equipo, separados por coma.</small></label>
+      <div class="field"><span>Clave numérica</span>
+        <div class="form-row"><input type="text" name="pin" class="mono" value="${p?.pin}" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Clave numérica"><button class="btn" type="button" data-action="pin-new" aria-label="Generar una clave">Generar</button></div>
+        <small>De 4 a 8 dígitos. Vacía si no usa clave.</small></div>
+      <div class="field"><span>Foto para reconocimiento facial</span>
+        <div class="photo"><span class="avatar lg" id="face-preview" style="${face ? `background-image:url(${face})` : ''}">${face ? '' : initials(p?.name ?? '')}</span>
+          <div class="form-actions"><button class="btn sm" type="button" data-action="face-pick" aria-label="Elegir foto">Elegir foto</button>
+            <button class="btn sm" type="button" data-action="face-clear" id="face-clear" aria-label="Quitar la foto" ${face || p?.has_face ? '' : raw('hidden')}>Quitar</button></div></div>
+        <input type="file" id="face-file" accept="image/*" hidden>
+        <small id="face-hint">${p?.device_face && !face ? 'Su rostro está cargado en el equipo de donde se trajo. Si elegís una foto acá, la reemplaza.' : p?.has_face && !face ? 'Tiene una foto cargada.' : 'De frente y con buena luz. Se ajusta sola al tamaño que aceptan los equipos y se guarda cifrada.'}</small></div>
+    </details>
     <label class="check"><input type="checkbox" name="active" ${!p || p.active ? raw('checked') : ''}><span>Habilitada<small>Al deshabilitarla se da de baja en todos los equipos.</small></span></label>
     ${p?.sync.length ? html`<h3>En los equipos</h3><ul class="rows">${p.sync.map(s => html`<li class="row flat">
       <span class="row-main"><strong>${s.device_name}</strong><span>${s.op === 'remove' ? 'Baja pendiente' : s.status === 'error' ? `${SYNC_TEXT.error}: ${s.error}` : SYNC_TEXT[s.status]}</span></span></li>`)}</ul>` : ''}
     <p class="form-error" role="alert"></p>
-    ${canOperate() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+    ${canOperate() ? html`<div class="form-actions"><button class="btn pri" type="submit">${p ? 'Guardar' : 'Agregar'}</button>
+      ${p?.active && kind !== 'staff' ? html`<button class="btn" type="button" data-action="visit-out" data-id="${p.id}">Dar salida</button>` : ''}
       ${p ? html`<button class="btn danger push" type="button" data-action="person-delete" data-id="${p.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
 }
-actions['person-new'] = () => personSheet(null);
-actions['person-edit'] = async el => { const p = await S.api.get(`/api/people/${el.dataset.id}`); (p.kind === 'visit' ? visitSheet : personSheet)(p); };
+
+/** Lo que pide cada tipo. */
+function kindFields(kind, p, cid) {
+  const from = html`<label class="field"><span>${kind === 'visit' ? 'De dónde viene' : 'Empresa de la que viene'}</span><input type="text" name="company" value="${p?.company}" placeholder="${kind === 'visit' ? 'Empresa o institución' : 'Razón social o nombre'}" ${['contractor', 'supplier_monthly', 'supplier_casual'].includes(kind) ? raw('required') : ''}></label>`;
+  const purpose = html`<label class="field"><span>${kind === 'temp' ? 'Tarea' : 'Qué viene a hacer'}</span><input type="text" name="purpose" value="${p?.purpose}" maxlength="120" placeholder="${{ temp: 'Zafra, reemplazo, refuerzo', contractor: 'Obra, mantenimiento, vigilancia', supplier_monthly: 'Reparto, retiro, limpieza', supplier_casual: 'Entrega, reparación, recarga' }[kind] ?? ''}"></label>`;
+  const doc = html`<label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>`;
+  const until = need => html`<label class="field"><span>${kind === 'visit' ? 'Vale hasta' : need ? 'Puede entrar hasta' : 'Hasta (opcional)'}</span><input type="datetime-local" name="valid_to" value="${toLocalInput(p?.valid_to ?? (kind === 'visit' ? visitEnd() : null))}" ${need ? raw('required') : ''}></label>`;
+  const hosts = [...new Set(S.people.filter(x => (x.kind ?? 'staff') === 'staff' && x.active).map(x => x.name))];
+  const place = html`<div class="form-row" id="person-place">${personPlaceFields(cid, p, CLOCKED.includes(kind))}</div>`;
+  if (kind === 'staff') return html`<div class="form-row">${doc}<label class="field"><span>Legajo</span><input type="text" value="${p?.ref ?? 'Se asigna solo'}" disabled></label></div>${place}`;
+  if (kind === 'temp') return html`<div class="form-row">${doc}${purpose}</div>${place}<div class="form-row">${until(false)}</div>`;
+  if (kind === 'visit') return html`<div class="form-row">${doc}${from}</div>
+    <label class="field"><span>A quién visita</span><input type="text" name="host" value="${p?.host}" list="visit-hosts" autocomplete="off"><datalist id="visit-hosts">${hosts.map(n => html`<option value="${n}"></option>`)}</datalist></label>
+    ${place}<div class="form-row">${until(true)}</div>`;
+  return html`<div class="form-row">${from}${doc}</div>${purpose}${place}<div class="form-row">${until(kind === 'supplier_casual')}</div>`;
+}
+actions['person-new'] = el => personSheet(null, el?.dataset?.kind || (S.peopleType !== 'all' ? S.peopleType : 'staff'));
+actions['person-edit'] = async el => { if (drag.justDropped) return; const p = await S.api.get(`/api/people/${el.dataset.id}`); personSheet(p); };
+actions['visit-new'] = () => personSheet(null, 'visit');
+
+/** Por dónde puede entrar: por zonas (lo común) y, si hace falta, puerta por puerta (un proveedor que solo pasa por el portón). */
+function personAccessFields(cid, p) {
+  const zonas = S.levels.filter(l => !cid || l.company_id === cid), sueltas = new Set(p?.doors ?? []);
+  const sites = S.sites.filter(s => !cid || s.company_id === cid);
+  const doorsBySite = sites.map(s => [s, S.doors.filter(d => d.site_id === s.id)]).filter(([, d]) => d.length);
+  return html`<legend>Por dónde puede entrar</legend>
+    ${zonas.length ? html`<div class="zone-chips">${zonas.map(l => html`<label class="zone-chip"><input type="checkbox" name="levels" data-list value="${l.id}" ${p?.levels.includes(l.id) ? raw('checked') : ''}>
+      <span><b>${l.name}</b><small>${count(l.doors.length, 'puerta', 'puertas')}</small></span></label>`)}</div>`
+      : html`<p class="hint">Todavía no hay zonas. Se arman en Zonas, juntando las puertas que suele usar un mismo grupo de gente.</p>`}
+    ${doorsBySite.length ? html`<details class="loose" ${sueltas.size ? raw('open') : ''}><summary>Puertas sueltas${sueltas.size ? ` (${sueltas.size})` : ''}<small>Además de sus zonas, puerta por puerta</small></summary>
+      ${doorsBySite.map(([s, doors]) => html`<fieldset><legend>${s.name}</legend>${doors.map(d => html`<label class="check">
+        <input type="checkbox" name="doors" data-list value="${d.id}" ${sueltas.has(d.id) ? raw('checked') : ''}><span>${d.name}<small>${d.device_name}</small></span></label>`)}</fieldset>`)}</details>` : ''}`;
+}
+
+forms.person = async (form, v) => {
+  const kind = v.kind ?? 'staff';
+  const body = {
+    kind, name: v.name, company: v.company ?? '', purpose: v.purpose ?? '', host: v.host ?? '', document: v.document ?? '', pin: v.pin, cards: v.cards.split(/[\s,;]+/).filter(Boolean),
+    company_id: v.company_id || personCompany(null), site_id: v.site_id || null, schedule_id: CLOCKED.includes(kind) ? v.schedule_id || null : null,
+    levels: v.levels ?? [], doors: v.doors ?? [], active: v.active,
+    valid_to: kind === 'staff' ? null : fromLocalInput(v.valid_to),
+    ...(S.draftFace !== undefined && { face: S.draftFace }),
+  };
+  const id = form.dataset.id;
+  if (id) await S.api.patch(`/api/people/${id}`, body); else S.fresh = (await S.api.post('/api/people', body)).id;
+  await load('people', 'overview', 'schedules');
+  sheet.close(); render(); toast(id ? 'Cambios guardados' : `${kindName(kind)}: agregado`);
+};
+
 actions['face-pick'] = () => $('#face-file').click();
 actions['face-clear'] = () => {
   S.draftFace = '';
@@ -2384,30 +2600,17 @@ actions['person-delete'] = async el => {
   await load('people', 'overview');
   sheet.close(); render(); toast('Persona eliminada');
 };
-forms.person = async (form, v) => {
-  const body = {
-    name: v.name, company: v.company, document: v.document, pin: v.pin, cards: v.cards.split(/[\s,;]+/).filter(Boolean),
-    company_id: v.company_id || personCompany(null), site_id: v.site_id || null, schedule_id: v.schedule_id || null,
-    levels: v.levels ?? [], active: v.active, valid_from: fromLocalInput(v.valid_from), valid_to: fromLocalInput(v.valid_to),
-    ...(S.draftFace !== undefined && { face: S.draftFace }),
-  };
-  const id = form.dataset.id;
-  if (id) await S.api.patch(`/api/people/${id}`, body); else S.fresh = (await S.api.post('/api/people', body)).id;
-  await load('people', 'overview', 'schedules');
-  sheet.close(); render(); toast(id ? 'Cambios guardados' : 'Persona agregada');
-};
-
-// ── Niveles de acceso ────────────────────────────────────────────────────────
+// ── Zonas ────────────────────────────────────────────────────────
 views.niveles = () => html`
-  ${head('Niveles de acceso', 'Un nivel junta las puertas que un grupo de personas puede pasar, sin importar de qué marca sea cada equipo.')}
+  ${head('Zonas', 'Una zona junta las puertas que un grupo de personas puede pasar, sin importar de qué marca sea cada equipo.')}
   <section class="card flush"><ul class="rows">${S.levels.length ? S.levels.map(l => html`<li><button class="row" type="button" data-action="level-edit" data-id="${l.id}">
     <span class="badge">${icon('niveles')}</span>
     <span class="row-main"><strong>${l.name}</strong><span>${[!viewCompany() && companyById(l.company_id)?.name, l.doors.map(id => S.doors.find(d => d.id === id)?.name).filter(Boolean).join(', ') || 'Sin puertas'].filter(Boolean).join(': ')}</span></span>
     <span class="row-side"><span class="chip plain">${count(l.members, 'persona', 'personas')}</span><span>${count(l.doors.length, 'puerta', 'puertas')}</span></span></button></li>`)
-    : html`<li class="empty">Todavía no hay niveles. Creá uno, elegí sus puertas y asignalo a las personas.</li>`}</ul></section>`;
+    : html`<li class="empty">Todavía no hay zonas. Creá uno, elegí sus puertas y asignalo a las personas.</li>`}</ul></section>`;
 
 function levelSheet(level) {
-  sheet.open(level ? level.name : 'Agregar nivel', html`<form class="form" data-form="level" data-id="${level?.id ?? ''}">
+  sheet.open(level ? level.name : 'Agregar zona', html`<form class="form" data-form="level" data-id="${level?.id ?? ''}">
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${level?.name}" maxlength="60" required ${level ? '' : raw('autofocus')}></label>
     ${!level && !viewCompany() && S.companies.length > 1 ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="level">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
     <div id="level-doors">${levelDoors(level ? level.company_id : viewCompany()?.id ?? S.companies[0]?.id, level)}</div>
@@ -2415,7 +2618,7 @@ function levelSheet(level) {
     ${isAdmin() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       ${level ? html`<button class="btn danger push" type="button" data-action="level-delete" data-id="${level.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
 }
-/** Las puertas que puede abrir un nivel: las de las áreas de su empresa, agrupadas por área. */
+/** Las puertas que puede abrir una zona: las de los lugares de su empresa, agrupadas por lugar. */
 function levelDoors(companyId, level) {
   const sites = S.sites.filter(site => !companyId || site.company_id === companyId);
   const out = sites.map(site => {
@@ -2431,13 +2634,13 @@ actions['level-delete'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
   await S.api.del(`/api/levels/${el.dataset.id}`);
   await load('levels', 'people', 'overview');
-  sheet.close(); render(); toast('Nivel eliminado');
+  sheet.close(); render(); toast('Zona eliminada');
 };
 forms.level = async (form, v) => {
   const id = form.dataset.id, body = { name: v.name, doors: v.doors ?? [], company_id: v.company_id || viewCompany()?.id };
   if (id) await S.api.patch(`/api/levels/${id}`, body); else await S.api.post('/api/levels', body);
   await load('levels', 'people', 'overview');
-  sheet.close(); render(); toast('Nivel guardado');
+  sheet.close(); render(); toast('Zona guardada');
 };
 
 // ── Equipos ──────────────────────────────────────────────────────────────────
@@ -2460,9 +2663,9 @@ views.equipos = () => html`
         <span class="row-main"><strong>${d.name}</strong><span>${d.brand_label} <span class="mono" style="display:inline">${d.host}:${d.port}</span>${d.model ? `, ${d.model}` : ''}</span>
           <span>${canDo(d.capabilities)}${d.capabilities.people ? '' : '. Las personas se cargan con el software de la marca'}</span></span>
         <span class="row-side">${deviceChip(d)}<span>${d.status === 'offline' ? d.status_detail : count(d.doors, 'puerta', 'puertas')}${d.sync_errors ? `, ${count(d.sync_errors, 'alta con error', 'altas con error')}` : ''}</span></span></button></li>`)
-        : html`<li class="empty">Esta área no tiene equipos todavía.</li>`}</ul></section>`;
+        : html`<li class="empty">Este lugar no tiene equipos todavía.</li>`}</ul></section>`;
   })}
-  ${S.sites.length ? '' : html`<section class="card"><p class="empty">Antes de agregar equipos creá un área en Ajustes, en la ficha de la empresa: es el lugar donde están instalados.</p></section>`}`;
+  ${S.sites.length ? '' : html`<section class="card"><p class="empty">Antes de agregar equipos creá un lugar en Ajustes, en la ficha de la empresa: es el lugar donde están instalados.</p></section>`}`;
 
 /** Qué puede hacer Kliva con un equipo, dicho sin vueltas: es lo que mira el instalador antes de prometer algo. */
 function klivaPuede(c) {
@@ -2506,7 +2709,7 @@ function deviceSheet(d) {
       ${d.capabilities.people ? html`<button class="btn sm" type="button" data-action="device-resync" data-id="${d.id}">Reenviar todas las personas a este equipo</button>` : ''}</div>` : ''}
   </form>`);
 }
-actions['device-new'] = () => deviceSheet(null); // si no hay áreas, se crea desde el mismo campo Área
+actions['device-new'] = () => deviceSheet(null); // si no hay lugares, se crea desde el mismo campo Lugar
 actions['device-edit'] = el => isAdmin() && deviceSheet(S.devices.find(d => d.id === el.dataset.id));
 actions['device-test'] = async el => {
   const form = el.closest('form'), v = values(form), box = $('#test-result');
@@ -2543,7 +2746,7 @@ const keyFor = name => S.integrations?.keys.find(k => fold(k.name).includes(name
 
 views.integraciones = () => {
   const I = S.integrations, olumi = hookFor('olumi'), ondi = keyFor('ondi');
-  if (!isAdmin()) return html`${head('Integraciones')}<section class="card"><p class="empty">Las conexiones con otros sistemas las maneja un administrador.</p></section>`;
+  if (!isAdmin()) return html`${head('Conexiones')}<section class="card"><p class="empty">Las conexiones con otros sistemas las maneja un administrador.</p></section>`;
   if (!I) return html`${head('Integraciones')}<section class="card"><p class="empty">Cargando…</p></section>`;
   return html`
   ${head('Integraciones', 'Kliva trabaja con las otras apps de Unity Tech y con cualquier sistema que sepa recibir un aviso o hacer una consulta.')}
@@ -2571,7 +2774,7 @@ views.integraciones = () => {
       <button class="btn sm danger" type="button" data-action="key-delete" data-id="${k.id}">Eliminar</button></li>`)
       : html`<li class="empty">Sin claves. Cada sistema lleva la suya, así se puede cortar una sin tocar las demás.</li>`}</ul>
     <details style="padding:0 2px 14px"><summary class="hint" style="cursor:pointer">Qué puede consultar un sistema con su clave</summary>
-      <dl class="facts" style="margin-top:10px"><dt class="mono">GET /api/v1/status</dt><dd>Empresas, áreas, equipos con su estado y puertas</dd><dt class="mono">GET /api/v1/events</dt><dd>Eventos en el orden en que llegaron; se sigue con <span class="mono">?after=</span></dd>
+      <dl class="facts" style="margin-top:10px"><dt class="mono">GET /api/v1/status</dt><dd>Empresas, lugares, equipos con su estado y puertas</dd><dt class="mono">GET /api/v1/events</dt><dd>Eventos en el orden en que llegaron; se sigue con <span class="mono">?after=</span></dd>
         <dt class="mono">GET /api/v1/marks</dt><dd>Primera y última pasada de cada persona por día</dd><dt class="mono">POST /api/v1/doors/:id/open</dt><dd>Abrir una puerta (solo claves con ese permiso)</dd></dl></details></section>`;
 };
 
@@ -2640,12 +2843,15 @@ async function loadIntegrations() {
 
 // ── Ajustes ──────────────────────────────────────────────────────────────────
 /** Las pestañas de Ajustes según quién mira: la instaladora ve todo; el administrador de una empresa, la suya. */
-const settingsTabs = () => !isAdmin() ? [['apariencia', 'Apariencia']] : isGlobal()
-  ? [['empresas', 'Empresas'], ['instalacion', 'Instalación'], ['seguridad', 'Seguridad'], ['datos', 'Datos'], ['apariencia', 'Apariencia'], ['bitacora', 'Bitácora']]
-  : [['empresa', 'Empresa'], ['apariencia', 'Apariencia']];
+// Dos lugares distintos: «Mi empresa» (lo que ve el cliente: sus datos, sus lugares, sus usuarios) e «Instaladora» (solo quien instala y
+// vende Kliva: los clientes, la licencia, la seguridad, las copias y la bitácora). Usan las mismas piezas, cada uno con sus pestañas.
+const settingsTabs = () => S.view === 'instaladora'
+  ? [['empresas', 'Clientes'], ['instalacion', 'Licencia y usuarios'], ['seguridad', 'Seguridad'], ['datos', 'Datos y copias'], ['bitacora', 'Bitácora']]
+  : isAdmin() ? [['empresa', 'Empresa'], ['apariencia', 'Apariencia']] : [['apariencia', 'Apariencia']];
 const settingsTab = () => settingsTabs().some(t => t[0] === S.settingsTab) ? S.settingsTab : settingsTabs()[0][0];
 const IDLE = [[1, '1 hora'], [8, '8 horas'], [24, '1 día'], [168, '7 días']];
-views.ajustes = () => { const tab = settingsTab(); return html`${head('Ajustes')}${seg('settings-tab', settingsTabs(), tab, 'Secciones de ajustes')}${settings[tab]()}`; };
+views.ajustes = () => { const tab = settingsTab(); return html`${head('Mi empresa', 'Los datos de la empresa, sus lugares y quién la maneja.')}${seg('settings-tab', settingsTabs(), tab, 'Secciones')}${settings[tab]()}`; };
+views.instaladora = () => { const tab = settingsTab(); return html`${head('Instaladora', `Lo de ${S.org}: los clientes, la licencia, la seguridad y las copias. Los clientes no ven esta parte.`)}${seg('settings-tab', settingsTabs(), tab, 'Secciones')}${settings[tab]()}`; };
 actions['settings-tab'] = el => { S.settingsTab = el.dataset.id; S.companyOpen = null; render(); };
 
 const toggle = (action, on, title, sub) => html`<button class="row flat" type="button" role="switch" aria-checked="${String(Boolean(on))}" data-action="${action}">
@@ -2670,7 +2876,7 @@ const settings = {
       <dl class="facts"><dt>Base de datos</dt><dd>${S.engine === 'postgres' ? 'PostgreSQL, en el servidor que eligió la empresa' : 'Local, en este mismo servidor'}</dd><dt>Versión</dt><dd>Kliva ${S.version}</dd></dl>
       ${S.api.demo && !isApp() ? html`<div class="form-actions"><button class="btn" type="button" data-action="wizard-preview">Ver el asistente de primera instalación</button></div>` : ''}</section>
     <section class="card"><div class="card-head"><h2>Tus datos son tuyos<small>Una copia completa para guardar o para llevarte</small></h2></div>
-      <p class="muted">Empresas, áreas, equipos, puertas, niveles, turnos, personas con sus tarjetas y usuarios, en un archivo. Nunca incluye contraseñas ni claves.</p>
+      <p class="muted">Empresas, lugares, equipos, puertas, zonas, turnos, personas con sus tarjetas y usuarios, en un archivo. Nunca incluye contraseñas ni claves.</p>
       <label class="check"><input type="checkbox" id="export-faces"><span>Incluir las fotos de rostro<small>Son datos biométricos: guardá ese archivo con cuidado.</small></span></label>
       <div class="form-actions"><button class="btn pri" type="button" data-action="export">${icon('download')}Descargar la copia</button>
         <a class="btn" href="#eventos">Los eventos se bajan como planilla</a></div></section>
@@ -2694,7 +2900,7 @@ const settings = {
 /** Lo que cada pestaña de Ajustes carga aparte, después de dibujarse. */
 async function fillSettings() {
   if (!isAdmin()) return;
-  const tab = settingsTab(), still = () => S.view === 'ajustes' && settingsTab() === tab;
+  const tab = settingsTab(), view = S.view, still = () => S.view === view && settingsTab() === tab;
   if ($('#user-list')) {
     S.users = await S.api.get('/api/users');
     const list = $('#user-list');
@@ -2764,7 +2970,7 @@ actions['session-close'] = async el => { await S.api.del(`/api/me/sessions/${el.
 actions['sessions-close-others'] = async () => { await S.api.post('/api/me/sessions/close-others'); toast('Las demás sesiones quedaron cerradas'); actions.account(); };
 
 // ── Plano ────────────────────────────────────────────────────────────────────
-// El plano de cada área con las puertas en 3D arriba. Es el motor común de Unity Tech (el mismo de Ondi y Darvi), dentro de un marco:
+// El plano de cada lugar con las puertas en 3D arriba. Es el motor común de Unity Tech (el mismo de Ondi y Darvi), dentro de un marco:
 // Kliva le pasa un anfitrión con el plano guardado, las puertas reales y lo que pasa en vivo; el motor dibuja, edita y avisa qué guardar.
 // Sin «embebida»: el Plano ocupa toda la vista (no es una página que se desplaza), así que la rueda y los dos dedos del
 // trackpad giran y acercan la cámara como en Ondi y Olumi, sin tener que apretar Ctrl.
@@ -2822,11 +3028,11 @@ function planLive(type, data) {
 
 views.plano = () => {
   const site = planoSite();
-  if (!site) return html`${head('Plano')}<section class="card"><p class="empty">Todavía no hay áreas. Se crean en Ajustes, en la ficha de la empresa, y después se les suman sus equipos.</p></section>`;
+  if (!site) return html`${head('Plano')}<section class="card"><p class="empty">Todavía no hay lugares. Se crean en Ajustes, en la ficha de la empresa, y después se les suman sus equipos.</p></section>`;
   const lede = isAdmin() ? 'Tocá Editar para subir el plano del lugar, ubicar cada puerta y nombrar los sectores.' : 'Cada puerta, en su lugar y en vivo.';
   return html`
     <header class="view-head"><div><h1>Plano</h1><p class="lede">${lede}</p></div>
-      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Área') : ''}${S.motorOk === false ? '' : html`<div class="replay" id="replay">${replayBar()}</div>`}</header>
+      ${S.sites.length > 1 ? seg('plano-site', S.sites.map(s => [s.id, s.name]), site.id, 'Lugar') : ''}${S.motorOk === false ? '' : html`<div class="replay" id="replay">${replayBar()}</div>`}</header>
     <div class="plano">${S.motorOk === false
       ? html`<p class="empty">El plano 3D se abre con Kliva instalado o en unitytech.uy/kliva/beta. Esta copia no trae los archivos del motor.</p>`
       : html`<iframe id="plano-frame" src="${MOTOR}&sitio=${site.id}" title="Plano de ${site.name}" allow="fullscreen"></iframe>`}</div>`;
@@ -2893,7 +3099,7 @@ actions['replay-play'] = async el => {
     }
   } catch (e) { return toast(e.message, 'deny'); }
   events = events.filter(e => doors.has(e.door_id)).reverse();
-  if (!events.length || !host) return toast('No hubo pasadas en ese rato en esta área');
+  if (!events.length || !host) return toast('No hubo pasadas en ese rato en este lugar');
   stopReplay();
   const span = to - from, length = Math.min(45_000, Math.max(12_000, events.length * 400)); // dura entre 12 y 45 segundos, según cuánto pasó
   const R = S.replay = { from, total: events.length, timers: [], started: performance.now() };
@@ -2924,9 +3130,9 @@ function stopReplay(finished = false) {
   if (finished) toast('Fin de la repetición: el plano vuelve a mostrar lo que pasa ahora');
 }
 
-// Empresas y áreas. Una instalación de Kliva atiende a varias empresas; cada empresa se divide en áreas
-// (una planta, un centro logístico, una oficina) y cada área tiene sus equipos, sus puertas y su plano.
-// Arriba siempre se ve qué empresa y qué área se está mirando; el servidor recorta todo a eso.
+// Empresas y lugares. Una instalación de Kliva atiende a varias empresas; cada empresa se divide en lugares
+// (una planta, un centro logístico, una oficina) y cada lugar tiene sus equipos, sus puertas y su plano.
+// Arriba siempre se ve qué empresa y qué lugar se está mirando; el servidor recorta todo a eso.
 
 const isGlobal = () => Boolean(S.me) && !S.me.company_id;          // usuario de la instaladora: ve todas las empresas
 const companyById = id => S.companies.find(c => c.id === id);
@@ -2953,21 +3159,21 @@ function scopeSub() {
   const c = viewCompany();
   if (!c) return count(S.companies.length, 'empresa', 'empresas');
   if (S.vista.area) return areaById(S.vista.area)?.name ?? '';
-  return c.areas.length === 1 ? c.areas[0].name : c.areas.length ? `Todas las áreas (${c.areas.length})` : 'Sin áreas todavía';
+  return c.areas.length === 1 ? c.areas[0].name : c.areas.length ? `Todos los lugares (${c.areas.length})` : 'Sin lugares todavía';
 }
 
 /** En el menú, debajo de la marca: dónde estás parado. */
-const scopeSwitch = () => html`<button class="me scope" type="button" data-action="scope" ${canSwitch() ? '' : raw('disabled')} title="${scopeTitle()}" aria-label="Elegir empresa y área">
+const scopeSwitch = () => html`<button class="me scope" type="button" data-action="scope" ${canSwitch() ? '' : raw('disabled')} title="${scopeTitle()}" aria-label="Elegir empresa y lugar">
   <span class="badge">${icon('empresa')}</span><span><b>${scopeTitle()}</b><small>${scopeSub()}</small></span>${canSwitch() ? icon('updown') : ''}</button>`;
 const drawScope = () => { setHTML($('#scope'), scopeSwitch()); };
 
-/** Las áreas de la empresa que se mira, para elegir una o todas. Solo aparece si hay más de una. */
+/** Los lugares de la empresa que se mira, para elegir una o todas. Solo aparece si hay más de una. */
 function areaBar() {
   const c = viewCompany();
   if (!c || c.areas.length < 2) return '';
-  return seg('scope-area', [['', 'Todas'], ...c.areas.map(a => [a.id, a.name])], S.vista.area, 'Área');
+  return seg('scope-area', [['', 'Todas'], ...c.areas.map(a => [a.id, a.name])], S.vista.area, 'Lugar');
 }
-/** Debajo del nombre de un área: de qué empresa es (si se miran todas) y dónde queda. */
+/** Debajo del nombre de un lugar: de qué empresa es (si se miran todas) y dónde queda. */
 const areaSub = site => [!viewCompany() && companyById(site.company_id)?.name, site.address].filter(Boolean).join(', ');
 
 const pickRow = (action, id, title, sub, on, glyph) => html`<li><button class="row" type="button" data-action="${action}" data-id="${id}" aria-pressed="${String(on)}">
@@ -2978,9 +3184,9 @@ function scopeSheet() {
   sheet.open('Qué mirar', html`
     ${isGlobal() && S.companies.length > 1 ? html`<h3>Empresa</h3><ul class="rows">
       ${pickRow('scope-company', '', 'Todas las empresas', `${count(S.companies.length, 'empresa', 'empresas')} de ${S.org}`, !S.vista.empresa, 'empresa')}
-      ${S.companies.map(x => pickRow('scope-company', x.id, x.name, `${count(x.areas.length, 'área', 'áreas')}, ${count(x.people, 'persona', 'personas')}`, S.vista.empresa === x.id, 'empresa'))}</ul>` : ''}
-    ${c && c.areas.length > 1 ? html`<h3>Área de ${c.name}</h3><ul class="rows">
-      ${pickRow('scope-pick-area', '', 'Todas las áreas', count(c.areas.length, 'área', 'áreas'), !S.vista.area, 'site')}
+      ${S.companies.map(x => pickRow('scope-company', x.id, x.name, `${count(x.areas.length, 'lugar', 'lugares')}, ${count(x.people, 'persona', 'personas')}`, S.vista.empresa === x.id, 'empresa'))}</ul>` : ''}
+    ${c && c.areas.length > 1 ? html`<h3>Lugar de ${c.name}</h3><ul class="rows">
+      ${pickRow('scope-pick-area', '', 'Todos los lugares', count(c.areas.length, 'lugar', 'lugares'), !S.vista.area, 'site')}
       ${c.areas.map(a => pickRow('scope-pick-area', a.id, a.name, a.address || count(a.devices, 'equipo', 'equipos'), S.vista.area === a.id, 'site'))}</ul>` : ''}`);
 }
 actions.scope = () => canSwitch() && scopeSheet();
@@ -3005,11 +3211,11 @@ async function setVista(v) {
   await route();
 }
 
-// ── Ajustes: empresas, sus áreas y sus usuarios ──────────────────────────────
+// ── Ajustes: empresas, sus lugares y sus usuarios ──────────────────────────────
 const COMPANY_FACTS = [['legal_name', 'Razón social'], ['tax_id', 'RUT'], ['address', 'Dirección'], ['phone', 'Teléfono'], ['email', 'Correo'], ['contact', 'Contacto'], ['notes', 'Notas']];
 const areasText = u => {
   const ids = String(u.areas || '').split(',').filter(Boolean);
-  return ids.length ? ids.map(id => areaById(id)?.name).filter(Boolean).join(', ') : 'Todas las áreas';
+  return ids.length ? ids.map(id => areaById(id)?.name).filter(Boolean).join(', ') : 'Todos los lugares';
 };
 function userRows(companyId) {
   const list = (S.users ?? []).filter(u => (u.company_id ?? null) === companyId);
@@ -3020,22 +3226,22 @@ function userRows(companyId) {
     <span class="row-side">${u.active ? html`<span class="chip plain">${ROLE[u.role]}</span>` : html`<span class="chip">Deshabilitado</span>`}<span>${companyId ? areasText(u) : u.mfa ? 'Con dos pasos' : 'Solo contraseña'}</span></span></button></li>`);
 }
 
-/** La ficha de una empresa: sus datos, sus áreas y quién de esa empresa entra a Kliva. */
+/** La ficha de una empresa: sus datos, sus lugares y quién de esa empresa entra a Kliva. */
 function companyDetail(c, back) {
   const facts = COMPANY_FACTS.filter(([k]) => c[k]);
   return html`
     ${back ? html`<div><button class="btn sm" type="button" data-action="company-back">${icon('left')}<span>Empresas</span></button></div>` : ''}
-    <section class="card"><div class="card-head"><h2>${c.name}<small>${count(c.areas.length, 'área', 'áreas')}, ${count(c.people, 'persona', 'personas')}</small></h2>
+    <section class="card"><div class="card-head"><h2>${c.name}<small>${count(c.areas.length, 'lugar', 'lugares')}, ${count(c.people, 'persona', 'personas')}</small></h2>
       ${isAdmin() ? html`<button class="btn sm" type="button" data-action="company-edit" data-id="${c.id}">Editar datos</button>` : ''}</div>
       ${facts.length ? html`<dl class="facts">${facts.map(([k, label]) => html`<dt>${label}</dt><dd>${c[k]}</dd>`)}</dl>`
         : html`<p class="empty">Faltan los datos de la empresa: razón social, RUT, dirección y un contacto.</p>`}</section>
-    <section class="card flush"><div class="card-head"><h2>Áreas<small>Cada parte de la empresa con sus propias puertas: una planta, un centro logístico, una oficina</small></h2>
-      ${isAdmin() && !S.me.areas ? html`<button class="btn sm" type="button" data-action="site-new" data-company="${c.id}">Agregar área</button>` : ''}</div>
+    <section class="card flush"><div class="card-head"><h2>Lugares<small>Cada parte de la empresa con sus propias puertas: una planta, un centro logístico, una oficina</small></h2>
+      ${isAdmin() && !S.me.areas ? html`<button class="btn sm" type="button" data-action="site-new" data-company="${c.id}">Agregar lugar</button>` : ''}</div>
       <ul class="rows">${c.areas.length ? c.areas.map(a => html`<li><button class="row" type="button" data-action="site-edit" data-id="${a.id}">
         <span class="badge">${icon('site')}</span><span class="row-main"><strong>${a.name}</strong><span>${a.address || 'Sin dirección'}</span></span>
         <span class="row-side">${count(a.devices, 'equipo', 'equipos')}</span></button></li>`)
-        : html`<li class="empty">Sin áreas todavía. Agregá la primera: después se le suman sus equipos y su plano.</li>`}</ul></section>
-    <section class="card flush"><div class="card-head"><h2>Usuarios<small>Quién de ${c.name} entra a Kliva, con qué permisos y a qué áreas</small></h2>
+        : html`<li class="empty">Sin lugares todavía. Agregá la primera: después se le suman sus equipos y su plano.</li>`}</ul></section>
+    <section class="card flush"><div class="card-head"><h2>Usuarios<small>Quién de ${c.name} entra a Kliva, con qué permisos y a qué lugares</small></h2>
       ${isAdmin() ? html`<button class="btn sm" type="button" data-action="user-new" data-company="${c.id}">Agregar usuario</button>` : ''}</div>
       <ul class="rows" id="user-list" data-company="${c.id}">${userRows(c.id)}</ul></section>`;
 }
@@ -3047,10 +3253,17 @@ settings.empresas = () => {
     <button class="btn sm" type="button" data-action="company-new">Agregar empresa</button></div>
     <ul class="rows">${S.companies.length ? S.companies.map(c => html`<li><button class="row" type="button" data-action="company-open" data-id="${c.id}">
       <span class="badge">${icon('empresa')}</span><span class="row-main"><strong>${c.name}</strong><span>${[c.legal_name, c.tax_id && `RUT ${c.tax_id}`].filter(Boolean).join(', ') || 'Faltan los datos'}</span></span>
-      <span class="row-side"><span class="chip plain">${count(c.areas.length, 'área', 'áreas')}</span><span>${count(c.people, 'persona', 'personas')}, ${count(c.users, 'usuario', 'usuarios')}</span></span>${icon('right')}</button></li>`)
-      : html`<li class="empty">Todavía no hay empresas. Agregá la primera con sus datos y sus áreas.</li>`}</ul></section>`;
+      <span class="row-side"><span class="chip plain">${count(c.areas.length, 'lugar', 'lugares')}</span><span>${count(c.people, 'persona', 'personas')}, ${count(c.users, 'usuario', 'usuarios')}</span></span>${icon('right')}</button></li>`)
+      : html`<li class="empty">Todavía no hay empresas. Agregá la primera con sus datos y sus lugares.</li>`}</ul></section>`;
 };
-settings.empresa = () => viewCompany() ? companyDetail(viewCompany(), false) : html`<section class="card"><p class="empty">Tu usuario no tiene empresa asignada.</p></section>`;
+settings.empresa = () => {
+  if (viewCompany()) return companyDetail(viewCompany(), false);
+  if (!isGlobal()) return html`<section class="card"><p class="empty">Tu usuario no tiene empresa asignada.</p></section>`;
+  // quien instala mira todas: elige de qué empresa son los ajustes (lo mismo que arriba, en «Qué mirar»)
+  return html`<section class="card flush"><div class="card-head"><h2>¿De qué empresa?<small>Elegí el cliente para ver y cambiar sus datos, sus lugares y sus usuarios</small></h2></div>
+    <ul class="rows">${S.companies.map(c => html`<li><button class="row" type="button" data-action="client-open" data-id="${c.id}">
+      <span class="badge">${icon('empresa')}</span><span class="row-main"><strong>${c.name}</strong><span>${count(c.areas.length, 'lugar', 'lugares')}, ${count(c.people, 'persona', 'personas')}</span></span>${icon('right')}</button></li>`)}</ul></section>`;
+};
 settings.instalacion = () => { const l = S.license; return html`
   <section class="card flush"><div class="card-head"><h2>Usuarios de ${S.org}<small>La instaladora: ven todas las empresas</small></h2><button class="btn sm" type="button" data-action="user-new" data-company="">Agregar usuario</button></div>
     <ul class="rows" id="user-list" data-company="">${userRows(null)}</ul></section>
@@ -3080,7 +3293,7 @@ function companySheet(c) {
     <p class="form-error" role="alert"></p>
     <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       ${c && isGlobal() ? html`<button class="btn danger push" type="button" data-action="company-delete" data-id="${c.id}">Eliminar</button>` : ''}</div>
-    ${c && isGlobal() ? html`<p class="hint">Para eliminar una empresa primero hay que quitarle sus áreas y sus personas.</p>` : ''}</form>`);
+    ${c && isGlobal() ? html`<p class="hint">Para eliminar una empresa primero hay que quitarle sus lugares y sus personas.</p>` : ''}</form>`);
 }
 actions['company-new'] = () => companySheet(null);
 actions['company-edit'] = el => companySheet(companyById(el.dataset.id));
@@ -3097,15 +3310,15 @@ forms.company = async (form, v) => {
   if (id) await S.api.patch(`/api/companies/${id}`, v);
   else S.companyOpen = (await S.api.post('/api/companies', v)).id;
   await load('companies');
-  sheet.close(); drawScope(); render(); toast(id ? 'Datos guardados' : 'Empresa agregada: ahora sumale sus áreas');
+  sheet.close(); drawScope(); render(); toast(id ? 'Datos guardados' : 'Empresa agregada: ahora sumale sus lugares');
 };
 
 function siteSheet(site, companyId) {
   const c = site ? companyOfArea(site.id) : companyById(companyId);
-  sheet.open(site ? site.name : `Agregar área a ${c?.name ?? 'la empresa'}`, html`<form class="form" data-form="site" data-id="${site?.id ?? ''}" data-company="${c?.id ?? ''}">
+  sheet.open(site ? site.name : `Agregar lugar a ${c?.name ?? 'la empresa'}`, html`<form class="form" data-form="site" data-id="${site?.id ?? ''}" data-company="${c?.id ?? ''}">
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${site?.name}" placeholder="Planta B, Centro logístico, Oficinas" required ${site ? '' : raw('autofocus')}></label>
     <label class="field"><span>Dirección</span><input type="text" name="address" value="${site?.address}"></label>
-    <p class="hint">Cada área tiene sus equipos, sus puertas y su plano. Los usuarios de la empresa se pueden limitar a algunas áreas.</p>
+    <p class="hint">Cada lugar tiene sus equipos, sus puertas y su plano. Los usuarios de la empresa se pueden limitar a algunos lugares.</p>
     <p class="form-error" role="alert"></p>
     <div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       ${site ? html`<button class="btn danger push" type="button" data-action="site-delete" data-id="${site.id}">Eliminar</button>` : ''}</div></form>`);
@@ -3117,13 +3330,13 @@ actions['site-delete'] = async el => {
   try { await S.api.del(`/api/sites/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
   sheet.close();
   await setVista({ ...S.vista });
-  toast('Área eliminada');
+  toast('Lugar eliminada');
 };
 forms.site = async (form, v) => {
   const id = form.dataset.id;
   if (id) await S.api.patch(`/api/sites/${id}`, v); else await S.api.post('/api/sites', { ...v, company_id: form.dataset.company || undefined });
   await load('companies', 'sites', 'doors');
-  sheet.close(); drawScope(); render(); toast(id ? 'Área guardada' : 'Área agregada');
+  sheet.close(); drawScope(); render(); toast(id ? 'Lugar guardada' : 'Lugar agregada');
 };
 
 const ROLE_HINT = 'Administrador: todo lo de su empresa. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.';
@@ -3135,9 +3348,9 @@ function userSheet(u, companyId) {
       : html`<label class="field"><span>Correo</span><input type="email" name="email" required autocomplete="off"></label>`}
     <label class="field"><span>Permisos</span><select name="role">${Object.entries(ROLE).map(([id, label]) => html`<option value="${id}" ${(u?.role ?? 'operator') === id ? raw('selected') : ''}>${label}</option>`)}</select>
       <small>${c ? ROLE_HINT : 'Administrador: todo, en todas las empresas. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.'}</small></label>
-    ${c && c.areas.length > 1 ? html`<fieldset><legend>Áreas que ve</legend>
+    ${c && c.areas.length > 1 ? html`<fieldset><legend>Lugares que ve</legend>
       ${c.areas.map(a => html`<label class="check"><input type="checkbox" name="areas" data-list value="${a.id}" ${mine.includes(a.id) ? raw('checked') : ''}><span>${a.name}<small>${a.address || count(a.devices, 'equipo', 'equipos')}</small></span></label>`)}
-      <p class="hint">Sin marcar ninguna, ve todas las áreas de ${c.name}. Un guardia de una planta, por ejemplo, ve solo esa.</p></fieldset>` : ''}
+      <p class="hint">Sin marcar ninguna, ve todos los lugares de ${c.name}. Un guardia de una planta, por ejemplo, ve solo esa.</p></fieldset>` : ''}
     <label class="field"><span>${u ? 'Nueva contraseña' : 'Contraseña'}</span><input type="password" name="password" autocomplete="new-password" ${u ? '' : raw('required')} minlength="10">
       <small>${u ? 'Dejala vacía para no cambiarla. ' : ''}Al menos 10 caracteres. Se la pasás en persona, nunca por un chat.</small></label>
     ${u ? html`<label class="check"><input type="checkbox" name="active" ${u.active ? raw('checked') : ''}><span>Habilitado</span></label>` : ''}
@@ -3167,53 +3380,53 @@ forms.user = async (form, v) => {
   sheet.close(); fillSettings(); toast(id ? 'Usuario guardado' : 'Usuario agregado');
 };
 
-// ── Personas: de qué empresa, de qué área y con qué turno ────────────────────
+// ── Personas: de qué empresa, de qué lugar y con qué turno ────────────────────
 const personCompany = p => p?.company_id ?? viewCompany()?.id ?? S.companies[0]?.id ?? null;
 function personPlace(p) {
   const pick = !p && !viewCompany() && S.companies.length > 1, cid = personCompany(p);
   return html`${pick ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="person">${S.companies.map(c => html`<option value="${c.id}" ${c.id === cid ? raw('selected') : ''}>${c.name}</option>`)}</select></label>` : ''}
     <div class="form-row" id="person-place">${personPlaceFields(cid, p)}</div>`;
 }
-function personPlaceFields(cid, p) {
+function personPlaceFields(cid, p, clocked = true) {
   const areas = companyById(cid)?.areas ?? [], schedules = S.schedules.filter(x => x.company_id === cid);
   const area = p ? p.site_id : S.vista.area || (areas.length === 1 ? areas[0].id : '');
-  return html`<label class="field"><span>Área</span><select name="site_id">${S.me.areas ? '' : html`<option value="">Ninguna en especial</option>`}
+  return html`<label class="field"><span>Lugar</span><select name="site_id">${S.me.areas ? '' : html`<option value="">Ninguno en especial</option>`}
       ${areas.map(a => html`<option value="${a.id}" ${a.id === area ? raw('selected') : ''}>${a.name}</option>`)}</select></label>
-    <label class="field"><span>Turno</span><select name="schedule_id"><option value="">Sin control de horario</option>
-      ${schedules.map(x => html`<option value="${x.id}" ${x.id === p?.schedule_id ? raw('selected') : ''}>${x.name}, ${hhmmText(x.start_min)} a ${hhmmText(x.end_min)}</option>`)}</select></label>`;
+    ${clocked ? html`<label class="field"><span>Turno</span><select name="schedule_id"><option value="">Sin control de horario</option>
+      ${schedules.map(x => html`<option value="${x.id}" ${x.id === p?.schedule_id ? raw('selected') : ''}>${x.name}, ${hhmmText(x.start_min)} a ${hhmmText(x.end_min)}</option>`)}</select></label>` : ''}`;
 }
-function personLevels(cid, p) {
-  const list = S.levels.filter(l => !cid || l.company_id === cid);
-  return list.length ? list.map(l => html`<label class="check"><input type="checkbox" name="levels" data-list value="${l.id}" ${p?.levels.includes(l.id) ? raw('checked') : ''}>
-    <span>${l.name}<small>${count(l.doors.length, 'puerta', 'puertas')}</small></span></label>`) : html`<p class="hint">Todavía no hay niveles. Se crean en la sección Niveles.</p>`;
-}
-/** Al cambiar de empresa en un formulario, las áreas, turnos, niveles y puertas pasan a ser los de esa empresa. */
+/** Al cambiar de empresa en un formulario, los lugares, turnos, zonas y puertas pasan a ser los de esa empresa. */
 function redrawForCompany(el) {
+  const form = el.closest('form');
   if (el.dataset.redraw === 'person') {
-    setHTML($('#person-place'), personPlaceFields(el.value, null));
-    setHTML($('#person-levels'), html`<legend>Niveles de acceso</legend>${personLevels(el.value, null)}`);
+    const kind = values(form).kind ?? 'staff';
+    setHTML($('#person-place'), personPlaceFields(el.value, null, CLOCKED.includes(kind)));
+    setHTML($('#person-levels'), personAccessFields(el.value, null));
+  }
+  if (el.dataset.redraw === 'kind') {
+    // cambia lo que pide la ficha, sin perder lo que ya se escribió
+    const v = values(form), cid = v.company_id || personCompany(S.people.find(x => x.id === form.dataset.id) ?? null);
+    const keep = { company: v.company, purpose: v.purpose, document: v.document, host: v.host, site_id: v.site_id || null, schedule_id: v.schedule_id || null, valid_to: fromLocalInput(v.valid_to ?? ''), ref: S.people.find(x => x.id === form.dataset.id)?.ref };
+    setHTML($('#kind-fields'), kindFields(el.value, keep, cid));
+    $('#kind-hint').textContent = KIND_HINT[el.value];
   }
   if (el.dataset.redraw === 'level') setHTML($('#level-doors'), levelDoors(el.value, null));
-  if (el.dataset.redraw === 'visit') {
-    setHTML($('#visit-area'), areaOptions(el.value, ''));
-    setHTML($('#person-levels'), html`<legend>Por dónde puede pasar</legend>${personLevels(el.value, null)}`);
-  }
 }
 
-// ── Elegir el área en una ficha: con buscador (para cuando son muchas) y para crear una nueva ahí mismo,
+// ── Elegir el lugar en una ficha: con buscador (para cuando son muchas) y para crear una nueva ahí mismo,
 // sin ir a Ajustes. Se abre adentro de la ficha, debajo del campo, para que no la tape nada.
 const manyCompanies = () => !viewCompany() && S.companies.length > 1;
 const areaLabel = s => manyCompanies() ? `${companyById(s.company_id)?.name ?? ''}, ${s.name}` : s.name;
 const canCreateArea = () => isAdmin() && !S.me.areas;
 function areaPicker(name, current) {
   const s = S.sites.find(x => x.id === current);
-  return html`<div class="field picker" data-picker><span id="${name}-label">Área</span>
-    <input type="hidden" name="${name}" value="${s?.id ?? ''}" data-required="Elegí el área${canCreateArea() ? ' o creá una' : ''}">
+  return html`<div class="field picker" data-picker><span id="${name}-label">Lugar</span>
+    <input type="hidden" name="${name}" value="${s?.id ?? ''}" data-required="Elegí el lugar${canCreateArea() ? ' o creá una' : ''}">
     <button class="picker-btn" type="button" data-action="picker-toggle" aria-expanded="false" aria-labelledby="${name}-label">
-      <span class="${s ? '' : 'faint'}">${s ? areaLabel(s) : (S.sites.length ? 'Elegí un área' : 'Todavía no hay áreas: creá la primera')}</span>${icon('updown')}</button>
+      <span class="${s ? '' : 'faint'}">${s ? areaLabel(s) : (S.sites.length ? 'Elegí un lugar' : 'Todavía no hay lugares: creá la primera')}</span>${icon('updown')}</button>
     <div class="picker-pop" hidden>
-      <label class="picker-q">${icon('search')}<input type="search" autocomplete="off" spellcheck="false" aria-label="Buscar un área"
-        placeholder="${S.sites.length ? (canCreateArea() ? 'Buscar o crear un área' : 'Buscar un área') : 'Nombre del área, por ejemplo Planta B'}"></label>
+      <label class="picker-q">${icon('search')}<input type="search" autocomplete="off" spellcheck="false" aria-label="Buscar un lugar"
+        placeholder="${S.sites.length ? (canCreateArea() ? 'Buscar o crear un lugar' : 'Buscar un lugar') : 'Nombre del lugar, por ejemplo Planta B'}"></label>
       <ul class="picker-list" role="listbox"></ul>
     </div></div>`;
 }
@@ -3235,7 +3448,7 @@ function pickerDraw(box) {
     out += html`<li class="group" role="presentation">Nueva</li>${targets.map(c => html`<li role="presentation"><button class="opt" type="button" data-action="picker-new" data-company="${c?.id ?? ''}">
       ${icon('plus')}<span><b>Crear «${typed}»</b>${c && (manyCompanies() || S.companies.length > 1) ? html`<small>en ${c.name}</small>` : ''}</span></button></li>`)}`;
   }
-  if (!out) out = html`<li class="empty">${S.sites.length ? 'Ningún área coincide.' : canCreateArea() ? 'Escribí el nombre del área: una planta, un depósito, una oficina.' : 'Pedile a un administrador que cree el área.'}</li>`;
+  if (!out) out = html`<li class="empty">${S.sites.length ? 'Ningún lugar coincide.' : canCreateArea() ? 'Escribí el nombre del lugar: una planta, un depósito, una oficina.' : 'Pedile a un administrador que cree el lugar.'}</li>`;
   setHTML($('.picker-list', box), out);
 }
 function pickerClose(box) {
@@ -3265,7 +3478,7 @@ actions['picker-new'] = async el => {
     await load('companies', 'sites');
     drawScope();
     pickerSet(box, S.sites.find(x => x.id === s.id) ?? s);
-    toast(`Área «${s.name}» creada`);
+    toast(`Lugar «${s.name}» creada`);
   } catch (e) { el.disabled = false; toast(e.message, 'deny'); }
 };
 
@@ -3364,7 +3577,7 @@ actions['horario-person'] = el => {
   const p = S.attendance.people.find(x => x.id === el.dataset.id), days = S.attendance.days.filter(d => d.person_id === p.id).reverse();
   const dayName = date => new Date(`${date}T12:00`).toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'short' });
   sheet.open(p.name, html`
-    <dl class="facts"><dt>Turno</dt><dd>${p.schedule || 'Sin turno'}</dd>${areaById(p.site_id) ? html`<dt>Área</dt><dd>${areaById(p.site_id).name}</dd>` : ''}
+    <dl class="facts"><dt>Turno</dt><dd>${p.schedule || 'Sin turno'}</dd>${areaById(p.site_id) ? html`<dt>Lugar</dt><dd>${areaById(p.site_id).name}</dd>` : ''}
       <dt>${PERIODS.find(x => x[0] === S.horarioPeriod)[1]}</dt><dd>${hoursText(p.minutes)} en ${count(p.days, 'día', 'días')}${p.late ? `, ${count(p.late, 'llegada tarde', 'llegadas tarde')}` : ''}${p.absent ? `, ${count(p.absent, 'falta', 'faltas')}` : ''}</dd></dl>
     <ul class="rows">${days.length ? days.map(d => html`<li class="row flat">
       <span class="row-main"><strong>${dayName(d.date)}</strong><span>${d.start ? `Turno ${clockText(d.start)} a ${clockText(d.end)}` : 'Sin turno ese día'}</span></span>
@@ -3491,12 +3704,12 @@ async function shareFile(blob, filename) {
   await Share.share({ title: filename, url: uri });
 }
 
-// Emergencias y quién está adentro. Un área entera queda con las puertas abiertas (evacuación) o cerradas (bloqueo)
+// Emergencias y quién está adentro. Un lugar entera queda con las puertas abiertas (evacuación) o cerradas (bloqueo)
 // hasta que alguien la vuelve a la normalidad; mientras tanto se ve arriba en toda la app. Y la lista de quién está
 // adentro, que es lo primero que se pregunta en una evacuación.
 const MODE = { open: ['Evacuación', 'puertas abiertas'], locked: ['Bloqueo', 'puertas cerradas'] };
 
-/** La franja de arriba: una por cada área en emergencia de las que se están mirando. */
+/** La franja de arriba: una por cada lugar en emergencia de las que se están mirando. */
 function drawAlarm() {
   const box = $('#alarm');
   if (box) setHTML(box, S.sites.filter(s => MODE[s.mode]).map(s => html`<button class="alarm" type="button" data-mode="${s.mode}" data-action="emergency" data-id="${s.id}" role="alert">${icon(s.mode === 'open' ? 'alert' : 'candado')}
@@ -3519,7 +3732,7 @@ async function insideSheet(site, emergency) {
       <button class="btn pri wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="normal">Volver a la normalidad</button>`
       : html`<button class="btn danger wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="open">${icon('alert')}<span>Evacuación: abrir todas las puertas</span></button>
         <button class="btn wide" type="button" data-action="mode-set" data-id="${site.id}" data-mode="locked">${icon('candado')}<span>Bloqueo: cerrar todas las puertas</span></button>
-        <p class="hint">Las puertas quedan así hasta que alguien vuelva el área a la normalidad desde acá. Queda anotado quién lo hizo y a qué hora.</p>`}
+        <p class="hint">Las puertas quedan así hasta que alguien vuelva el lugar a la normalidad desde acá. Queda anotado quién lo hizo y a qué hora.</p>`}
     ${failed.length ? html`<p class="result" data-tone="warn">${failed.map(f => `${f.device}: ${f.why}`).join('. ')}.</p>` : ''}
     <h3>Adentro ahora (${list.length})</h3>
     ${insideRows(list)}
@@ -3548,67 +3761,22 @@ actions['door-dir'] = async el => {
   catch (e) { toast(e.message, 'deny'); }
 };
 
-// Otras formas de cargar gente: las visitas (valen hasta una hora y se dan de baja solas), muchas personas de una vez
+// Otras formas de cargar gente: muchas personas de una vez
 // desde una planilla, y las que ya están cargadas en un equipo (para no tipear a todos de nuevo al reemplazar el programa de la marca).
 
-// ── Visitas ──────────────────────────────────────────────────────────────────
-const PEOPLE_KINDS = [['staff', 'Personal'], ['visit', 'Visitas']];
-actions['people-kind'] = el => { S.peopleKind = el.dataset.id; render(); };
-/** Por defecto una visita vale hasta las 18; si ya pasó esa hora, cuatro horas más. */
+// ── Lo que comparten invitados y proveedores ──────────────────────────────────
+/** Por defecto un invitado vale hasta las 18; si ya pasó esa hora, cuatro horas más. */
 const visitEnd = () => { const d = new Date(); d.setHours(18, 0, 0, 0); return d.getTime() > Date.now() + 3600_000 ? d.getTime() : Date.now() + 4 * 3600_000; };
-function visitChip(p) {
-  if (!p.active) return html`<span class="chip">Se fue</span>`;
-  if (p.valid_to && p.valid_to < Date.now()) return html`<span class="chip">Venció</span>`;
-  return S.presence.some(x => x.id === p.id) ? html`<span class="chip" data-tone="accent">Adentro</span>` : html`<span class="chip" data-tone="pass">Vigente</span>`;
-}
-const areaOptions = (cid, current) => html`<option value="">Ninguna en especial</option>${(companyById(cid)?.areas ?? []).map(a => html`<option value="${a.id}" ${a.id === current ? raw('selected') : ''}>${a.name}</option>`)}`;
-
-function visitSheet(p) {
-  const pick = !p && !viewCompany() && S.companies.length > 1, cid = personCompany(p);
-  const hosts = [...new Set(S.people.filter(x => (x.kind ?? 'staff') === 'staff' && x.active).map(x => x.name))];
-  sheet.open(p ? p.name : 'Registrar visita', html`<form class="form" data-form="visit" data-id="${p?.id ?? ''}">
-    <label class="field"><span>Nombre y apellido</span><input type="text" name="name" value="${p?.name}" required ${p ? '' : raw('autofocus')}></label>
-    <div class="form-row">
-      <label class="field"><span>Documento</span><input type="text" name="document" value="${p?.document}"></label>
-      <label class="field"><span>De dónde viene</span><input type="text" name="company" value="${p?.company}" placeholder="Empresa o motivo"></label>
-    </div>
-    <label class="field"><span>A quién visita</span><input type="text" name="host" value="${p?.host}" list="visit-hosts" autocomplete="off"><datalist id="visit-hosts">${hosts.map(n => html`<option value="${n}"></option>`)}</datalist></label>
-    ${pick ? html`<label class="field"><span>Empresa</span><select name="company_id" data-redraw="visit">${S.companies.map(c => html`<option value="${c.id}" ${c.id === cid ? raw('selected') : ''}>${c.name}</option>`)}</select></label>` : ''}
-    <div class="form-row">
-      <label class="field"><span>Área</span><select name="site_id" id="visit-area">${areaOptions(cid, p ? p.site_id : S.vista.area)}</select></label>
-      <label class="field"><span>Vale hasta</span><input type="datetime-local" name="valid_to" value="${toLocalInput(p?.valid_to ?? visitEnd())}" required></label>
-    </div>
-    <label class="field"><span>Tarjeta de visita</span><input type="text" name="cards" class="mono" value="${p?.cards.join(', ')}" inputmode="numeric" placeholder="Número de la tarjeta"></label>
-    <div class="field"><span>Clave para la puerta</span>
-      <div class="form-row"><input type="text" name="pin" class="mono" value="${p?.pin}" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Clave para la puerta"><button class="btn" type="button" data-action="pin-new">Generar</button></div>
-      <small>Se le dice a la visita. Deja de servir cuando vence.</small></div>
-    <fieldset id="person-levels"><legend>Por dónde puede pasar</legend>${personLevels(cid, p)}</fieldset>
-    ${p?.sync.length ? html`<h3>En los equipos</h3><ul class="rows">${p.sync.map(s => html`<li class="row flat">
-      <span class="row-main"><strong>${s.device_name}</strong><span>${s.op === 'remove' ? 'Baja pendiente' : s.status === 'error' ? `${SYNC_TEXT.error}: ${s.error}` : SYNC_TEXT[s.status]}</span></span></li>`)}</ul>` : ''}
-    <p class="form-error" role="alert"></p>
-    ${canOperate() ? html`<div class="form-actions"><button class="btn pri" type="submit">${p ? 'Guardar' : 'Registrar visita'}</button>
-      ${p?.active ? html`<button class="btn" type="button" data-action="visit-out" data-id="${p.id}">Dar salida</button>` : ''}
-      ${p ? html`<button class="btn danger push" type="button" data-action="person-delete" data-id="${p.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
-}
-actions['visit-new'] = () => visitSheet(null);
 actions['pin-new'] = () => { $('#sheet input[name="pin"]').value = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000); };
 actions['visit-out'] = async el => {
   try { await S.api.patch(`/api/people/${el.dataset.id}`, { active: false }); } catch (e) { return toast(e.message, 'deny'); }
   await load('people', 'overview');
   sheet.close(); render(); toast('Salida registrada: se da de baja en los equipos');
 };
-forms.visit = async (form, v) => {
-  const id = form.dataset.id, body = { kind: 'visit', name: v.name, document: v.document, company: v.company, host: v.host, pin: v.pin, cards: v.cards.split(/[\s,;]+/).filter(Boolean),
-    company_id: v.company_id || personCompany(null), site_id: v.site_id || null, valid_to: fromLocalInput(v.valid_to), levels: v.levels ?? [], ...(id ? {} : { active: true }) };
-  if (id) await S.api.patch(`/api/people/${id}`, body); else S.fresh = (await S.api.post('/api/people', body)).id;
-  S.peopleKind = 'visit';
-  await load('people', 'overview');
-  sheet.close(); render(); toast(id ? 'Cambios guardados' : 'Visita registrada');
-};
 
 // ── Muchas personas desde una planilla ───────────────────────────────────────
-const IMPORT_COLS = [['name', 'Nombre', /^(nombre|apellido|persona)/], ['document', 'Documento', /^(documento|cedula|ci\b)/], ['cards', 'Tarjetas', /^tarjeta/], ['area', 'Área', /^area/],
-  ['schedule', 'Turno', /^(turno|horario)/], ['level', 'Nivel', /^nivel/], ['employer', 'Empleador', /^(empleador|contratista|empresa)/]];
+const IMPORT_COLS = [['name', 'Nombre', /^(nombre|apellido|persona)/], ['document', 'Documento', /^(documento|cedula|ci\b)/], ['cards', 'Tarjetas', /^tarjeta/], ['area', 'Lugar', /^area/],
+  ['schedule', 'Turno', /^(turno|horario)/], ['level', 'Zona', /^(zona|nivel)/], ['employer', 'Empleador', /^(empleador|contratista|empresa)/]];
 function cellsOf(line, sep) {
   const out = []; let cur = '', quoted = false;
   for (let i = 0; i < line.length; i++) {
@@ -3632,7 +3800,7 @@ actions['import-open'] = () => {
   S.importRows = null;
   const pick = !viewCompany() && S.companies.length > 1;
   sheet.open('Cargar desde una planilla', html`<form class="form" data-form="import">
-    <p class="hint">Una fila por persona y los títulos en la primera fila: Nombre, Documento, Tarjetas, Área, Turno, Nivel y Empleador. Solo el nombre es obligatorio. El área, el turno y el nivel van con el nombre que tienen en Kliva.</p>
+    <p class="hint">Una fila por persona y los títulos en la primera fila: Nombre, Documento, Tarjetas, Lugar, Turno, Zona y Empleador. Solo el nombre es obligatorio. El lugar, el turno y la zona van con el nombre que tienen en Kliva.</p>
     <div class="form-actions"><button class="btn sm" type="button" data-action="import-template">${icon('download')}<span>Planilla modelo</span></button></div>
     ${pick ? html`<label class="field"><span>Empresa</span><select name="company_id">${S.companies.map(c => html`<option value="${c.id}">${c.name}</option>`)}</select></label>` : ''}
     <div class="field"><span>Planilla</span>
@@ -3643,8 +3811,8 @@ actions['import-open'] = () => {
     <div class="form-actions"><button class="btn pri" type="submit" id="import-go" disabled>Cargar</button></div></form>`);
 };
 actions['import-template'] = () => {
-  const c = viewCompany() ?? S.companies[0], area = c?.areas[0]?.name ?? '', turno = S.schedules.find(x => x.company_id === c?.id)?.name ?? '', nivel = S.levels.find(l => l.company_id === c?.id)?.name ?? '';
-  saveBlob(new Blob([planilla(IMPORT_COLS.map(col => col[1]), [['María Ejemplo', '1.234.567-8', '5550123', area, turno, nivel, '']])], { type: 'text/csv' }), 'kliva-planilla-de-personas.csv');
+  const c = viewCompany() ?? S.companies[0], area = c?.areas[0]?.name ?? '', turno = S.schedules.find(x => x.company_id === c?.id)?.name ?? '', zona = S.levels.find(l => l.company_id === c?.id)?.name ?? '';
+  saveBlob(new Blob([planilla(IMPORT_COLS.map(col => col[1]), [['María Ejemplo', '1.234.567-8', '5550123', area, turno, zona, '']])], { type: 'text/csv' }), 'kliva-planilla-de-personas.csv');
 };
 async function importPreview(input) {
   const box = $('#import-preview'), go = $('#import-go');
@@ -3696,11 +3864,17 @@ forms['device-people'] = async (form, v) => {
 };
 
 // Arranque, menú, ingreso, instalación y lo que llega en vivo.
+// El menú: lo de todos los días arriba; lo de la empresa (equipos, conexiones y sus ajustes) abajo; y aparte, solo para quien instala
+// y vende Kliva, la parte de la instaladora (clientes, licencia, servidor, seguridad, copias). El cliente nunca ve esa parte.
 const NAV = [
-  { id: 'panel', label: 'Panel' }, { id: 'plano', label: 'Plano' }, { id: 'eventos', label: 'Eventos' },
-  { group: 'Gestión' }, { id: 'personas', label: 'Personas' }, { id: 'horario', label: 'Horario' }, { id: 'niveles', label: 'Niveles' },
-  { group: 'Instalación' }, { id: 'equipos', label: 'Equipos' }, { id: 'integraciones', label: 'Integraciones' }, { id: 'ajustes', label: 'Ajustes' },
+  { id: 'panel', label: 'Panel' }, { id: 'plano', label: 'Plano' },
+  { group: 'Registro' }, { id: 'eventos', label: 'Eventos' }, { id: 'horario', label: 'Horario' },
+  { group: 'Gente' }, { id: 'personas', label: 'Personas' }, { id: 'niveles', label: 'Zonas' },
+  { group: 'Empresa' }, { id: 'equipos', label: 'Equipos' }, { id: 'integraciones', label: 'Conexiones' }, { id: 'ajustes', label: 'Mi empresa' },
+  { group: 'Instaladora', installer: true }, { id: 'instaladora', label: 'Instaladora', installer: true },
 ];
+const isInstaller = () => isGlobal() && isAdmin();
+const navItems = () => NAV.filter(n => !n.installer || isInstaller());
 const DOCK = ['panel', 'plano', 'eventos', 'personas'];
 const label = id => NAV.find(n => n.id === id).label;
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -3711,7 +3885,7 @@ function shell() {
       <div class="side-head">${brand(isGlobal() ? S.org : viewCompany()?.name ?? S.org, 'con Kliva')}<button class="fold" type="button" data-action="fold" aria-label="Plegar o desplegar el menú">${icon('left')}</button></div>
       <div id="scope">${scopeSwitch()}</div>
       <nav class="menu" id="menu" aria-label="Secciones"><span class="pill"></span>
-        ${NAV.map(n => n.group ? html`<p class="menu-label">${n.group}</p>` : html`<a class="nav" href="#${n.id}" data-nav="${n.id}" title="${n.label}">${icon(n.id)}<span>${n.label}</span></a>`)}</nav>
+        ${navItems().map(n => n.group ? html`<p class="menu-label">${n.group}</p>` : html`<a class="nav" href="#${n.id}" data-nav="${n.id}" title="${n.label}">${icon(n.id)}<span>${n.label}</span></a>`)}</nav>
       <div class="side-foot">
         <button class="nav" type="button" role="switch" data-action="night" aria-checked="false" title="Modo noche">${icon('moon')}<span>Modo noche</span><span class="switch"></span></button>
         <button class="me" type="button" data-action="account" title="Mi cuenta" aria-label="Mi cuenta"><span class="avatar">${initials(S.me.name)}</span><span><b>${S.me.name}</b><small>${S.me.email}</small></span>${icon('updown')}</button>
@@ -3737,7 +3911,7 @@ function drawTopQuery() {
 }
 actions['people-q-clear'] = async () => {
   S.peopleQ = ''; const f = $('#people-q'); if (f) f.value = '';
-  await load('people'); setHTML($('#people-list'), peopleRows()); drawTopQuery();
+  await load('people'); drawPeople(); drawTopQuery();
 };
 
 /** Lo que rodea a la vista: dónde estás (la pastilla), la acción principal, la campana y el modo noche. */
@@ -3764,12 +3938,12 @@ function render() {
   setHTML(view, views[S.view]());
   $$('.seg-in', view).forEach(el => movePill(el, 'x'));
   drawChrome();
-  if (S.view === 'ajustes') fillSettings().catch(e => toast(e.message, 'deny'));
+  if (S.view === 'ajustes' || S.view === 'instaladora') fillSettings().catch(e => toast(e.message, 'deny'));
 }
 
 async function route() {
   const id = location.hash.slice(1);
-  S.view = views[id] ? id : 'panel';
+  S.view = views[id] && (id !== 'instaladora' || isInstaller()) ? id : 'panel';
   if ($('#menu')) drawChrome();   // la pastilla va a la sección en el momento, aunque los datos tarden
   try {
     if (S.view === 'eventos') await load('events');
@@ -3801,7 +3975,7 @@ actions.fold = () => {
 };
 actions.more = () => sheet.open('Más', html`<ul class="rows">
   ${canSwitch() ? html`<li><button class="row" type="button" data-action="scope"><span class="badge">${icon('empresa')}</span><span class="row-main"><strong>${scopeTitle()}</strong><span>${scopeSub()}</span></span>${icon('updown')}</button></li>` : ''}
-  ${NAV.filter(n => n.id && !DOCK.includes(n.id)).map(n => html`<li><a class="row" href="#${n.id}" data-action="go" data-id="${n.id}" style="text-decoration:none"><span class="badge">${icon(n.id)}</span><span class="row-main"><strong>${n.label}</strong></span>${icon('right')}</a></li>`)}
+  ${navItems().filter(n => n.id && !DOCK.includes(n.id)).map(n => html`<li><a class="row" href="#${n.id}" data-action="go" data-id="${n.id}" style="text-decoration:none"><span class="badge">${icon(n.id)}</span><span class="row-main"><strong>${n.label}</strong></span>${icon('right')}</a></li>`)}
   <li><button class="row" type="button" data-action="account"><span class="avatar">${initials(S.me.name)}</span><span class="row-main"><strong>Mi cuenta</strong><span>${S.me.email}</span></span>${icon('right')}</button></li>
   <li><button class="row flat" type="button" role="switch" aria-checked="${String(root.dataset.mode === 'dark')}" data-action="night-more"><span class="badge">${icon('moon')}</span><span class="row-main"><strong>Modo noche</strong></span><span class="switch"></span></button></li></ul>`);
 actions.go = el => { sheet.close(); location.hash = el.dataset.id; };
@@ -3818,14 +3992,14 @@ function refreshSoon(...keys) {
     const batch = [...stale];
     stale.clear();
     try { await load(...batch); } catch { return; }
-    if (S.view === 'personas') { setHTML($('#people-list'), peopleRows()); showFresh(); }
+    if (S.view === 'personas') { drawPeople(); showFresh(); }
     else if (['panel', 'equipos', 'niveles'].includes(S.view)) render();
     else if (S.view === 'horario' && batch.includes('attendance')) render();
     drawBell();
   }, 350);
 }
 
-/** Deja un elemento a la vista moviendo solo el área de la app, nunca la página que la contiene:
+/** Deja un elemento a la vista moviendo solo el lugar de la app, nunca la página que la contiene:
  *  si está cerca, lo justo para que entre entero; si está lejos, lo lleva al medio. */
 function bringIn(el) {
   const main = $('#main');
@@ -4086,7 +4260,7 @@ document.addEventListener('input', e => {
   S.peopleQ = e.target.value;
   drawTopQuery();
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(async () => { await load('people'); setHTML($('#people-list'), peopleRows()); }, 220);
+  searchTimer = setTimeout(async () => { await load('people'); drawPeople(); }, 220);
 });
 
 document.addEventListener('change', async e => {
