@@ -2,7 +2,7 @@
 <html lang="es-UY" class="n">
 <head>
 <meta charset="utf-8">
-<script>try{localStorage.removeItem('unity.tema');if(sessionStorage.getItem('olumi.web.tema')==='dia')document.documentElement.classList.remove('n')}catch(e){}</script>
+<script>try{localStorage.removeItem('unity.tema');if(localStorage.getItem('olumi.web.tema')==='dia')document.documentElement.classList.remove('n')}catch(e){}</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>if(location.protocol==='http:'&&/(^|\.)unitytech\.uy$/.test(location.hostname))location.replace('https:'+location.href.slice(5))</script>
 <title>Olumi · Tu empresa virtual, viva</title>
@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 <style>
 /* Olumi web v6 (pública desde el 23/11; vista previa del 22/11): la identidad de la app (negro, vidrio y el naranja del punto del logo; un solo movimiento), la historia sobre el
-   motor común, el CRM nuevo y la seguridad contada al bajar. Arranca siempre de noche (Christian 23/11); el día se elige arriba a la derecha y dura esa visita (sessionStorage olumi.web.tema). En día, las capturas pasan a sus versiones claras (img/*-claro.webp). */
+   motor común, el CRM nuevo y la seguridad contada al bajar. La primera vez arranca de noche (Christian 23/11); si alguien elige día arriba a la derecha, queda guardado en su equipo (localStorage olumi.web.tema; el unity.tema viejo se descarta, así todos arrancan de noche una vez). En día, las capturas pasan a sus versiones claras (img/*-claro.webp). */
 :root{--bg:#E3E6EA;--ink:#111215;--ink2:rgba(17,18,21,.64);--ink3:rgba(17,18,21,.42);--line:rgba(17,18,21,.09);--line2:rgba(17,18,21,.16);
   --glass:rgba(255,255,255,.58);--glass2:rgba(255,255,255,.78);--hi:rgba(255,255,255,.9);--sh:0 1px 0 rgba(255,255,255,.7) inset,0 24px 60px -28px rgba(20,24,32,.35);
   --acc:#FF7A1A;--graf:#1E1F23;--acc-ink:#9E3706;--ok:#1f9d55;--red:#d92d20;--amb:#b26b00;
@@ -597,7 +597,7 @@ footer{padding:70px 0 calc(40px + env(safe-area-inset-bottom,0px));border-top:1p
 (function(){
   var H=document.documentElement,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   // ---- día o noche (uno solo para toda la página, queda guardado) ----
-  var mb=document.getElementById('modo');function modo(n){H.classList.toggle('n',n);mb.setAttribute('aria-label',n?'Cambiar a modo día':'Cambiar a modo noche');try{sessionStorage.setItem('olumi.web.tema',n?'noche':'dia')}catch(e){}capturas(n)}
+  var mb=document.getElementById('modo');function modo(n){H.classList.toggle('n',n);mb.setAttribute('aria-label',n?'Cambiar a modo día':'Cambiar a modo noche');try{localStorage.setItem('olumi.web.tema',n?'noche':'dia')}catch(e){}capturas(n)}
   function capturas(n){[].forEach.call(document.querySelectorAll('img[data-claro]'),function(i){if(!i.dataset.noche)i.dataset.noche=i.getAttribute('src');var u=n?i.dataset.noche:i.dataset.claro;if(i.getAttribute('src')!==u)i.setAttribute('src',u)})}
   if(!H.classList.contains('n')){capturas(false);mb.setAttribute('aria-label','Cambiar a modo noche')}
   mb.addEventListener('click',function(){modo(!H.classList.contains('n'))});
