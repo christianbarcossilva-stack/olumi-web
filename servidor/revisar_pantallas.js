@@ -21,7 +21,7 @@ function simularMenu() {
     const cli = document.createElement('div'); cli.className = 'navgb navcli'; for (const t of ['Parque logístico', 'Depósito central', 'Planta 2', 'Oficinas']) cli.appendChild(mk(t));
     const g = document.createElement('button'); g.className = 'navg'; g.innerHTML = '<span>Herramientas</span>'; const gb = document.createElement('div'); gb.className = 'navgb'; gb.append(mk('Simulación'), mk('Pedidos'));
     const g2 = document.createElement('button'); g2.className = 'navg'; g2.innerHTML = '<span>Administración</span>'; const gb2 = document.createElement('div'); gb2.className = 'navgb'; gb2.append(mk('Ajustes'), mk('Unity Tech'));
-    const ref = nav.querySelector('.tema') || null; for (const e of [mk('Panel'), mk('Clientes'), sub, cli, mk('Documentación'), g, gb, g2, gb2]) nav.insertBefore(e, ref); } }
+    const ref = nav.querySelector('.tema') || null; for (const e of [mk('Panel'), mk('Clientes'), sub, cli, mk('Documentación'), mk('Integraciones'), g, gb, g2, gb2]) nav.insertBefore(e, ref); } }
 
 // lo que se sale de su lugar
 function medir() {

@@ -562,6 +562,7 @@ const HERE = location.origin + location.pathname;
 const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const ROLN = { owner: 'Dueño', admin: 'Administrador', encargado: 'Encargado', tecnico: 'Técnico', ventas: 'Ventas', administracion: 'Administración', subcontratista: 'Subcontratista', viewer: 'Solo lectura' };
 const IC = {
+  integ: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v5"/></svg>',
   plano: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>',
   panel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
   sites: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/></svg>',
@@ -627,7 +628,7 @@ const ago = d => { if (!d) return ''; const m = Math.round((Date.now() - new Dat
 const nfmt = n => n == null ? '—' : Number(n).toLocaleString('es-UY');
 
 /* ---------- estado ---------- */
-const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'panel', tab: 'maqueta', atab: 'empresa', claves: null, auth: 'login', msg: '', info: '', falta: '',
+const S = { user: null, ctxs: [], ctx: null, sites: [], site: null, view: 'panel', tab: 'maqueta', atab: 'empresa', itab: 'marcas', claves: null, auth: 'login', msg: '', info: '', falta: '',
   link: {}, sitiosUI: {}, sitiosOrg: {}, rep: {}, acc: null, code: undefined, eq: {}, man: {}, maqSave: '', armed: null, test: {}, org: null, team: null, ajustes: null, modal: null, manForm: null };
 const CODE = (new URLSearchParams(location.search).get('codigo') || '').toUpperCase();
 window.__ondiApp = { S, render: () => render() }; // para las pruebas de pantalla
@@ -728,7 +729,7 @@ async function loadCtx() { S.ped = null; S.pedN = 0; S.act = undefined; S.myRol 
   else { const last = ls.get('ondi.site.' + orgId()), st = S.sites.find(x => x.id === last), m = /^#c(?:\/([a-z]+))?(?:\/(.+))?$/.exec(location.hash || ''), mv = /^#v\/([a-z]+)(?:\/([a-z]+))?$/.exec(location.hash || '');
     // al recargar (F5) se vuelve a donde se estaba: cliente, pestaña y rack de la documentación; o la sección del menú
     if (st && m) { S.site = st; S.view = 'site'; if (m[1]) S.tab = m[1]; if (m[2]) S.docIni = decodeURIComponent(m[2]); }
-    else if (mv && ['clientes', 'docs', 'sim', 'ajustes', 'pedidos', 'ayuda', 'super'].includes(mv[1])) { S.view = mv[1]; if (mv[1] === 'ajustes' && mv[2]) S.atab = mv[2]; } }
+    else if (mv && ['clientes', 'docs', 'integ', 'sim', 'ajustes', 'pedidos', 'ayuda', 'super'].includes(mv[1])) { S.view = mv[1]; if (mv[1] === 'ajustes' && mv[2]) S.atab = mv[2]; if (mv[1] === 'integ' && mv[2]) S.itab = mv[2]; if (mv[1] === 'ajustes' && mv[2] === 'integraciones') { S.view = 'integ'; S.itab = 'marcas'; } } }
   render(); }
 async function loadClaves() { const r = await SB.rpc('ondi_claves', { o: orgId() }); S.claves = r.error ? [] : r.data || []; render(); }
 const claveDe = (sc, k = 'unifi') => (S.claves || []).find(c => c.scope === sc && c.kind === k);
@@ -744,7 +745,7 @@ function demoSalir() { S.demo = false; S.user = null; S.ctxs = []; S.ctx = null;
 
 /* ---------- pantallas ---------- */
 // barra de arriba (en la compu), como en Kliva y Olumi: dónde estás y un buscador de todo (clientes, racks y secciones) con Ctrl K o ⌘K
-const TITULOS = { panel: 'Panel', clientes: 'Clientes', docs: 'Documentación', sim: 'Simulación', pedidos: 'Pedidos', ajustes: 'Ajustes', super: 'Unity Tech', ayuda: 'Ayuda' };
+const TITULOS = { panel: 'Panel', clientes: 'Clientes', docs: 'Documentación', integ: 'Integraciones', sim: 'Simulación', pedidos: 'Pedidos', ajustes: 'Ajustes', super: 'Unity Tech', ayuda: 'Ayuda' };
 function topBar() { if (!staff() || S.demo || S.falta) return ''; const t = S.view === 'site' && S.site ? 'Clientes · ' + S.site.name : TITULOS[S.view] || '', mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   return `<header class="topb"><b class="topt">${esc(t)}</b><label class="topq"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="topq" type="search" placeholder="Buscar cliente, rack, gabinete o sección" aria-label="Buscar en Ondi" autocomplete="off" value="${esc(S.topQ || '')}"><kbd>${mac ? '⌘' : 'Ctrl'} K</kbd></label><div class="topr" id="topr" hidden></div></header>`; }
 function topBuscar(q) { const N = v => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), ws = N(q).split(/\s+/).filter(Boolean), ok = t => ws.every(w => N(t).includes(w)), out = [];
@@ -766,7 +767,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-topi
 function render() {
   if (S.auth) { $('#root').innerHTML = authView(); return; }
   const ctxSel = `<select id="ctxsel" aria-label="Empresa o cliente">${S.ctxs.map(c => `<option value="${esc(c.key)}" ${c === S.ctx ? 'selected' : ''}>${esc(c.name)}${c.kind === 'acc' ? ' · ' + esc(c.sub) : ''}</option>`).join('')}</select>`;
-  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['docs', 'Documentación', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>'], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
+  const navItems = staff() ? [['panel', 'Panel', IC.panel], ['clientes', 'Clientes', IC.sites], ['docs', 'Documentación', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 8h16M4 13h16M7 5.5h2M7 10.5h2M7 15.5h2"/></svg>'], ['integ', 'Integraciones', IC.integ], ['sim', 'Simulación', IC.sim], ['pedidos', 'Pedidos' + (S.pedN ? ` <em class="nb">${S.pedN}</em>` : ''), IC.ped], ['ajustes', 'Ajustes', IC.cog]] : [['clientes', 'Mi sitio', IC.sites], ['ayuda', 'Ayuda', IC.ped]];
   if (S.super) navItems.push(['super', 'Unity Tech', IC.shield]);
   if (S.demo) navItems.splice(0, navItems.length, ['sim', 'Demostración', IC.sim]);
   const cur = S.view === 'site' ? 'clientes' : S.view;
@@ -774,7 +775,7 @@ function render() {
   const grupo = (id, t, ks) => { const its = ks.map(por).filter(Boolean); if (!its.length) return ''; const ab = S.mini || NG[id] !== false; return `<button class="navg" data-navg="${id}" aria-expanded="${ab}"><span>${t}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="navgb" data-navgb="${id}"${ab ? '' : ' hidden'}>${its.map(btn).join('')}</div>`; };
   const subCli = staff() && !S.demo && S.sites && S.sites.length && !S.mini ? (() => { const F = fijGet().map(id => S.sites.find(st => st.id === id)).filter(Boolean), n = S.sites.length;
     return `<div class="navgb navcli" data-navgb="cli">${F.map(x => `<button data-site="${esc(x.id)}" class="${S.view === 'site' && S.site && S.site.id === x.id ? 'on' : ''}"><i class="dot${vigila(x) ? ' ok' : ''}"></i><span>${esc(x.name)}</span></button>`).join('')}<button data-nav="clientes" class="mas"><span>${F.length ? `Ver los ${n}` : `Fijá con ★ los que más usás`}</span></button></div>`; })() : '';
-  const nav = S.demo ? navItems.map(btn).join('') : ['panel', 'clientes'].map(por).filter(Boolean).map(btn).join('') + subCli + [por('docs')].filter(Boolean).map(btn).join('') + grupo('her', 'Herramientas', ['sim', 'pedidos']) + grupo('adm', 'Administración', ['ajustes', 'super']);
+  const nav = S.demo ? navItems.map(btn).join('') : ['panel', 'clientes'].map(por).filter(Boolean).map(btn).join('') + subCli + [por('docs'), por('integ')].filter(Boolean).map(btn).join('') + grupo('her', 'Herramientas', ['sim', 'pedidos']) + grupo('adm', 'Administración', ['ajustes', 'super']);
   const who = S.demo ? 'Sin cuenta · nada se guarda' : staff() ? (ROLN[S.ctx.role] || S.ctx.role) + ' en ' + esc(S.ctx.name) : 'Vista del cliente · solo lectura';
   const keepMaq = S.view === 'site' && S.tab === 'maqueta' && !S.modal && $('#maqframe') && $('#maqframe').dataset.site === S.site.id;
   if (keepMaq) { $('#sitehead').innerHTML = siteHead(); $('#maqbar').innerHTML = maqBar(); return; }
@@ -785,12 +786,13 @@ function render() {
       <div class="orgsel"><label for="ctxsel">Trabajando en</label>${ctxSel}</div><nav class="nav"><span class="navpill" aria-hidden="true"></span>${nav}</nav>
       ${S.ctx.soporte ? `<div class="sopo"><b>Modo soporte</b><span>Estás ayudando a ${esc(S.ctx.name)} como Unity Tech.</span><button class="btn sm" data-do="soporteout">Salir del soporte</button></div>` : ''}<div class="side-foot">${temaBtn()}<div class="yo" title="${esc(S.user.email)} · ${who}"><span class="av" aria-hidden="true">${esc(inicial())}</span><span class="yo-t"><b>${esc(nombreYo())}</b><small>${who}</small></span><button class="salir" data-a="logout" aria-label="Salir" title="Salir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg></button></div></div></aside>
     <div><div class="mtop">${logo()}${ctxSel.replace('id="ctxsel"', 'id="ctxsel2"')}</div><div class="mnav">${nav}${temaBtn()}<button data-a="logout">Salir</button></div>
-    <main id="main" class="${S.view === 'site' && S.site && !S.falta ? 'msitio' : ''}">${topBar()}${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
+    <main id="main" class="${S.view === 'site' && S.site && !S.falta ? 'msitio' : ''}">${topBar()}${S.falta ? faltaView() : S.view === 'sim' && staff() ? simView() : S.view === 'super' ? superView() : S.view === 'docs' && staff() ? docsView() : S.view === 'integ' && staff() ? integView() : S.view === 'pedidos' ? pedidosView() : S.view === 'ayuda' ? ayudaView() : S.view === 'panel' ? panelView() : S.view === 'ajustes' ? ajustesView() : S.view === 'site' && S.site ? siteView() : sitesView()}</main></div></div>
     ${S.modal ? modalView() : ''}`;
   navPill();
   if (S.view === 'site' && S.tab === 'maqueta' && S.site && !S.falta) mountMaq();
   if (S.view === 'site' && S.tab === 'doc' && S.site && staff() && !S.falta) mountDoc();
   if (S.view === 'sim' && S.sim && staff() && !S.falta) mountSim();
+  if (S.view === 'integ' && staff() && !S.falta && S.itab !== 'marcas') mountHerr();
   if (S.modal === 'newsite') { const f = $('#ns_name'); if (f) f.focus(); }
 }
 function faltaView() { return `<div class="wrap"><div class="head"><div><h1>Falta preparar la base</h1><p>La cuenta funciona, pero en Supabase todavía no están las tablas de Ondi.</p></div></div>
@@ -1081,7 +1083,7 @@ function integView() { const st = S.site, M = S.man[st.id], F = S.manForm;
   const list = (M || []).map(d => `<div><span><b>${esc(d.nombre)}</b><br><span class="muted" style="font-size:13px">${esc([BR[d.marca] ? BR[d.marca].n : d.marca, TIPOS[d.tipo] || d.tipo, d.modelo, d.ip].filter(Boolean).join(' · '))}</span></span>
       <span class="acts">${estPill(d.estado, d.marca)}${editor() ? `<button class="btn sm" data-manedit="${esc(d.id)}">Cambiar</button><button class="btn sm danger ${S.armed === 'man:' + d.id ? 'arm' : ''}" data-mandel="${esc(d.id)}">${S.armed === 'man:' + d.id ? '¿Seguro?' : 'Borrar'}</button>` : ''}</span></div>`).join('');
   return `${falta11()}<div class="grid2" style="align-items:start"><div style="display:grid;gap:18px">${CLOUD.map(k => cloudBlock(st, k)).join('')}</div>
-    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">Sonoff, TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell todavía no se leen solos. Cada marca va a tener dos caminos, y siempre uno sin instalar nada en el cliente (están en Ajustes → Integraciones). Mientras tanto cargalos acá: quedan en la lista y en la maqueta, y se ponen en vivo cuando el camino de su marca esté listo.</p>
+    <div class="card pad"><h2>Equipos de otras marcas</h2><p class="muted">Sonoff, TP-Link, MikroTik, Cisco, Hikvision, Dahua, Intelbras y Honeywell todavía no se leen solos. Cada marca va a tener dos caminos, y siempre uno sin instalar nada en el cliente (están en Integraciones → Marcas). Mientras tanto cargalos acá: quedan en la lista y en la maqueta, y se ponen en vivo cuando el camino de su marca esté listo.</p>
       ${M === undefined ? '<p class="muted">Cargando…</p>' : list ? `<div class="ppl">${list}</div>` : '<p class="muted">Todavía no cargaste equipos.</p>'}
       ${editor() && !F ? `<p style="margin-top:12px"><button class="btn pri" data-do="manadd">${IC.plus}Agregar equipo</button></p>` : ''}${form}</div></div>`; }
 
@@ -1154,11 +1156,11 @@ function claveCard() { if (S.ajustes === null) { setTimeout(loadAjustes, 0); ret
     <p style="margin:0 0 12px">${C ? `Definida${C.por ? ' por ' + esc(C.por) : ''}${C.cuando ? ' el ' + new Date(C.cuando).toLocaleDateString('es-UY') : ''}.` : '<b>Todavía no está definida.</b>'}</p>${admin() ? `<button class="btn" data-clave="cambiar">${C ? 'Cambiar la clave' : 'Definir la clave'}</button>` : '<p class="muted" style="font-size:13px;margin:0">La cambia un administrador.</p>'}</div>`; }
 document.addEventListener('click', e => { if (e.target.closest('[data-clave=cambiar]')) claveCambiar(); });
 
-function ajustesView() { const t = S.atab;
-  const tabs = [['empresa', 'Empresa y equipo'], ['roles', 'Roles y permisos'], ['clientes', 'Clientes'], ['integraciones', 'Integraciones'], ['avisos', 'Avisos'], ...(admin() ? [['actividad', 'Actividad']] : []), ['cuenta', 'Mi cuenta']];
+function ajustesView() { if (S.atab === 'integraciones') S.atab = 'empresa'; const t = S.atab;
+  const tabs = [['empresa', 'Empresa y equipo'], ['roles', 'Roles y permisos'], ['clientes', 'Clientes'], ['avisos', 'Avisos'], ...(admin() ? [['actividad', 'Actividad']] : []), ['cuenta', 'Mi cuenta']];
   return `<div class="wrap"><div class="head"><div><h1>Ajustes</h1><p>${esc(S.ctx.name)} · ${esc(ROLN[S.ctx.role] || S.ctx.role)}</p></div></div>
     <div class="stabs">${tabs.map(([k, n]) => `<button data-atab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${falta11()}
-    ${t === 'empresa' ? empresaView() : t === 'roles' ? rolesView() : t === 'clientes' ? clientesCfgView() : t === 'integraciones' ? marcasView() : t === 'avisos' ? avisosView() : t === 'actividad' ? actividadView() : cuentaView()}</div>`; }
+    ${t === 'empresa' ? empresaView() : t === 'roles' ? rolesView() : t === 'clientes' ? clientesCfgView() : t === 'avisos' ? avisosView() : t === 'actividad' ? actividadView() : cuentaView()}</div>`; }
 function empresaView() { if (!S.org) { setTimeout(loadOrg, 0); return '<div class="card empty">Cargando…</div>'; }
   const o = S.org, T = S.team || [];
   return `<div class="grid2"><div class="card pad"><h2>${esc(o.name)}</h2><dl class="rows" style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:8px 0 0;font-size:14px"><dt class="muted">Plan de Ondi</dt><dd style="margin:0">${esc(S.ctx.plan || o.plan || '—')}</dd><dt class="muted">Clientes en Ondi</dt><dd style="margin:0">${S.sites.length}</dd><dt class="muted">Tu rol</dt><dd style="margin:0">${esc(ROLN[S.ctx.role] || S.ctx.role)}</dd></dl>
@@ -1209,6 +1211,13 @@ document.addEventListener('toggle', e => { const d = e.target; if (d.matches && 
 // estado de cada marca: qué está andando y qué falta, en una palabra
 function bEstado(b) { const k = claveDe('', b.k); if (b.ready) return k ? ['ok', 'Funcionando'] : ['off', 'Falta la clave']; if (b.k === 'sonoff') return ['warn', 'Falta la cuenta de eWeLink']; return ['info', 'Con el Agente Ondi']; }
 const CHEV = '<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+/* Integraciones: las marcas y sus claves, y las herramientas para técnicos (herramientas.js) */
+const ITABS = [['marcas', 'Marcas'], ['consola', 'Consola'], ['escaneo', 'Escaneo de red'], ['calor', 'Mapa de calor'], ['wifi', 'Wifi predictivo'], ['camaras', 'Cámaras']];
+function integView() { const t = ITABS.some(x => x[0] === S.itab) ? S.itab : (S.itab = 'marcas');
+  return `<div class="wrap${t === 'marcas' ? '' : ' wide'}"><div class="head"><div><h1>Integraciones</h1><p>Las marcas que lee Ondi y las herramientas para trabajar en la red del cliente.</p></div></div>
+    <div class="stabs" style="margin-bottom:16px">${ITABS.map(([k, n]) => `<button data-itab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${t === 'marcas' ? falta11() + marcasView() : `<div id="herbox" data-h="${t}"><div class="card empty">Cargando…</div></div>`}</div>`; }
+const herr = () => window.OndiHerr ? Promise.resolve() : (herr.p = herr.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'herramientas.js?v=1'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+function mountHerr() { herr().then(() => window.OndiHerr.montar({ S, SB, orgId, toast, errTxt, render })).catch(() => { const b = $('#herbox'); if (b) b.innerHTML = '<div class="card empty"><b>No se pudo cargar</b><span>Revisá la conexión y recargá la página.</span></div>'; }); }
 function marcasView() { const filas = [...BRANDS.map(b => [b.k, b.n, b.c, b.ab]), ['otra', 'Cualquier otra marca', '#5B6670', '+']];
   const est = k => k === 'otra' ? ['info', 'Latido o chequeo'] : bEstado(BR[k]), ok = BRANDS.filter(b => bEstado(b)[1] === 'Funcionando').length;
   return `<div class="card pad mtab"><div class="mtab-h"><div><h2>Así monitorea Ondi cada marca</h2><p class="muted">Cada marca tiene un camino principal y uno de respaldo; siempre hay uno que no instala nada en el cliente. Las claves quedan guardadas en el servidor: nadie las puede ver después. Cada cliente se enlaza en su ficha, pestaña Integraciones.</p></div>
@@ -1355,7 +1364,7 @@ document.addEventListener('change', async e => {
 const arm = (key) => { if (S.armed === key) { S.armed = null; return true; } S.armed = key; render(); setTimeout(() => { if (S.armed === key) { S.armed = null; render(); } }, 4000); return false; };
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-fij],[data-vig]')) { e.preventDefault(); e.target.click(); } });
 document.addEventListener('click', async e => { if (S.modal && e.target.matches('[data-closemodal]')) { S.modal = null; render(); return; }
-  const t = e.target.closest('[data-fij],[data-vig],[data-docir],[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-sidetog],[data-tema],[data-navg],[data-ball],[data-bgo],[data-bfull],[data-probar],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
+  const t = e.target.closest('[data-fij],[data-vig],[data-docir],[data-nav],[data-sim],[data-site],[data-tab],[data-do],[data-pick],[data-rm],[data-atab],[data-itab],[data-sidetog],[data-tema],[data-navg],[data-ball],[data-bgo],[data-bfull],[data-probar],[data-goaj],[data-buscar],[data-unlink],[data-probar],[data-sorgref],[data-sorgall],[data-pickorg],[data-al],[data-alf],[data-alref],[data-clif],[data-ctdel],[data-ctav],[data-eqtab],[data-eqf],[data-delkey],[data-manedit],[data-mandel],[data-pf],[data-stab],[data-sin],[data-sout],[data-sgo],[data-sact],[data-snota],[data-srej],[data-repopen],[data-repsug],[data-repsave]'); if (!t || S.auth) return;
   if (t.dataset.repopen) { const h = t.dataset.repopen; S.rep[h] = 'cargando'; render(); fn({ accion: 'consola', hostId: h }).then(r => { S.rep[h] = repInit(r); render(); }).catch(er => { S.rep[h] = { error: errTxt(er) }; render(); }); return; }
   if (t.dataset.repsug) { const R = S.rep[t.dataset.repsug], cli = s => (R.sitios.find(x => x.siteId === s) || {}).cliente || ''; R.equipos.forEach(d => { R.sel[d.mac] = cli(d.sugerido); }); render(); return; }
   if (t.dataset.repsave) { const h = t.dataset.repsave, R = S.rep[h]; if (!R || R.saving) return; const asig = {}; R.clientes.forEach(c => { asig[c.id] = []; }); R.equipos.forEach(d => { const v = R.sel[d.mac]; if (v && asig[v]) asig[v].push(d.mac); }); R.saving = true; render();
@@ -1376,6 +1385,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
   if (t.dataset.site) return openSite(t.dataset.site, t.dataset.sitetab);
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.manForm = null; render(); return; }
   if (t.dataset.atab) { S.atab = t.dataset.atab; render(); return; }
+  if (t.dataset.itab) { S.itab = t.dataset.itab; render(); return; }
   if (t.dataset.bfull != null && t.closest('.brand, .brands')) { e.preventDefault(); S.bfull = t.dataset.bfull || null; document.documentElement.classList.toggle('bfullon', !!S.bfull); render(); return; }
   if (t.dataset.probar) { e.preventDefault(); probar(t.dataset.probar); return; }
   if (t.dataset.sidetog != null) { sideTog(); return; }
@@ -1383,7 +1393,7 @@ document.addEventListener('click', async e => { if (S.modal && e.target.matches(
   if (t.dataset.tema != null) { temaPoner(temaOscuro() ? 'light' : 'dark'); return; }
   if (t.dataset.ball) { const on = t.dataset.ball === '1'; document.querySelectorAll('details[data-bk]').forEach(d => { d.open = on; BOPEN[d.dataset.bk] = on ? 1 : 0; }); bSave(); return; }
   if (t.dataset.bgo) { e.preventDefault(); const d = document.getElementById('br-' + t.dataset.bgo); if (d) { d.open = true; d.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); } return; }
-  if (t.dataset.goaj) { S.view = 'ajustes'; S.atab = t.dataset.goaj; S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
+  if (t.dataset.goaj) { if (t.dataset.goaj === 'integraciones') { S.view = 'integ'; S.itab = 'marcas'; } else { S.view = 'ajustes'; S.atab = t.dataset.goaj; } S.site = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); return; }
   const st = S.site;
   try {
     if (t.dataset.pick) { const [k, hostId, siteId] = t.dataset.pick.split('|'), x = ((S.sitiosUI[k] || {}).sitios || []).find(o => o.hostId === hostId && o.siteId === siteId);
@@ -1944,7 +1954,7 @@ document.addEventListener('keydown', e => { if (!e.target.classList || !e.target
 // la dirección guarda dónde se está parado, para que F5 vuelva al mismo lugar (#c/pestaña/rack o #v/sección)
 function navHash() { if (S.auth || !S.user || /type=recovery|access_token/.test(location.hash)) return; let h = '';
   if (S.view === 'site' && S.site) { h = '#c/' + S.tab; const D = S.doc; if (S.tab === 'doc' && D && D.site === S.site.id) { if (D.cid) h += '/' + encodeURIComponent(D.cid); else if (D.caja) h += '/' + encodeURIComponent('caja:' + D.caja); } }
-  else if (S.view && S.view !== 'panel') h = '#v/' + S.view + (S.view === 'ajustes' && S.atab ? '/' + S.atab : '');
+  else if (S.view && S.view !== 'panel') h = '#v/' + S.view + (S.view === 'ajustes' && S.atab ? '/' + S.atab : S.view === 'integ' && S.itab ? '/' + S.itab : '');
   if ((location.hash || '') !== h) try { history.replaceState(null, '', location.pathname + location.search + h); } catch (e) {} }
 render = (o => function () { const r = o.apply(this, arguments); navHash(); if (S.maqCh && !(S.view === 'site' && S.tab === 'maqueta' && S.site && S.site.id === S.maqChSite)) maqPresFin(); return r; })(render);
 docPaint = (o => function () { const r = o.apply(this, arguments); navHash(); return r; })(docPaint);
