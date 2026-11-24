@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="../../olumi/app/config.js"></script>
 <script src="../../olumi/app/vendor/supabase.js"></script>
+<script src="elegir.js?v=1" defer></script>
 <style>
 /* Ondi con cuentas: la instaladora administra sus clientes, los enlaza con UniFi y le da acceso de solo lectura al IT de cada cliente.
    Mismos colores y letras que la app de Ondi: grafito frío + cian "señal"; verde/ámbar/rojo solo para estado. */
@@ -458,7 +459,21 @@ html.navmini .side .side-foot{display:grid}html.navmini .yo{justify-content:cent
 .clist{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
 .cl{padding:16px 18px 14px;gap:8px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:pan-y;transition:box-shadow .25s,transform .25s var(--mv)}
 .cl:hover{box-shadow:inset 0 1px 0 var(--brillo),0 18px 40px -18px rgba(11,40,90,.45)}
-.cl .clh{display:flex;align-items:center;gap:10px;width:100%;min-width:0}.docsbus{margin:0 0 14px}.docsbus input{width:100%;max-width:520px;height:42px;border-radius:999px;border:1px solid var(--line);background:var(--surface);padding:0 16px;font:inherit;font-size:15px;color:var(--ink)}
+.cl .clh{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
+/* listas para elegir con la estética de la app (elegir.js): el botón ocupa el lugar del select y la lista flota con buscador si es larga */
+.cpk-sel{display:none!important}
+.cpk-b{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.cpk-b span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cpk-b.vacio span{color:var(--muted)}.cpk-b svg{flex:none;color:var(--muted);transition:transform .2s}
+.cpk-b:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.cpk-b:focus-visible,.cpk-b[aria-expanded=true]{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.cpk-b[aria-expanded=true] svg{transform:rotate(180deg)}.cpk-b:disabled{opacity:.55;cursor:default}
+.eqfil .cpk-b,.alfil .cpk-b{height:34px;font-size:13.5px;border-radius:8px;background:var(--surface);max-width:220px}.mtop .cpk-b{height:36px;max-width:46vw;border-radius:9px;font-size:14px}.orgsel .cpk-b{height:38px;border-radius:9px}
+.cpk{position:fixed;z-index:1000;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:linear-gradient(var(--surface),var(--surface)),var(--bg);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);box-shadow:0 18px 44px -12px rgba(15,20,26,.35),0 2px 6px rgba(15,20,26,.08);overflow:hidden;animation:cpkin .14s ease-out}
+@keyframes cpkin{from{opacity:0;transform:translateY(-4px)}}@media (prefers-reduced-motion:reduce){.cpk{animation:none}}
+.cpk-q{display:flex;align-items:center;gap:8px;padding:2px 12px;border-bottom:1px solid var(--line);color:var(--muted);flex:none}.cpk-q input{flex:1;min-width:0;border:0;background:none;padding:11px 0;font:inherit;font-size:15px;color:var(--ink);outline:none}
+.cpk-l{overflow:auto;overscroll-behavior:contain;padding:5px;flex:1}
+.cpk-o{display:flex;align-items:center;gap:8px;width:100%;min-height:38px;padding:8px 10px;border:0;border-radius:9px;background:none;color:var(--ink);font:inherit;font-size:14.5px;text-align:left;cursor:pointer}
+.cpk-o span{flex:1;min-width:0}.cpk-o svg{flex:none;color:var(--accent)}.cpk-o.on,.cpk-o:hover{background:var(--sunken)}.cpk-o:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.cpk-o.sel{font-weight:600}.cpk-o.vacio{color:var(--muted)}.cpk-o:disabled{opacity:.45;cursor:default}
+.red .cpk-b{height:36px;font-size:14px;border-radius:8px}.red-te .cpk-b{height:30px;padding:0 7px;font-size:13px;border-color:transparent;background:transparent;border-radius:6px}.red-te .cpk-b:hover{border-color:var(--line)}.docp .red-tools .cpk-b{display:none}
+.cpk-g{padding:9px 10px 4px;font-size:11.5px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.cpk-nada{margin:0;padding:12px;font-size:13.5px;color:var(--muted)}.docsbus{margin:0 0 14px}.docsbus input{width:100%;max-width:520px;height:42px;border-radius:999px;border:1px solid var(--line);background:var(--surface);padding:0 16px;font:inherit;font-size:15px;color:var(--ink)}
 .docblk{padding:14px 16px;margin-bottom:12px}.docblk-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.docblk-h b{font-size:16px}.docblk-h .muted{flex:1;font-size:13px;min-width:0}
 .docrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:12px}.dgr{display:flex;align-items:center;gap:10px;text-align:left;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;font:inherit;min-width:0}
 .dgr:hover{border-color:var(--accent);background:var(--accent-soft)}.dgr i{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink,var(--accent));flex:none}.dgr i svg{width:20px;height:20px}.dgr>span{display:grid!important;gap:1px;min-width:0;flex:1}.dgr b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dgr small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fij{display:inline-grid;place-items:center;width:30px;height:30px;margin:-6px 0;border-radius:9px;color:var(--muted);cursor:pointer;flex:none;transition:color .15s,background .15s}.fij:hover{background:var(--sunken);color:var(--ink)}.fij[aria-pressed=true]{color:#f5b301}.fij:focus-visible,.vig:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
