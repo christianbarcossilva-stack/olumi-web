@@ -1,5 +1,5 @@
 /* Ondi · Integraciones: herramientas para técnicos y gerentes de IT.
-   Consola y escaneo de red (con el ayudante Ondi Técnico en la laptop), mapa de calor medido,
+   Escaneo de red (con Ondi Scanner en la laptop), mapa de calor medido,
    predictivo de wifi y simulador de cámaras. Usa lo que ya tiene la app (S, SB, orgId, toast). */
 (function () {
 'use strict';
@@ -63,7 +63,7 @@ const css = `
 if (!document.getElementById('hcss')) { const st = document.createElement('style'); st.id = 'hcss'; st.textContent = css; document.head.appendChild(st); }
 
 /* ======================================================================
-   Ondi Técnico (el ayudante de la laptop)
+   Ondi Scanner (el programa de la laptop)
    ====================================================================== */
 const AY = { url: 'http://127.0.0.1:47800', est: undefined, cod: ls.get('ondi.tec.cod') || '' };
 async function ayHola() {
@@ -80,27 +80,23 @@ async function ayWifi() { const r = await fetch(AY.url + '/wifi', { headers: { '
 
 const SO = /Win/i.test(navigator.platform || navigator.userAgent) ? 'win' : /Mac/i.test(navigator.platform || '') && !movil ? 'mac' : movil ? 'movil' : 'otro';
 const safari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|Firefox/.test(navigator.userAgent);
+const DESC = '../scanner/descargas/';
 function ayHtml(para) {
-  if (AY.est === undefined) return `<div class="hay"><span class="dot"></span><span>Buscando Ondi Técnico en esta compu…</span></div>`;
-  if (AY.est === false) { const cmd = 'python3 ~/Downloads/ondi_tecnico.py';
-    const pasos = SO === 'mac' ? `<li>Tocá acá para bajarlo: <a href="../tecnico/ondi_tecnico.py" download>ondi_tecnico.py</a> (queda en Descargas).</li>
-        <li>Abrí la app <b>Terminal</b> (Cmd + Espacio y escribís «Terminal»).</li>
-        <li>Pegá esto y apretá Enter: <span class="mono" style="user-select:all">${cmd}</span> <button class="btn sm" data-hcopia="${cmd}">Copiar</button><br><span class="muted">Si la Mac pide instalar «herramientas de línea de comandos», aceptá, esperá que termine y pegalo de nuevo.</span></li>
-        <li>La Terminal muestra un <b>código de 6 números</b>. Dejala abierta, volvé acá y tocá <b>Buscar de nuevo</b>.</li>`
-      : SO === 'win' ? `<li>Instalá Python desde <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a>. En el instalador tildá <b>«Add Python to PATH»</b>. Se hace una sola vez.</li>
-        <li>Tocá acá para bajarlo: <a href="../tecnico/ondi_tecnico.py" download>ondi_tecnico.py</a></li>
-        <li>Hacé doble clic en el archivo bajado. Se abre una ventana negra con un <b>código de 6 números</b>.</li>
-        <li>Dejá esa ventana abierta, volvé acá y tocá <b>Buscar de nuevo</b>.</li>`
-      : `<li>Abrí Ondi en la laptop (Windows o Mac) y entrá acá mismo: ahí te muestra los pasos para esa compu.</li>`;
-    return `<div class="hay" style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center"><span class="dot no"></span><b>${SO === 'movil' ? para + ' se hace desde la laptop' : 'Falta abrir Ondi Técnico en esta compu'}</b></div>
-    <p class="muted" style="margin:0">${para} necesita un programa chico en la laptop del técnico: el navegador solo no puede tirar ping ni recorrer la red del cliente. El programa hace eso y le pasa el resultado a Ondi. Solo funciona en esta compu y solo le contesta a Ondi.</p>
-    <ol class="how" style="margin:0">${pasos}</ol>
-    ${SO !== 'movil' ? `<p class="muted" style="margin:0">Las próximas veces alcanza con abrirlo${SO === 'mac' ? ' (el comando de la Terminal)' : ' (doble clic)'}: el código queda guardado.${safari ? ' <b>Usá Chrome:</b> Safari no deja que la página hable con el programa.' : ''}</p>
-    <div><button class="btn sm" data-h="ayre">Buscar de nuevo</button></div>` : ''}</div>`; }
-  if (!AY.est.emparejado) return `<div class="hay"><span class="dot"></span><b>Ondi Técnico está abierto</b><span class="muted">Poné el código de 6 números que muestra su ventana.</span>
-    <form data-hf="aycod"><input id="aycod" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000" aria-label="Código de emparejado"><button class="btn sm pri" type="submit">Emparejar</button></form></div>`;
+  if (AY.est === undefined) return `<div class="hay"><span class="dot"></span><span>Buscando Ondi Scanner en esta compu…</span></div>`;
+  if (AY.est === false) {
+    const bW = `<a class="btn sm${SO === 'win' ? ' pri' : ''}" href="${DESC}OndiScanner.exe" download>Bajar Ondi Scanner para Windows</a>`, bM = `<a class="btn sm${SO === 'mac' ? ' pri' : ''}" href="${DESC}OndiScanner-Mac.zip" download>Bajar Ondi Scanner para Mac</a>`;
+    const bajar = SO === 'mac' ? bM : SO === 'win' ? bW : bW + ' ' + bM;
+    const abrir = SO === 'mac' ? 'Abrí el zip y después «Ondi Scanner». La primera vez la Mac pide confirmar: clic derecho → Abrir (en macOS 15: Configuración del Sistema → Privacidad y seguridad → Abrir igual).'
+      : SO === 'win' ? 'Abrí el archivo. La primera vez Windows puede avisar: tocá «Más información» → «Ejecutar de todas formas».' : 'Abrilo. La primera vez Windows o la Mac piden confirmar (en la página «Qué es» están los pasos).';
+    return `<div class="hay" style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center"><span class="dot no"></span><b>${SO === 'movil' ? para + ' se hace desde la laptop' : 'Falta abrir Ondi Scanner en esta compu'}</b></div>
+    <p class="muted" style="margin:0">${para} usa Ondi Scanner, nuestro programa gratis para la laptop del técnico: el navegador solo no puede recorrer la red del cliente ni leer el wifi. Se baja una vez y no se instala nada.</p>
+    ${SO === 'movil' ? '<p class="muted" style="margin:0">Abrí Ondi en una laptop con Windows o Mac y entrá acá mismo.</p>' : `<ol class="how" style="margin:0"><li>${bajar} <a href="../scanner/" target="_blank" rel="noopener">Qué es</a></li><li>${abrir}</li>
+      <li>Arriba a la derecha de Ondi Scanner tocá <b>Ondi web</b>: ahí está el código de 6 números. Ponelo acá.</li></ol>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn sm" data-h="ayre">Ya lo abrí, buscar de nuevo</button>${safari ? '<span class="muted"><b>Usá Chrome:</b> Safari no deja que la página hable con el programa.</span>' : ''}</div>`}</div>`; }
+  if (!AY.est.emparejado) return `<div class="hay"><span class="dot"></span><b>Ondi Scanner está abierto</b><span class="muted">Poné el código de 6 números que aparece en su botón «Ondi web».</span>
+    <form data-hf="aycod"><input id="aycod" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000" aria-label="Código de emparejado"><button class="btn sm pri" type="submit">Conectar</button></form></div>`;
   const R = AY.est.redes && AY.est.redes[0];
-  return `<div class="hay"><span class="dot ok"></span><b>Ondi Técnico conectado</b><span class="muted">${esc(AY.est.equipo || '')} · ${esc(AY.est.so || '')}${R ? ' · ' + esc(R.ip) : ''} · versión ${esc(AY.est.version || '1.0')}</span><span class="grow" style="flex:1"></span><button class="btn sm" data-h="ayoff">Desemparejar</button></div>`; }
+  return `<div class="hay"><span class="dot ok"></span><b>Ondi Scanner conectado</b><span class="muted">${esc(AY.est.equipo || '')} · ${esc(AY.est.so || '')}${R ? ' · ' + esc(R.ip) : ''}</span><span class="grow" style="flex:1"></span><button class="btn sm" data-h="ayoff">Desconectar</button></div>`; }
 
 /* ======================================================================
    Consola
@@ -133,13 +129,13 @@ async function coCorrer(txt) {
   if (cm === 'limpiar' || cm === 'cls' || cm === 'clear') { CO.lineas = []; coPintar(); return; }
   if (cm === 'ayuda' || cm === 'help' || cm === '?') { coAgregar(AYUDA, 'tn'); return; }
   const c = ALIAS[cm]; if (!c) { coAgregar('No conozco «' + w + '». Escribí ayuda.\n', 'no'); return; }
-  if (!ayListo()) { coAgregar('Falta Ondi Técnico abierto y emparejado en esta compu (arriba están los pasos).\n', 'no'); return; }
+  if (!ayListo()) { coAgregar('Falta Ondi Scanner abierto y emparejado en esta compu (arriba están los pasos).\n', 'no'); return; }
   let a = resto.filter(x => !/^-/.test(x)).join(' '), n = 4; const nn = txt.match(/\s(?:-n|-c)\s*(\d+)/) || (c === 'ping' && resto[1] && /^\d+$/.test(resto[1]) ? [0, resto[1]] : null);
   if (c === 'ping') { if (nn) n = +nn[1]; if (/\s-t\b/.test(txt)) n = 100; a = resto[0] || ''; }
   if (['ping', 'traza', 'dns', 'puerto'].includes(c) && !a) { coAgregar('Falta la dirección. Ej.: ' + c + ' 8.8.8.8' + (c === 'puerto' ? ' 443' : '') + '\n', 'no'); return; }
   const ac = new AbortController(); CO.corre = ac; coPintar();
   try { await ayPost('/cmd', { c, a, n }, t => coAgregar(t), ac.signal); }
-  catch (e) { if (e.name !== 'AbortError') coAgregar((/Failed to fetch|NetworkError|Load failed/.test(e.message) ? 'Se cortó la conexión con Ondi Técnico. ¿Sigue abierta su ventana?' : e.message) + '\n', 'no'); else coAgregar('^C cortado\n', 'tn'); }
+  catch (e) { if (e.name !== 'AbortError') coAgregar((/Failed to fetch|NetworkError|Load failed/.test(e.message) ? 'Se cortó la conexión con Ondi Scanner. ¿Sigue abierta su ventana?' : e.message) + '\n', 'no'); else coAgregar('^C cortado\n', 'tn'); }
   CO.corre = null; coPintar(); if (AY.est && !AY.est.emparejado) montar(); }
 function consolaHtml() {
   const ch = ['ping 8.8.8.8', 'ping 192.168.1.1', 'traza google.com', 'dns unitytech.uy', 'puerto 192.168.1.64 554', 'ip', 'arp', 'wifi'];
@@ -152,7 +148,7 @@ function consolaHtml() {
    Escaneo de red
    ====================================================================== */
 const ES = { filas: [], total: 0, hechos: 0, corre: null, red: '', puertos: true, q: '', fin: null, cli: '', agregados: {} };
-const TIPN = { camara: 'Cámara o grabador', router: 'Router', ap: 'Access point', switch: 'Switch', sensor_puerta: 'Equipo IoT', otro: 'Otro' };
+const TIPN = { camara: 'Cámara o grabador', router: 'Router', ap: 'Access point', switch: 'Switch', impresora: 'Impresora', pc: 'Computadora', nas: 'Almacenamiento (NAS)', iot: 'Equipo IoT', sensor_puerta: 'Equipo IoT', movil: 'Celular o compu', otro: 'Otro' };
 const MARCA = f => /hikvision/i.test(f) ? 'hikvision' : /dahua/i.test(f) ? 'dahua' : /ubiquiti/i.test(f) ? 'unifi' : /mikrotik|routerboard/i.test(f) ? 'mikrotik' : /tp-?link/i.test(f) ? 'tplink' : /intelbras/i.test(f) ? 'intelbras' : /espressif|sonoff|itead/i.test(f) ? 'sonoff' : /cisco|meraki/i.test(f) ? 'cisco' : 'otra';
 function escaneoHtml() {
   if (!ES.red && AY.est && AY.est.redes && AY.est.redes[0]) ES.red = AY.est.redes[0].red;
@@ -162,7 +158,7 @@ function escaneoHtml() {
     <div class="card pad"><form class="hbar" data-hf="scan"><label class="fld" style="margin:0;min-width:200px;flex:1">Red a recorrer<input id="hred" class="mono" value="${esc(ES.red)}" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false"></label>
       <label class="chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" id="hpto" ${ES.puertos ? 'checked' : ''}> Buscar puertos (cámaras, routers, web)</label>
       <button class="btn ${ES.corre ? 'danger' : 'pri'}" style="align-self:end" type="submit">${ES.corre ? 'Parar' : 'Escanear'}</button></form>
-      ${ES.corre || ES.fin ? `<div style="margin-top:12px"><div class="hprog"><i style="width:${ES.corre ? pct : 100}%"></i></div><p class="hnota" style="margin-top:6px">${ES.corre ? `Recorriendo ${ES.hechos} de ${ES.total}…` : esc(ES.fin)}</p></div>` : '<p class="hnota" style="margin-top:10px">Recorre una red de hasta 1024 direcciones desde esta compu: quién responde, fabricante por la MAC, nombre y qué puertos tiene abiertos. Una /24 tarda entre 10 y 40 segundos.</p>'}</div>
+      ${ES.corre || ES.fin ? `<div style="margin-top:12px"><div class="hprog"><i style="width:${ES.corre ? pct : 100}%"></i></div><p class="hnota" style="margin-top:6px">${ES.corre ? `Recorriendo ${ES.hechos} de ${ES.total}…` : esc(ES.fin)}</p></div>` : '<p class="hnota" style="margin-top:10px">Recorre una red de hasta 4096 direcciones desde esta compu: quién responde, fabricante por la MAC, nombre y qué puertos tiene abiertos. Una /24 tarda entre 10 y 40 segundos.</p>'}</div>
     ${ES.filas.length ? `<div class="card pad"><div class="hbar" style="margin-bottom:10px"><b>${ES.filas.length} equipos</b><input id="hesq" placeholder="Filtrar por IP, marca o nombre" value="${esc(ES.q)}" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)">
         <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Agregar a<select id="hescli" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface)"><option value="">elegí un cliente</option>${sites.map(s => `<option value="${esc(s.id)}" ${ES.cli === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
         <button class="btn sm" data-h="escsv">Bajar la lista</button></div>
@@ -174,17 +170,17 @@ function escaneoHtml() {
 async function esCorrer() {
   if (ES.corre) { ES.corre.abort(); return; }
   ES.red = ($('#hred') || {}).value.trim(); ES.puertos = !!($('#hpto') || {}).checked;
-  if (!ayListo()) { A.toast('Primero abrí y emparejá Ondi Técnico'); return; }
+  if (!ayListo()) { A.toast('Primero abrí Ondi Scanner y conectalo'); return; }
   ES.filas = []; ES.hechos = 0; ES.total = 0; ES.fin = null; const ac = new AbortController(); ES.corre = ac; montar(); let buf = '';
   try { await ayPost('/escanear', { red: ES.red, puertos: ES.puertos }, t => { buf += t; let i; while ((i = buf.indexOf('\n')) >= 0) { const ln = buf.slice(0, i); buf = buf.slice(i + 1); if (!ln) continue; const o = JSON.parse(ln);
       if (o.t === 'inicio') ES.total = o.total; else if (o.t === 'avance') ES.hechos = o.hechos; else if (o.t === 'equipo') ES.filas.push(o); else if (o.t === 'fin') ES.fin = `Listo: ${o.encontrados} equipos en ${dec(o.seg)} s.`; }
       montarLuego(); }, ac.signal); }
-  catch (e) { ES.fin = e.name === 'AbortError' ? 'Cortado.' : /Failed to fetch|NetworkError|Load failed/.test(e.message) ? 'Se cortó la conexión con Ondi Técnico.' : e.message; }
+  catch (e) { ES.fin = e.name === 'AbortError' ? 'Cortado.' : /Failed to fetch|NetworkError|Load failed/.test(e.message) ? 'Se cortó la conexión con Ondi Scanner.' : e.message; }
   ES.corre = null; montar(); }
 async function esAgregar(ip) {
   const st = (A.S.sites || []).find(s => s.id === ES.cli); if (!st) { A.toast('Elegí a qué cliente agregarlo'); const s = $('#hescli'); if (s) s.focus(); return; }
   const r = ES.filas.find(x => x.ip === ip); if (!r) return;
-  const row = { org_id: st.org_id, site_id: st.id, marca: MARCA(r.fab + ' ' + r.web), tipo: r.tipo === 'switch' ? 'switch' : r.tipo, nombre: (r.nombre || r.web || ((r.fab && !/privada/.test(r.fab) ? r.fab.split(/[ ,]/)[0] + ' ' : '') + ip)).slice(0, 80), ip, modelo: null, notas: r.mac ? 'MAC ' + r.mac : null };
+  const row = { org_id: st.org_id, site_id: st.id, marca: MARCA(r.fab + ' ' + r.web), tipo: ['camara', 'router', 'ap', 'switch'].includes(r.tipo) ? r.tipo : 'otro', nombre: (r.nombre || r.web || ((r.fab && !/privada/.test(r.fab) ? r.fab.split(/[ ,]/)[0] + ' ' : '') + ip)).slice(0, 80), ip, modelo: null, notas: r.mac ? 'MAC ' + r.mac : null };
   const q = await A.SB.from('ondi_equipos').insert(row).select().single();
   if (q.error) { A.toast(A.errTxt(q.error)); return; }
   if (A.S.man && A.S.man[st.id]) A.S.man[st.id].push(q.data); if (A.S.eq) delete A.S.eq[st.id];
@@ -447,7 +443,7 @@ function calibrar(Lw, Lc) {
       por = {}; for (const id in sum) por[id] = clamp(sum[id] / (cnt[id] + 4), -10, 10); } }
   return { n: Math.round(n * 100) / 100, k: Math.round(k * 100) / 100, off: Math.round(off * 10) / 10, por, pts: D.length, e0: Math.round(e0 * 10) / 10, e1: Math.round(error(n, k, off, por) * 10) / 10, f: new Date().toISOString().slice(0, 10) }; }
 
-/* ---------- caminar midiendo (con Ondi Técnico) ----------
+/* ---------- caminar midiendo (con Ondi Scanner) ----------
    Se toca el plano donde uno arranca y cada vez que dobla; las lecturas del medio se reparten a lo largo del tramo según la hora. */
 const CAM = { activo: false, L: null, wps: [], pend: [], seq: -1, n: 0, ult: null, id: 0, err: 0, tm: 0 };
 const normW = w => w && !w.actual && (w.rssi != null || w.ssid) ? { actual: w, redes: [], seq: Date.now(), exacto: false } : w;
@@ -457,7 +453,7 @@ function aPunto(w, x, y, cam) { const a = w.actual || {};
 async function camLeer() { if (!CAM.activo) return; const t0 = Date.now();
   try { const w = normW(await ayWifi()); if (w && w.seq !== CAM.seq) { CAM.seq = w.seq; CAM.pend.push({ t: Date.now(), w }); CAM.n++; CAM.ult = w; CAM.err = 0; } } catch (e) { CAM.err++; }
   camEstado(); CAM.tm = setTimeout(camLeer, Math.max(150, 900 - (Date.now() - t0))); }
-function camEmpezar(L, x, y) { if (!ayListo()) { A.toast('Para caminar midiendo hace falta Ondi Técnico abierto en la laptop'); return; }
+function camEmpezar(L, x, y) { if (!ayListo()) { A.toast('Para caminar midiendo hace falta Ondi Scanner abierto en la laptop'); return; }
   Object.assign(CAM, { activo: true, L, wps: [{ x, y, t: Date.now() }], pend: [], seq: -1, n: 0, ult: null, id: Date.now(), err: 0 }); montar(); camLeer(); }
 function camPunto(L, x, y) { const t = Date.now(), a = CAM.wps[CAM.wps.length - 1], usar = CAM.pend.filter(s => s.t <= t); CAM.pend = CAM.pend.filter(s => s.t > t);
   for (const s of usar) { const f = clamp((s.t - a.t) / Math.max(1, t - a.t), 0, 1); L.puntos.push(aPunto(s.w, a.x + (x - a.x) * f, a.y + (y - a.y) * f, CAM.id)); }
@@ -466,7 +462,7 @@ function camTerminar() { const L = CAM.L; if (!CAM.activo) return; clearTimeout(
   for (const s of CAM.pend) L.puntos.push(aPunto(s.w, a.x, a.y, CAM.id)); CAM.activo = false; CAM.pend = []; L.cambio = true; montar(); A.toast(`Recorrido guardado: ${L.puntos.filter(p => p.cam === CAM.id).length} lecturas`); }
 function camEstado() { const el = $('#hwalk'); if (!el) return; const u = CAM.ult, a = u && u.actual || {};
   el.innerHTML = `<span class="rec"></span><span>Caminando: <b>${CAM.n}</b> lecturas</span>${a.rssi != null ? `<span>Ahora <b>${a.rssi} dBm</b>${a.ssid ? ' en ' + esc(a.ssid) : ''}</span>` : ''}${u && u.redes ? `<span class="muted">${u.redes.length} access points a la vista</span>` : ''}
-    ${CAM.err > 2 ? '<span style="color:var(--crit)">No responde Ondi Técnico</span>' : ''}${u && u.exacto === false ? '<span class="muted">Esta compu da la señal en %, se pasa a dBm aproximado</span>' : ''}
+    ${CAM.err > 2 ? '<span style="color:var(--crit)">No responde Ondi Scanner</span>' : ''}${u && u.permiso === 'ubicacion' ? '<span style="color:var(--crit)">Windows no deja leer las redes: activá Configuración → Privacidad y seguridad → Ubicación → «Permitir que las apps de escritorio accedan a la ubicación»</span>' : ''}${u && u.exacto === false ? '<span class="muted">Esta compu da la señal en %, se pasa a dBm aproximado</span>' : ''}
     <span style="flex:1"></span><button class="btn sm pri" data-h="camfin">Terminar</button>`; }
 
 /* ---------- el panel de al lado ---------- */
@@ -493,7 +489,7 @@ function ladoPintar(L) { const el = $('#hlado'); if (!el) return; const s = L.se
     <div class="hst" style="margin-bottom:8px">${m ? `<span>Mejor señal${L.ssid !== '*' && (L.ssid || p.ssid) ? ' de ' + esc(L.ssid || p.ssid) : ''}</span><b>${dec(m.r, 0)} dBm</b>` : ''}<span>Velocidad</span><b>${p.mbps == null ? '—' : dec(p.mbps) + ' Mbps'}</b><span>Latencia</span><b>${p.ms == null ? '—' : dec(p.ms, 0) + ' ms'}</b>${p.ruido ? `<span>Ruido</span><b>${p.ruido} dBm</b>` : ''}</div>
     ${R.length ? `<div class="hcats" style="margin-bottom:8px">${R.map(r => `<div><i style="background:${PALETA[apIdx(L, grupoAP(r)) % PALETA.length]}"></i><span>${esc(r.s || 'red oculta')} · c${r.c}</span><span>${r.r}</span></div>`).join('')}</div>` : ''}
     <div style="display:flex;flex-wrap:wrap;gap:6px">${ayListo() && !p.cam ? '<button class="btn sm" data-h="leerw">Leer el wifi de esta compu</button>' : ''}<button class="btn sm" data-h="medirv">${L.midiendo ? 'Midiendo…' : 'Medir velocidad'}</button><button class="btn sm danger" data-h="borrasel">Borrar</button></div>
-    ${ayListo() || p.cam ? '' : '<p class="hnota" style="margin-top:8px">La señal se lee sola con Ondi Técnico abierto en la laptop. En el celular, copiala de una app como WiFiman: el navegador no la deja leer.</p>'}</div>`; }
+    ${ayListo() || p.cam ? '' : '<p class="hnota" style="margin-top:8px">La señal se lee sola con Ondi Scanner abierto en la laptop. En el celular, copiala de una app como WiFiman: el navegador no la deja leer.</p>'}</div>`; }
   let num = '';
   if (L.tipo === 'wifi') { const c = L.aps.length ? cobertura(L) : null, U = UMBRAL.find(x => x[0] === +L.umbral) || UMBRAL[0];
     num = `<div class="card"><h3>Lo que necesita el cliente</h3>
@@ -531,9 +527,9 @@ function lienzoHtml(L) {
   const sites = A.S.sites || [], E = EST[L.tipo], walk = CAM.activo && CAM.L === L, v11 = AY.est && AY.est.version && AY.est.version >= '1.1';
   const herrs = L.tipo === 'wifi' ? [['mover', 'Mover'], ['ap', 'Poner AP'], ['pared', 'Dibujar pared'], ['escala', 'Medir escala'], ['borrar', 'Borrar']] : [['mover', 'Mover'], ['caminar', 'Caminar midiendo'], ['medir', 'Medir acá'], ['pared', 'Dibujar pared'], ['escala', 'Medir escala'], ['borrar', 'Borrar']];
   const ayuda = { mover: 'Arrastrá para mover el plano o un elemento. Rueda o dos dedos para acercar.', ap: 'Tocá donde va colgado cada access point.', pared: 'Arrastrá de punta a punta de cada pared. Se acomoda a 90° sola.', escala: 'Trazá una línea sobre algo que sepas cuánto mide (una pared, un portón).', borrar: 'Tocá lo que quieras sacar.',
-    medir: 'Parate en un lugar, tocá en el plano dónde estás y medí.', caminar: walk ? 'Tocá el plano cada vez que llegues a una esquina o cambies de dirección. Caminá a paso parejo.' : 'Tocá dónde arrancás y caminá a paso parejo con la laptop abierta. Ondi Técnico lee todos los access points cada segundo.' }[L.herr];
+    medir: 'Parate en un lugar, tocá en el plano dónde estás y medí.', caminar: walk ? 'Tocá el plano cada vez que llegues a una esquina o cambies de dirección. Caminá a paso parejo.' : 'Tocá dónde arrancás y caminá a paso parejo con la laptop abierta. Ondi Scanner lee todos los access points cada segundo.' }[L.herr];
   const vistas = VISTAS[L.tipo].filter(([k]) => k !== 'dif' || L.refL);
-  return `<div class="hwrap">${L.tipo === 'calor' && !walk ? ayHtml('Medir caminando') : ''}${L.tipo === 'calor' && ayListo() && !v11 ? '<div class="hay"><b>Hay una versión nueva de Ondi Técnico</b><span class="muted">La 1.1 lee todos los access points con su señal real. Bajala de nuevo y abrila:</span><a class="btn sm" href="../tecnico/ondi_tecnico.py" download>ondi_tecnico.py</a></div>' : ''}
+  return `<div class="hwrap">${L.tipo === 'calor' && !walk ? ayHtml('Medir caminando') : ''}${L.tipo === 'calor' && ayListo() && !v11 ? '<div class="hay"><b>Pasate a Ondi Scanner</b><span class="muted">Lee todos los access points con su señal real.</span><a class="btn sm" href="../scanner/" target="_blank" rel="noopener">Bajarlo</a></div>' : ''}
     <div class="card pad"><div class="hbar">
       <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Cliente<select id="hlcli" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:200px"><option value="">Sin cliente</option>${sites.map(s => `<option value="${esc(s.id)}" ${L.site === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
       <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Estudio<select id="hlest" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:220px"><option value="">${L.id ? '' : 'Nuevo, sin guardar'}</option>${(E.lista || []).filter(e => !L.site || e.site_id === L.site).map(e => `<option value="${esc(e.id)}" ${L.id === e.id ? 'selected' : ''}>${esc(e.nombre || 'Sin nombre')}</option>`).join('')}</select></label>
@@ -882,12 +878,12 @@ function enganchar(box) {
     if (h === 'escno') { L.escala = null; L.trazo = null; montar(); return; }
     if (h === 'calibrar') { hacerCalibrar(L); return; }
     if (h === 'sincal') { L.cal = null; L.cambio = true; dibujar(L, true); return; }
-    if (h === 'leerw' && L.sel) { try { if (!await leerWifi(L.sel.o)) { A.toast('Esta compu no está por wifi o no se pudo leer'); return; } L.cambio = true; dibujar(L, true); } catch (er) { A.toast('No respondió Ondi Técnico'); } return; }
+    if (h === 'leerw' && L.sel) { try { if (!await leerWifi(L.sel.o)) { A.toast('Esta compu no está por wifi o no se pudo leer'); return; } L.cambio = true; dibujar(L, true); } catch (er) { A.toast('No respondió Ondi Scanner'); } return; }
     if (h === 'medirv' && L.sel && !L.midiendo) { const p = L.sel.o; L.midiendo = true; ladoPintar(L); try { const r = await medirVel(); p.mbps = Math.round(r.mbps * 10) / 10; p.ms = Math.round(r.ms); } catch (er) { A.toast('No se pudo medir: ¿hay conexión?'); } L.midiendo = false; L.cambio = true; dibujar(L, true); return; }
   });
   box.addEventListener('submit', async e => { const f = e.target.closest('[data-hf]'); if (!f) return; e.preventDefault(); const k = f.dataset.hf;
     if (k === 'cmd') { const i = $('#hcmd'); if (CO.corre) { CO.corre.abort(); return; } const v = i.value; i.value = ''; coCorrer(v); return; }
-    if (k === 'aycod') { const v = ($('#aycod').value || '').replace(/\D/g, ''); if (v.length !== 6) { A.toast('Son 6 números'); return; } AY.cod = v; ls.set('ondi.tec.cod', v); await ayHola(); if (!AY.est || !AY.est.emparejado) A.toast('Ese código no coincide con el de la ventana de Ondi Técnico'); montar(); return; }
+    if (k === 'aycod') { const v = ($('#aycod').value || '').replace(/\D/g, ''); if (v.length !== 6) { A.toast('Son 6 números'); return; } AY.cod = v; ls.set('ondi.tec.cod', v); await ayHola(); if (!AY.est || !AY.est.emparejado) A.toast('Ese código no coincide con el de la ventana de Ondi Scanner'); montar(); return; }
     if (k === 'scan') { esCorrer(); return; }
     if (k === 'escala') { const L = LZ[actual], v = parseFloat(String($('#hlesc').value).replace(',', '.')); if (!(v > 0) || !L.escala) return; const f2 = v / L.escala;
       L.anchoM *= f2; L.altoM *= f2; escalar(L, f2);
