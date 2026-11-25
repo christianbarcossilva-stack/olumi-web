@@ -22,7 +22,7 @@ import { abrirMaqueta } from './maqueta.js?v=98';
 const P = new URLSearchParams(location.search), app = P.get('app') || 'ondi';
 document.documentElement.dataset.app = app;
 if (app === 'kliva') document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap">');
-let host = null; try { host = window.parent !== window && (window.parent.__maquetaHost || window.parent.__ondiMaqueta) || null; } catch (e) {}
+let host = null; try { host = !P.has('solo') && window.parent !== window && (window.parent.__maquetaHost || window.parent.__ondiMaqueta) || null; } catch (e) {} // solo=1: escena propia aunque esté adentro de una app (el simulador de cámaras)
 let escena = null;
 { const tm = (host && host.tema) || P.get('tema'); if (tm === 'oscuro' || tm === 'claro') document.documentElement.dataset.tema = tm; }
 if (!host) { const id = P.get('escena') || 'deposito';
