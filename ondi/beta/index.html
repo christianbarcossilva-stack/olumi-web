@@ -1216,7 +1216,7 @@ const ITABS = [['marcas', 'Marcas'], ['escaneo', 'Escaneo de red'], ['calor', 'M
 function integView() { const t = ITABS.some(x => x[0] === S.itab) ? S.itab : (S.itab = 'marcas');
   return `<div class="wrap${t === 'marcas' ? '' : ' wide'}"><div class="head"><div><h1>Integraciones</h1><p>Las marcas que lee Ondi y las herramientas para trabajar en la red del cliente.</p></div></div>
     <div class="stabs" style="margin-bottom:16px">${ITABS.map(([k, n]) => `<button data-itab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${t === 'marcas' ? falta11() + marcasView() : `<div id="herbox" data-h="${t}"><div class="card empty">Cargando…</div></div>`}</div>`; }
-const herr = () => window.OndiHerr ? Promise.resolve() : (herr.p = herr.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'herramientas.js?v=2'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const herr = () => window.OndiHerr ? Promise.resolve() : (herr.p = herr.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'herramientas.js?v=3'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 function mountHerr() { herr().then(() => window.OndiHerr.montar({ S, SB, orgId, toast, errTxt, render })).catch(() => { const b = $('#herbox'); if (b) b.innerHTML = '<div class="card empty"><b>No se pudo cargar</b><span>Revisá la conexión y recargá la página.</span></div>'; }); }
 function marcasView() { const filas = [...BRANDS.map(b => [b.k, b.n, b.c, b.ab]), ['otra', 'Cualquier otra marca', '#5B6670', '+']];
   const est = k => k === 'otra' ? ['info', 'Latido o chequeo'] : bEstado(BR[k]), ok = BRANDS.filter(b => bEstado(b)[1] === 'Funcionando').length;

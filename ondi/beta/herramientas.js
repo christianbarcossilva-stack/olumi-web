@@ -529,7 +529,8 @@ function lienzoHtml(L) {
   const ayuda = { mover: 'Arrastrá para mover el plano o un elemento. Rueda o dos dedos para acercar.', ap: 'Tocá donde va colgado cada access point.', pared: 'Arrastrá de punta a punta de cada pared. Se acomoda a 90° sola.', escala: 'Trazá una línea sobre algo que sepas cuánto mide (una pared, un portón).', borrar: 'Tocá lo que quieras sacar.',
     medir: 'Parate en un lugar, tocá en el plano dónde estás y medí.', caminar: walk ? 'Tocá el plano cada vez que llegues a una esquina o cambies de dirección. Caminá a paso parejo.' : 'Tocá dónde arrancás y caminá a paso parejo con la laptop abierta. Ondi Scanner lee todos los access points cada segundo.' }[L.herr];
   const vistas = VISTAS[L.tipo].filter(([k]) => k !== 'dif' || L.refL);
-  return `<div class="hwrap">${L.tipo === 'calor' && !walk ? ayHtml('Medir caminando') : ''}${L.tipo === 'calor' && ayListo() && !v11 ? '<div class="hay"><b>Pasate a Ondi Scanner</b><span class="muted">Lee todos los access points con su señal real.</span><a class="btn sm" href="../scanner/" target="_blank" rel="noopener">Bajarlo</a></div>' : ''}
+  const conAy = L.tipo === 'calor' && L.herr === 'caminar'; // el cartel de Ondi Scanner solo con «Caminar midiendo»
+  return `<div class="hwrap">${conAy && !walk ? ayHtml('Medir caminando') : ''}${conAy && ayListo() && !v11 ? '<div class="hay"><b>Pasate a Ondi Scanner</b><span class="muted">Lee todos los access points con su señal real.</span><a class="btn sm" href="../scanner/" target="_blank" rel="noopener">Bajarlo</a></div>' : ''}
     <div class="card pad"><div class="hbar">
       <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Cliente<select id="hlcli" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:200px"><option value="">Sin cliente</option>${sites.map(s => `<option value="${esc(s.id)}" ${L.site === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
       <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Estudio<select id="hlest" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:220px"><option value="">${L.id ? '' : 'Nuevo, sin guardar'}</option>${(E.lista || []).filter(e => !L.site || e.site_id === L.site).map(e => `<option value="${esc(e.id)}" ${L.id === e.id ? 'selected' : ''}>${esc(e.nombre || 'Sin nombre')}</option>`).join('')}</select></label>
@@ -887,7 +888,7 @@ function enganchar(box) {
     if (k === 'scan') { esCorrer(); return; }
     if (k === 'escala') { const L = LZ[actual], v = parseFloat(String($('#hlesc').value).replace(',', '.')); if (!(v > 0) || !L.escala) return; const f2 = v / L.escala;
       L.anchoM *= f2; L.altoM *= f2; escalar(L, f2);
-      L.escala = null; L.trazo = null; L.herr = L.tipo === 'wifi' ? 'pared' : 'caminar'; L.cambio = true; L.z = 1; L.ox = L.oy = null; montar(); A.toast(`Listo: el plano mide ${dec(L.anchoM)} × ${dec(L.altoM)} m`); } });
+      L.escala = null; L.trazo = null; L.herr = L.tipo === 'wifi' ? 'pared' : ayListo() ? 'caminar' : 'medir'; L.cambio = true; L.z = 1; L.ox = L.oy = null; montar(); A.toast(`Listo: el plano mide ${dec(L.anchoM)} × ${dec(L.altoM)} m`); } });
   box.addEventListener('keydown', e => { if (e.target.id !== 'hcmd') return;
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); CO.hi = clamp(CO.hi + (e.key === 'ArrowUp' ? 1 : -1), -1, CO.hist.length - 1); e.target.value = CO.hi < 0 ? '' : CO.hist[CO.hi]; }
     else if (e.key === 'c' && e.ctrlKey && CO.corre) { e.preventDefault(); CO.corre.abort(); } });
