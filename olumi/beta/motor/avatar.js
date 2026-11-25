@@ -1,6 +1,6 @@
 // Motor común · personas: el mismo núcleo de Olumi (reposo natural, caminar con pisada, gestos) y la misma variedad de piel, pelo y ropa.
 // ARCHIVO ARMADO: no se edita a mano. Fuente: olumi/beta/avatares.html y olumi/beta/oficina.html; se rearma con servidor/taller3d/motor_avatar.py
-import { THREE } from './nucleo.js?v=89bdb1cf';
+import { THREE } from './nucleo.js?v=c6d525a6';
 export const {avatarGLB,avPose,avGesto,AV_GES,avMat}=(function(THREE){
 // ---------- avatares 3D · núcleo (sin nada propio de la oficina: lo usan la oficina y el visor del taller) ----------
 // avatarGLB(escena, alto): prepara un modelo GLB con esqueleto (nombres tipo Mixamo o "game_engine" de MakeHuman) y devuelve la persona:
