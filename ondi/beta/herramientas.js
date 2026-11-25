@@ -86,7 +86,7 @@ function ayHtml(para) {
   if (AY.est === false) {
     const bW = `<a class="btn sm${SO === 'win' ? ' pri' : ''}" href="${DESC}OndiScanner.exe" download>Bajar Ondi Scanner para Windows</a>`, bM = `<a class="btn sm${SO === 'mac' ? ' pri' : ''}" href="${DESC}OndiScanner-Mac.zip" download>Bajar Ondi Scanner para Mac</a>`;
     const bajar = SO === 'mac' ? bM : SO === 'win' ? bW : bW + ' ' + bM;
-    const abrir = SO === 'mac' ? 'Abrí el zip y después «Ondi Scanner». La primera vez la Mac pide confirmar: clic derecho → Abrir (en macOS 15: Configuración del Sistema → Privacidad y seguridad → Abrir igual).'
+    const abrir = SO === 'mac' ? 'Abrí el zip y después «Ondi Scanner». Si la Mac dice «No se abrió», tocá <b>Listo</b> (no lo mandes al basurero), andá a Configuración del Sistema → Privacidad y seguridad, bajá hasta abajo y tocá <b>Abrir igual</b>. Es una sola vez.'
       : SO === 'win' ? 'Abrí el archivo. La primera vez Windows puede avisar: tocá «Más información» → «Ejecutar de todas formas».' : 'Abrilo. La primera vez Windows o la Mac piden confirmar (en la página «Qué es» están los pasos).';
     return `<div class="hay" style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center"><span class="dot no"></span><b>${SO === 'movil' ? para + ' se hace desde la laptop' : 'Falta abrir Ondi Scanner en esta compu'}</b></div>
     <p class="muted" style="margin:0">${para} usa Ondi Scanner, nuestro programa gratis para la laptop del técnico: el navegador solo no puede recorrer la red del cliente ni leer el wifi. Se baja una vez y no se instala nada.</p>
