@@ -25,7 +25,7 @@ import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = '1.0'
+VERSION = '1.1'
 PUERTO = 47800
 WIN, MAC = os.name == 'nt', sys.platform == 'darwin'
 ENC = 'oem' if WIN else 'utf-8'
@@ -111,35 +111,154 @@ def tabla_arp():
             if m not in ('FF:FF:FF:FF:FF:FF', '00:00:00:00:00:00'): t[ip.group(1)] = m
     return t
 
-def wifi():
-    """La señal del wifi al que está conectada esta compu."""
-    d = {}
+def banda_de(mhz=0, canal=0, txt=''):
+    t = str(txt).lower()
+    if mhz: return '2.4' if mhz < 3000 else '5' if mhz < 5925 else '6'
+    if '6g' in t or '6 g' in t: return '6'
+    if '5g' in t or '5 g' in t: return '5'
+    if '2.4' in t or '2,4' in t: return '2.4'
+    c = int(canal or 0)
+    return '2.4' if 0 < c <= 14 else '5' if c else ''
+
+def wifi_windows():
+    """Windows: la API nativa (wlanapi). Da la señal de cada access point en dBm reales y pide un escaneo nuevo."""
+    import ctypes, ctypes.wintypes as W
+    wl = ctypes.windll.wlanapi
+    class GUID(ctypes.Structure): _fields_ = [('a', W.DWORD), ('b', W.WORD), ('c', W.WORD), ('d', ctypes.c_ubyte * 8)]
+    class IFI(ctypes.Structure): _fields_ = [('guid', GUID), ('desc', ctypes.c_wchar * 256), ('estado', ctypes.c_uint)]
+    class IFL(ctypes.Structure): _fields_ = [('n', W.DWORD), ('i', W.DWORD), ('info', IFI * 64)]
+    class SSID(ctypes.Structure): _fields_ = [('largo', ctypes.c_ulong), ('ssid', ctypes.c_ubyte * 32)]
+    class TASAS(ctypes.Structure): _fields_ = [('n', ctypes.c_ulong), ('t', ctypes.c_ushort * 126)]
+    class BSS(ctypes.Structure): _fields_ = [('ssid', SSID), ('phy', ctypes.c_ulong), ('bssid', ctypes.c_ubyte * 6), ('tipo', ctypes.c_uint), ('phytipo', ctypes.c_uint),
+        ('rssi', ctypes.c_long), ('calidad', ctypes.c_ulong), ('reg', ctypes.c_ubyte), ('beacon', ctypes.c_ushort), ('ts', ctypes.c_ulonglong), ('hts', ctypes.c_ulonglong),
+        ('cap', ctypes.c_ushort), ('khz', ctypes.c_ulong), ('tasas', TASAS), ('ieoff', ctypes.c_ulong), ('ielen', ctypes.c_ulong)]
+    class BSSL(ctypes.Structure): _fields_ = [('total', W.DWORD), ('n', W.DWORD), ('e', BSS * 1)]
+    if not hasattr(wifi_windows, 'h'):
+        h, ver = W.HANDLE(), W.DWORD()
+        if wl.WlanOpenHandle(2, None, ctypes.byref(ver), ctypes.byref(h)): raise OSError('wlan')
+        wifi_windows.h, wifi_windows.ult = h, 0
+    h = wifi_windows.h
+    pl = ctypes.POINTER(IFL)()
+    if wl.WlanEnumInterfaces(h, None, ctypes.byref(pl)): raise OSError('wlan')
+    try:
+        if not pl.contents.n: return None
+        guid = GUID.from_buffer_copy(pl.contents.info[0].guid)
+    finally: wl.WlanFreeMemory(pl)
+    if time.time() - wifi_windows.ult > 3.5:  # Windows tarda unos 3 segundos en escanear: se pide cada 4
+        wl.WlanScan(h, ctypes.byref(guid), None, None, None); wifi_windows.ult = time.time()
+    redes = []
+    pb = ctypes.c_void_p()
+    if not wl.WlanGetNetworkBssList(h, ctypes.byref(guid), None, 3, False, None, ctypes.byref(pb)) and pb.value:
+        try:
+            n = ctypes.cast(pb, ctypes.POINTER(BSSL)).contents.n
+            arr = ctypes.cast(pb.value + BSSL.e.offset, ctypes.POINTER(BSS * n)).contents if n else []
+            for e in arr:
+                mhz = e.khz // 1000
+                canal = (mhz - 2407) // 5 if mhz < 3000 else (mhz - 5950) // 5 if mhz >= 5955 else (mhz - 5000) // 5
+                redes.append({'ssid': bytes(e.ssid.ssid[:e.ssid.largo]).decode('utf-8', 'replace'), 'bssid': ':'.join('%02X' % x for x in e.bssid),
+                              'rssi': int(e.rssi), 'canal': int(canal), 'banda': banda_de(mhz)})
+        finally: wl.WlanFreeMemory(pb)
+    act = {}
+    out = correr(['netsh', 'wlan', 'show', 'interfaces'], 4)
+    m = re.search(r'^\s*SSID\s*:\s*(.+)$', out, re.M); b = re.search(r'BSSID\s*:\s*(\S+)', out)
+    if m: act['ssid'] = m.group(1).strip()
+    if b: act['bssid'] = b.group(1).upper().replace('-', ':')
+    pr, sz = ctypes.c_void_p(), W.DWORD()
+    if not wl.WlanQueryInterface(h, ctypes.byref(guid), 0x10000102, None, ctypes.byref(sz), ctypes.byref(pr), None) and pr.value:  # la señal de la conexión, al momento
+        try: act['rssi'] = ctypes.cast(pr, ctypes.POINTER(ctypes.c_long)).contents.value
+        finally: wl.WlanFreeMemory(pr)
+    yo = next((r for r in redes if act.get('bssid') and r['bssid'] == act['bssid']), None)
+    if yo: act.update(canal=yo['canal'], banda=yo['banda']); act.setdefault('rssi', yo['rssi'])
+    return {'fuente': 'Windows', 'exacto': True, 'actual': act, 'redes': redes}
+
+def wifi_netsh():
+    """Windows sin la API: lo que muestra netsh (la señal viene en %, se pasa a dBm como hace Windows)."""
+    a = correr(['netsh', 'wlan', 'show', 'interfaces'], 4); out = correr(['netsh', 'wlan', 'show', 'networks', 'mode=bssid'], 6)
+    redes, ssid = [], ''
+    for ln in out.splitlines():
+        m = re.match(r'^SSID \d+\s*:\s*(.*)$', ln.strip())
+        if m: ssid = m.group(1).strip(); cur = None; continue
+        m = re.match(r'^BSSID \d+\s*:\s*(\S+)', ln.strip())
+        if m: cur = {'ssid': ssid, 'bssid': m.group(1).upper().replace('-', ':'), 'rssi': None, 'canal': 0, 'banda': ''}; redes.append(cur); continue
+        if redes:
+            cur = redes[-1]
+            m = re.search(r'(?:Signal|Se.al)\s*:\s*(\d+)%', ln, re.I)
+            if m: cur['rssi'] = round(int(m.group(1)) / 2 - 100)
+            m = re.search(r'(?:Channel|Canal)\s*:\s*(\d+)', ln, re.I)
+            if m: cur['canal'] = int(m.group(1)); cur['banda'] = cur['banda'] or banda_de(canal=cur['canal'])
+            m = re.search(r'(?:Band|Banda)\s*:\s*(.+)$', ln, re.I)
+            if m: cur['banda'] = banda_de(txt=m.group(1)) or cur['banda']
+    act = {}
+    for k, rx in (('ssid', r'^\s*SSID\s*:\s*(.+)$'), ('bssid', r'BSSID\s*:\s*(\S+)'), ('canal', r'(?:Channel|Canal)\s*:\s*(\d+)'), ('senal', r'(?:Signal|Se.al)\s*:\s*(\d+)%')):
+        m = re.search(rx, a, re.M | re.I)
+        if m: act[k] = m.group(1).strip()
+    if 'senal' in act: act['rssi'] = round(int(act.pop('senal')) / 2 - 100)
+    if 'bssid' in act: act['bssid'] = act['bssid'].upper().replace('-', ':')
+    if 'canal' in act: act['canal'] = int(act['canal']); act['banda'] = banda_de(canal=act['canal'])
+    return {'fuente': 'Windows (netsh)', 'exacto': False, 'actual': act, 'redes': [r for r in redes if r['rssi'] is not None]}
+
+def wifi_mac():
+    """Mac: system_profiler. Da señal y ruido en dBm; desde macOS 14 no muestra la MAC de los otros equipos."""
+    try: d = json.loads(correr(['system_profiler', 'SPAirPortDataType', '-json'], 25) or '{}')
+    except Exception: return None
+    def uno(x):
+        sn = re.findall(r'-?\d+', str(x.get('spairport_signal_noise', '')))
+        ch = str(x.get('spairport_network_channel', '')); mc = re.match(r'(\d+)', ch)
+        return {'ssid': x.get('_name', ''), 'bssid': x.get('spairport_network_bssid', ''), 'rssi': int(sn[0]) if sn else None, 'ruido': int(sn[1]) if len(sn) > 1 else None,
+                'canal': int(mc.group(1)) if mc else 0, 'banda': banda_de(txt=ch) or banda_de(canal=mc.group(1) if mc else 0)}
+    act, redes = {}, []
+    for it in d.get('SPAirPortDataType', []):
+        for i in it.get('spairport_airport_interfaces', []):
+            if i.get('spairport_current_network_information'): act = uno(i['spairport_current_network_information'])
+            redes += [uno(x) for x in i.get('spairport_airport_other_local_wireless_networks', [])]
+    if act: redes.append(dict(act))
+    return {'fuente': 'Mac', 'exacto': True, 'actual': act, 'redes': [r for r in redes if r['rssi'] is not None]}
+
+def wifi_linux():
+    out = correr(['nmcli', '-t', '-f', 'IN-USE,SSID,BSSID,SIGNAL,CHAN,FREQ', 'dev', 'wifi', 'list', '--rescan', 'auto'], 10)
+    act, redes = {}, []
+    for ln in out.splitlines():
+        p = [x.replace('\\:', ':') for x in re.split(r'(?<!\\):', ln)]
+        if len(p) < 6: continue
+        mhz = int(re.sub(r'\D', '', p[5]) or 0)
+        r = {'ssid': p[1], 'bssid': p[2].upper(), 'rssi': round(int(p[3] or 0) / 2 - 100), 'canal': int(p[4] or 0), 'banda': banda_de(mhz, p[4])}
+        redes.append(r)
+        if p[0] == '*': act = dict(r)
+    return {'fuente': 'Linux (nmcli)', 'exacto': False, 'actual': act, 'redes': redes}
+
+def wifi_leer():
     if WIN:
-        out = correr(['netsh', 'wlan', 'show', 'interfaces'])
-        for k, rx in (('ssid', r'^\s*SSID\s*:\s*(.+)$'), ('bssid', r'BSSID\s*:\s*(\S+)'), ('canal', r'(?:Channel|Canal)\s*:\s*(\d+)'), ('senal', r'(?:Signal|Se.al)\s*:\s*(\d+)%'), ('banda', r'(?:Band|Banda)\s*:\s*(.+)$')):
-            m = re.search(rx, out, re.M | re.I)
-            if m: d[k] = m.group(1).strip()
-        m = re.search(r'Rssi\s*:\s*(-?\d+)', out, re.I)
-        if m: d['rssi'] = int(m.group(1))
-        elif 'senal' in d: d['rssi'] = round(int(d['senal']) / 2 - 100)  # lo que hace Windows: 0 % = -100 dBm, 100 % = -50 dBm
-    elif MAC:
-        out = correr(['system_profiler', 'SPAirPortDataType'], 20)
-        cur = out.split('Current Network Information:')
-        if len(cur) > 1:
-            blk = cur[1]
-            m = re.search(r'^\s*(.+?):\s*$', blk, re.M)
-            if m: d['ssid'] = m.group(1).strip()
-            m = re.search(r'Signal / Noise:\s*(-?\d+)\s*dBm', blk)
-            if m: d['rssi'] = int(m.group(1))
-            m = re.search(r'Channel:\s*(\d+)\s*\(([^,)]+)', blk)
-            if m: d['canal'], d['banda'] = m.group(1), m.group(2).strip()
-    else:
-        out = correr(['nmcli', '-t', '-f', 'ACTIVE,SSID,SIGNAL,CHAN,BSSID', 'dev', 'wifi'])
-        for ln in out.splitlines():
-            if ln.startswith('yes:'):
-                p = re.split(r'(?<!\\):', ln)
-                d = {'ssid': p[1], 'senal': p[2], 'canal': p[3], 'rssi': round(int(p[2] or 0) / 2 - 100)}
-    return d
+        try:
+            d = wifi_windows()
+            if d: return d
+        except Exception: pass
+        return wifi_netsh()
+    if MAC: return wifi_mac() or {'actual': {}, 'redes': []}
+    return wifi_linux()
+
+class Muestreo:
+    """Mientras Ondi pide la señal (caminando el lugar), lee el wifi sin parar y guarda la última lectura."""
+    def __init__(self): self.ult, self.seq, self.pedido, self.hilo, self.lock = None, 0, 0, None, threading.Lock()
+    def leer(self):
+        self.pedido = time.time()
+        with self.lock:
+            if not self.hilo or not self.hilo.is_alive(): self.hilo = threading.Thread(target=self.bucle, daemon=True); self.hilo.start()
+        t0 = time.time()
+        while self.ult is None and time.time() - t0 < 30: time.sleep(0.2)
+        return self.ult or {'actual': {}, 'redes': [], 'seq': 0}
+    def bucle(self):
+        while time.time() - self.pedido < 45:  # si Ondi deja de pedir, se frena solo
+            t0 = time.time()
+            try:
+                d = wifi_leer(); self.seq += 1; d.update(seq=self.seq, t=round(time.time(), 2), v=VERSION); self.ult = d
+            except Exception: pass
+            time.sleep(max(0.2, 1.0 - (time.time() - t0)))
+        self.hilo = None
+MUESTREO = Muestreo()
+
+def wifi():
+    """Compatibilidad con Ondi 1.0: la red a la que está conectada esta compu."""
+    d = MUESTREO.leer(); a = dict(d.get('actual') or {}); return a
 
 # ---------- un equipo de la red ----------
 PUERTOS = [80, 443, 554, 8000, 37777, 22, 23, 8080, 8291, 8443, 161, 5000, 9000, 3389, 445, 1883]
@@ -269,7 +388,7 @@ class Pedido(BaseHTTPRequestHandler):
             return self.json({'ok': True, 'version': VERSION, 'so': platform.system() + ' ' + platform.release(), 'equipo': socket.gethostname(),
                               'redes': redes(), 'emparejado': self.headers.get('X-Ondi-Codigo') == CODIGO})
         if self.headers.get('X-Ondi-Codigo') != CODIGO: return self.json({'error': 'codigo'}, 401)
-        if self.path.startswith('/wifi'): return self.json(wifi())
+        if self.path.startswith('/wifi'): return self.json(MUESTREO.leer())
         self.json({'error': 'no existe'}, 404)
 
     def do_POST(self):

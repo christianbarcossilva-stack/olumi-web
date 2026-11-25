@@ -1212,11 +1212,11 @@ document.addEventListener('toggle', e => { const d = e.target; if (d.matches && 
 function bEstado(b) { const k = claveDe('', b.k); if (b.ready) return k ? ['ok', 'Funcionando'] : ['off', 'Falta la clave']; if (b.k === 'sonoff') return ['warn', 'Falta la cuenta de eWeLink']; return ['info', 'Con el Agente Ondi']; }
 const CHEV = '<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 /* Integraciones: las marcas y sus claves, y las herramientas para técnicos (herramientas.js) */
-const ITABS = [['marcas', 'Marcas'], ['consola', 'Consola'], ['escaneo', 'Escaneo de red'], ['calor', 'Mapa de calor'], ['wifi', 'Wifi predictivo'], ['camaras', 'Cámaras']];
+const ITABS = [['marcas', 'Marcas'], ['escaneo', 'Escaneo de red'], ['calor', 'Mapa de calor'], ['wifi', 'Wifi predictivo'], ['camaras', 'Cámaras']];
 function integView() { const t = ITABS.some(x => x[0] === S.itab) ? S.itab : (S.itab = 'marcas');
   return `<div class="wrap${t === 'marcas' ? '' : ' wide'}"><div class="head"><div><h1>Integraciones</h1><p>Las marcas que lee Ondi y las herramientas para trabajar en la red del cliente.</p></div></div>
     <div class="stabs" style="margin-bottom:16px">${ITABS.map(([k, n]) => `<button data-itab="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>${t === 'marcas' ? falta11() + marcasView() : `<div id="herbox" data-h="${t}"><div class="card empty">Cargando…</div></div>`}</div>`; }
-const herr = () => window.OndiHerr ? Promise.resolve() : (herr.p = herr.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'herramientas.js?v=1'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
+const herr = () => window.OndiHerr ? Promise.resolve() : (herr.p = herr.p || new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'herramientas.js?v=2'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }));
 function mountHerr() { herr().then(() => window.OndiHerr.montar({ S, SB, orgId, toast, errTxt, render })).catch(() => { const b = $('#herbox'); if (b) b.innerHTML = '<div class="card empty"><b>No se pudo cargar</b><span>Revisá la conexión y recargá la página.</span></div>'; }); }
 function marcasView() { const filas = [...BRANDS.map(b => [b.k, b.n, b.c, b.ab]), ['otra', 'Cualquier otra marca', '#5B6670', '+']];
   const est = k => k === 'otra' ? ['info', 'Latido o chequeo'] : bEstado(BR[k]), ok = BRANDS.filter(b => bEstado(b)[1] === 'Funcionando').length;
