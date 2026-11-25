@@ -13,6 +13,7 @@ export const IC = {
   rehacer: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/>',
   grilla: '<path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/>',
   capas: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  pelar: '<path d="m12 13 9 5-9 5-9-5z"/><path d="M3 13V9l9-5 9 5v4" stroke-dasharray="2.2 2.4"/><path d="M12 10V2M9 5l3-3 3 3"/>',
   tema: '<circle cx="12" cy="12" r="5.2"/><path d="M12 6.8a5.2 5.2 0 0 0 0 10.4z" fill="currentColor" stroke="none"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M4.9 19.1l1.4-1.4M2 12h2"/><path d="M18.6 6.2a7 7 0 0 1 0 11.6" opacity=".55"/>',
   vista: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
