@@ -899,10 +899,12 @@ function liveApi(base = '') {
 function demoApi() {
   const H = 3600_000;
   const BRANDS = [
-    { brand: 'zkteco', label: 'ZKTeco', protocol: 'C3 / inBio (TCP 4370)', defaultPort: 4370, doors: 4, model: 'inBio460', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: false, cards: false, faces: false, pins: false, history: false, readPeople: false, hold: true, lock: false } },
-    { brand: 'hikvision', label: 'Hikvision', protocol: 'ISAPI', defaultPort: 80, doors: 1, model: 'DS-K1T671TM-3XF', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
-    { brand: 'dahua', label: 'Dahua', protocol: 'HTTP API (CGI)', defaultPort: 80, doors: 2, model: 'ASC2202C-S', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
-    { brand: 'intelbras', label: 'Intelbras', protocol: 'API Bio-T (CGI)', defaultPort: 80, doors: 1, model: 'SS 3532 MF W', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'zkteco', label: 'ZKTeco controladoras', protocol: 'C3 / inBio (TCP 4370)', defaultPort: 4370, defaultUser: '', doors: 4, model: 'inBio460', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: false, cards: false, faces: false, pins: false, history: false, readPeople: false, hold: true, lock: false } },
+    { brand: 'zkteco-reloj', label: 'ZKTeco relojes', protocol: 'K40, MB160, SpeedFace y más (TCP 4370)', defaultPort: 4370, defaultUser: '', doors: 1, model: 'MB160', capabilities: { remoteOpen: true, liveEvents: true, doorState: false, people: true, cards: true, faces: false, pins: true, history: true, readPeople: true, hold: false, lock: false } },
+    { brand: 'hikvision', label: 'Hikvision', protocol: 'ISAPI', defaultPort: 80, defaultUser: 'admin', doors: 1, model: 'DS-K1T671TM-3XF', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'dahua', label: 'Dahua', protocol: 'HTTP API (CGI)', defaultPort: 80, defaultUser: 'admin', doors: 2, model: 'ASC2202C-S', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'intelbras', label: 'Intelbras', protocol: 'API Bio-T (CGI)', defaultPort: 80, defaultUser: 'admin', doors: 1, model: 'SS 3532 MF W', capabilities: { remoteOpen: true, liveEvents: true, doorState: true, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: true, lock: true } },
+    { brand: 'controlid', label: 'Control iD', protocol: 'API HTTP (iDFace, iDFlex, iDAccess)', defaultPort: 80, defaultUser: 'admin', doors: 1, model: 'iDFace', capabilities: { remoteOpen: true, liveEvents: true, doorState: false, people: true, cards: true, faces: true, pins: true, history: true, readPeople: true, hold: false, lock: false } },
   ];
   const brandOf = brand => BRANDS.find(b => b.brand === brand);
   const me = { id: 'u1', name: 'Christian', email: 'christian@demo.uy', role: 'admin', mfa: false, company_id: null, areas: '' };
@@ -958,12 +960,12 @@ function demoApi() {
 
   // ── Datos de ejemplo ───────────────────────────────────────────────────────
   // Las puertas de entrada marcan horario; las de adentro (vestuarios, depósitos, cámaras) no.
-  const CLOCK = ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Administración', 'Acceso de personal'];
+  const CLOCK = ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Administración', 'Acceso de personal', 'Reloj de personal'];
   const addDevice = (site_id, brand, name, host, model, firmware, doorNames, status = 'online', detail = '') => {
-    const d = { id: newId('d'), site_id, brand, name, host, port: brandOf(brand).defaultPort, secure: 0, username: brand === 'zkteco' ? '' : 'admin', enabled: 1,
+    const d = { id: newId('d'), site_id, brand, name, host, port: brandOf(brand).defaultPort, secure: 0, username: brandOf(brand).defaultUser, enabled: 1,
       model, serial: `${model.replace(/\W/g, '').slice(0, 6).toUpperCase()}${20230000 + serial * 137}`, firmware, status, status_detail: detail, last_seen: status === 'online' ? now() : now() - 5 * H };
     db.devices.push(d);
-    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' ? 'closed' : 'unknown', state_at: now(), clock: Number(CLOCK.includes(name)), dir: /de entrada$/.test(name) ? 'in' : /de salida$/.test(name) ? 'out' : 'both' }));
+    doorNames.forEach((name, i) => db.doors.push({ id: newId('p'), device_id: d.id, number: i + 1, name, state: status === 'online' && brandOf(brand).capabilities.doorState ? 'closed' : 'unknown', state_at: now(), clock: Number(CLOCK.includes(name)), dir: /de entrada$/.test(name) ? 'in' : /de salida$/.test(name) ? 'out' : 'both' }));
     return d;
   };
   addDevice('s1', 'zkteco', 'Controladora de portería', '10.20.1.21', 'inBio460', 'AC Ver 5.0.9', ['Portería peatonal', 'Molinete de entrada', 'Molinete de salida', 'Depósito de repuestos']);
@@ -974,6 +976,8 @@ function demoApi() {
   if (!cine) {
     addDevice('s3', 'hikvision', 'Facial de acceso de personal', '10.40.0.15', 'DS-K1T671TM-3XF', 'V3.3.5 build 230511', ['Acceso de personal']);
     addDevice('s3', 'zkteco', 'Controladora de cámaras', '10.40.0.21', 'inBio460', 'AC Ver 5.0.9', ['Cámara de frío 1', 'Cámara de frío 2', 'Sala de máquinas', 'Expedición']);
+    addDevice('s3', 'zkteco-reloj', 'Reloj de personal', '10.40.0.30', 'MB160', 'Ver 6.60 Apr 13 2023', ['Reloj de personal']);
+    addDevice('s3', 'controlid', 'Facial del vestuario', '10.40.0.33', 'iDFace', 'V6.21.4', ['Vestuario de faena']);
   }
 
   const doorId = name => db.doors.find(p => p.name === name).id;
@@ -983,8 +987,8 @@ function demoApi() {
   addLevel('c1', 'Administración', 'Administración', 'Oficina de tráfico', 'Portería peatonal');
   addLevel('c1', 'Tráfico y portones', 'Portón 1', 'Portón 2', 'Barrera de camiones', 'Oficina de tráfico');
   if (!cine) {
-    addLevel('c2', 'Operarios de faena', 'Acceso de personal', 'Cámara de frío 1', 'Cámara de frío 2', 'Expedición');
-    addLevel('c2', 'Mantenimiento de frío', 'Acceso de personal', 'Cámara de frío 1', 'Cámara de frío 2', 'Sala de máquinas', 'Expedición');
+    addLevel('c2', 'Operarios de faena', 'Acceso de personal', 'Reloj de personal', 'Vestuario de faena', 'Cámara de frío 1', 'Cámara de frío 2', 'Expedición');
+    addLevel('c2', 'Mantenimiento de frío', 'Acceso de personal', 'Reloj de personal', 'Vestuario de faena', 'Cámara de frío 1', 'Cámara de frío 2', 'Sala de máquinas', 'Expedición');
   }
 
   [
@@ -1084,6 +1088,7 @@ function demoApi() {
   const byDoor = name => db.doors.find(p => p.name === name);
 
   function swing(door, ms = 2600) {
+    if (!brandOf(device(door.device_id).brand).capabilities.doorState) return; // relojes y faciales que no informan la puerta
     door.state = 'open'; door.state_at = now();
     emit('door', { id: door.id, state: 'open', state_at: door.state_at });
     setTimeout(() => {
@@ -1120,7 +1125,7 @@ function demoApi() {
   // Dos semanas de entradas y salidas de quienes tienen turno, para el control de horario: casi todos a tiempo,
   // algunos tarde, alguno que se va antes y alguna falta. Lo de hoy solo hasta la hora actual.
   const SHIFT_DOOR = { sch1: ['Molinete de entrada', 'Molinete de salida'], sch2: ['Administración', 'Administración'], sch3: ['Portón 1', 'Portón 1'],
-    sch4: ['Acceso de personal', 'Acceso de personal'], sch5: ['Acceso de personal', 'Acceso de personal'] };
+    sch4: ['Acceso de personal', 'Acceso de personal'], sch5: ['Reloj de personal', 'Reloj de personal'] };
   const minutes = (a, b) => (a + Math.random() * (b - a)) * 60_000;
   for (const person of db.people) {
     const sch = db.schedules.find(x => x.id === person.schedule_id);
@@ -2674,9 +2679,13 @@ function klivaPuede(c) {
   const no = [!c.people && 'cargar personas', !c.history && 'recuperar lo que pasó sin conexión', !c.readPeople && 'traer las personas ya cargadas', !c.lock && 'bloquear las puertas a distancia'].filter(Boolean);
   return `${yes.join(', ').replace(/^./, x => x.toUpperCase())}.${no.length ? ` Todavía no: ${no.join(', ')}.` : ''}`;
 }
-const brandHint = b => b.capabilities.people
-  ? `Con ${b.label}, Kliva recibe los eventos, abre puertas y carga personas con tarjeta, clave y rostro.`
-  : `Con ${b.label}, Kliva recibe los eventos y abre puertas. El alta de personas en el panel todavía se hace con el software de la marca.`;
+const brandHint = b => {
+  const c = b.capabilities, con = [c.cards && 'tarjeta', c.pins && 'clave', c.faces && 'rostro'].filter(Boolean);
+  const with_ = con.length > 1 ? `${con.slice(0, -1).join(', ')} y ${con.at(-1)}` : con[0];
+  return c.people
+    ? `Con ${b.label}, Kliva recibe las marcas, abre a distancia y carga personas con ${with_}.${c.faces ? '' : ' El rostro y la huella se registran en el equipo.'}`
+    : `Con ${b.label}, Kliva recibe los eventos y abre puertas. El alta de personas en el panel todavía se hace con el software de la marca.`;
+};
 
 function deviceSheet(d) {
   const first = S.brands[0];
@@ -2694,7 +2703,7 @@ function deviceSheet(d) {
       <label class="field"><span>Puerto</span><input type="number" name="port" class="mono" value="${d?.port ?? first.defaultPort}" min="1" max="65535" required></label>
     </div>
     <div class="form-row">
-      <label class="field"><span>Usuario</span><input type="text" name="username" value="${d?.username ?? (first.brand === 'zkteco' ? '' : 'admin')}" autocomplete="off"></label>
+      <label class="field"><span>Usuario</span><input type="text" name="username" value="${d?.username ?? first.defaultUser ?? 'admin'}" autocomplete="off"></label>
       <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="new-password" placeholder="${d ? 'Sin cambios' : ''}"></label>
     </div>
     <p class="hint">La contraseña del equipo se guarda cifrada y no vuelve a mostrarse.</p>
@@ -4271,7 +4280,7 @@ document.addEventListener('change', async e => {
   if (el.name === 'brand') {
     const b = S.brands.find(x => x.brand === el.value);
     el.form.elements.port.value = b.defaultPort;
-    el.form.elements.username.value = b.brand === 'zkteco' ? '' : 'admin';
+    el.form.elements.username.value = b.defaultUser ?? 'admin';
     $('#brand-hint').textContent = brandHint(b);
   }
   if (el.id === 'idle-hours') {
