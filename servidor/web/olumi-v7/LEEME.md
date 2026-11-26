@@ -19,7 +19,7 @@ Con «reducir movimiento» nada se anima.
 - `base-v6.html` · la página pública del 26/11 (v6), de donde salen los textos, planes y preguntas.
 - `construir.py SALIDA [previa]` · arma la página: toma `olumi/index.html` del repositorio y, si esa ya es la v7, `base-v6.html`. Antes revisa `v7.js` con `node --check` y no arma una página rota.
   Con `previa` sale sin indexar y con la chapita «Vista previa» (para `nuevo/olumi/`).
-- `prueba/` · `logica.js` (la historia con números), `web.js` (recorre y saca capturas), `tanda.sh` (todas las plataformas), `quieta.js` (quién sigue pidiendo cuadros), `srv.js`.
+- `prueba/` · `logica.js` (la historia con números), `web.js` (recorre y saca capturas), `tanda.sh` (todas las plataformas), `sin3d.js` (sin maqueta queda la foto), `fotos.js` (saca esas fotos de la portada: `olumi/img/oficina-{noche,dia}{,-m}.webp`), `quieta.js` (quién sigue pidiendo cuadros), `srv.js`.
 
 ## Armar
 ```
@@ -46,7 +46,7 @@ Al pasarla a pública, `nuevo/olumi/index.html` vuelve a ser la redirección a `
 - `ponHora` saca una foto del lienzo (`#fund`) y la desvanece sobre la hora nueva (1,1 s).
 - **Fuera de la pantalla la maqueta no dibuja** (`M.cada` envuelto con `vis`): su gente se movía sola y gastaba placa y batería mientras se leía el resto de la página.
 - La escena se revalida antes de abrir la maqueta (`fetch(…,{cache:'no-cache'})`): el motor la pide sin versión y el navegador podía quedarse horas con la anterior.
-- Si no hay maqueta (teléfono con poca memoria o no cargó), `cine.sin3d` esconde el cartel «Armando la oficina», que antes quedaba para siempre.
+- Si no hay maqueta (teléfono con poca memoria, o a los 14 s no cargó), `cine.sin3d` pone una foto de la oficina en su lugar y esconde el cartel «Armando la oficina», que antes quedaba para siempre. Si la maqueta llega después, entra igual y la foto se va. Si cambia la toma de la portada o la escena, las fotos se vuelven a sacar con `prueba/fotos.js`.
 - Sin guion (o si a los 5 s no corrió), `html` pierde la clase `js` y todo se muestra sin esperar animaciones.
 
 ## El scroll
@@ -73,6 +73,7 @@ Es la de la v6 (`olumi-web.json`, que siguen usando la página pública del 26/1
 ```
 cd servidor/web/olumi-v7/prueba
 node logica.js                                                        # la historia con números (tiene que terminar en «todo bien»)
+node sin3d.js                                                         # sin maqueta: queda la foto de la oficina (también «todo bien»)
 OUT=/tmp/w7 W=1440 H=900 MID=4.45 SECC='#crm,#probar' node web.js     # una pasada con capturas (prueba nuevo/olumi/ del repositorio)
 ./tanda.sh                                                            # teléfono, tablet de pie y acostada, claro, 1280, oscuro y sin movimiento
 ```
