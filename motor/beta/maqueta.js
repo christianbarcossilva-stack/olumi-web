@@ -14,7 +14,7 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe } from './piezas.js?v=81';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe } from './piezas.js?v=82';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=5';
 import { construir } from './construir.js?v=63';
@@ -90,7 +90,7 @@ export async function abrirMaqueta(o) {
     m.position.y = 0.06; m.renderOrder = 1; m.visible = false; motor.scene.add(m); return m; })();
   // con el plano del lugar en el piso, la grilla de noche no se le pone arriba
   let cuadricula = false; // el cuadriculado del piso se ve solo editando (de día y de noche)
-  const pintaSuelo = () => { suelo.material = matSuelo('pasto', { roughness: 1 }); grillaNoche.visible = cuadricula && motor.tema === 'oscuro' && !E.piezas.some(p => p.t === 'plano'); grillaNoche.material.color.set(getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea'); };
+  const pintaSuelo = () => { const ag = E.fondo === 'rio' || E.fondo === 'mar'; suelo.material = ag ? matAgua(E.fondo) : matSuelo('pasto', { roughness: 1 }); suelo.position.y = ag ? -(+E.nivelAgua || 1.5) : -0.02; grillaNoche.visible = cuadricula && motor.tema === 'oscuro' && !E.piezas.some(p => p.t === 'plano'); grillaNoche.material.color.set(getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3fc6ea'); };
 
   // ---------- equipos reales (Ondi) ----------
   const EQ = { lista: [], porUid: new Map(), at: 0 };
