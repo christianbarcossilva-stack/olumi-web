@@ -5,7 +5,7 @@ const WEB = path.resolve(__dirname, '../../../..'), OUT = process.env.OUT || '/t
   const opt = process.env.DEV ? { ...devices[process.env.DEV] } : { viewport: { width: W, height: Hh } };
   const ctx = await br.newContext({ ...opt, reducedMotion: process.env.QUIETO ? 'reduce' : 'no-preference' }); await ctx.addInitScript(t => { try { localStorage.setItem('ondi.web.tema', t) } catch (e) {} }, TEMA);
   const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
-  await pg.goto('http://127.0.0.1:'+(+process.env.PUERTO||8792)+'/nuevo/ondi/'); const t0 = Date.now();
+  await pg.goto('http://127.0.0.1:'+(+process.env.PUERTO||8792)+(process.env.RUTA||'/nuevo/ondi/')); const t0 = Date.now();
   await pg.waitForFunction(() => document.querySelector('#cine').classList.contains('ready') || document.querySelector('#cine').classList.contains('sin3d'), null, { timeout: 150000 }).catch(() => {});
   console.log('lista en', ((Date.now() - t0) / 1000).toFixed(0), 's', await pg.evaluate(() => document.querySelector('#cine').className));
   await pg.waitForTimeout(6000);
