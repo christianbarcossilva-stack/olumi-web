@@ -1204,6 +1204,22 @@ details.ao-vis .ao-h1 h3{display:none}
 .relfotos-top{margin-top:4px}.relfotos-top .photos{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
 .ph.relf-nueva{box-shadow:0 0 0 3px var(--accent);transition:box-shadow .3s}
 /* fin 1.53m */
+/* 1.53p */
+.ritem.rit{display:flex;flex-direction:column;gap:8px;padding:14px 0}
+.ritem.rit:first-child{padding-top:4px}
+.rit-top{display:flex;gap:8px;align-items:center}
+.rit-top .ri-ubic{flex:1 1 auto;min-width:0;margin:0;font-weight:600}
+.rit-fotos{display:flex;gap:8px;flex-wrap:wrap}
+.rit-b{position:relative;display:inline-flex;align-items:center;gap:8px;box-sizing:border-box;min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2,var(--surface));color:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .15s}
+.rit-b:active{transform:scale(.96)}
+.rit-b .ic{width:20px;height:20px}
+.rit-b.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg,#1E1F23)}
+.ritem.rit textarea.ri-desc{display:block;width:100%;box-sizing:border-box;min-height:64px;margin:0;resize:none;overflow:hidden;line-height:1.45;font:inherit}
+.ritem.rit .photos{margin-top:0}
+.rit-m{margin:-2px 0 0;font-size:13px;color:var(--muted)}
+.rit-m:empty{display:none}
+@media (max-width:600px){.rit-fotos .rit-b{flex:1 1 0;justify-content:center}}
+/* fin 1.53p */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -4432,6 +4448,85 @@ document.addEventListener('focusout',e=>{const t=e.target;if(t&&t.dataset&&t.dat
 function avJobHtml(j){return j&&j.proyectoId&&D.proyectos&&D.proyectos[j.proyectoId]?avanceHtml(j.proyectoId,{tj:j.id}):''}
 window.__av={de:avDe,pct:avPct};   // para las pruebas
 /* === fin 1.53n === */
+/* === 1.53p · Relevamiento: cada ítem es zona + fotos + descripción, y los ítems pasan solos a la descripción general === */
+/* Christian 25/11 22:45: «dejar solo donde es la zona, sacar foto o agregar de la galería, después una descripción donde se ponen los metros de cable;
+   estos ítems se pasan automático a la descripción general del relevamiento, para que se arme un informe». */
+/* Lo viejo no se pierde: cantidad distinta de 1, metros de cable, canalización y altura se pasan al texto de la descripción la primera vez (v2). */
+function ritDesc(it){
+  if(!it)return'';if(it.v2)return it.desc||'';
+  const U={unidad:'u',metro:'m',jornal:'jornal',hora:'h'},c=n0(it.cant);
+  const ex=[c&&c!==1?`${r2(c).toLocaleString('es-UY')} ${U[it.unidad||'unidad']||''}`.trim():'',n0(it.metros)&&!ritMetros(it.desc)?`${r2(it.metros).toLocaleString('es-UY')} m de cable`:'',it.canal?(CANALN[it.canal]||it.canal):'',n0(it.altura)?`a ${r2(it.altura).toLocaleString('es-UY')} m de altura`:''].filter(Boolean);
+  return[it.desc||'',...ex].filter(Boolean).join(' · ');
+}
+/* metros que se leen en la descripción: «12 m de UTP x 6» = 72; «20 mts de fibra y 15 m» = 35 */
+function ritMetros(s){
+  s=String(s||'');const re=/(\d+(?:[.,]\d+)?)\s*(?:m|mts?|metros?)\b/gi,ms=[...s.matchAll(re)];let t=0;
+  ms.forEach((m,i)=>{const fin=i+1<ms.length?ms[i+1].index:s.length;const tramo=s.slice(m.index+m[0].length,fin).split(/[,;·\n]/)[0];const k=tramo.match(/(?:^|\s)[x×]\s*(\d+)\b/i);const v=parseFloat(m[1].replace(',','.'));const alt=/^\s*(de\s+)?altur/i.test(tramo)||/\b(a|altura)\s*$/i.test(s.slice(0,m.index));if(v>0&&!alt)t+=v*(k?parseInt(k[1],10)||1:1)});
+  return r2(t);
+}
+function ritAlto(el){if(!el)return;el.style.height='auto';el.style.height=Math.max(64,el.scrollHeight+2)+'px'}
+relItemRow=function(it,i){
+  const d=ritDesc(it),m=ritMetros(d),ro=readonly?' readonly':'';
+  const up=(ico,txt,a,pri)=>`<label class="rit-b upl${pri?' pri':''}">${ic(ico)}<span>${txt}</span><input type="file" accept="image/*" ${a} data-up="ritfoto" data-i="${i}"></label>`;
+  return`<div class="ritem rit" data-i="${i}">
+    <div class="rit-top"><input class="ri-ubic" value="${esc(it.ubic||'')}" placeholder="Zona · ej. Laboratorio control" aria-label="Zona" autocomplete="off"${ro}>${readonly?'':`<button type="button" class="btn ico ghost" data-act="ridel:${i}" aria-label="Quitar ítem" title="Quitar ítem">${ic('x')}</button>`}</div>
+    ${readonly||!AS?'':`<div class="rit-fotos">${up('foto','Foto','capture="environment"',1)}${up('galeria','Galería','multiple')}</div>`}
+    ${(it.fotos||[]).length?photosHtmlRel(it.fotos,String(i)):''}
+    <textarea class="ri-desc" rows="2" placeholder="Descripción · ej. 12 m de UTP x 6, caja para embutir en yeso" aria-label="Descripción"${ro}>${esc(d)}</textarea>
+    <p class="rit-m">${m?`≈ ${m.toLocaleString('es-UY')} m de cable`:''}</p></div>`;
+};
+relReadItems=function(){
+  const old=(RELJ&&RELJ.items)||[];
+  const rows=[...document.querySelectorAll('#relItems .ritem')];
+  if(!rows.length)return old.map(x=>({...x}));
+  return rows.map(el=>{const o=old[+el.dataset.i]||{};const desc=(el.querySelector('.ri-desc')?.value||'').trim();
+    const x={...o,id:o.id||uid(),ubic:(el.querySelector('.ri-ubic')?.value||'').trim(),desc,cant:n0(o.cant)||1,unidad:o.unidad||'unidad',metros:ritMetros(desc)||undefined,fotos:o.fotos||[],v2:1};
+    delete x.canal;delete x.altura;return x});
+};
+relItemsHtml=function(items){return(items||[]).length?items.map(relItemRow).join(''):'<p class="muted" style="margin:0">Todavía no cargaste ítems. Tocá «Ítem» y anotá la zona, sacale fotos y escribí lo que hay que hacer (con los metros de cable). Todo pasa solo a la descripción del relevamiento.</p>'};
+/* los ítems, en la descripción general: arriba, bajo «Ítems relevados», y lo que escribe la persona queda debajo de «Observaciones» */
+const RIT_A='<h4>Ítems relevados</h4>',RIT_Z='<h4>Observaciones</h4>';
+function ritBloque(items){
+  const g=[];(items||[]).forEach(it=>{const d=ritDesc(it).trim(),nf=(it.fotos||[]).length;if(!d&&!nf&&!it.ubic)return;const k=(it.ubic||'').trim();let s=g.find(x=>x.k===k);if(!s){s={k,l:[]};g.push(s)}
+    if(d||nf)s.l.push(`<li>${esc(d||'Ver fotos')}${nf?` <i>(${nf} foto${nf===1?'':'s'})</i>`:''}</li>`)});
+  const h=g.filter(s=>s.l.length||s.k).map(s=>`<p><b>${esc(s.k||'Sin zona')}</b></p>${s.l.length?`<ul>${s.l.join('')}</ul>`:''}`).join('');
+  return h?RIT_A+h+RIT_Z:'';
+}
+function ritSinBloque(html){
+  let t=String(html||'').trim();if(!t.startsWith(RIT_A))return t;
+  const z=t.indexOf(RIT_Z);if(z>=0)return t.slice(z+RIT_Z.length).trim();
+  t=t.slice(RIT_A.length);const re=/^\s*(<p><b>[\s\S]*?<\/b><\/p>|<ul>[\s\S]*?<\/ul>)/;let m;while((m=re.exec(t)))t=t.slice(m[0].length);return t.trim();
+}
+function ritSync(){
+  if(readonly||!SH||SH.type!=='rel'||!RELJ)return;const el=document.getElementById('f_notas');if(!el)return;
+  const items=relItemsClean(relReadItems()),b=ritBloque(items),resto=ritSinBloque(el.innerHTML);
+  const nuevo=b?b+(resto&&resto!=='<br>'?resto:'<p><br></p>'):resto;
+  if(el.innerHTML!==nuevo)el.innerHTML=nuevo;
+}
+let RIT_T=0;
+document.addEventListener('input',e=>{const t=e.target;if(!(t instanceof Element)||!t.closest('#relItems'))return;
+  if(t.classList.contains('ri-desc')){ritAlto(t);const m=ritMetros(t.value),p=t.closest('.ritem')?.querySelector('.rit-m');if(p)p.textContent=m?`≈ ${m.toLocaleString('es-UY')} m de cable`:''}
+  clearTimeout(RIT_T);RIT_T=setTimeout(ritSync,250)});
+{const _r=relItemsRender;relItemsRender=function(){_r();document.querySelectorAll('#relItems .ri-desc').forEach(ritAlto);ritSync()}}
+{const _s=sheetRel;sheetRel=function(id,p){const h=_s(id,p);setTimeout(()=>{document.querySelectorAll('#relItems .ri-desc').forEach(ritAlto);ritSync()},0);return h}}
+/* compartir: si la descripción ya trae los ítems, no se repiten */
+{const _t=relText;relText=function(r){const auto=/^\s*Ítems relevados/.test(r.notas||'');const items=auto?[]:(r.items||[]).map(it=>({...it,desc:ritDesc(it),cant:1,unidad:'unidad',metros:0,canal:'',altura:0}));return _t({...r,items}).replace(/^\(1\) /gm,'• ')}}
+/* fotos de cada ítem: Foto (cámara) o Galería (varias) */
+{const _u=campoUpload;campoUpload=async function(inp){
+  if(inp.dataset.up!=='ritfoto')return _u(inp);
+  const files=[...(inp.files||[])],idx=+inp.dataset.i;inp.value='';if(!files.length||!SH||!RELJ)return true;
+  if(!AS){toast('Necesitás permiso de edición para subir fotos.');return true}
+  RELJ.items=relReadItems();const orig=RELJ.items[idx];if(!orig)return true;
+  const nid=await relEnsureSaved();if(!nid)return true;
+  let it=RELJ.items.find(x=>x.id===orig.id);if(!it){it={...orig};RELJ.items.splice(Math.min(idx,RELJ.items.length),0,it)}   /* un ítem vacío se limpia al guardar: vuelve a su lugar */
+  const busy=$('#upBusy');if(busy){busy.hidden=false;busy.textContent='Subiendo fotos…'}let n=0;
+  for(const f of files){try{const b=await shrink(f);const up=await AS.upload(b,{type:b.type||f.type});it.fotos=[...(it.fotos||[]),{id:up.id,name:f.name||'foto',type:up.contentType,at:Date.now(),by:ME||''}];n++}catch(e){toast(upErr(e))}}
+  if(busy)busy.hidden=true;
+  if(n){await patch('relevamientos',nid,{items:relItemsClean(RELJ.items)});relItemsRender();const k=RELJ.items.indexOf(it);
+    const row=document.querySelector(`#relItems .ritem[data-i="${k}"]`);if(row){const ph=[...row.querySelectorAll('.ph')].slice(-n);ph.forEach(x=>x.classList.add('relf-nueva'));row.scrollIntoView({block:'nearest',behavior:'smooth'});setTimeout(()=>ph.forEach(x=>x.classList.remove('relf-nueva')),1600)}
+    toast(n===1?`Foto agregada${it.ubic?' a '+it.ubic:' al ítem'}`:`${n} fotos agregadas${it.ubic?' a '+it.ubic:' al ítem'}`)}
+  return true}}
+/* === fin 1.53p === */
 async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
