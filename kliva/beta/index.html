@@ -777,7 +777,7 @@ const toLocalInput = ms => { if (!ms) return ''; const d = new Date(ms - new Dat
 const fromLocalInput = text => text ? new Date(text).getTime() : null;
 
 const METHOD = { card: 'tarjeta', face: 'rostro', fingerprint: 'huella', pin: 'clave', qr: 'código QR', remote: 'remoto', button: 'botón', mixed: 'doble factor' };
-const ROLE = { admin: 'Administrador', operator: 'Operador', viewer: 'Solo lectura' };
+const ROLE = { admin: 'Administrador', hr: 'Recursos humanos', operator: 'Operador', viewer: 'Solo lectura' };
 const ALERT_KINDS = ['door_forced', 'door_held', 'duress', 'tamper', 'alarm'];
 /** Los tipos de persona, en el orden de las columnas del tablero (los nombres salen de TIPOS, el mismo archivo que el servidor). */
 const KINDS = ['staff', 'temp', 'contractor', 'supplier_monthly', 'supplier_casual', 'visit'];
@@ -951,7 +951,8 @@ function demoApi() {
       { ...me, active: 1 },
       { id: 'u4', name: 'Técnico de guardia', email: 'tecnico@demo.uy', role: 'operator', active: 1, company_id: null, areas: '' },
       { id: 'u2', name: 'Guardia de portería', email: 'porteria@andino.demo.uy', role: 'operator', active: 1, company_id: 'c1', areas: 's1' },
-      { id: 'u3', name: 'Recursos humanos', email: 'rrhh@andino.demo.uy', role: 'admin', active: 1, company_id: 'c1', areas: '' },
+      { id: 'u3', name: 'Recursos humanos', email: 'rrhh@andino.demo.uy', role: 'hr', active: 1, company_id: 'c1', areas: '' },
+      { id: 'u7', name: 'Sistemas', email: 'sistemas@andino.demo.uy', role: 'admin', active: 1, company_id: 'c1', areas: '' },
       { id: 'u5', name: 'Gerencia', email: 'gerencia@andino.demo.uy', role: 'viewer', active: 1, company_id: 'c1', areas: '' },
       ...(cine ? [] : [{ id: 'u6', name: 'Jefatura de planta', email: 'jefatura@frigorifico.demo.uy', role: 'admin', active: 1, company_id: 'c2', areas: '' }]),
     ],
@@ -1935,7 +1936,9 @@ const S = {
 };
 const root = document.documentElement, hostTheme = root.dataset.theme;
 const isAdmin = () => S.me?.role === 'admin';
-const canOperate = () => Boolean(S.me) && S.me.role !== 'viewer';
+const canOperate = () => ['operator', 'admin'].includes(S.me?.role);      // abrir puertas y emergencias
+const canPeople = () => ['operator', 'hr', 'admin'].includes(S.me?.role); // cargar y cambiar personas y visitas
+const canHR = () => ['hr', 'admin'].includes(S.me?.role);                 // turnos, feriados y carga desde planilla
 const actions = {}; // data-action="nombre"  → función(elemento, evento)
 const forms = {};   // data-form="nombre"    → función(formulario, valores)
 const fold = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -2264,7 +2267,7 @@ const head = (title, lede, extra = '') => html`<header class="view-head plain"><
 /** La acción principal de cada pantalla (va en la barra de arriba, con el color del punto). */
 const PRIMARY = {
   panel: () => canOperate() && ['Abrir una puerta', 'palette-doors', 'panel'],
-  personas: () => canOperate() && [S.peopleType === 'all' ? 'Agregar persona' : `Agregar: ${TIPOS[S.peopleType].toLowerCase()}`, 'person-new', 'plus'],
+  personas: () => canPeople() && [S.peopleType === 'all' ? 'Agregar persona' : `Agregar: ${TIPOS[S.peopleType].toLowerCase()}`, 'person-new', 'plus'],
   niveles: () => isAdmin() && ['Nueva zona', 'level-new', 'plus'],
   equipos: () => isAdmin() && ['Agregar equipo', 'device-new', 'plus'],
   eventos: () => ['Descargar la planilla de eventos', 'events-download', 'download'],
@@ -2420,7 +2423,7 @@ function drawPeople() { const el = $('#people-list'); if (el) setHTML(el, people
 /** Las opciones propias de la pestaña: tablero o lista, cargar una planilla y descargar el listado. */
 function peopleTools() {
   return html`<div class="tools">${seg('people-view', [['board', 'Tablero'], ['list', 'Lista']], S.peopleView, 'Cómo ver a las personas')}
-    ${isAdmin() ? html`<button class="round" type="button" data-action="import-open" title="Cargar varias desde una planilla" aria-label="Cargar varias desde una planilla">${icon('planilla')}</button>` : ''}</div>`;
+    ${canHR() ? html`<button class="round" type="button" data-action="import-open" title="Cargar varias desde una planilla" aria-label="Cargar varias desde una planilla">${icon('planilla')}</button>` : ''}</div>`;
 }
 actions['people-view'] = el => { S.peopleView = el.dataset.id; saved.set('kliva.peopleView', S.peopleView); render(); };
 actions['people-type'] = el => { S.peopleType = el.dataset.id; render(); };
@@ -2464,7 +2467,7 @@ function peopleBoard() {
     const list = peopleOfKind(k);
     return html`<section class="col" data-kind="${k}" aria-label="${KIND_PLURAL[k]}">
       <header class="col-head"><b>${KIND_PLURAL[k]}</b><span class="col-n">${list.length}</span>
-        ${canOperate() ? html`<button class="round" type="button" data-action="person-new" data-kind="${k}" title="Agregar ${kindName(k).toLowerCase()}" aria-label="Agregar ${kindName(k).toLowerCase()}">${icon('plus')}</button>` : ''}</header>
+        ${canPeople() ? html`<button class="round" type="button" data-action="person-new" data-kind="${k}" title="Agregar ${kindName(k).toLowerCase()}" aria-label="Agregar ${kindName(k).toLowerCase()}">${icon('plus')}</button>` : ''}</header>
       <div class="col-body">${list.length ? list.map(p => html`<button class="pcard ${p.active ? '' : 'idle'} ${S.fresh === p.id ? 'fresh' : ''}" type="button" data-action="person-edit" data-id="${p.id}" data-drag="${canOperate() ? 'person' : ''}">
         <span class="pcard-top"><span class="avatar sm ${p.active ? '' : 'idle'}">${initials(p.name)}</span><strong>${p.name}</strong></span>
         <span class="pcard-line">${personLine(p) || personAccess(p)}</span>
@@ -2539,7 +2542,7 @@ function personSheet(p, kind = p?.kind ?? 'staff') {
     ${p?.sync.length ? html`<h3>En los equipos</h3><ul class="rows">${p.sync.map(s => html`<li class="row flat">
       <span class="row-main"><strong>${s.device_name}</strong><span>${s.op === 'remove' ? 'Baja pendiente' : s.status === 'error' ? `${SYNC_TEXT.error}: ${s.error}` : SYNC_TEXT[s.status]}</span></span></li>`)}</ul>` : ''}
     <p class="form-error" role="alert"></p>
-    ${canOperate() ? html`<div class="form-actions"><button class="btn pri" type="submit">${p ? 'Guardar' : 'Agregar'}</button>
+    ${canPeople() ? html`<div class="form-actions"><button class="btn pri" type="submit">${p ? 'Guardar' : 'Agregar'}</button>
       ${p?.active && kind !== 'staff' ? html`<button class="btn" type="button" data-action="visit-out" data-id="${p.id}">Dar salida</button>` : ''}
       ${p ? html`<button class="btn danger push" type="button" data-action="person-delete" data-id="${p.id}">Eliminar</button>` : ''}</div>` : ''}</form>`);
 }
@@ -3348,15 +3351,15 @@ forms.site = async (form, v) => {
   sheet.close(); drawScope(); render(); toast(id ? 'Lugar guardada' : 'Lugar agregada');
 };
 
-const ROLE_HINT = 'Administrador: todo lo de su empresa. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.';
+const ROLE_HINT = 'Administrador: sistemas o quien instala; configura equipos, puertas y zonas, y ve todo lo de su empresa. Recursos humanos: personas, turnos, feriados y planillas; no abre ni configura puertas. Operador: portería; visitas, personas y apertura de puertas. Solo lectura: mirar.';
 function userSheet(u, companyId) {
   const cid = u ? u.company_id ?? null : companyId || null, c = companyById(cid), mine = String(u?.areas || '').split(',').filter(Boolean);
   sheet.open(u ? u.name : c ? `Usuario de ${c.name}` : `Usuario de ${S.org}`, html`<form class="form" data-form="user" data-id="${u?.id ?? ''}" data-company="${cid ?? ''}">
     <label class="field"><span>Nombre</span><input type="text" name="name" value="${u?.name}" required ${u ? '' : raw('autofocus')}></label>
     ${u ? html`<dl class="facts"><dt>Correo</dt><dd>${u.email}</dd><dt>Empresa</dt><dd>${c?.name ?? `${S.org}, la instaladora`}</dd><dt>Dos pasos</dt><dd>${u.mfa ? 'Activos' : 'Sin activar'}</dd></dl>`
       : html`<label class="field"><span>Correo</span><input type="email" name="email" required autocomplete="off"></label>`}
-    <label class="field"><span>Permisos</span><select name="role">${Object.entries(ROLE).map(([id, label]) => html`<option value="${id}" ${(u?.role ?? 'operator') === id ? raw('selected') : ''}>${label}</option>`)}</select>
-      <small>${c ? ROLE_HINT : 'Administrador: todo, en todas las empresas. Operador: personas, horario y apertura de puertas. Solo lectura: mirar.'}</small></label>
+    <label class="field"><span>Permisos</span><select name="role">${Object.entries(ROLE).filter(([id]) => c || id !== 'hr' || u?.role === 'hr').map(([id, label]) => html`<option value="${id}" ${(u?.role ?? 'operator') === id ? raw('selected') : ''}>${label}</option>`)}</select>
+      <small>${c ? ROLE_HINT : 'Administrador: todo, en todas las empresas. Operador: visitas, personas y apertura de puertas. Solo lectura: mirar.'}</small></label>
     ${c && c.areas.length > 1 ? html`<fieldset><legend>Lugares que ve</legend>
       ${c.areas.map(a => html`<label class="check"><input type="checkbox" name="areas" data-list value="${a.id}" ${mine.includes(a.id) ? raw('checked') : ''}><span>${a.name}<small>${a.address || count(a.devices, 'equipo', 'equipos')}</small></span></label>`)}
       <p class="hint">Sin marcar ninguna, ve todos los lugares de ${c.name}. Un guardia de una planta, por ejemplo, ve solo esa.</p></fieldset>` : ''}
@@ -3539,16 +3542,16 @@ views.horario = () => {
         </button></li>`) : html`<li class="empty">Nadie con turno todavía. Creá un turno abajo y asignalo en la ficha de cada persona.</li>`}</ul></section>`
     : html`<section class="card"><p class="empty">Cargando…</p></section>`}
   <section class="card flush"><div class="card-head"><h2>Turnos<small>El horario esperado de cada grupo, con su tolerancia para llegar</small></h2>
-    ${isAdmin() ? html`<button class="btn sm" type="button" data-action="schedule-new">Agregar turno</button>` : ''}</div>
+    ${canHR() ? html`<button class="btn sm" type="button" data-action="schedule-new">Agregar turno</button>` : ''}</div>
     <ul class="rows">${S.schedules.length ? S.schedules.map(x => html`<li><button class="row" type="button" data-action="schedule-edit" data-id="${x.id}">
       <span class="badge">${icon('horario')}</span><span class="row-main"><strong>${x.name}</strong><span>${[!viewCompany() && companyById(x.company_id)?.name, scheduleText(x)].filter(Boolean).join(': ')}</span></span>
       <span class="row-side"><span class="chip plain">${count(x.people, 'persona', 'personas')}</span><span>${x.tolerance ? `${x.tolerance} min de tolerancia` : 'Sin tolerancia'}</span></span></button></li>`)
       : html`<li class="empty">Todavía no hay turnos.</li>`}</ul></section>
   <section class="card flush"><div class="card-head"><h2>Feriados<small>Días en que no se espera a nadie: no cuentan como falta</small></h2>
-    ${isAdmin() ? html`<button class="btn sm" type="button" data-action="holiday-new">Agregar feriado</button>` : ''}</div>
+    ${canHR() ? html`<button class="btn sm" type="button" data-action="holiday-new">Agregar feriado</button>` : ''}</div>
     <ul class="rows">${holidaysAhead().length ? holidaysAhead().map(h => html`<li class="row flat">
       <span class="badge">${icon('horario')}</span><span class="row-main"><strong>${dayLong(h.day)}</strong><span>${[!viewCompany() && companyById(h.company_id)?.name, h.name].filter(Boolean).join(': ') || 'Feriado'}</span></span>
-      ${isAdmin() ? html`<button class="btn sm" type="button" data-action="holiday-delete" data-id="${h.id}">Quitar</button>` : ''}</li>`)
+      ${canHR() ? html`<button class="btn sm" type="button" data-action="holiday-delete" data-id="${h.id}">Quitar</button>` : ''}</li>`)
       : html`<li class="empty">Sin feriados cargados de acá en adelante.</li>`}</ul></section>`;
 };
 const dayLong = day => new Date(`${day}T12:00`).toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -3625,7 +3628,7 @@ function scheduleSheet(x) {
     <label class="field"><span>Tolerancia para llegar</span><select name="tolerance">${[0, 5, 10, 15, 20, 30].map(m => html`<option value="${m}" ${(x?.tolerance ?? 10) === m ? raw('selected') : ''}>${m ? `${m} minutos` : 'Sin tolerancia'}</option>`)}</select>
       <small>Llegar dentro de ese margen no cuenta como tarde. Lo mismo para irse antes.</small></label>
     <p class="form-error" role="alert"></p>
-    ${isAdmin() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
+    ${canHR() ? html`<div class="form-actions"><button class="btn pri" type="submit">Guardar</button>
       ${x ? html`<button class="btn danger push" type="button" data-action="schedule-delete" data-id="${x.id}">Eliminar</button>` : ''}</div>` : ''}
     ${x?.people ? html`<p class="hint">Al eliminarlo, ${count(x.people, 'la persona que lo tiene queda', 'las personas que lo tienen quedan')} sin control de horario.</p>` : ''}</form>`);
 }
