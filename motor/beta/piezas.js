@@ -1277,6 +1277,20 @@ export const TIPOS = {
       if (oscuro()) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w, d, w, d + 0.05], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false);
         if (!p.abierto) { const n = p.portones | 0; for (let i = 0; i < n; i++) { const x = -w + (i + 0.5) * p.ancho / n; brillo(g, x, Math.min(h - 0.6, 5.4), d + 0.5, 4, '#ffe2b0', 0.8); pozo(g, x, d + 5, 6, '#ffcf8a', 0.28); } } }
       return g; } },
+  // galpón de techo curvo: varias bóvedas de chapa una al lado de la otra, sobre paredes bajas, con sus tímpanos en las puntas y canaletas entre bóvedas
+  bovedas: { n: 'Galpón de techo curvo (bóvedas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 25, fondo: 30, alto: 3.5, naves: 6, flecha: 2, color: '#e9ebec', techo: '#d9dcdc' },
+    campos: [F.nombre, F.ancho('Largo (m)', 3, 200), F.fondo('Fondo (m)', 3, 200), F.alto('Alto de las paredes (m)', 2, 15, 0.5), { k: 'naves', n: 'Cantidad de bóvedas', t: 'num', min: 1, max: 30, paso: 1 }, { k: 'flecha', n: 'Alto de cada bóveda (m)', t: 'num', min: 0.5, max: 10, paso: 0.5 }, F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = p.alto, n = Math.max(1, p.naves | 0), b = p.fondo / n, f = Math.max(0.3, Math.min(+p.flecha || b / 2, 10));
+      const mp = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.85, side: THREE.DoubleSide }), mt = mat(os ? mix(p.techo, '#000', 0.45) : p.techo, { roughness: 0.55, metalness: 0.3, side: THREE.DoubleSide });
+      caja(g, -w, 0, -d, w, H, d, mp);
+      const media = new THREE.CylinderGeometry(1, 1, p.ancho, 28, 1, true, 0, Math.PI); media.rotateZ(Math.PI / 2);
+      const fr = new THREE.Shape(); for (let i = 0; i <= 24; i++) { const t = Math.PI * i / 24, u = Math.cos(t) * b / 2, v = Math.sin(t) * f; if (i) fr.lineTo(u, v); else fr.moveTo(u, v); }
+      const tim = new THREE.ShapeGeometry(fr);
+      for (let i = 0; i < n; i++) { const zc = -d + b * (i + 0.5), m = new THREE.Mesh(media, mt); m.scale.set(1, f, b / 2 - 0.04); m.position.set(0, H, zc); g.add(sombra(m));
+        for (const s of [-1, 1]) { const t = new THREE.Mesh(tim, mp); t.rotation.y = Math.PI / 2; t.position.set(s * w, H, zc); g.add(t); }
+        if (i) caja(g, -w - 0.1, H - 0.05, zc - b / 2 - 0.12, w + 0.1, H + 0.12, zc - b / 2 + 0.12, mat(os ? '#5b6066' : '#9aa1a7', { metalness: 0.5, roughness: 0.4 }), false);
+        for (let x = -w + 2.5; x < w - 1; x += 2.5) { const r = new THREE.Mesh(media, mat(os ? '#4c5157' : '#c2c7ca', { roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide })); r.scale.set(0.06 / p.ancho, f + 0.02, b / 2 - 0.02); r.position.set(x, H, zc); g.add(r); } }
+      return g; } },
   modulo: { n: 'Oficina o módulo', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 12, fondo: 6, pisos: 1, color: '#f5f6f7', ventanas: true, estilo: 'liso', semaforo: false },
     campos: [F.nombre, { k: 'estilo', n: 'Estilo', t: 'sel', ops: [['liso', 'Módulo liso'], ['garita', 'Casilla de control (alero, rejas y vereda con baranda)']] }, F.ancho('Largo (m)', 1, 120), F.fondo('Fondo (m)', 1, 60), { k: 'pisos', n: 'Pisos', t: 'num', min: 1, max: 12, paso: 1 }, F.color('Color'), { k: 'ventanas', n: 'Ventanas', t: 'bool' }, { k: 'semaforo', n: 'Semáforo en la esquina', t: 'bool' }, F.r],
     armar(p) { if (p.estilo === 'garita') return garita(p); const g = new THREE.Group(), w = p.ancho / 2, d = p.fondo / 2, H = 3.1 * p.pisos; caja(g, -w, 0, -d, w, H, d, mat(oscuro() ? mix(p.color, '#000', 0.35) : p.color, { roughness: 0.6 }));
@@ -1920,5 +1934,5 @@ export function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.
     if (p.rampa === 'der' || p.rampa === 'ambas') { const u = Math.max(...us) + 5; R.push([u, Math.max(3, Math.min(lg, L - u - 2.4)), 1]); }
     if (p.rampa === 'izq' || p.rampa === 'ambas') { const u = Math.min(...us) - 5; R.push([u, Math.max(3, Math.min(lg, u - 2.4)), -1]); } }
   return R; }
-export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (q.alto || 2), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
+export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, bovedas: q.alto + (q.flecha || 2), modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (q.alto || 2), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
 export { largoDe };
