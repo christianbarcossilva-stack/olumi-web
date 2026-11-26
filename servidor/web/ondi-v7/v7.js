@@ -89,7 +89,7 @@
       var aba=Y-56<(ancha?84:riel.classList.contains('v')?132:84);if(aba!==tkAba){tkAba=aba;tk3.classList.toggle('aba',aba)}
       var izq=Math.max(10,Math.min(hi-tkW,Math.max(lo,X-tkW/2)));
       tk3.style.transform='translate('+X.toFixed(1)+'px,'+Y.toFixed(1)+'px)';tk3b.style.transform='translateX('+(izq-X).toFixed(1)+'px)'}}
-  function medir(){ox=f.offsetLeft;oy=f.offsetTop;ancha=innerWidth>900;asp=f.clientWidth/Math.max(1,f.clientHeight);bw=f.clientWidth;medirTk();winB=BG.offsetHeight;ZONA=Math.min(.84,winB/Math.max(1,innerHeight)+.14)}
+  function medir(){ox=f.offsetLeft;oy=f.offsetTop;ancha=innerWidth>900;asp=f.clientWidth/Math.max(1,f.clientHeight);bw=f.clientWidth;medirTk();winB=BG.offsetHeight;ZONA=Math.min(.84,winB/Math.max(1,innerHeight)+.07)}
   function medirTk(){tkW=tk3b.offsetWidth||200}
   // cambiar de hora fundiendo: una foto de lo que se ve queda encima y se desvanece sobre la hora nueva
   function ponHora(h){if(!M||!h||h===hora)return;var antes=hora;hora=h;
