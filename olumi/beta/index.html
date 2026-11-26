@@ -1313,6 +1313,24 @@ html.d2[data-paleta][data-mode="dark"] #sheet .reltools{background:linear-gradie
 .pr-marca{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 70%,transparent);transition:box-shadow .3s}
 #sheet .sh-b>[id^="pr-"]{scroll-margin-top:12px}
 /* fin 1.53r */
+/* 1.53s */
+.cg-body.rj{height:var(--rjh);overflow:clip}
+.cg-body.rj>*{margin-top:calc(var(--rj0)*-1);height:calc(var(--ch)*24)}
+.cg-head>.cg-gut{display:grid;place-items:center;min-width:0}
+.cg-rjb{appearance:none;-webkit-appearance:none;border:0;background:none;padding:0;margin:0;width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:var(--muted);cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+.cg-rjb::after{content:"";position:absolute;inset:-6px}
+.cg-rjb .ic{width:18px;height:18px;position:static}
+.cg-rjb:hover{color:var(--fg);background:var(--surface-2)}
+.cg-rjb[aria-pressed=true]{color:var(--accent)}
+.cg-rjb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* fin 1.53s */
+/* 1.53t */
+#sheet textarea:not([readonly]):not([disabled]),#main .fld textarea:not([readonly]):not([disabled]){resize:vertical}
+/* el ítem es una columna: la regla vieja de la fila (flex:2 1 40%) hacía que el cuadro ignorara su alto y no creciera nunca */
+.ritem.rit textarea.ri-desc{flex:none;resize:vertical;overflow:auto}
+.rte[contenteditable="true"]{resize:vertical}
+.rte.tx-mano,.rte[contenteditable="true"][style*="height"]{max-height:none}
+/* fin 1.53t */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -4807,6 +4825,75 @@ function pryResumenHtml(id){const r=D.proyectos[id]||{},c=D.clientes[r.clienteId
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-prgo]');if(!t)return;e.preventDefault();const s=document.getElementById(t.dataset.prgo);if(!s)return;
   s.scrollIntoView({behavior:'smooth',block:'start'});s.classList.add('pr-marca');setTimeout(()=>s.classList.remove('pr-marca'),1400)});
 /* === fin 1.53r === */
+/* === 1.53s · el Calendario muestra la jornada (sin la madrugada ni la noche vacías) === */
+// Christian 26/11 09:42, con captura: «mucha zona muerta en calendario». Con la barra de la semana a la vista (arriba de la página) la grilla mostraba de 00:00 a 09:00, vacío.
+// La grilla por horas muestra la jornada: de 7 a 19, o más si hay algo antes o después (nunca queda nada escondido). El alto de cada hora se ajusta para que la jornada
+// entre en la ventana sin bajar; si sobra lugar, se suman horas. El botón de la esquina pasa a las 24 horas, que quedan como estaban (1.53j). Se recuerda en el equipo.
+const CALRJ={full:lsGet('crm.calfull')==='1',a:7,b:19,a0:7,b0:19,ch:48,disp:0,otra:0,w:0,ro:null};
+const calRjMin=()=>CALRJ.full?0:CALRJ.a*60,calRjMax=()=>CALRJ.full?1440:CALRJ.b*60,calRjTope=()=>CALRJ.full?23*60:CALRJ.b*60-30;
+// de qué hora a qué hora hay algo en lo dibujado (con 45 min de aire); sin nada, de 7 a 19
+function calRjRango(h){let a=420,b=1140,m;const re=/data-ini="([\d.]+)" data-dur="([\d.]+)"/g;
+  while((m=re.exec(h))){a=Math.min(a,+m[1]-45);b=Math.max(b,+m[1]+ +m[2]+45)}
+  return[Math.max(0,Math.floor(a/60)),Math.min(24,Math.ceil(b/60))]}
+// cuántas horas mostrar y de qué alto, según el lugar libre (disp): la jornada se estira hasta 64 px por hora; con más lugar se suman horas de 60 px o más (primero la tarde, después la mañana)
+function calRjCalc(a,b,disp){
+  const bordes=()=>(a>0?12:0)+(b<24?10:0);
+  if(disp>0){const caben=Math.floor((disp-bordes())/60);while(b-a<caben){if(b<21)b++;else if(a>6)a--;else if(b<24)b++;else if(a>0)a--;else break}}
+  const ch=disp>0?Math.floor((disp-bordes())/(b-a)/2)*2:48;
+  return{a,b,ch:Math.max(calPag()?40:48,Math.min(64,ch))}}
+const vCalGrid153s=vCalGrid;
+vCalGrid=function(){
+  const boton=h=>{const t=CALRJ.full?'Ver solo la jornada':'Ver las 24 horas';
+    return h.replace('<div class="cg-head"><div class="cg-gut"></div>',`<div class="cg-head"><div class="cg-gut"><button type="button" class="cg-rjb" data-act="calrj" aria-pressed="${CALRJ.full}" title="${t}" aria-label="${t}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${CALRJ.full?'<path d="M8 4.5l4 4 4-4M8 19.5l4-4 4 4"/>':'<path d="M8 9l4-4 4 4M8 15l4 4 4-4"/>'}</svg></button></div>`)};
+  /* el título ya nace escondido (va en la barra de arriba, 1.52s): si lo escondiera después, la grilla se mediría 28 px más abajo de donde queda */
+  const listo=h=>(document.getElementById('topTitle')?h.replace('<div class="vhead"><div><h1>','<div class="vhead"><div><h1 class="h1-arriba">'):h);
+  if(CALRJ.full){CGH=48;return listo(boton(vCalGrid153s()))}
+  CGH=CALRJ.ch;let h=vCalGrid153s();const [a0,b0]=calRjRango(h),r=calRjCalc(a0,b0,CALRJ.disp);
+  if(r.ch!==CGH){CGH=r.ch;h=vCalGrid153s()}
+  Object.assign(CALRJ,r,{a0,b0});const sup=r.a>0?12:0,inf=r.b<24?10:0;   /* un borde de la hora de antes y de la de después: se ve que el día sigue */
+  return listo(boton(h)).replace('<div class="cg-body">',`<div class="cg-body rj" style="--rj0:${r.a*CGH-sup}px;--rjh:${(r.b-r.a)*CGH+sup+inf}px">`)};
+// lugar libre para las horas: en la computadora, de la grilla al borde de abajo de la ventana (con la página arriba de todo); en el teléfono, la caja de la grilla
+function calRjDisp(sc){const body=sc.querySelector('.cg-body'),top=sc.querySelector('.cg-top');
+  return Math.round(calPag()?innerHeight-(body.getBoundingClientRect().top+scrollY)-14:sc.clientHeight-(top?top.offsetHeight:0))}
+// en el teléfono la caja no queda más alta que la jornada
+function calRjCaja(sc){if(calPag())return;const top=sc.querySelector('.cg-top'),body=sc.querySelector('.cg-body.rj');if(!body)return;const alto=(top?top.offsetHeight:0)+body.offsetHeight;if(alto<sc.clientHeight)sc.style.height=alto+'px'}
+// después de cada dibujo (lo llama calPost): si el lugar libre cambió, se vuelve a dibujar con el alto de hora que corresponde; devuelve false en las 24 horas
+function calRjPost(sc){
+  if(!sc.querySelector('.cg-body.rj'))return false;
+  const disp=calRjDisp(sc);CALRJ.w=innerWidth;
+  if(Math.abs(disp-CALRJ.disp)>1){CALRJ.disp=disp;const r=calRjCalc(CALRJ.a0,CALRJ.b0,disp);
+    if((r.ch!==CALRJ.ch||r.a!==CALRJ.a||r.b!==CALRJ.b)&&CALRJ.otra<2){CALRJ.otra++;render();return true}}
+  CALRJ.otra=0;
+  if(!CALRJ.ro&&window.ResizeObserver){const bn=document.getElementById('banner');if(bn){CALRJ.ro=new ResizeObserver(calRjCambio);CALRJ.ro.observe(bn)}}
+  if(calPag())CALSC=-1;else{calRjCaja(sc);if(CALSC==null||CALSC<0)CALSC=0;sc.scrollTop=CALSC}
+  calAhora();return true}
+const calAct153s=calAct;
+calAct=async function(k,el,arg){
+  if(k==='calrj'){CALRJ.full=!CALRJ.full;lsSet('crm.calfull',CALRJ.full?'1':'0');CALSC=null;CALRJ.otra=0;calqCierra();if(calPag())scrollTo({top:0,behavior:'instant'});sr();return true}
+  return calAct153s(k,el,arg)};
+// al cambiar el tamaño de la ventana la jornada se vuelve a acomodar (en el teléfono solo si cambia el ancho: la barra del navegador sube y baja todo el tiempo)
+let calRjT=0;
+function calRjCambio(){clearTimeout(calRjT);calRjT=setTimeout(()=>{const sc=document.getElementById('calSc');if(!sc||CALRJ.full||CALDR.on||!sc.querySelector('.cg-body.rj'))return;
+  if(calPag()||innerWidth!==CALRJ.w){if(Math.abs(calRjDisp(sc)-CALRJ.disp)>1||innerWidth!==CALRJ.w)sr()}else calRjCaja(sc)},140)}
+window.addEventListener('resize',calRjCambio);
+/* === fin 1.53s === */
+/* === 1.53t · los cuadros donde se escribe se agrandan con el mouse y muestran todo === */
+// Christian 26/11 10:07, con captura de un ítem del relevamiento: «estos espacios donde se escribe se tiene que poder agrandar con mouse, para poder ver todo».
+// - Todos los cuadros de texto de las fichas (y la descripción con formato) se estiran desde la esquina de abajo a la derecha.
+// - Lo que se estiró a mano se respeta: al escribir crece si hace falta, pero no vuelve a achicarse solo.
+// - La descripción de cada ítem del relevamiento mide su texto cuando se ve (antes se medía con la ficha todavía escondida y quedaba en 64 px, con los renglones de arriba tapados).
+const txAlto=el=>+(el&&el.dataset.alto)||0;
+ritAlto=function(el){if(!el||!el.isConnected||!el.offsetParent)return;el.style.height='auto';el.style.height=Math.max(64,el.scrollHeight+2,txAlto(el))+'px'};
+// medir cuando aparece en pantalla y cuando cambia el ancho de la ficha
+const TXVE=window.IntersectionObserver?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)ritAlto(e.target)})):null;
+const TXRO=window.ResizeObserver?new ResizeObserver(es=>es.forEach(e=>{const w=Math.round(e.contentRect.width);if(e.target.__txw!==w){const antes=e.target.__txw;e.target.__txw=w;if(antes)ritAlto(e.target)}})):null;
+new MutationObserver(()=>{document.querySelectorAll('textarea.ri-desc:not([data-txm])').forEach(t=>{t.dataset.txm='1';if(TXVE)TXVE.observe(t);if(TXRO)TXRO.observe(t);requestAnimationFrame(()=>ritAlto(t))})}).observe(document.body,{childList:true,subtree:true});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>document.querySelectorAll('textarea.ri-desc').forEach(ritAlto));
+// estirar a mano: se anota el alto que dejó la persona (en el cuadro, mientras la ficha esté abierta)
+let TXP=null;
+document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('textarea,.rte[contenteditable="true"]');TXP=t?{t,h:t.offsetHeight}:null},true);
+document.addEventListener('pointerup',()=>{if(!TXP)return;const {t,h}=TXP;TXP=null;const n=t.offsetHeight;if(Math.abs(n-h)>4){t.dataset.alto=n;t.classList.add('tx-mano')}},true);
+/* === fin 1.53t === */
 async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
@@ -4925,7 +5012,7 @@ async function agendaAct(k,el,arg){if(k!=='aprobag')return false;const x=D.aprob
 /* Calendario por horas (Día, 3 días, Semana): cada cosa en su hora, se mueve arrastrando y se estira para cambiar cuánto dura.
    Eventos propios (colección "eventos") y traer lo de Google Calendar desde el archivo que exporta Google (.zip o .ics). */
 let CALSC=null;
-const CGH=48;
+let CGH=48;
 const CALDR={el:null,on:false,fin:0};
 const CALG=()=>CALV==='dia'||CALV==='3dias'||CALV==='semana';
 const calNG=()=>CALV==='dia'?1:CALV==='3dias'?3:7;
@@ -5012,6 +5099,7 @@ function calAlto(){const sc=document.getElementById('calSc');if(!sc)return null;
   sc.style.height=Math.max(340,innerHeight-arriba-fija-(fija?14:22))+'px';return sc}
 function calPost(){
   calCierraNuevo();const sc=calAlto();if(!sc)return;
+  if(calRjPost(sc))return;
   if(CALSC==null){let m=7*60;const ms=[...sc.querySelectorAll('.ce')].map(x=>+x.dataset.ini);if(ms.length)m=Math.max(0,Math.min(m,Math.min(...ms)-45));CALSC=Math.max(0,m/60*CGH-14)}
   if(calPag()){if(CALSC>=0){calIrHora((CALSC+14)/CGH*60);CALSC=-1}}else{if(CALSC<0)CALSC=6*CGH;sc.scrollTop=CALSC}calAhora();
 }
@@ -5026,7 +5114,7 @@ document.addEventListener('click',e=>{
   if(CQ&&!(e.target.closest&&(e.target.closest('.cq')||e.target.closest('.ce')))){calqCierra();if(e.target.closest&&e.target.closest('.cg-col')){e.stopPropagation();return}}
   const habia=document.querySelector('.cg-menu');if(habia){if(e.target.closest&&e.target.closest('.cg-menu'))setTimeout(calCierraNuevo,0);else calCierraNuevo()}
   const col=e.target.closest&&e.target.closest('.cg-col');if(!col||e.target!==col||readonly||habia)return;
-  const r=col.getBoundingClientRect(),m=Math.max(0,Math.min(23*60,Math.floor((e.clientY-r.top)/CGH*2)*30)),h=m2hm(m),d=col.dataset.cgd;
+  const r=col.getBoundingClientRect(),m=Math.max(calRjMin(),Math.min(calRjTope(),Math.floor((e.clientY-r.top)/CGH*2)*30)),h=m2hm(m),d=col.dataset.cgd;
   const g=document.createElement('div');g.className='cg-nuevo';g.style.top=m/60*CGH+'px';g.style.height=CGH-2+'px';g.textContent=h;col.appendChild(g);
   const mn=document.createElement('div');mn.className='cg-menu';mn.innerHTML=`<span>${fdate(d)} · ${h}</span><button class="btn pri" data-new="trab" data-date="${d}" data-hora="${h}">Trabajo</button><button class="btn" data-new="ev" data-date="${d}" data-hora="${h}">Evento</button>`;
   document.body.appendChild(mn);const w=mn.offsetWidth,hh=mn.offsetHeight;
@@ -5042,10 +5130,10 @@ function calDrIni(){
 }
 function calDrMueve(){
   const s=CALDR,el=s.el;if(!el||!el.isConnected){calDrFin();return}
-  if(s.rs){const r=el.parentElement.getBoundingClientRect(),fin=Math.round((s.y-r.top)/CGH*4)*15;s.dur=Math.max(15,Math.min(1440-s.ini,fin-s.ini))}
+  if(s.rs){const r=el.parentElement.getBoundingClientRect(),fin=Math.round((s.y-r.top)/CGH*4)*15;s.dur=Math.max(15,Math.min(calRjMax()-s.ini,fin-s.ini))}
   else{const col=[...document.querySelectorAll('.cg-col')].find(c=>{const r=c.getBoundingClientRect();return s.x>=r.left&&s.x<r.right})||el.parentElement;
     if(col!==el.parentElement)col.appendChild(el);s.d=col.dataset.cgd;const r=col.getBoundingClientRect();
-    s.ini=Math.max(0,Math.min(1440-15,Math.round((s.y-s.dy-r.top)/CGH*4)*15));s.dur=Math.min(s.dur0,1440-s.ini)}
+    s.ini=Math.max(calRjMin(),Math.min(calRjMax()-15,Math.round((s.y-s.dy-r.top)/CGH*4)*15));s.dur=Math.min(s.dur0,1440-s.ini)}
   el.style.top=s.ini/60*CGH+'px';el.style.height=Math.max(22,s.dur/60*CGH-2)+'px';
   const t=el.querySelector('.t');if(t)t.textContent=m2hm(s.ini)+' – '+(s.ini+s.dur>=1440?'24:00':m2hm(s.ini+s.dur));
 }
@@ -7047,7 +7135,7 @@ document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest
 (()=>{if(typeof ICN!=='object')return;
   ICN.deshacer='<path d="M8.5 5.5 4 10l4.5 4.5M4.5 10H14a5.5 5.5 0 0 1 0 11h-3"/>';ICN.rehacer='<path d="M15.5 5.5 20 10l-4.5 4.5M19.5 10H10a5.5 5.5 0 0 0 0 11h3"/>';
   const ok=t=>t&&t.tagName==='TEXTAREA'&&/^f_/.test(t.id||''),PRE=/^(• |\d+\. )/,vh=()=>(window.visualViewport?visualViewport.height:innerHeight);
-  const crece=t=>{if(t.classList.contains('ted-full')){t.style.height=Math.max(160,vh()-130)+'px';return}t.style.height='auto';t.style.height=Math.min(Math.max(t.scrollHeight+2,96),vh()*.55)+'px'};
+  const crece=t=>{if(t.classList.contains('ted-full')){t.style.height=Math.max(160,vh()-130)+'px';return}t.style.height='auto';t.style.height=Math.max(+t.dataset.alto||0,Math.min(Math.max(t.scrollHeight+2,96),vh()*.55))+'px'};
   const ins=(t,s)=>{t.focus();if(s===''){document.execCommand('delete')||t.setRangeText('',t.selectionStart,t.selectionEnd,'end')}
     else if(!document.execCommand('insertText',false,s))t.setRangeText(s,t.selectionStart,t.selectionEnd,'end');t.dispatchEvent(new Event('input',{bubbles:true}))};
   const linea=t=>{const v=t.value,a=t.selectionStart,i=v.lastIndexOf('\n',a-1)+1;let f=v.indexOf('\n',a);if(f<0)f=v.length;return[i,f,v.slice(i,f)]};
