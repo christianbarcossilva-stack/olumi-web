@@ -250,7 +250,16 @@ export async function abrirMaqueta(o) {
   const UI = { abierta: false }; try { UI.abierta = localStorage.getItem('motor.ficha') === '1'; } catch (e) {}
   // la caja de lo elegido no cuenta el campo de visión ni el aro del piso (si no, una cámara queda adentro de una caja enorme)
   const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && !m.userData.noPica && m !== g.userData.aro) b.expandByObject(m); }); return b; };
-  function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaDe(g, caja.box).expandByScalar(0.15); puntos(); motor.dirty = true; }
+  // la caja de una pieza girada se mide en el marco de la pieza y se dibuja girada con ella (si no, a un bloque en diagonal le queda una caja enorme que cruza a los vecinos)
+  const _bl = new THREE.Box3(), _bm = new THREE.Box3(), _mi = new THREE.Matrix4(), _mr = new THREE.Matrix4(), _vc = new THREE.Vector3(), _vs = new THREE.Vector3();
+  const cajaGirada = (g, H, margen) => { const r = g.rotation.y; let ok = !!r && !g.rotation.x && !g.rotation.z; H.rotation.set(0, 0, 0);
+    if (ok) { g.updateMatrixWorld(true); _mi.copy(g.matrixWorld).invert(); _bl.makeEmpty();
+      g.traverse(m => { if (!ok || !m.isMesh || !m.visible || m.userData.campo || m.userData.noPica || m === g.userData.aro) return; let b = null;
+        if (m.isInstancedMesh) { if (m.computeBoundingBox) { if (!m.boundingBox) m.computeBoundingBox(); b = m.boundingBox; } } else if (!m.isSkinnedMesh) { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b = m.geometry.boundingBox; }
+        if (!b) { ok = false; return; } if (b.isEmpty()) return; _bl.union(_bm.copy(b).applyMatrix4(_mr.multiplyMatrices(_mi, m.matrixWorld))); });
+      if (ok && !_bl.isEmpty()) { _bl.expandByScalar(margen); _bl.getCenter(_vc).applyMatrix4(g.matrixWorld); _bl.getSize(_vs).multiplyScalar(0.5); H.box.min.copy(_vc).sub(_vs); H.box.max.copy(_vc).add(_vs); H.rotation.set(0, r, 0); return H.box; } }
+    return cajaDe(g, H.box).expandByScalar(margen); };
+  function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaGirada(g, caja, 0.15); puntos(); motor.dirty = true; }
   function elegir(p, enfocar) { if (!p) soltarMulti(); SEL = p; CON.alElegir(p); marcar(); info(); if (enfocar && p) { const [x, z] = centro(p); motor.ir({ tx: x, tz: z, d: Math.min(motor.C.d, TIPOS[p.t].equipo ? 45 : 140) }); } }
   // un equipo chico y lejos (un AP en el techo de un galpón) casi no tiene superficie para el rayo: se acepta el equipo cuyo centro cae cerca del toque en pantalla
   const _v = new THREE.Vector3(), _bb = new THREE.Box3();
@@ -700,7 +709,7 @@ export async function abrirMaqueta(o) {
     else { const casa = !e.altKey && Math.hypot(dx, dz) < 0.3;   // cerca de donde estaba, vuelve justo ahí (aunque no estuviera en la grilla)
       D.p.x = casa ? D.orig[0] : pegar(D.orig[0] + dx, e.altKey); D.p.z = casa ? D.orig[1] : pegar(D.orig[1] + dz, e.altKey); mx = D.p.x - D.orig[0]; mz = D.p.z - D.orig[1]; let g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z);
       if (J) { J.probar(D.p, D, { ign: D.ign || (D.ign = new Set(D.con.map(c => c.q))), base: D.apoyado ? null : (D.y0 ?? null) }); g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z); if (!D.mal) D.bien = [D.p.x, D.p.z, D.p.y]; }
-      cajaDe(g, caja.box).expandByScalar(0.15); motor.dirty = true; }
+      cajaGirada(g, caja, 0.15); motor.dirty = true; }
     for (const { q, o } of D.con) { if (q.pts) { q.pts = o.map(k => [Math.round((k[0] + mx) * 100) / 100, Math.round((k[1] + mz) * 100) / 100]); rehacer(q); } else { q.x = Math.round((o[0] + mx) * 100) / 100; q.z = Math.round((o[1] + mz) * 100) / 100; const g = objs.get(q.id); if (g) g.position.set(q.x, 0, q.z); } } };
   motor.soltar = (e, gesto) => { if (recuadro) { const R = recuadro; recuadro = null; if (R.m) { motor.scene.remove(R.m); R.m.geometry.dispose(); R.m.material.dispose(); }
       if (!gesto && R.x1 != null && Math.abs(R.x1 - R.x0) + Math.abs(R.z1 - R.z0) > 1.5) { const a = Math.min(R.x0, R.x1), b = Math.max(R.x0, R.x1), c = Math.min(R.z0, R.z1), d = Math.max(R.z0, R.z1); if (!R.suma) MULTI.clear();
@@ -716,8 +725,8 @@ export async function abrirMaqueta(o) {
     if (ED.linea && p && ED.linea.rect && ED.linea.p && ED.linea.pts.length === 1) { const L = ED.linea; L.p.pts = rect(L.pts[0], [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]); rehacer(L.p); return; }
     if (ED.linea && p && ED.linea.p) { const L = ED.linea; L.p.pts = [...L.pts, [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]]; if (L.p.pts.length >= 2) rehacer(L.p); return; }
     if (e.pointerType !== 'mouse') return; const h = hallar(e), g = h && objs.get(h.p.id);
-    if (!ED.on) { cajaH.material.color.set(0x8ecbff); cajaH.visible = !!g && h.p !== SEL && TIPOS[h.p.t].forma === 'punto' && (!motor.mirando || !!TIPOS[h.p.t].equipo); if (cajaH.visible) cajaDe(g, cajaH.box).expandByScalar(0.1); canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
-    else { cajaH.visible = motor.mirando && !!g && h.p !== SEL && h.p.t !== 'terreno' && !(h.p.fijo || h.p.candado); if (cajaH.visible) { cajaH.material.color.set(ED.h === 'maza' ? 0xff453a : ED.h === 'gotero' ? 0x30d158 : 0x8ecbff); cajaDe(g, cajaH.box).expandByScalar(0.06); } if (motor.mirando) motor.dirty = true; canvas.classList.toggle('sobre', (!!h && ED.h === 'mano' && h.p.t !== 'terreno' && (h.p === SEL || directo(h.p))) || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
+    if (!ED.on) { cajaH.material.color.set(0x8ecbff); cajaH.visible = !!g && h.p !== SEL && TIPOS[h.p.t].forma === 'punto' && (!motor.mirando || !!TIPOS[h.p.t].equipo); if (cajaH.visible) cajaGirada(g, cajaH, 0.1); canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
+    else { cajaH.visible = motor.mirando && !!g && h.p !== SEL && h.p.t !== 'terreno' && !(h.p.fijo || h.p.candado); if (cajaH.visible) { cajaH.material.color.set(ED.h === 'maza' ? 0xff453a : ED.h === 'gotero' ? 0x30d158 : 0x8ecbff); cajaGirada(g, cajaH, 0.06); } if (motor.mirando) motor.dirty = true; canvas.classList.toggle('sobre', (!!h && ED.h === 'mano' && h.p.t !== 'terreno' && (h.p === SEL || directo(h.p))) || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
   // con la mira, la rueda gira lo que se tiene en la mano (lo que se está ubicando o lo que se lleva agarrado): un paso, 45°
   let ruG = 0; motor.alRueda = (e, dx, dy) => { if (!motor.mirando || !ED.on || !(ED.colocar || (ED.drag && ED.drag.p && !ED.drag.p.pts))) return false; ruG += dy; const n = Math.trunc(ruG / 60); if (n) { ruG -= n * 60; girarSel(Math.sign(n) * Math.PI / 4); if (ED.drag) ED.drag.movido = true; } return true; };
   let ultimoToque = 0;
