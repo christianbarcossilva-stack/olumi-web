@@ -7,8 +7,8 @@
 //   Con la mano:  tocar una pared la elige (tipo, color, aberturas, arrastrarla estira el recinto); tocar el piso elige el recinto entero,
 //                 que se mueve con todo lo que tiene adentro (Alt lo mueve solo) y gira con R , y .
 // Imán: las puntas se pegan a esquinas y paredes que ya existen y, si no, a la grilla de 25 cm (Alt: libre).
-import { THREE } from './nucleo.js?v=1bb78591';
-import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=1bb78591';
+import { THREE } from './nucleo.js?v=06f6522e';
+import { ABERTURAS, PAREDES, areaSig, centro, cotaEn } from './piezas.js?v=06f6522e';
 
 export function construir(M) {
   const { motor, TIPOS, objs } = M, esMuro = p => !!p && (p.t === 'pared' || p.t === 'recinto');

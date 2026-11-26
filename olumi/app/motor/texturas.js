@@ -1,6 +1,6 @@
 // Motor común · texturas dibujadas en el momento (sin archivos ni fotos de terceros): pedregullo, tierra, hormigón, asfalto,
 // pasto, chapa acanalada y puertas de contenedor. Cada una se dibuja una sola vez y se repite en metros.
-import { THREE } from './nucleo.js?v=1bb78591';
+import { THREE } from './nucleo.js?v=06f6522e';
 
 const CACHE = new Map();
 const lienzo = (w, h = w) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };

@@ -6,7 +6,7 @@
 //  4. Reglas de ubicar: una cosa no entra adentro de otra ni atraviesa una pared («No entra ahí»), y lo que va arriba de una mesa se apoya en la mesa.
 // Este módulo no guarda nada del jugador: los ajustes cuelgan de `motor` (motor.aj, motor.canon), porque un módulo importado con dos direcciones
 // distintas se carga dos veces. Los paneles se arman acá adentro, sin depender de quién los abre, para poder dibujarlos mañana en un plano 3D (VR).
-import { THREE } from './nucleo.js?v=1bb78591';
+import { THREE } from './nucleo.js?v=06f6522e';
 
 export function juego(M) {
   const { motor, objs, TIPOS, svg, esc, raiz, app, host, toast, canvas } = M, $ = (s, r = document) => r.querySelector(s);

@@ -1,11 +1,11 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=1bb78591';
+import { THREE } from './nucleo.js?v=06f6522e';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=1bb78591';
-import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=1bb78591';
-import { matsCuerpo, marco as marcoCont, tanque as tanqueGeo, navieraDe, navieraAlAzar, H_CONT } from './contenedor.js?v=1bb78591';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=06f6522e';
+import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=06f6522e';
+import { matsCuerpo, marco as marcoCont, tanque as tanqueGeo, navieraDe, navieraAlAzar, H_CONT } from './contenedor.js?v=06f6522e';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
 // { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
@@ -85,6 +85,15 @@ function texHormigon() { if (TEX_HORM) return TEX_HORM; const N = 1024, c = docu
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return TEX_HORM = t; }
 export function matSuelo(k, o = {}, escala = 1) { if (k === 'calzada' || k === 'hormigon') return piso(matTex(texHormigon(), oscuro() ? '#56606b' : '#d4d6d8', [1 / (HORM_M * escala), 1 / (HORM_M * escala)], Object.assign({ roughness: 0.93 }, o))); if (k === 'adoquin') return piso(matTex(texAdoquin(), oscuro() ? '#5a6470' : '#ffffff', [1 / (ADOQ_M * escala), 1 / (ADOQ_M * escala)], Object.assign({ roughness: 0.95 }, o))); const t = SUELO_TEX[k]; if (!t) return null; const m = METROS[t] * escala, parejo = t === 'hormigon' || t === 'asfalto' || k === 'tosca';   // la tosca es pareja: sin manchones
   const b = matTex(texSuelo(t), oscuro() ? '#4b5866' : (TINTE[k] || '#ffffff'), [1 / m, 1 / m], Object.assign({ roughness: 0.97, macro: parejo ? 0 : macroDe(t) }, o)); return piso(parejo ? calmo(b, 0.3) : b); }
+// agua de fondo (el río o el mar alrededor de un puerto): marrón del Río de la Plata o azul, con ondas chicas en relieve que se repiten cada 18 m
+const MAGUA = new Map();
+export function matAgua(k = 'rio') { const os = oscuro(), key = k + os; if (MAGUA.has(key)) return MAGUA.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), R = azar(77); x.fillStyle = '#808080'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 700; i++) { const px = R() * 256, py = R() * 256, w = 8 + R() * 26, cl = R() < 0.5 ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.2)', lw = 1 + R() * 1.6, h = 2 + R() * 2;
+    for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) { x.strokeStyle = cl; x.lineWidth = lw; x.beginPath(); x.moveTo(px + dx, py + dy); x.quadraticCurveTo(px + dx + w / 2, py + dy - h, px + dx + w, py + dy); x.stroke(); } }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1 / 18, 1 / 18); t.anisotropy = 4;
+  const col = k === 'mar' ? (os ? '#14262f' : '#4f7f93') : (os ? '#221d17' : '#8a7860');
+  const m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.32, metalness: 0.08, bumpMap: t, bumpScale: 0.35 }); MAGUA.set(key, m); return m; }
 // con lluvia los pisos brillan: cada material de piso recuerda su aspereza de seco
 export const AMB = { mojado: false };
 function piso(m) { if (m.userData.r0 == null) m.userData.r0 = m.roughness; m.userData.suelo = true; m.roughness = AMB.mojado ? Math.min(m.userData.r0, 0.4) : m.userData.r0; return m; }
@@ -181,11 +190,15 @@ const MONT = { k: 'montaje', n: 'Montaje', t: 'sel', ops: [['poste', 'En columna
 const NODO_CAMPOS = () => [{ k: 'nombre', n: 'Nombre del nodo', t: 'txt' }, EQ_CAMPOS[1], EQ_CAMPOS[2]];
 const EQ_CAMPOS = [F.nombre, { k: 'marca', n: 'Marca', t: 'sel', ops: MARCAS }, { k: 'modelo', n: 'Modelo', t: 'txt' }, { k: 'ip', n: 'IP', t: 'txt' }, { k: 'mac', n: 'MAC', t: 'txt' }, { k: 'y', n: 'Altura (m)', t: 'num', min: 0, max: 40, paso: 0.1 }, F.r, { k: 'notas', n: 'Notas', t: 'area' }, MONT, BASE];
 
+// alto de un rack: sale de su tamaño en U (lo de la documentación manda: ctx.capRack), con zócalo y techo; sin U, el alto anotado
+export const U_RACK = 0.04445;
+export function uRack(p, ctx) { const d = ctx && ctx.capRack ? +ctx.capRack(p.id) : 0; return d > 0 ? d : +p.u > 0 ? +p.u : 0; }
+function altoRack(p, ctx) { const u = uRack(p, ctx); return u ? u * U_RACK + (p.clase === 'pared' ? 0.08 : 0.17) : (p.alto || (p.clase === 'pared' ? 0.5 : 2)); }
 // ---------- equipos de red y seguridad (Ondi) ----------
 // Van un poco más grandes que en la realidad para que se vean en un predio, con su soporte según el montaje (columna o poste, pared, techo)
 // y una luz del color de su estado. En el piso, un aro chico marca dónde están (más grande si van en columna).
 function equipo(dibujo) { return (p, ctx) => { const g = new THREE.Group(), y = p.y ?? 3, est = (ctx.estado && ctx.estado(p)) || 'off', ec = COL.estado[est], mont = p.montaje || 'poste';
-  const cuerpo = new THREE.Group(); cuerpo.position.y = y; g.add(cuerpo); dibujo(cuerpo, p, ec, mont);
+  const cuerpo = new THREE.Group(); cuerpo.position.y = y; g.add(cuerpo); dibujo(cuerpo, p, ec, mont, ctx);
   const b0 = +p.piso || 0; if (y - b0 > 0.6 && mont === 'poste') { const palo = cil(g, 0, b0, 0, 0.045, y - b0 - 0.05, mat('#9aa3ab', { metalness: 0.4, roughness: 0.5 })); palo.castShadow = false; cil(g, 0, b0, 0, 0.11, 0.05, mat('#7d868e', { metalness: 0.4, roughness: 0.6 })); }
   const r = mont === 'poste' ? 0.62 : 0.34, aro = new THREE.Mesh(new THREE.RingGeometry(r * 0.72, r, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ec, transparent: true, opacity: mont === 'poste' ? 0.85 : 0.6, depthWrite: false })); aro.position.y = b0 + 0.09; aro.renderOrder = 2; g.add(aro);
   g.userData.estado = est; g.userData.aro = aro; return g; }; }
@@ -258,14 +271,14 @@ function sensorDib(g, p, ec, mont) { const b = blanco(), c = p.clase || 'mov';
 // ---------- paredes, aberturas y pisos (modo construcción) ----------
 // Aberturas de una pared: { s: lado (0 = primer tramo), a: desde dónde (m, a lo largo), w: ancho, k: tipo }. Medidas de fábrica acá abajo.
 export const ABERTURAS = { puerta: { n: 'Puerta', w: 0.9, h: 2.05 }, doble: { n: 'Puerta doble', w: 1.6, h: 2.05 }, vidrio: { n: 'Puerta de vidrio', w: 0.9, h: 2.05 }, ventana: { n: 'Ventana', w: 1.2, h: 1.15, y: 0.95 }, paso: { n: 'Paso sin puerta', w: 1, h: 2.05 }, porton: { n: 'Portón', w: 3.5, h: 3.2 } };
-export const PAREDES = [['maciza', 'Maciza (revocada y pintada)'], ['bloque', 'Bloque de hormigón'], ['ladrillo', 'Ladrillo visto'], ['hormigon', 'Hormigón visto'], ['panel', 'Panel sándwich'], ['chapa', 'Chapa trapezoidal'], ['vidrio', 'Vidriada'], ['cortina', 'Muro cortina (fachada de vidrio)'], ['media', 'Media altura'], ['reja', 'Reja o malla'], ['sin', 'Sin pared (abierto)']];
+export const PAREDES = [['maciza', 'Maciza (revocada y pintada)'], ['bloque', 'Bloque de hormigón'], ['bloquePintado', 'Bloque pintado (toma el color de la pared)'], ['ladrillo', 'Ladrillo visto'], ['hormigon', 'Hormigón visto'], ['panel', 'Panel sándwich'], ['chapa', 'Chapa trapezoidal'], ['vidrio', 'Vidriada'], ['cortina', 'Muro cortina (fachada de vidrio)'], ['media', 'Media altura'], ['reja', 'Reja o malla'], ['sin', 'Sin pared (abierto)']];
 // textura de cada material de pared: lo que mide el dibujo en metros (ancho, alto) para repetirlo a escala
-const MUROS = { bloque: { m: [2.4, 1.2], f: '#a7a9a6', j: '#7f817e', p: [0.4, 0.2], t: 1 }, ladrillo: { m: [1.2, 0.6], f: '#a8553a', j: '#d9cdbd', p: [0.24, 0.075], t: 1 }, hormigon: { m: [2.4, 1.2], f: '#b8b8b2', j: '#9c9c96', p: [1.2, 0.6], t: 0 },
+const MUROS = { bloque: { m: [2.4, 1.2], f: '#a7a9a6', j: '#7f817e', p: [0.4, 0.2], t: 1 }, bloquePintado: { m: [2.4, 1.2], f: '#f4f4f2', j: '#c9cac7', p: [0.4, 0.2], t: 1, pinta: 1 }, ladrillo: { m: [1.2, 0.6], f: '#a8553a', j: '#d9cdbd', p: [0.24, 0.075], t: 1 }, hormigon: { m: [2.4, 1.2], f: '#b8b8b2', j: '#9c9c96', p: [1.2, 0.6], t: 0 },
   panel: { m: [2, 2], f: '#eef0f0', j: '#c9cccd', p: [1, 99], t: 0 }, chapa: { m: [1, 1], f: '#d8dcdf', j: '#aeb3b7', p: [0.2, 99], t: 0 } };
 const TEX_MURO = {};
 function texMuro(k) { if (TEX_MURO[k]) return TEX_MURO[k]; const D = MUROS[k], N = 512, c = document.createElement('canvas'); c.width = N; c.height = Math.round(N * D.m[1] / D.m[0]); const x = c.getContext('2d'), sx = N / D.m[0], R = azar(k.length * 31);
   x.fillStyle = D.j; x.fillRect(0, 0, c.width, c.height); const pw = D.p[0] * sx, ph = Math.min(D.p[1], D.m[1]) * sx, jn = k === 'ladrillo' ? 2 : 1.5;
-  for (let j = 0; j * ph < c.height; j++) for (let i = -1; i * pw < N + pw; i++) { const x0 = i * pw + (D.t && j % 2 ? pw / 2 : 0), v = (R() - 0.5) * (k === 'ladrillo' ? 30 : 12), b = new THREE.Color(D.f).offsetHSL(0, 0, v / 255); x.fillStyle = '#' + b.getHexString(); x.fillRect(x0 + jn / 2, j * ph + jn / 2, pw - jn, ph - jn); }
+  for (let j = 0; j * ph < c.height; j++) for (let i = -1; i * pw < N + pw; i++) { const x0 = i * pw + (D.t && j % 2 ? pw / 2 : 0), v = (R() - 0.5) * (k === 'ladrillo' ? 30 : D.pinta ? 4 : 12), b = new THREE.Color(D.f).offsetHSL(0, 0, v / 255); x.fillStyle = '#' + b.getHexString(); x.fillRect(x0 + jn / 2, j * ph + jn / 2, pw - jn, ph - jn); }
   if (k === 'hormigon') { x.fillStyle = 'rgba(80,80,76,.5)'; for (const [a, bb] of [[0.3, 0.3], [0.9, 0.3], [0.3, 0.9], [0.9, 0.9]]) for (const ox of [0, 1.2]) { x.beginPath(); x.arc((a + ox) * sx * 0.5 + 0.15 * sx, bb * sx * 0.5, 3, 0, 7); x.fill(); } }
   if (k === 'chapa') { const g = x.createLinearGradient(0, 0, pw, 0); g.addColorStop(0, 'rgba(0,0,0,.18)'); g.addColorStop(0.35, 'rgba(255,255,255,.12)'); g.addColorStop(1, 'rgba(0,0,0,.05)'); for (let i = 0; i * pw < N; i++) { x.save(); x.translate(i * pw, 0); x.fillStyle = g; x.fillRect(0, 0, pw, c.height); x.restore(); } }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return TEX_MURO[k] = t; }
@@ -325,9 +338,9 @@ function losaPared(g, P, y, ancho) { const os = oscuro(), m = mat(os ? '#3a3e43'
 // un tramo de pared de a hasta b (metros del mundo) con sus aberturas; lo macizo se anota en segs: [x0, z0, x1, z1, medio grosor, y de abajo, y de arriba]
 function tramoPared(g, a, b, o, hs, segs) { const len = Math.hypot(b[0] - a[0], b[1] - a[1]), t = o.tipo || 'maciza'; if (len < 0.05 || t === 'sin') return;
   const os = oscuro(), dx = (b[0] - a[0]) / len, dz = (b[1] - a[1]) / len, ang = Math.atan2(-dz, dx), y = o.y || 0, gr = t === 'vidrio' ? 0.07 : t === 'cortina' ? 0.1 : t === 'reja' ? 0.05 : o.grosor || 0.15, alto = t === 'media' ? Math.min(1.1, o.alto) : o.alto, real = t === 'media' ? Math.min(1.1, o.real || o.alto) : o.real || o.alto;
-  const mP = MUROS[t] ? matTex(texMuro(t), os ? '#6f7478' : '#ffffff', [len / MUROS[t].m[0], (o.alto || 2.6) / MUROS[t].m[1]], { roughness: t === 'chapa' || t === 'panel' ? 0.6 : 0.93 }) : mat(os ? mix(o.color, '#000', 0.38) : o.color, { roughness: 0.92 }), mM = mat(o.aluminio || '#2a2e33', { roughness: 0.42, metalness: 0.45 }), mV = mat(os ? '#a9c7d6' : '#d6e8f1', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.24, depthWrite: false });
+  const mP = MUROS[t] ? matTex(texMuro(t), MUROS[t].pinta ? (os ? mix(o.color || '#eceeef', '#000', 0.38) : (o.color || '#eceeef')) : (os ? '#6f7478' : '#ffffff'), [len / MUROS[t].m[0], (o.alto || 2.6) / MUROS[t].m[1]], { roughness: t === 'chapa' || t === 'panel' ? 0.6 : 0.93 }) : mat(os ? mix(o.color, '#000', 0.38) : o.color, { roughness: 0.92 }), mM = mat(o.aluminio || '#2a2e33', { roughness: 0.42, metalness: 0.45 }), mV = mat(os ? '#a9c7d6' : '#d6e8f1', { roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.24, depthWrite: false });
   const mE = mat(os ? '#b9c4cc' : '#ffffff', { roughness: 0.6, transparent: true, opacity: os ? 0.35 : 0.55, depthWrite: false }), mH = mat(os ? '#6b4e36' : '#9a7250', { roughness: 0.6 }), mR = mat('#5b656d', { roughness: 0.6, metalness: 0.5, transparent: true, opacity: 0.4, depthWrite: false });
-  const seg = (s0, s1, y0, y1, m, gro = gr) => { if (s1 - s0 < 0.005 || y1 - y0 < 0.005) return; if (m === mP && MUROS[t]) m = matTex(texMuro(t), os ? '#6f7478' : '#ffffff', [(s1 - s0) / MUROS[t].m[0], (y1 - y0) / MUROS[t].m[1]], { roughness: t === 'chapa' || t === 'panel' ? 0.6 : 0.93 }); const k = new THREE.Mesh(CAJA, m); k.scale.set(s1 - s0, y1 - y0, gro); k.position.set(a[0] + dx * (s0 + s1) / 2, y + (y0 + y1) / 2, a[1] + dz * (s0 + s1) / 2); k.rotation.y = ang; k.castShadow = !m.transparent; k.receiveShadow = true; g.add(k); };
+  const seg = (s0, s1, y0, y1, m, gro = gr) => { if (s1 - s0 < 0.005 || y1 - y0 < 0.005) return; if (m === mP && MUROS[t]) m = matTex(texMuro(t), MUROS[t].pinta ? (os ? mix(o.color || '#eceeef', '#000', 0.38) : (o.color || '#eceeef')) : (os ? '#6f7478' : '#ffffff'), [(s1 - s0) / MUROS[t].m[0], (y1 - y0) / MUROS[t].m[1]], { roughness: t === 'chapa' || t === 'panel' ? 0.6 : 0.93 }); const k = new THREE.Mesh(CAJA, m); k.scale.set(s1 - s0, y1 - y0, gro); k.position.set(a[0] + dx * (s0 + s1) / 2, y + (y0 + y1) / 2, a[1] + dz * (s0 + s1) / 2); k.rotation.y = ang; k.castShadow = !m.transparent; k.receiveShadow = true; g.add(k); };
   const duro = (s0, s1, y0, y1) => { s0 = Math.max(0, s0); s1 = Math.min(len, s1); if (s1 - s0 > 0.02 && y1 - y0 > 0.3) segs.push([a[0] + dx * s0, a[1] + dz * s0, a[0] + dx * s1, a[1] + dz * s1, gr / 2, y + y0, y + y1]); };
   const lleno = (s0, s1) => { if (s1 - s0 < 0.01) return; duro(s0, s1, 0, real);
     if (t === 'vidrio') { seg(s0, s1, 0, 0.1, mM); seg(s0, s1, 0.1, alto - 0.06, mV, 0.03); seg(s0, s1, alto - 0.06, alto, mM); for (let q = Math.max(0, s0) + 1.2; q < s1 - 0.3; q += 1.2) seg(q - 0.02, q + 0.02, 0.1, alto - 0.06, mM);
@@ -336,14 +349,15 @@ function tramoPared(g, a, b, o, hs, segs) { const len = Math.hypot(b[0] - a[0], 
       for (let i = 0; i <= n; i++) { const q = s0 + i * st; seg(q - 0.04, q + 0.04, 0.12, alto - 0.06, mM, 0.09); } }
     else if (t === 'reja') { seg(s0, s1, 0.05, alto - 0.05, mR, 0.02); seg(s0, s1, alto - 0.05, alto, mM); const n = Math.max(1, Math.round((s1 - s0) / 2.5)); for (let i = 0; i <= n; i++) { const q = s0 + (s1 - s0) * i / n; seg(q - 0.03, q + 0.03, 0, alto, mM, 0.06); } }
     else seg(s0, s1, 0, alto, mP); };
-  const A = (hs || []).map(h => ({ ...(ABERTURAS[h.k] || ABERTURAS.puerta), ...h })).map(h => { const w = Math.min(h.w, len - 0.2), a0 = Math.min(Math.max(0.1, h.a), len - 0.1 - w); return { ...h, w, a0, a1: a0 + w }; }).filter(h => h.w > 0.3).sort((m, n) => m.a0 - n.a0);
+  const A = (hs || []).map(h => ({ ...(ABERTURAS[h.k] || ABERTURAS.puerta), ...h, _o: h })).map(h => { const w = Math.min(h.w, len - 0.2), a0 = Math.min(Math.max(0.1, h.a), len - 0.1 - w); return { ...h, w, a0, a1: a0 + w }; }).filter(h => h.w > 0.3).sort((m, n) => m.a0 - n.a0);
   let s = o.e0 ? -gr / 2 : 0; for (const h of A) { if (h.a0 < s) continue; lleno(s, h.a0); s = h.a1; const y0 = Math.min(h.y || 0, alto), top = Math.min((h.y || 0) + h.h, alto);
     if (y0 > 0) seg(h.a0, h.a1, 0, y0, mP); if (h.y) duro(h.a0, h.a1, 0, h.y); if (top < alto) seg(h.a0, h.a1, top, alto, t === 'vidrio' ? mV : mP, t === 'vidrio' ? 0.03 : gr);
     if (top - y0 < 0.4) continue;   // con las paredes al ras o cortadas por debajo no hay marco ni hoja
     for (const q of [h.a0, h.a1]) seg(q - 0.035, q + 0.035, y0, top, mM, gr + 0.03); seg(h.a0, h.a1, top - 0.05, top, mM, gr + 0.03);
     if (h.k === 'ventana') { seg(h.a0, h.a1, y0, y0 + 0.05, mM, gr + 0.07); seg(h.a0 + 0.035, h.a1 - 0.035, y0 + 0.05, top - 0.05, mV, 0.025); seg((h.a0 + h.a1) / 2 - 0.02, (h.a0 + h.a1) / 2 + 0.02, y0 + 0.05, top - 0.05, mM, 0.04); }
     else if (h.k === 'porton') seg(h.a0, h.a1, top - 0.4, top - 0.05, mat('#b9bec3', { metalness: 0.6, roughness: 0.4 }), gr + 0.14);   // cortina enrollada arriba: portón abierto
-    else if (h.k !== 'paso') { const nx = -dz * (o.dentro || 1), nz = dx * (o.dentro || 1), c = Math.cos(1.25), sn = Math.sin(1.25);   // hojas abiertas hacia adentro del ambiente
+    else if (h.k !== 'paso') { const ab = o.abierta ? o.abierta(h._o) : false, an = ab ? 1.25 : 0, nx = -dz * (o.dentro || 1), nz = dx * (o.dentro || 1), c = Math.cos(an), sn = Math.sin(an);   // hojas cerradas; abiertas (con E, recorriendo) giran hacia adentro del ambiente
+      if (!ab && segs) segs.push([a[0] + dx * h.a0, a[1] + dz * h.a0, a[0] + dx * h.a1, a[1] + dz * h.a1, gr / 2 + 0.03, y + y0, y + top, undefined, undefined, 'puerta']);   // la puerta cerrada no se atraviesa (el camino del clic sí la cuenta como paso: la abre al llegar)
       const hoja = (s0, w, sent) => { const ux = dx * sent * c + nx * sn, uz = dz * sent * c + nz * sn, k = new THREE.Mesh(CAJA, h.k === 'vidrio' ? mV : mH); k.scale.set(w, top - y0 - 0.07, 0.04);
         k.position.set(a[0] + dx * s0 + ux * w / 2, y + (y0 + top - 0.07) / 2 + 0.01, a[1] + dz * s0 + uz * w / 2); k.rotation.y = Math.atan2(-uz, ux); k.castShadow = h.k !== 'vidrio'; k.receiveShadow = true; g.add(k); };
       if (h.k === 'doble') { hoja(h.a0 + 0.04, h.w / 2 - 0.05, 1); hoja(h.a1 - 0.04, h.w / 2 - 0.05, -1); } else hoja(h.a0 + 0.04, h.w - 0.08, 1); } }
@@ -737,7 +751,7 @@ function caseta(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2
     for (let zz = -0.36; zz <= 0.37; zz += 0.06) caja(g, lado > 0 ? x + 0.26 : x - 0.265, 1.9, zz - 0.008, lado > 0 ? x + 0.265 : x - 0.26, 2.12, zz + 0.008, mat('#9aa1a7'), false); }
   return g; }
 // dónde quedan los postes de un cerco, tal como se arma (con sus cortes): el editor pone una manija en cada uno
-export function postesDe(p, ctx) { const q = { ...TIPOS.cerco.def, ...p }; if (!q.pts || q.pts.length < 2) return []; const paso = { premoldeado: 2, baranda: 2.4, guardarrail: 4, vidrio: 1.5 }[q.tipo] || 3, P0 = q.cerrado ? [...q.pts, q.pts[0]] : q.pts;
+export function postesDe(p, ctx) { const q = { ...TIPOS.cerco.def, ...p }; if (!q.pts || q.pts.length < 2) return []; const paso = { premoldeado: 2, baranda: 2.4, guardarrail: 4, vidrio: 1.5, reja: 2.5 }[q.tipo] || 3, P0 = q.cerrado ? [...q.pts, q.pts[0]] : q.pts;
   return cortarLinea(P0, cortesCerco(ctx)).flatMap(P => P.length > 1 ? aLoLargo(P, paso).map(([x, z]) => [x, z]) : []); }
 // un tramo de cerco (entre dos cortes)
 function cercoTramo(g, p, P, h, gr) {
@@ -748,6 +762,13 @@ function cercoTramo(g, p, P, h, gr) {
         const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals();
         g.add(new THREE.Mesh(geo, mat(os ? '#7f9aa8' : '#bcd3df', { transparent: true, opacity: os ? 0.35 : 0.28, roughness: 0.05, metalness: 0.15, side: THREE.DoubleSide, depthWrite: false })));
         g.add(sombra(new THREE.Mesh(cintaVertical(P, 0.05, h), mat(os ? '#5d646b' : '#8f979d', { roughness: 0.4, metalness: 0.55, side: THREE.DoubleSide })))); return; }
+      // reja: murete bajo de hormigón o bloque y barrotes de hierro hasta arriba, con parantes cada 2,5 m y dos planchuelas (el cerco de frente de una planta sobre la vereda)
+      if (p.tipo === 'reja') { const os = oscuro(), hm = Math.min(h - 0.3, Math.max(0, p.murete ?? 0.5)), me = mat(p.color ? (os ? mix(p.color, '#000', 0.4) : p.color) : (os ? '#6a7076' : '#b9bec2'), { roughness: 0.45, metalness: 0.55 }), mu = mat(os ? '#55595d' : '#c9c8c2', { roughness: 0.95 });
+        for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.05) continue; const d = Math.atan2(b[0] - a[0], b[1] - a[1]), cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2;
+          if (hm > 0.02) { const k = new THREE.Mesh(CAJA, mu); k.scale.set(0.2, hm, L); k.position.set(cx, hm / 2, cz); k.rotation.y = d; g.add(sombra(k)); }
+          for (const yy of [hm + 0.12, h - 0.1]) { const k = new THREE.Mesh(CAJA, me); k.scale.set(0.04, 0.05, L); k.position.set(cx, yy, cz); k.rotation.y = d; g.add(k); } }
+        lote(g, CAJA, me, aLoLargo(P, 0.14).map(([x, z, d]) => [x, hm + (h - hm) / 2, z, d, 0.022, h - hm, 0.022]), false);
+        lote(g, CAJA, me, aLoLargo(P, 2.5).map(([x, z, d]) => [x, h / 2 + 0.03, z, d, 0.07, h + 0.06, 0.07])); return; }
       if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return; }
       // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
       if (p.tipo === 'premoldeado') { const os = oscuro(), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), v = [], uv = [], ix = [];
@@ -970,13 +991,47 @@ function estCamiones(p, g, os, C, R, po) { const LU = +p.lugar > 3.2 ? +p.lugar 
   // semirremolques esperando (sin tractor): los claros son furgones y los de color, contenedores
   const G = camionGeo(), M = matCamion(); lote(g, G.remolque, M.d, [...lisos, ...conts].map(q => q.slice(0, 7))); lote(g, G.lisa, M.t, lisos); lote(g, G.contenedor, M.t, conts); return g; }
 
+// ---------- ciudad de contexto y edificios por contorno ----------
+// Un barrio entero (manzanas, edificios, verde, vías, muros, líneas de carril y árboles) en pocas mallas, para dar contexto sin pesar.
+// Todo va en decímetros enteros: manz (manzanas) y verde son listas de polígonos [x0, z0, x1, z1, …]; edif: edificios [alto, color, techo, x0, z0, …] (color y techo son índices de pal);
+// vias y ejes (de calle) son líneas; muros: muros y cercos [alto, x0, z0, …]; arb: árboles [x, z, x, z, …].
+const TEX_VENT = {};
+function texVentanas(k) { if (TEX_VENT[k]) return TEX_VENT[k]; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 64, 64);
+  if (k === 'v') { x.fillStyle = '#8b96a0'; x.fillRect(15, 14, 34, 32); x.fillStyle = '#aab4bd'; x.fillRect(15, 14, 34, 5); x.fillStyle = '#eceae4'; x.fillRect(0, 59, 64, 5); }
+  else { x.fillStyle = '#dfe0de'; for (let i = 0; i < 64; i += 8) x.fillRect(i, 0, 2, 64); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return (TEX_VENT[k] = t); }
+const lineaDm = (a, i0 = 0) => { const P = []; for (let i = i0; i + 1 < a.length; i += 2) P.push([a[i] / 10, a[i + 1] / 10]); return P; };
+const anilloDm = (a, i0 = 0) => { const P = lineaDm(a, i0), n = P.length; if (n > 2 && P[0][0] === P[n - 1][0] && P[0][1] === P[n - 1][1]) P.pop(); return P; };
+const geoDe = (D, conUv) => { if (!D.ix.length) return null; const G = new THREE.BufferGeometry(); G.setAttribute('position', new THREE.Float32BufferAttribute(D.pos, 3)); if (D.col) G.setAttribute('color', new THREE.Float32BufferAttribute(D.col, 3)); if (conUv) G.setAttribute('uv', new THREE.Float32BufferAttribute(D.uv, 2)); G.setIndex(D.ix); G.computeVertexNormals(); G.computeBoundingSphere(); return G; };
+// prismas: de cada polígono { P, y0, y1, color, techo } salen la tapa de arriba y sus paredes (con el dibujo de la fachada repetido cada 3,2 m y un piso cada 3,1 m)
+function prismas(L) { const T = { pos: [], col: [], ix: [] }, W = { pos: [], col: [], uv: [], ix: [] }, c = new THREE.Color();
+  for (const q of L) { const P = q.P, n = P.length; if (n < 3) continue; c.set(q.techo || q.color); const b = T.pos.length / 3; for (const [x, z] of P) { T.pos.push(x, q.y1, z); T.col.push(c.r, c.g, c.b); }
+    let tri = []; try { tri = THREE.ShapeUtils.triangulateShape(P.map(v => new THREE.Vector2(v[0], v[1])), []); } catch (e) {} for (const t of tri) T.ix.push(b + t[0], b + t[1], b + t[2]);
+    c.set(q.color); const h = q.y1 - q.y0, v1 = Math.max(1, Math.round(h / 3.1)); let u = 0;
+    for (let i = 0; i < n; i++) { const A = P[i], B = P[(i + 1) % n], l = Math.hypot(B[0] - A[0], B[1] - A[1]), k = W.pos.length / 3, u0 = u / 3.2, u1 = Math.max(1, Math.round(l / 3.2)) + u0;
+      W.pos.push(A[0], q.y0, A[1], B[0], q.y0, B[1], B[0], q.y1, B[1], A[0], q.y1, A[1]); for (let j = 0; j < 4; j++) W.col.push(c.r, c.g, c.b); W.uv.push(u0, 0, u1, 0, u1, v1, u0, v1); W.ix.push(k, k + 1, k + 2, k, k + 2, k + 3); u = Math.round(u1) * 3.2; } }
+  return { tapas: geoDe(T), paredes: geoDe(W, true) }; }
+// franjas planas a lo largo de unas líneas (rieles, ejes de calle): ancho w, altura y, corridas d hacia un costado; gui = [lleno, vacío] las hace discontinuas
+function franjas(Ls, w, y, d = 0, gui) { const D = { pos: [], ix: [] }; const quad = (ax, az, bx, bz) => { const l = Math.hypot(bx - ax, bz - az); if (l < 0.01) return; const nx = -(bz - az) / l, nz = (bx - ax) / l, k = D.pos.length / 3, ox = nx * d, oz = nz * d, hx = nx * w / 2, hz = nz * w / 2;
+    D.pos.push(ax + ox - hx, y, az + oz - hz, bx + ox - hx, y, bz + oz - hz, bx + ox + hx, y, bz + oz + hz, ax + ox + hx, y, az + oz + hz); D.ix.push(k, k + 2, k + 1, k, k + 3, k + 2); };
+  for (const P of Ls) { let acc = 0; for (let i = 0; i + 1 < P.length; i++) { const [ax, az] = P[i], [bx, bz] = P[i + 1]; if (!gui) { quad(ax, az, bx, bz); continue; } const l = Math.hypot(bx - ax, bz - az), per = gui[0] + gui[1]; if (l < 0.01) continue;
+      for (let s = -acc; s < l; s += per) { const s0 = Math.max(0, s), s1 = Math.min(l, s + gui[0]); if (s1 - s0 > 0.2) quad(ax + (bx - ax) * s0 / l, az + (bz - az) * s0 / l, ax + (bx - ax) * s1 / l, az + (bz - az) * s1 / l); } acc = (acc + l) % per; } }
+  return geoDe(D); }
+function murosDm(L, color) { const D = { pos: [], col: [], ix: [] }, c = new THREE.Color(color); for (const a of L) { const h = a[0] / 10, P = lineaDm(a, 1); for (let i = 0; i + 1 < P.length; i++) { const k = D.pos.length / 3; D.pos.push(P[i][0], 0, P[i][1], P[i + 1][0], 0, P[i + 1][1], P[i + 1][0], h, P[i + 1][1], P[i][0], h, P[i][1]); for (let j = 0; j < 4; j++) D.col.push(c.r, c.g, c.b); D.ix.push(k, k + 1, k + 2, k, k + 2, k + 3); } } return geoDe(D); }
+// carro pórtico (straddle carrier): pasa por encima de una hilera de contenedores y los lleva colgando. Va a lo largo de X.
+function straddle(p) { const g = new THREE.Group(), os = oscuro(), c = mat(os ? mix(p.color || '#c23b2a', '#000', 0.35) : (p.color || '#c23b2a'), { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { roughness: 0.8 }), gr = mat('#5a6065', { roughness: 0.55, metalness: 0.45 }), v = mat('#2f4656', { roughness: 0.1, metalness: 0.6 }), am = mat('#e2b12a', { roughness: 0.5, metalness: 0.3 }), H = 13.2;
+  for (const z of [-2.15, 2.15]) { caja(g, -4.6, 0.7, z - 0.35, 4.6, 1.5, z + 0.35, c); for (const x of [-3.9, -1.3, 1.3, 3.9]) malla(g, CILX, n, x, 0.6, z, 1.2, 1.2, 0.5); for (const x of [-3.6, 3.6]) caja(g, x - 0.3, 1.5, z - 0.3, x + 0.3, H, z + 0.3, c); caja(g, -3.9, H - 0.8, z - 0.35, 3.9, H, z + 0.35, c); }
+  for (const x of [-3.6, 3.6]) caja(g, x - 0.35, H - 0.8, -2.5, x + 0.35, H, 2.5, c); caja(g, -2.6, H, -1.6, 1.2, H + 1.5, 1.6, gr);
+  caja(g, 3.9, H - 2.6, -2.45, 5.5, H - 0.4, -0.6, c); caja(g, 5.45, H - 2.3, -2.3, 5.52, H - 0.9, -0.75, v, false);
+  const ys = 9.5; caja(g, -6.05, ys, -1.2, 6.05, ys + 0.45, 1.2, am); for (const x of [-2.4, 2.4]) for (const z of [-0.9, 0.9]) caja(g, x - 0.05, ys + 0.45, z - 0.05, x + 0.05, H - 0.8, z + 0.05, gr, false);
+  return g; }
 export const TIPOS = {
   // terreno y caminos
   terreno: { n: 'Terreno', g: 'Terreno', forma: 'area', capa: 'base', def: { mat: 'tierra' },
-    campos: [F.nombre, { k: 'mat', n: 'Superficie', t: 'sel', ops: [['tierra', 'Tierra o balasto'], ['ripio', 'Ripio'], ['tosca', 'Tosca (patio de contenedores)'], ['hormigon', 'Hormigón'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['adoquin', 'Adoquines'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro'], ['monte', 'Monte'], ['cultivo', 'Cultivo en hileras'], ['agua', 'Agua']] }, { k: 'cordon', n: 'Con cordón alrededor (cantero o isla)', t: 'bool' }, { k: 'borde', n: 'Cordón ancho de hormigón hacia adentro (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'flechas', n: 'Flechas de sentido en el cordón', t: 'sel', ops: [['', 'Sin flechas'], ['anti', 'Giro antihorario'], ['hor', 'Giro horario']] }],
-    armar(p, ctx) { const g = new THREE.Group(), y = ({ agua: 0.012, pasto: 0.016, pasto2: 0.018, monte: 0.018, cultivo: 0.02, tierra: 0.026, ripio: 0.03, tosca: 0.03, hormigon: 0.034, asfalto: 0.038, calzada: 0.038 }[p.mat] ?? 0.026) + (p.sobre ? 0.03 : 0), bo = +p.borde > 0 && p.pts.length > 2 ? adentro(p.pts, +p.borde) : null;
+    campos: [F.nombre, { k: 'mat', n: 'Superficie', t: 'sel', ops: [['tierra', 'Tierra o balasto'], ['ripio', 'Ripio'], ['tosca', 'Tosca (patio de contenedores)'], ['hormigon', 'Hormigón'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['adoquin', 'Adoquines'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro'], ['monte', 'Monte'], ['cultivo', 'Cultivo en hileras'], ['agua', 'Agua']] }, { k: 'cordon', n: 'Con cordón alrededor (cantero o isla)', t: 'bool' }, { k: 'orden', n: 'Va encima de otros terrenos (0 a 5)', t: 'num', min: 0, max: 5, paso: 1 }, { k: 'borde', n: 'Cordón ancho de hormigón hacia adentro (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'flechas', n: 'Flechas de sentido en el cordón', t: 'sel', ops: [['', 'Sin flechas'], ['anti', 'Giro antihorario'], ['hor', 'Giro horario']] }],
+    armar(p, ctx) { const g = new THREE.Group(), ord = Math.max(0, +p.orden || 0), y = ({ agua: 0.012, pasto: 0.016, pasto2: 0.018, monte: 0.018, cultivo: 0.02, tierra: 0.026, ripio: 0.03, tosca: 0.03, hormigon: 0.034, asfalto: 0.038, calzada: 0.038 }[p.mat] ?? 0.026) + (p.sobre ? 0.03 : 0) + ord * 0.002, bo = +p.borde > 0 && p.pts.length > 2 ? adentro(p.pts, +p.borde) : null;
       let m; if (p.mat === 'cultivo') { const t = rayas(suelo('cultivo'), oscuro() ? '#1d2818' : '#8eaa72', 10).clone(); t.needsUpdate = true; t.repeat.set(1 / 20, 1 / 20); m = new THREE.MeshStandardMaterial({ map: t, roughness: 1 }); }
-      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0), polygonOffsetUnits: -2 }; m = matSuelo(p.textura || p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); else if (/^(pasto|pasto2)$/.test(p.mat) && m.map && !oscuro()) m = conManchas(m); }
+      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0) - ord, polygonOffsetUnits: -2 - ord * 4 }; m = matSuelo(p.textura || p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); else if (/^(pasto|pasto2)$/.test(p.mat) && m.map && !oscuro()) m = conManchas(m); }
       // con borde: cordón ancho de hormigón con caída alrededor y la superficie adentro, un escalón más arriba (la isla de una rotonda)
       const ALTO_B = 0.15; if (bo) try { bordeIsla(g, p.pts, bo, y + 0.004, y + ALTO_B, p.flechas, { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - 1, polygonOffsetUnits: -2 }); } catch (e) { console.warn('borde', e); }
       const k = area(g, bo || p.pts, y + (bo ? ALTO_B : 0), m, bo ? null : p.huecos); if (p.cordon && !bo) try { cordonDe(g, p); } catch (e) {} if (ctx && ctx.piezas && /^(pasto|pasto2|monte)$/.test(p.mat) && p.matas !== false) try { matas(g, bo ? { ...p, pts: bo, huecos: null } : p, ctx); } catch (e) { console.warn('matas', e); } if (k && p.mat === 'cultivo') { const uv = k.geometry.attributes.uv, pos = k.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i)); } return g; } },
@@ -1127,9 +1182,9 @@ export const TIPOS = {
       if (p.linea !== 'no' && p.tipo !== 'tierra') { if (p.linea === 'continua') { for (const r of libres(p.pts)) g.add(new THREE.Mesh(cinta(r, 0.15, y + 0.005), blanca)); } else if (p.linea === 'corta') { const mc = oscuro() ? mat('#8d969d', { roughness: 0.6, ...lo }) : blanca; for (const [x, z, d] of aLoLargo(p.pts, 3)) { if (tapada(x, z)) continue; const k = new THREE.Mesh(CAJA, mc); k.scale.set(0.1, 0.01, 1.5); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } } else for (const [x, z, d] of aLoLargo(p.pts, 9)) { if (tapada(x, z)) continue; const k = new THREE.Mesh(CAJA, blanca); k.scale.set(0.15, 0.01, 4.2); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } }
       if (p.tipo === 'ruta') for (const s of [-1, 1]) for (const r of libres(offset(p.pts, s * (p.ancho / 2 - 0.6)))) g.add(new THREE.Mesh(cinta(r, 0.18, y + 0.005), blanca)); return g; } },
   vereda: { n: 'Vereda', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 1.8 },
-    campos: [F.nombre, F.ancho('Ancho (m)', 0.6, 12)],
+    campos: [F.nombre, F.ancho('Ancho (m)', 0.6, 12), F.color('Color de la baldosa (vacío = hormigón)')],
     armar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho, t = texVereda().clone(); t.needsUpdate = true; t.repeat.set(w / 1.6, 1 / 1.6);
-      const l = [conUV(cinta(p.pts, w, 0.15)), conUV(cintaVertical(offset(p.pts, w / 2), 0.15, 0.075)), conUV(cintaVertical(offset(p.pts, -w / 2), 0.15, 0.075))], k = new THREE.Mesh(l[0], new THREE.MeshStandardMaterial({ map: t, color: os ? '#6a7078' : '#ffffff', roughness: 0.93 })); k.receiveShadow = true; k.userData.noChoca = true; g.add(k);
+      const l = [conUV(cinta(p.pts, w, 0.15)), conUV(cintaVertical(offset(p.pts, w / 2), 0.15, 0.075)), conUV(cintaVertical(offset(p.pts, -w / 2), 0.15, 0.075))], k = new THREE.Mesh(l[0], new THREE.MeshStandardMaterial({ map: t, color: p.color ? (os ? mix(p.color, '#000', 0.5) : p.color) : (os ? '#6a7078' : '#ffffff'), roughness: 0.93 })); k.receiveShadow = true; k.userData.noChoca = true; g.add(k);
       const b = new THREE.Mesh(mergeGeometries([l[1], l[2]]), mat(os ? '#5b6066' : '#cfccc4', { roughness: 0.9, side: THREE.DoubleSide })); b.receiveShadow = true; b.userData.noChoca = true; g.add(b); return g; } },
   balanza: { n: 'Balanza de camiones', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { largo: 22, ancho: 3.4, guias: 'baranda', piso: 'acero' },
     campos: [F.nombre, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 40, paso: 0.5 }, F.ancho('Ancho (m)', 2.5, 6), { k: 'piso', n: 'Plataforma', t: 'sel', ops: [['acero', 'Chapa de acero'], ['hormigon', 'Hormigón']] }, { k: 'guias', n: 'Guías a los costados', t: 'sel', ops: [['baranda', 'Baranda amarilla'], ['cordon', 'Cordones de hormigón (alto del lado de la calle)']] }, F.r],
@@ -1246,7 +1301,7 @@ export const TIPOS = {
       // la isla va por encima de las calles que cruzan por el centro (más alta y dibujada adelante)
       if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const cir = r => { const l = []; for (let k = 0; k < 48; k++) l.push([r * Math.cos(k / 48 * 6.2832), -r * Math.sin(k / 48 * 6.2832)]); return l; }; try { bordeIsla(g, cir(p.isla + 0.62), cir(p.isla + 0.02), 0.058, 0.33, p.flechas === 'no' ? '' : (p.flechas || 'anti'), ad); } catch (e) { console.warn('borde', e); } g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)'], ['vidrio', 'Paneles de vidrio']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)'], ['vidrio', 'Paneles de vidrio'], ['reja', 'Reja de barrotes sobre murete']] }, F.alto('Alto (m)', 0.5, 6), { k: 'murete', n: 'Murete de abajo (m, reja)', t: 'num', min: 0, max: 3, paso: 0.1 }, { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
     // lo que se pone sobre la línea del cerco (portón, pilar, caseta, puerta con control) le abre el paso: el cerco se corta ahí solo
     armar(p, ctx) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P0 = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
       for (const P of cortarLinea(P0, cortesCerco(ctx))) if (P.length > 1) cercoTramo(g, p, P, h, gr); return g; } },
@@ -1276,6 +1331,22 @@ export const TIPOS = {
       // de noche: tira de luz en el color de la app bajo el alero y luz sobre los portones
       if (oscuro()) { const nm = neon(acento()); for (const [x0, z0, x1, z1] of [[-w, -d - 0.05, w, -d], [-w, d, w, d + 0.05], [-w - 0.05, -d, -w, d], [w, -d, w + 0.05, d]]) caja(g, x0, h - 0.5, z0, x1, h - 0.38, z1, nm, false);
         if (!p.abierto) { const n = p.portones | 0; for (let i = 0; i < n; i++) { const x = -w + (i + 0.5) * p.ancho / n; brillo(g, x, Math.min(h - 0.6, 5.4), d + 0.5, 4, '#ffe2b0', 0.8); pozo(g, x, d + 5, 6, '#ffcf8a', 0.28); } } }
+      return g; } },
+  // galpón de techo curvo: varias bóvedas de chapa una al lado de la otra, sobre paredes bajas, con sus tímpanos en las puntas y canaletas entre bóvedas
+  bovedas: { n: 'Galpón de techo curvo (bóvedas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 25, fondo: 30, alto: 3.5, naves: 6, flecha: 2, color: '#e9ebec', techo: '#d9dcdc' },
+    campos: [F.nombre, F.ancho('Largo (m)', 3, 200), F.fondo('Fondo (m)', 3, 200), F.alto('Alto de las paredes (m)', 2, 15, 0.5), { k: 'naves', n: 'Cantidad de bóvedas', t: 'num', min: 1, max: 30, paso: 1 }, { k: 'flecha', n: 'Alto de cada bóveda (m)', t: 'num', min: 0.5, max: 10, paso: 0.5 }, F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'abierto', n: 'Techado abierto (columnas, sin paredes)', t: 'bool' }, { k: 'traslucido', n: 'Techo translúcido', t: 'bool' }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = p.alto, n = Math.max(1, p.naves | 0), b = p.fondo / n, f = Math.max(0.3, Math.min(+p.flecha || b / 2, 10));
+      const mp = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.85, side: THREE.DoubleSide }), mt = mat(os ? mix(p.techo, '#000', 0.45) : p.techo, { roughness: 0.55, metalness: 0.3, side: THREE.DoubleSide });
+      const mtr = p.traslucido ? mat(os ? '#5d6468' : '#f4f6f4', { roughness: 0.35, transparent: true, opacity: os ? 0.55 : 0.82, side: THREE.DoubleSide }) : null, col = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.55, metalness: 0.4 });
+      if (p.abierto) { for (let i = 0; i <= n; i++) for (const s of [-1, 1]) caja(g, s * (w - 0.15) - 0.12, 0, -d + b * i - 0.12, s * (w - 0.15) + 0.12, H, -d + b * i + 0.12, col); for (const s of [-1, 1]) caja(g, s * (w - 0.15) - 0.1, H - 0.3, -d, s * (w - 0.15) + 0.1, H, d, col); }
+      else caja(g, -w, 0, -d, w, H, d, mp);
+      const media = new THREE.CylinderGeometry(1, 1, p.ancho, 28, 1, true, 0, Math.PI); media.rotateZ(Math.PI / 2);
+      const fr = new THREE.Shape(); for (let i = 0; i <= 24; i++) { const t = Math.PI * i / 24, u = Math.cos(t) * b / 2, v = Math.sin(t) * f; if (i) fr.lineTo(u, v); else fr.moveTo(u, v); }
+      const tim = new THREE.ShapeGeometry(fr);
+      for (let i = 0; i < n; i++) { const zc = -d + b * (i + 0.5), m = new THREE.Mesh(media, mtr || mt); m.scale.set(1, f, b / 2 - 0.04); m.position.set(0, H, zc); g.add(sombra(m));
+        if (!p.abierto) for (const s of [-1, 1]) { const t = new THREE.Mesh(tim, mp); t.rotation.y = Math.PI / 2; t.position.set(s * w, H, zc); g.add(t); }
+        if (i) caja(g, -w - 0.1, H - 0.05, zc - b / 2 - 0.12, w + 0.1, H + 0.12, zc - b / 2 + 0.12, mat(os ? '#5b6066' : '#9aa1a7', { metalness: 0.5, roughness: 0.4 }), false);
+        for (let x = -w + 2.5; x < w - 1; x += 2.5) { const r = new THREE.Mesh(media, mat(os ? '#4c5157' : '#c2c7ca', { roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide })); r.scale.set(0.06 / p.ancho, f + 0.02, b / 2 - 0.02); r.position.set(x, H, zc); g.add(r); } }
       return g; } },
   modulo: { n: 'Oficina o módulo', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 12, fondo: 6, pisos: 1, color: '#f5f6f7', ventanas: true, estilo: 'liso', semaforo: false },
     campos: [F.nombre, { k: 'estilo', n: 'Estilo', t: 'sel', ops: [['liso', 'Módulo liso'], ['garita', 'Casilla de control (alero, rejas y vereda con baranda)']] }, F.ancho('Largo (m)', 1, 120), F.fondo('Fondo (m)', 1, 60), { k: 'pisos', n: 'Pisos', t: 'num', min: 1, max: 12, paso: 1 }, F.color('Color'), { k: 'ventanas', n: 'Ventanas', t: 'bool' }, { k: 'semaforo', n: 'Semáforo en la esquina', t: 'bool' }, F.r],
@@ -1333,7 +1404,7 @@ export const TIPOS = {
   pared: { n: 'Pared', g: 'Construcción', forma: 'linea', capa: 'base', herramienta: 'pared', def: { alto: 2.6, grosor: 0.15, tipo: 'maciza', color: '#eceeef' },
     campos: [F.nombre, F.alto('Alto (m)', 0.3, 12), { k: 'grosor', n: 'Grosor (m)', t: 'num', min: 0.05, max: 0.6, paso: 0.05 }, { k: 'tipo', n: 'Tipo de pared', t: 'sel', ops: PAREDES.filter(q => q[0] !== 'sin') }, F.color('Color'), { k: 'aluminio', n: 'Color del aluminio (marcos, puertas y ventanas)', t: 'sel', ops: [['', 'Negro'], ['#c9ccce', 'Natural (anodizado)'], ['#f2f3f2', 'Blanco'], ['#6f5a45', 'Bronce'], ['#7d8186', 'Gris'], ['#a8794e', 'Símil madera']] }, { k: 'losa', n: 'Losa arriba con luz (fachada)', t: 'bool' }],
     armar(p, ctx) { const g = new THREE.Group(), segs = [], P = p.pts, alto = altoVista(p.alto, ctx, p);
-      for (let i = 0; i < P.length - 1; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[i + 1], { y: p.y || 0, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, aluminio: p.aluminio, dentro: 1, e0: i > 0, e1: i < P.length - 2 }, (p.huecos || []).filter(h => h.s === i), segs); }
+      for (let i = 0; i < P.length - 1; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[i + 1], { y: p.y || 0, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, aluminio: p.aluminio, dentro: 1, e0: i > 0, e1: i < P.length - 2, abierta: ctx && ctx.abierta ? h => ctx.abierta(p, h) : null }, (p.huecos || []).filter(h => h.s === i), segs); }
       if (p.losa && alto >= p.alto - 0.01) losaPared(g, P, (p.y || 0) + p.alto, p.losa === true ? 0.7 : +p.losa);
       g.userData.segs = segs; return g; } },
   recinto: { n: 'Recinto (habitación)', g: 'Construcción', forma: 'area', capa: 'base', herramienta: 'recinto', etiqueta: p => p.nombre, def: { alto: 2.6, grosor: 0.15, tipo: 'maciza', color: '#eceeef', piso: 'ceramica' },
@@ -1357,7 +1428,7 @@ export const TIPOS = {
         for (let i = 0; i < n; i++) { const u = (i + 0.5) / n, cx = w >= d ? x0 + w * u : (x0 + x1) / 2, cz = w >= d ? (z0 + z1) / 2 : z0 + d * u, l = new THREE.SpotLight('#ffd9a8', LUZ_PISO * LUZ_H ** 1.6 * f, LUZ_H * 2.4, Math.min(1.2, Math.atan(radio / LUZ_H)), 0.45, 1.6);
           l.position.set(cx, y + LUZ_H, cz); l.target.position.set(cx, y, cz); g.add(l, l.target); } }
       else if (p.tipo === 'sin') area(g, P, y + 0.05, matZona());   // zona: sin paredes ni piso, nombra un sector (por ejemplo, sobre el plano del lugar)
-      for (let i = 0; i < n; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[(i + 1) % n], { y, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, aluminio: p.aluminio, dentro, e0: true, e1: true }, (p.huecos || []).filter(h => h.s === i), segs); }
+      for (let i = 0; i < n; i++) { const L = (p.lados || {})[i] || {}; tramoPared(g, P[i], P[(i + 1) % n], { y, alto, real: p.alto, grosor: p.grosor, tipo: L.tipo || p.tipo, color: L.color || p.color, aluminio: p.aluminio, dentro, e0: true, e1: true, abierta: ctx && ctx.abierta ? h => ctx.abierta(p, h) : null }, (p.huecos || []).filter(h => h.s === i), segs); }
       // contenedor oficina: techo de chapa, esquineros y bastidor de abajo; el techo se saca cuando las paredes se ven cortadas o con la capa de techos apagada
       if (p.estilo === 'contenedor') { const H = y + (+p.alto || 2.59), oc = oscuro(), fr = mat(oc ? '#30363c' : mix(p.color || '#e6eaed', '#000', 0.3), { roughness: 0.5, metalness: 0.45 });
         for (const [x, z] of P) caja(g, x - 0.09, y, z - 0.09, x + 0.09, H + 0.07, z + 0.09, fr);
@@ -1513,13 +1584,13 @@ export const TIPOS = {
 
   // logística
   fila: { n: 'Fila de contenedores', g: 'Logística', forma: 'punto', capa: 'logistica', siempre: true, etiqueta: p => [p.nombre, p.naviera].filter(Boolean).join(' · '), def: { largo: 100, ancho: 5, alto: 6, pies: 40, carga: 'seco', color: '#2f6fd6', ocupacion: 75, mezcla: 12 },
-    campos: [F.nombre, { k: 'naviera', n: 'Naviera', t: 'txt' }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 600, paso: 0.5 }, { k: 'ancho', n: 'Ancho (contenedores)', t: 'num', min: 1, max: 20, paso: 1 }, { k: 'orient', n: 'Contenedores', t: 'sel', ops: [['largo', 'A lo largo de la fila'], ['trans', 'Atravesados (uno al lado del otro)']] }, { k: 'bloque', n: 'Bloques de (0 = seguido)', t: 'num', min: 0, max: 30, paso: 1 }, { k: 'alto', n: 'Alto máximo (contenedores)', t: 'num', min: 1, max: 9, paso: 1 },
+    campos: [F.nombre, { k: 'naviera', n: 'Naviera', t: 'txt' }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 600, paso: 0.5 }, { k: 'ancho', n: 'Ancho (contenedores)', t: 'num', min: 1, max: 20, paso: 1 }, { k: 'sep', n: 'Calle entre hileras (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'orient', n: 'Contenedores', t: 'sel', ops: [['largo', 'A lo largo de la fila'], ['trans', 'Atravesados (uno al lado del otro)']] }, { k: 'bloque', n: 'Bloques de (0 = seguido)', t: 'num', min: 0, max: 30, paso: 1 }, { k: 'alto', n: 'Alto máximo (contenedores)', t: 'num', min: 1, max: 9, paso: 1 },
       { k: 'pies', n: 'Contenedores de', t: 'sel', ops: [[40, '40 pies'], [20, '20 pies']] }, { k: 'carga', n: 'Tipo', t: 'sel', ops: [['seco', 'Secos'], ['reefer', 'Refrigerados (reefer)'], ['tanque', 'Tanques (cisterna de 20 pies)']] }, { k: 'color', n: 'Color de la naviera', t: 'color' },
       { k: 'colores', n: 'Colores', t: 'sel', ops: [['', 'El color que elegí'], ['navieras', 'El de la naviera real más parecida']] },
       { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'mezcla', n: 'Otras navieras mezcladas (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'semilla', n: 'Variante', t: 'num', min: 0, max: 999, paso: 1 }, F.r],
     // cada contenedor: el cuerpo (chapa con relieve, puertas, óxido) y su esqueleto (esquineros, encastres, largueros, barras) en un tono más oscuro.
     // Tanques: cilindro en marco abierto, siempre de 20 pies. Colores «navieras»: el color medido pasa al de la naviera real más parecida.
-    armar(p) { const tq = p.carga === 'tanque', pies = tq ? 20 : +p.pies === 20 ? 20 : 40, g = new THREE.Group(), L = pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = tr ? L + 0.34 : 2.74, ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], esq = [], celdas = [], som = [];
+    armar(p) { const tq = p.carga === 'tanque', pies = tq ? 20 : +p.pies === 20 ? 20 : 40, g = new THREE.Group(), L = pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = (tr ? L + 0.34 : 2.74) + Math.max(0, +p.sep || 0), ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], esq = [], celdas = [], som = [];
       const x0 = -ns * pitch / 2, z0 = -(nr - 1) * paso / 2, H = H_CONT, occ = (p.ocupacion ?? 75) / 100, propio = p.colores === 'navieras' ? navieraDe(p.color || '#2f6fd6')[1] : p.color;
       const blq = p.bloque | 0; for (let s = 0; s < ns; s++) for (let r = 0; r < nr; r++) { if (blq && s % (blq + 1) === blq) continue; const borde = tr && nr <= 2 ? R() < 0.25 : r === 0 || r === nr - 1, lleno = R() < Math.min(1, occ * (borde ? 0.9 : 1.15)); if (!lleno) continue;
         const h = Math.max(1, Math.min(p.alto, Math.round((borde ? 0.45 : 0.62) * p.alto + (R() - 0.35) * p.alto * 0.7 * occ + occ * 1.2))); som.push([x0 + (s + 0.5) * pitch, z0 + r * paso]);
@@ -1541,12 +1612,162 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'carga', n: 'Contenedor (color, vacío = sin carga)', t: 'color' }, { k: 'cabina', n: 'Cabina', t: 'color' }, F.r],
     armar(p) { return camionQuieto(new THREE.Group(), p.carga, p.cabina || '#f2f4f5'); } },
   maquina: { n: 'Máquina de patio', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'apiladora', color: '#d8a31a' },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
-    armar(p) { const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['straddle', 'Carro pórtico (straddle carrier)'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
+    armar(p) { if (p.tipo === 'straddle') return straddle(p); const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
       caja(g, -3.2 * (big ? 1 : 0.5), 0.6, -1.4 * (big ? 1 : 0.6), 2.2 * (big ? 1 : 0.5), 2.2 * (big ? 1 : 0.7), 1.4 * (big ? 1 : 0.6), c); caja(g, -1.6, 2.2, -0.9, 0, 4.4, 0.9, mat('#2c3e4f', { roughness: 0.15, metalness: 0.5 }));
       if (p.tipo === 'reach') return reachStacker(g, p);
       else { for (const z of [-0.9, 0.9]) caja(g, 2.3, 0.4, z - 0.15, 2.6, big ? 16 : 4.5, z + 0.15, n); caja(g, 2.6, big ? 12 : 1.2, -1.3, 3.1, big ? 12.5 : 1.4, 1.3, n); }
       for (const [x, z] of [[-2.4, -1.3], [-2.4, 1.3], [1.5, -1.3], [1.5, 1.3]]) { const w = cil(g, x * (big ? 1 : 0.5), 0, z * (big ? 1 : 0.6), big ? 0.75 : 0.35, 0.6, n); w.rotation.x = Math.PI / 2; w.position.y = big ? 0.75 : 0.35; } return g; } },
+  // ---------- puerto ----------
+  // grúa de muelle. Pórtico (STS): los rieles van a lo largo de X y la pluma sale sobre el agua hacia -Z; el punto (x, z) es el centro del pórtico.
+  // Móvil: grúa sobre neumáticos con torre, pluma inclinada hacia -Z y patas estabilizadoras.
+  grua: { n: 'Grúa de puerto', g: 'Puerto', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'sts', estructura: '#e9ecee', color: '#c8402e', alto: 40, trocha: 30.5, alcance: 52, pluma: 'baja', carro: 0.35 },
+    variantes: [{ n: 'Grúa pórtico de muelle (STS)', o: { tipo: 'sts', alto: 40, alcance: 52 } }, { n: 'Grúa móvil de puerto', o: { tipo: 'movil', alto: 30, alcance: 48, color: '#e0a21b' } }, { n: 'Grúa pórtico de patio (RTG)', o: { tipo: 'rtg', alto: 18, trocha: 23.5, color: '#e0b020', estructura: '#f2f2ee' } }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['sts', 'Pórtico de muelle (STS)'], ['movil', 'Móvil sobre neumáticos'], ['rtg', 'Pórtico de patio sobre neumáticos (RTG)']] }, { k: 'estructura', n: 'Color de la estructura', t: 'color' }, F.color('Color de máquinas y cabina'),
+      F.alto('Alto de la pluma (m)', 12, 60, 0.5), { k: 'trocha', n: 'Trocha entre rieles (m, pórtico)', t: 'num', min: 10, max: 40, paso: 0.5 }, { k: 'alcance', n: 'Alcance sobre el agua (m)', t: 'num', min: 15, max: 80, paso: 1 },
+      { k: 'pluma', n: 'Pluma', t: 'sel', ops: [['baja', 'Baja (trabajando)'], ['alta', 'Levantada (parada)']] }, { k: 'carro', n: 'Carro (0 = punta, 1 = muelle)', t: 'num', min: 0, max: 1, paso: 0.05 }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), E = mat(os ? mix(p.estructura, '#000', 0.45) : p.estructura, { roughness: 0.55, metalness: 0.35 }), C = mat(os ? mix(p.color, '#000', 0.3) : p.color, { roughness: 0.5, metalness: 0.3 }),
+        N = mat('#2a2e33', { roughness: 0.7, metalness: 0.4 }), V = mat(os ? '#e2bc6e' : '#2f4656', { roughness: 0.08, metalness: 0.6, emissive: os ? '#e2a64e' : '#000000', emissiveIntensity: os ? 0.6 : 0 }), CAB = mat('#8d959c', { roughness: 0.5, metalness: 0.6 }),
+        LUZ = mat('#ff2a1a', { emissive: '#ff2a1a', emissiveIntensity: os ? 2 : 0.5 }), AM = mat('#e2b12a', { roughness: 0.5, metalness: 0.3 }), _a = new THREE.Vector3(), _u = new THREE.Vector3(0, 1, 0);
+      const palo = (G, a, b, r, m, redondo) => { _a.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const L = _a.length(); if (L < 0.01) return; const k = new THREE.Mesh(redondo ? CIL : CAJA, m); k.scale.set(r * 2, L, r * 2); k.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); k.quaternion.setFromUnitVectors(_u, _a.normalize()); G.add(sombra(k)); return k; };
+      const alta = p.pluma === 'alta';
+      if (p.tipo === 'rtg') { const T = Math.max(8, +p.trocha || 23.5), H = Math.max(8, Math.min(30, +p.alto || 18)), hz = T / 2;
+        for (const z of [-hz, hz]) { caja(g, -5.2, 0.9, z - 0.45, 5.2, 1.7, z + 0.45, C); for (const x of [-4.2, -2.8, 2.8, 4.2]) malla(g, CILX, N, x, 0.6, z, 1.2, 1.2, 0.8); for (const x of [-4.4, 4.4]) caja(g, x - 0.35, 1.7, z - 0.35, x + 0.35, H, z + 0.35, C); caja(g, -4.75, H * 0.55, z - 0.2, 4.75, H * 0.55 + 0.4, z + 0.2, C); }
+        for (const x of [-4.4, 4.4]) caja(g, x - 0.5, H, -hz - 1.2, x + 0.5, H + 1.3, hz + 1.2, C);
+        const zt = (+(p.carro ?? 0.4) - 0.5) * (T - 6); caja(g, -3.4, H + 1.3, zt - 2.2, 3.4, H + 2.3, zt + 2.2, E); caja(g, 3.4, H - 2.4, zt - 1.1, 5.6, H, zt + 1.1, E); caja(g, 5.55, H - 2.1, zt - 1, 5.62, H - 0.6, zt + 1, V, false);
+        const ys = H * 0.6; caja(g, -6.1, ys, zt - 1.25, 6.1, ys + 0.5, zt + 1.25, AM); for (const sx of [-1, 1]) for (const sz of [-1, 1]) palo(g, [sx * 2.2, H + 1.3, zt + sz * 0.9], [sx * 2.2, ys + 0.5, zt + sz * 0.9], 0.05, CAB, true);
+        caja(g, -5.3, 1.7, hz + 0.45, -3.6, 4.2, hz + 2.3, mat(os ? '#4b5157' : '#d9dcdf', { roughness: 0.6 })); return g; }
+      if (p.tipo !== 'movil') {
+        const T = Math.max(10, +p.trocha || 30.5), H = Math.max(20, +p.alto || 40), A = Math.max(15, +p.alcance || 52), R = Math.max(10, T * 0.55), B = 8.5, zw = -T / 2, zl = T / 2, yb = H;
+        // carros con ruedas al pie de cada pata, patas, vigas del pórtico y riostras
+        for (const x of [-B, B]) for (const z of [zw, zl]) { caja(g, x - 4.2, 0.55, z - 0.75, x + 4.2, 1.7, z + 0.75, C); for (let i = -3; i <= 3; i += 2) malla(g, CILX, N, x + i * 1.15, 0.45, z, 0.9, 0.9, 1.3);
+          caja(g, x - 0.85, 1.7, z - 0.85, x + 0.85, yb, z + 0.85, E); }
+        for (const z of [zw, zl]) { caja(g, -B - 0.85, 13, z - 0.75, B + 0.85, 14.8, z + 0.75, E); caja(g, -B - 0.85, yb - 2.4, z - 0.95, B + 0.85, yb, z + 0.95, E); }
+        for (const x of [-B, B]) { caja(g, x - 0.75, yb - 2, zw - 0.8, x + 0.75, yb - 0.3, zl + 0.8, E); palo(g, [x, 14.8, zl], [x, yb - 2, 0], 0.35, E); palo(g, [x, 14.8, zw], [x, yb - 2, 0], 0.35, E); }
+        palo(g, [-B, 14.8, zl], [B, yb - 2.4, zl], 0.3, E); palo(g, [B, 14.8, zl], [-B, yb - 2.4, zl], 0.3, E);
+        // ascensor de servicio en una pata del muelle
+        caja(g, B + 0.85, 1.7, zl - 1.1, B + 2.7, yb, zl + 1.1, mat(os ? '#3d4247' : '#c9cdd1', { roughness: 0.6, metalness: 0.3 }));
+        // vigas de la pluma: la parte fija va del muelle al pórtico; la pluma (con bisagra) sale sobre el agua
+        for (const s of [-1, 1]) caja(g, s * 2.7 - 0.7, yb, zw - 2, s * 2.7 + 0.7, yb + 3, zl + R, E);
+        for (let z = zw; z <= zl + R - 1; z += 6) caja(g, -2.7, yb + 2.5, z - 0.3, 2.7, yb + 3, z + 0.3, E);
+        const bo = new THREE.Group(); bo.position.set(0, yb, zw - 2); bo.rotation.x = alta ? 1.33 : 0; g.add(bo);
+        for (const s of [-1, 1]) { caja(bo, s * 2.7 - 0.65, 0.2, -A, s * 2.7 + 0.65, 2.8, 0, E); }
+        for (let z = -6; z > -A + 1; z -= 6) caja(bo, -2.7, 2.3, z - 0.25, 2.7, 2.8, z + 0.25, E);
+        caja(bo, -3.4, 0, -A - 0.8, 3.4, 3, -A, C); caja(bo, -0.3, 3, -A - 0.5, 0.3, 3.4, -A - 0.1, LUZ, false);
+        // pórtico en A arriba del lado del agua, con tensores hacia la pluma y hacia atrás
+        const Y = yb + 3 + H * 0.42, Z = zw + 3, ap = (s) => [s * 1.3, Y, Z];
+        for (const s of [-1, 1]) { palo(g, [s * B, yb + 2.4, zw], ap(s), 0.55, E); palo(g, [s * B, yb + 2.4, zl - 2], ap(s), 0.5, E); }
+        caja(g, -2, Y - 0.6, Z - 0.6, 2, Y + 0.6, Z + 0.6, E); caja(g, -0.3, Y + 0.6, Z - 0.3, 0.3, Y + 1, Z + 0.3, LUZ, false);
+        const rot = (y, z) => { const a = bo.rotation.x, c = Math.cos(a), s = Math.sin(a); return [yb + y * c - z * s, zw - 2 + y * s + z * c]; };
+        for (const s of [-1, 1]) { for (const f of [0.45, 0.85]) { const [py, pz] = rot(2.8, -A * f); palo(g, ap(s), [s * 2.7, py, pz], 0.16, CAB, true); } palo(g, ap(s), [s * 2.7, yb + 3, zl + R], 0.2, CAB, true); }
+        // sala de máquinas atrás, con una franja del color
+        const casa = mat(os ? '#4b5157' : mix(p.estructura, '#ffffff', 0.35), { roughness: 0.6, metalness: 0.2 });
+        caja(g, -4.8, yb + 3, zl - 1, 4.8, yb + 8.6, zl + R, casa); caja(g, -4.85, yb + 6.6, zl - 1.05, 4.85, yb + 7.5, zl + R + 0.05, C);
+        // carro con la cabina del operador colgando y el spreader amarillo con sus cables
+        const zt = alta ? zl - 3 : zw - 2 - A * Math.min(1, Math.max(0, 1 - (+p.carro || 0))) * 0.92 - 2;
+        caja(g, -3.4, yb - 0.9, zt - 3, 3.4, yb + 0.2, zt + 3, C); caja(g, -1.5, yb - 4.4, zt - 1.7, 1.5, yb - 0.9, zt + 1.7, C); caja(g, -1.35, yb - 4, zt - 1.78, 1.35, yb - 1.5, zt - 1.7, V, false);
+        const ys = alta ? yb - 8 : Math.max(6, H * 0.42); caja(g, -6.1, ys, zt - 1.25, 6.1, ys + 0.9, zt + 1.25, AM);
+        for (const s of [-1, 1]) for (const t of [-1, 1]) palo(g, [s * 2.2, yb - 0.9, zt + t * 0.9], [s * 2.2, ys + 0.9, zt + t * 0.9], 0.05, CAB, true);
+      } else {
+        const H = Math.max(15, +p.alto || 30), A = Math.max(15, +p.alcance || 48);
+        // chasis con ruedas y cuatro patas estabilizadoras apoyadas en zapatas
+        caja(g, -9, 1, -2.3, 9, 3.2, 2.3, E); for (let i = -7.5; i <= 7.6; i += 2.5) for (const z of [-1.9, 1.9]) malla(g, CILX, N, i, 0.6, z, 1.15, 1.15, 0.7);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) { caja(g, sx * 5.5 - 0.6, 1.5, Math.min(sz * 2.3, sz * 8.5), sx * 5.5 + 0.6, 2.4, Math.max(sz * 2.3, sz * 8.5), E); caja(g, sx * 5.5 - 0.35, 0.4, sz * 8.5 - 0.35, sx * 5.5 + 0.35, 1.6, sz * 8.5 + 0.35, E); cil(g, sx * 5.5, 0, sz * 8.5, 1.1, 0.4, N); }
+        cil(g, 0, 3.2, 0, 1.7, H - 3.2, E, CIL24);
+        // arriba de la torre: casa de máquinas que gira, contrapeso y la cabina al costado
+        caja(g, -3, H, -2.5, 3, H + 4, 9, mat(os ? '#4b5157' : mix(p.estructura, '#ffffff', 0.3), { roughness: 0.6, metalness: 0.2 })); caja(g, -3.1, H + 2.6, -2.55, 3.1, H + 3.2, 9.05, C); caja(g, -3, H + 0.2, 9, 3, H + 3.4, 11, N);
+        caja(g, 1.7, H - 4, -1.3, 4.3, H - 1, 1.5, C); caja(g, 1.8, H - 3.7, -1.38, 4.2, H - 1.6, -1.3, V, false);
+        const el = alta ? 1.2 : 0.72, bo = new THREE.Group(); bo.position.set(0, H + 1.5, -2); bo.rotation.x = el; g.add(bo);
+        for (const s of [-1, 1]) caja(bo, s * 1.2 - 0.3, -0.9, -A, s * 1.2 + 0.3, 0.9, 0, E);
+        for (let z = -3; z > -A; z -= 3) { const k = palo(bo, [-1.2, -0.8, z], [1.2, 0.8, z - 3], 0.12, E); }
+        caja(bo, -1.6, -1.1, -A - 1.5, 1.6, 1.1, -A, C);
+        const c = Math.cos(el), s = Math.sin(el), ty = H + 1.5 + A * s, tz = -2 - A * c; palo(g, [0, H - 2, -1.5], [0, H + 1.5 + A * 0.35 * s - 0.9 * c, -2 - A * 0.35 * c - 0.9 * s], 0.45, CAB, true);
+        const hy = Math.max(8, ty - 22); palo(g, [0, ty - 1, tz], [0, hy + 1, tz], 0.06, CAB, true); caja(g, -0.7, hy, tz - 0.7, 0.7, hy + 1.2, tz + 0.7, AM);
+      }
+      return g; } },
+  // buque amarrado: la proa hacia +X. El casco queda con la línea de flotación en el nivel del agua (que en un puerto está «nivel» metros debajo del muelle)
+  buque: { n: 'Buque', g: 'Puerto', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'portacontenedores', eslora: 200, manga: 32, casco: '#24405e', obra: '#f1f2ef', carga: 60, nivel: 1.5 },
+    variantes: [{ n: 'Portacontenedores', o: { tipo: 'portacontenedores', eslora: 200, manga: 32, casco: '#24405e' } }, { n: 'Granelero', o: { tipo: 'granelero', eslora: 180, manga: 30, casco: '#7a2a24' } }, { n: 'Carguero con grúas', o: { tipo: 'carguero', eslora: 130, manga: 21, casco: '#2f5d3a' } },
+      { n: 'Ferry de pasajeros', o: { tipo: 'ferry', eslora: 115, manga: 22, casco: '#f4f5f3' } }, { n: 'Remolcador', o: { tipo: 'remolcador', eslora: 30, manga: 11, casco: '#b3261e' } }, { n: 'Pesquero', o: { tipo: 'pesquero', eslora: 55, manga: 11, casco: '#3c4650' } }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['portacontenedores', 'Portacontenedores'], ['granelero', 'Granelero'], ['carguero', 'Carguero con grúas'], ['ferry', 'Ferry de pasajeros'], ['remolcador', 'Remolcador'], ['pesquero', 'Pesquero']] },
+      { k: 'eslora', n: 'Eslora (largo, m)', t: 'num', min: 12, max: 400, paso: 1 }, { k: 'manga', n: 'Manga (ancho, m)', t: 'num', min: 4, max: 60, paso: 0.5 }, { k: 'casco', n: 'Color del casco', t: 'color' }, { k: 'obra', n: 'Color de la superestructura', t: 'color' },
+      { k: 'carga', n: 'Carga en cubierta (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'nivel', n: 'Agua por debajo del muelle (m)', t: 'num', min: 0, max: 6, paso: 0.1 }, { k: 'semilla', n: 'Variante', t: 'num', min: 0, max: 999, paso: 1 }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), t = p.tipo || 'portacontenedores', L = Math.max(12, +p.eslora || 200), M = Math.max(4, +p.manga || 32), yw = -(+p.nivel || 0), R = azar(semilla(p));
+      const _a = new THREE.Vector3(), _u = new THREE.Vector3(0, 1, 0), vara = (a, b, r, m) => { _a.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const k = new THREE.Mesh(CAJA, m), l = _a.length(); k.scale.set(r * 2, l, r * 2); k.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); k.quaternion.setFromUnitVectors(_u, _a.normalize()); g.add(sombra(k)); return k; };
+      const cl = (v, a, b) => Math.min(b, Math.max(a, v)), pun = { portacontenedores: cl(L * 0.05, 6, 14), granelero: cl(L * 0.04, 5, 10), carguero: cl(L * 0.045, 4, 9), ferry: cl(L * 0.06, 4, 8), remolcador: 2.6, pesquero: 3.2 }[t] || 6, yd = yw + pun;
+      const Lb = ['remolcador', 'pesquero'].includes(t) ? L * 0.4 : Math.min(L * 0.2, M * 2.2), r0 = ['remolcador', 'pesquero'].includes(t) ? M * 0.35 : M * 0.15;
+      const forma = (k = 1) => { const m = M / 2 * k, l = L / 2 * k, s = new THREE.Shape(); s.moveTo(-l, 0); s.lineTo(-l, -m + r0); s.quadraticCurveTo(-l, -m, -l + r0, -m); s.lineTo(l - Lb, -m); s.bezierCurveTo(l - Lb * 0.35, -m, l, -m * 0.24, l, 0);
+        s.bezierCurveTo(l, m * 0.24, l - Lb * 0.35, m, l - Lb, m); s.lineTo(-l + r0, m); s.quadraticCurveTo(-l, m, -l, m - r0); s.closePath(); return s; };
+      const prisma = (k, y0, y1, m) => { const geo = new THREE.ExtrudeGeometry(forma(k), { depth: y1 - y0, bevelEnabled: false, curveSegments: 12 }).rotateX(-Math.PI / 2); geo.translate(0, y0, 0); const me = new THREE.Mesh(geo, m); g.add(sombra(me)); return me; };
+      const cas = os ? mix(p.casco, '#000', 0.4) : p.casco, ob = os ? mix(p.obra, '#000', 0.45) : p.obra, MO = mat(ob, { roughness: 0.6 }), MV = mat(os ? '#f0c574' : '#3b4954', { roughness: 0.1, metalness: 0.5, emissive: os ? '#e0a650' : '#000000', emissiveIntensity: os ? 0.7 : 0 });
+      prisma(1, yw - 3, yd, mat(cas, { roughness: 0.55, metalness: 0.15 })); prisma(1.004, yw - 3, yw + 0.7, mat(os ? '#3a1714' : '#8f2a23', { roughness: 0.7 }));
+      if (t === 'remolcador') prisma(1.06, yw + 0.3, yw + 1.3, mat('#1b1d1f', { roughness: 0.9 }));
+      { const geo = new THREE.ShapeGeometry(forma(0.985), 12).rotateX(-Math.PI / 2); geo.translate(0, yd + 0.02, 0); const d = new THREE.Mesh(geo, mat(os ? '#2b2e2c' : t === 'ferry' ? '#d9dcdc' : '#6b6e66', { roughness: 0.85 })); d.receiveShadow = true; g.add(d); }
+      // superestructura con una franja de ventanas por cubierta, puente con alerones y chimenea
+      const casilla = (x0, x1, w, n, hp = 2.8) => { let y = yd; for (let i = 0; i < n; i++) { const ww = i === n - 1 ? w + (t === 'ferry' ? 0 : M * 0.08) : w; caja(g, x0, y, -ww / 2, x1, y + hp, ww / 2, MO); caja(g, x0 - 0.04, y + hp * 0.5, -ww / 2 - 0.04, x1 + 0.04, y + hp * 0.7, ww / 2 + 0.04, MV, false); y += hp; } return y; };
+      const chimenea = (x, y, h, w) => { caja(g, x - 2.2, y, -w / 2, x + 2.2, y + h, w / 2, mat(os ? '#3a3a3a' : mix(p.casco, '#ffffff', 0.15), { roughness: 0.6 })); caja(g, x - 2.25, y + h - 0.9, -w / 2 - 0.05, x + 2.25, y + h, w / 2 + 0.05, mat('#1b1d1f')); };
+      if (['portacontenedores', 'granelero', 'carguero'].includes(t)) {
+        const lc = Math.max(8, L * 0.075), x0 = -L / 2 + L * 0.035, n = Math.round(cl(L / 32, 3, 7)), top = casilla(x0, x0 + lc, M * 0.8, n); chimenea(x0 + lc * 0.25, top, 5, 3.4);
+        caja(g, x0 + lc - 0.5, top, -0.25, x0 + lc, top + 4, 0.25, MO); const xa = x0 + lc + 3, xb = L / 2 - Lb * 0.55;
+        if (t === 'portacontenedores') { const its = [], nb = Math.floor((xb - xa) / 13), nr = Math.floor(M * 0.9 / 2.5), tmax = Math.max(0, Math.round(1 + (+(p.carga ?? 60)) / 100 * 6)), occ = (+(p.carga ?? 60)) / 100;
+          for (let b = 0; b < nb; b++) { const x = xa + b * 13 + 6.5; caja(g, x - 6.3, yd, -M * 0.45, x + 6.3, yd + 1.2, M * 0.45, mat(os ? '#2f3336' : '#7b8286', { roughness: 0.7 })); if (!tmax) continue;
+            const hb = Math.round(tmax * (0.55 + R() * 0.45)); for (let r = 0; r < nr; r++) { if (R() > Math.min(1, occ * 1.25)) continue; const z = -(nr - 1) * 1.25 + r * 2.5, h = Math.max(1, Math.min(tmax, hb - (R() < 0.3 ? 1 : 0)));
+              for (let k = 0; k < h; k++) { _c.set(navieraAlAzar(R)).offsetHSL(0, -R() * 0.05, (R() - 0.5) * 0.07); its.push([x, yd + 1.2 + k * 2.59 + 1.295, z, 0, 12.1, 2.56, 2.38, '#' + _c.getHexString()]); } } }
+          lote(g, CONT, matsCont(44, false), its); }
+        else { const nh = Math.max(3, Math.round((xb - xa) / (t === 'granelero' ? 24 : 20))), st = (xb - xa) / nh, tapa = mat(os ? '#3b3330' : t === 'granelero' ? '#a3472f' : '#5a6b5e', { roughness: 0.6, metalness: 0.2 }), CR = mat(os ? '#5a4d22' : '#d9b41f', { roughness: 0.5, metalness: 0.3 });
+          for (let i = 0; i < nh; i++) { const x = xa + (i + 0.5) * st; caja(g, x - st * 0.32, yd, -M * 0.3, x + st * 0.32, yd + 1.6, M * 0.3, tapa);
+            if (i < nh - 1 && (t === 'carguero' || i % 2 === 0)) { const xc = xa + (i + 1) * st; cil(g, xc, yd, 0, 0.9, 10, CR); caja(g, xc - 1.3, yd + 10, -1.3, xc + 1.3, yd + 12, 1.3, CR);
+              vara([xc, yd + 11, 0], [xc + st * 0.5, yd + 17, (i % 2 ? 1 : -1) * 2], 0.35, CR); } } } }
+      else if (t === 'ferry') { const x0 = -L / 2 + L * 0.06, x1 = L / 2 - Lb * 0.9; let y = yd; for (let i = 0; i < 3; i++) { const a = x0 + i * L * 0.04, b = x1 - i * L * 0.05, w = M * (0.96 - i * 0.1); caja(g, a, y, -w / 2, b, y + 3, w / 2, MO); caja(g, a - 0.04, y + 1.1, -w / 2 - 0.04, b + 0.04, y + 2.4, w / 2 + 0.04, MV, false); y += 3; }
+        chimenea(x0 + L * 0.12, y, 4.5, 3); chimenea(x0 + L * 0.12, y, 4.5, -3); }
+      else { const x0 = t === 'remolcador' ? -L * 0.05 : L * 0.05, lc = L * (t === 'remolcador' ? 0.3 : 0.22), top = casilla(x0, x0 + lc, M * 0.6, 2, 2.5); caja(g, x0 + lc * 0.4, top, -0.15, x0 + lc * 0.5, top + 5, 0.15, mat('#d8d8d4'));
+        if (t === 'pesquero') { const ga = mat(os ? '#4a2a22' : '#c0392b', { roughness: 0.6, metalness: 0.3 }); for (const s of [-1, 1]) caja(g, -L / 2 + 2, yd, s * M * 0.38 - 0.2, -L / 2 + 2.4, yd + 7, s * M * 0.38 + 0.2, ga); caja(g, -L / 2 + 1.9, yd + 6.6, -M * 0.4, -L / 2 + 2.5, yd + 7.2, M * 0.4, ga); }
+        else chimenea(x0 - 2.5, yd, 4.5, 2.2); }
+      return g; } },
+  // borde de un muelle o de la costa, trazado por la orilla. El agua queda del lado elegido. Muelle: pared vertical de hormigón con viga de coronamiento,
+  // defensas negras y bitas (y rieles de grúa si se pone la trocha). Escollera: piedras en talud hacia el agua. Espigón: escollera suelta con agua de los dos lados.
+  muelle: { n: 'Borde de muelle o costa', g: 'Puerto', forma: 'linea', capa: 'base', etiqueta: p => p.nombre, def: { tipo: 'muelle', agua: 'izq', nivel: 1.5, bitas: 24, defensas: 14, rieles: 0, ancho: 8 },
+    variantes: [{ n: 'Muelle (pared con defensas y bitas)', o: { tipo: 'muelle' } }, { n: 'Costa de piedras (escollera)', o: { tipo: 'escollera' } }, { n: 'Pared de costa', o: { tipo: 'pared' } }, { n: 'Espigón (agua a los dos lados)', o: { tipo: 'espigon', ancho: 8 } }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['muelle', 'Muelle con defensas y bitas'], ['escollera', 'Costa de piedras'], ['pared', 'Pared de costa'], ['espigon', 'Espigón suelto']] }, { k: 'agua', n: 'El agua queda', t: 'sel', ops: [['izq', 'A la izquierda del trazo'], ['der', 'A la derecha del trazo']] },
+      { k: 'nivel', n: 'Agua por debajo del muelle (m)', t: 'num', min: 0.3, max: 6, paso: 0.1 }, { k: 'bitas', n: 'Bitas cada (m, 0 = sin)', t: 'num', min: 0, max: 60, paso: 1 }, { k: 'defensas', n: 'Defensas cada (m, 0 = sin)', t: 'num', min: 0, max: 40, paso: 1 },
+      { k: 'rieles', n: 'Rieles de grúa: trocha (m, 0 = sin)', t: 'num', min: 0, max: 40, paso: 0.5 }, F.ancho('Ancho del espigón (m)', 2, 60)],
+    armar(p) { const g = new THREE.Group(); if (!p.pts || p.pts.length < 2) return g; const os = oscuro(), t = p.tipo || 'muelle', n0 = Math.max(0.3, +p.nivel || 1.5), s = p.agua === 'der' ? 1 : -1, R = azar(semilla(p));
+      const HO = mat(os ? '#4a4f53' : '#b9bcb6', { roughness: 0.9 }), CO = mat(os ? '#5a5f63' : '#d6d7d1', { roughness: 0.85 }), NE = mat('#1b1d1f', { roughness: 0.9 }), BI = mat(os ? '#4a4030' : '#2b2f33', { roughness: 0.5, metalness: 0.5 }), RI = mat('#6d7277', { roughness: 0.35, metalness: 0.7 }), AMA = mat(os ? '#6b5a20' : '#e2b72c', { roughness: 0.7 });
+      // todo va en pocos dibujos (uno por material), aunque la orilla tenga cientos de tramos
+      const B = { ho: [], co: [], am: [], ne: [], ri: [], bi: [], ro: [] }, piedras = ['#8e8c86', '#7b7974', '#9e9b94', '#6f6d68', '#a6a39b'], w = Math.max(2, +p.ancho || 8), an = Math.max(3, n0 * 2.2), fd = +p.defensas || 0, bt = +p.bitas || 0, tr = +p.rieles || 0; let ad = fd / 2, ab = bt / 2;
+      for (let i = 0; i < p.pts.length - 1; i++) { const a = p.pts[i], b = p.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz); if (len < 0.05) continue; const ux = dx / len, uz = dz / len, nx = -uz, nz = ux, gi = Math.atan2(-dz, dx);
+        // una caja en el marco del tramo: u a lo largo, v de costado (el agua queda hacia s·v) y la altura
+        const caja2 = (L, u0, u1, y0, y1, v0, v1) => { const um = (u0 + u1) / 2, vm = (v0 + v1) / 2; L.push([a[0] + ux * um + nx * vm, (y0 + y1) / 2, a[1] + uz * um + nz * vm, gi, Math.max(0.01, u1 - u0), Math.max(0.01, y1 - y0), Math.max(0.01, Math.abs(v1 - v0))]); };
+        const talud = (lado, y0, ancho, v00) => { for (let u = 0.6; u < len; u += 1.4) for (let k = 0; k * 1.4 < ancho; k++) { const v = v00 + lado * (k * 1.4 + 0.5 + R() * 0.4), uu = u + R() * 0.6 - 0.3, sc = 1.3 + R() * 1.1, c = piedras[(R() * piedras.length) | 0]; B.ro.push([a[0] + ux * uu + nx * v, y0 - (k * 1.4) * (n0 + 0.6) / ancho, a[1] + uz * uu + nz * v, R() * 6, sc, sc * (0.6 + R() * 0.3), sc * (0.8 + R() * 0.4), os ? mix(c, '#000', 0.5) : c]); } };
+        if (t === 'espigon') { caja2(B.co, -w * 0.25, len + w * 0.25, -n0 - 0.5, 0.6, -w / 2, w / 2); talud(1, 0.3, an, w / 2); talud(-1, 0.3, an, -w / 2); continue; }
+        if (t === 'escollera') { talud(s, 0, an, 0); continue; }
+        caja2(B.ho, -0.3, len + 0.3, -n0 - 0.8, 0.03, -s * 1.2, 0); if (t === 'pared') continue;
+        caja2(B.co, -0.3, len + 0.3, 0.02, 0.2, -s * 1.5, 0); caja2(B.am, 0, len, 0.2, 0.215, -s * 1.8, -s * 1.65);
+        if (fd > 0) { for (; ad < len; ad += fd) caja2(B.ne, ad - 0.9, ad + 0.9, -n0 - 0.2, -0.05, 0, s * 0.85); ad -= len; }
+        if (bt > 0) { for (; ab < len; ab += bt) { const x = a[0] + ux * ab - nx * s * 0.85, z = a[1] + uz * ab - nz * s * 0.85; B.bi.push([x, 0.475, z, 0, 0.6, 0.55, 0.6], [x, 0.78, z, 0, 0.84, 0.12, 0.84]); } ab -= len; }
+        if (tr > 0) for (const v of [-s * 2.5, -s * (2.5 + tr)]) caja2(B.ri, 0, len, 0.02, 0.1, v - 0.09, v + 0.09); }
+      lote(g, CAJA, HO, B.ho); lote(g, CAJA, CO, B.co); lote(g, CAJA, AMA, B.am, false); lote(g, CAJA, NE, B.ne); lote(g, CAJA, RI, B.ri, false); lote(g, CIL, BI, B.bi); if (B.ro.length) lote(g, BOLA2, mat('#ffffff', { roughness: 0.95 }), B.ro);
+      return g; } },
+  ciudad: { n: 'Ciudad de contexto', g: 'Terreno', forma: 'punto', capa: 'base', fondo: true, sinOferta: true, def: {}, campos: [F.nombre],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), pal = p.pal || ['#d9d4c8'], tinte = os ? '#59606a' : '#ffffff', DS = THREE.DoubleSide;
+      const pon = (geo, m, da) => { if (!geo) return null; const k = new THREE.Mesh(geo, m); k.castShadow = !!da; k.receiveShadow = true; k.userData.noChoca = true; g.add(k); return k; };
+      const liso = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: 0.92, side: DS, ...o });
+      if (p.manz && p.manz.length) { const G = prismas(p.manz.map(a => ({ P: anilloDm(a), y0: 0, y1: 0.15, color: '#b3b1aa', techo: '#c9c7c0' }))); pon(G.tapas, liso({ polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -8 })); pon(G.paredes, liso()); }
+      if (p.verde && p.verde.length) { const G = prismas(p.verde.map(a => ({ P: anilloDm(a), y0: 0.15, y1: 0.2, color: '#86a672', techo: '#86a672' }))); pon(G.tapas, liso({ polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -14 })); }
+      if (p.edif && p.edif.length) { const G = prismas(p.edif.map(a => ({ P: anilloDm(a, 3), y0: 0.1, y1: a[0] / 10, color: pal[a[1]] || pal[0], techo: pal[a[2]] || pal[0] }))); pon(G.tapas, liso(), true); pon(G.paredes, liso({ map: texVentanas('v'), roughness: 0.86 }), true); }
+      if (p.vias && p.vias.length) for (const d of [-0.7175, 0.7175]) pon(franjas(p.vias.map(a => lineaDm(a)), 0.08, 0.09, d), mat(os ? '#5b6166' : '#62676c', { roughness: 0.4, metalness: 0.7, side: DS, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -30 }));
+      if (p.ejes && p.ejes.length) pon(franjas(p.ejes.map(a => lineaDm(a)), 0.16, 0.07, 0, [3, 6]), mat(os ? '#8d949b' : '#f1f1ee', { roughness: 0.8, side: DS, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -26 }));
+      if (p.muros && p.muros.length) pon(murosDm(p.muros, '#b4b7b2'), liso(), true);
+      if (p.arb && p.arb.length) { const R = azar(7), co = [], tr = []; for (let i = 0; i + 1 < p.arb.length; i += 2) { const x = p.arb[i] / 10, z = p.arb[i + 1] / 10, s = 3.6 + R() * 2.4; co.push([x, 2.2 + s * 0.45, z, R() * 6, s, s * 0.85, s, VERDES[(R() * VERDES.length) | 0]]); tr.push([x, 1.2, z, 0, 0.32, 2.4, 0.32]); }
+        const a = lote(g, BOLA2, mat('#ffffff', { roughness: 0.9 }), co), b = lote(g, CIL, mat('#6b5a48', { roughness: 0.9 }), tr, false); if (a) a.userData.noChoca = true; if (b) b.userData.noChoca = true; }
+      return g; } },
+  volumen: { n: 'Edificio por contorno', g: 'Construcción', forma: 'area', capa: 'base', etiqueta: p => p.nombre, def: { alto: 9, color: '#e4e8eb', techo: '#c9ced2', fachada: 'lisa' },
+    campos: [F.nombre, F.alto('Alto (m)', 2, 150, 0.5), F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'fachada', n: 'Fachada', t: 'sel', ops: [['lisa', 'Lisa'], ['ventanas', 'Con ventanas'], ['chapa', 'De chapa']] }],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), P = (p.pts || []).map(q => [q[0], q[1]]); if (P.length < 3) return g; const h = Math.max(1, +p.alto || 9), DS = THREE.DoubleSide, tinte = os ? '#59606a' : '#ffffff', ch = p.fachada === 'chapa';
+      const G = prismas([{ P, y0: 0, y1: h, color: p.color || '#e4e8eb', techo: p.techo || p.color || '#c9ced2' }]);
+      const a = new THREE.Mesh(G.tapas, new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: 0.82, side: DS })), b = new THREE.Mesh(G.paredes, new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: ch ? 0.6 : 0.88, metalness: ch ? 0.25 : 0, side: DS, map: p.fachada === 'ventanas' ? texVentanas('v') : ch ? texVentanas('c') : null }));
+      g.add(sombra(a), sombra(b)); a.userData.noChoca = b.userData.noChoca = true;
+      g.userData.segs = P.map((q, i) => { const r = P[(i + 1) % P.length]; return [q[0], q[1], r[0], r[1], 0.15, 0, h]; }); return g; } },
   vehiculo: { n: 'Vehículo', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', def: { modelo: 'suv', color: '' },
     campos: [F.nombre, { k: 'modelo', n: 'Modelo', t: 'sel', ops: [['suv', 'SUV'], ['eq7', 'Chery eQ7'], ['toro', 'Pickup (Fiat Toro)'], ['fiorino', 'Furgón chico (Fiorino)'], ['bipper', 'Utilitario (Bipper)']] }, { k: 'color', n: 'Color', t: 'color' }, F.r],
     armar(p, ctx) { const g = new THREE.Group(), c = mat(p.color || '#c9ced2', { roughness: 0.35, metalness: 0.4 }); caja(g, -2.2, 0.35, -0.9, 2.2, 1.1, 0.9, c); caja(g, -1.2, 1.1, -0.82, 1.0, 1.6, 0.82, mat('#2c3e4f', { roughness: 0.1, metalness: 0.6 }));
@@ -1576,9 +1797,9 @@ export const TIPOS = {
       const fil = n > 24 ? 2 : 1, col = Math.ceil(n / fil), paso = (W - 0.08) / col; for (let f = 0; f < fil; f++) for (let i = 0; i < col; i++) caja(g, -W / 2 + 0.04 + i * paso, -H / 2 + 0.008 + f * H * 0.45, D / 2, -W / 2 + 0.04 + i * paso + paso * 0.7, -H / 2 + 0.008 + f * H * 0.45 + H * 0.35, D / 2 + 0.005, led(ec), false); }) },
   // rack: de piso con puerta de vidrio, de pared (más chico, colgado) o abierto (dos parantes). Lo de adentro se documenta aparte (bocas, patch cords, fibras).
   rack: { n: 'Rack', g: 'Equipos', forma: 'punto', capa: 'equipos', ondi: 'otro', equipo: 'sw', protegido: true, etiqueta: p => p.nombre, def: { y: 0, alto: 2, clase: 'piso' },
-    campos: [...NODO_CAMPOS(), { k: 'clase', n: 'Tipo de rack', t: 'sel', ops: [['piso', 'De piso'], ['pared', 'De pared'], ['abierto', 'Abierto (parantes)']] }, F.alto('Alto (m)', 0.3, 2.4), { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.4, max: 1, paso: 0.05 }, { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r, EQ_CAMPOS[7]],
+    campos: [...NODO_CAMPOS(), { k: 'clase', n: 'Tipo de rack', t: 'sel', ops: [['piso', 'De piso'], ['pared', 'De pared'], ['abierto', 'Abierto (parantes)']] }, { k: 'u', n: 'Tamaño (U)', t: 'num', min: 4, max: 48, paso: 1 }, { k: 'ancho', n: 'Ancho (m)', t: 'num', min: 0.4, max: 1, paso: 0.05 }, { k: 'fondo', n: 'Fondo (m)', t: 'num', min: 0.3, max: 1.2, paso: 0.05 }, { k: 'base', n: 'Altura del borde de abajo (m)', t: 'num', min: 0, max: 3, paso: 0.05 }, F.r, EQ_CAMPOS[7]],
     variantes: [{ n: 'Rack de piso', o: { clase: 'piso', alto: 2 } }, { n: 'Rack de pared', o: { clase: 'pared', alto: 0.5 } }, { n: 'Rack abierto', o: { clase: 'abierto', alto: 2 } }],
-    armar: equipo((g, p, ec) => { const c = p.clase || 'piso', h = p.alto || (c === 'pared' ? 0.5 : 2), a = p.ancho || 0.6, f = p.fondo || (c === 'pared' ? 0.45 : c === 'abierto' ? 0.5 : 0.8), b = c === 'pared' ? (p.base ?? 1.5) : 0, ch = negro(), acero = mat('#2b3035', { roughness: 0.45, metalness: 0.5 });
+    armar: equipo((g, p, ec, mont, ctx) => { const c = p.clase || 'piso', h = altoRack(p, ctx), a = p.ancho || 0.6, f = p.fondo || (c === 'pared' ? 0.45 : c === 'abierto' ? 0.5 : 0.8), b = c === 'pared' ? (p.base ?? 1.5) : 0, ch = negro(), acero = mat('#2b3035', { roughness: 0.45, metalness: 0.5 });
       const frentes = z => { for (let yy = b + h - 0.16, i = 0; yy > b + 0.14 && i < 14; yy -= 0.135, i++) caja(g, -a / 2 + 0.07, yy, z, a / 2 - 0.07, yy + (i % 4 === 2 ? 0.085 : 0.04), z + 0.012, i % 3 === 1 ? gris() : mat('#3b4148', { roughness: 0.5, metalness: 0.3 }), false); };
       if (c === 'abierto') { caja(g, -a / 2, 0, -f / 2, a / 2, 0.04, f / 2, acero); caja(g, -a / 2, h - 0.04, -0.04, a / 2, h, 0.04, acero); for (const s of [-1, 1]) caja(g, s * (a / 2 - 0.025) - 0.025, 0, -0.04, s * (a / 2 - 0.025) + 0.025, h, 0.04, acero); frentes(0.04); }
       else { caja(g, -a / 2, b, -f / 2, a / 2, b + h, f / 2 - 0.025, ch); caja(g, -a / 2, b, f / 2 - 0.025, a / 2, b + h, f / 2, acero);
@@ -1653,7 +1874,7 @@ export const TIPOS = {
       muebleGeo(p.modelo).then(geo => { if (!geo) return; g.remove(caja0); tonoMueble(); const m = new THREE.Mesh(geo, MUEB.mat); m.position.y = p.y || 0; m.castShadow = m.receiveShadow = true; m.userData.dueño = caja0.userData.dueño; /* el modelo llega después: hereda de quién es, para que se pueda tocar y elegir */ g.add(m); ctx && ctx.dirty && ctx.dirty(); }).catch(() => {});
       return g; } },
 };
-export const GRUPOS = ['Terreno', 'Construcción', 'Oficina', 'Cocina', 'Baño', 'Living y descanso', 'Muebles', 'Control de acceso', 'Logística', 'Vegetación', 'Equipos', 'Personas y vehículos'];
+export const GRUPOS = ['Terreno', 'Construcción', 'Oficina', 'Cocina', 'Baño', 'Living y descanso', 'Muebles', 'Control de acceso', 'Logística', 'Puerto', 'Vegetación', 'Equipos', 'Personas y vehículos'];
 
 // árboles: tronco + copa, todos los de una pieza en dos o tres dibujos
 function arbolado(g, lista) { const tr = [], co = [], pi = [], pa = [], ma = { corten: [], hormigon: [] }, R = azar(lista.length * 31 + 7), T = oscuro();
@@ -1920,5 +2141,5 @@ export function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.
     if (p.rampa === 'der' || p.rampa === 'ambas') { const u = Math.max(...us) + 5; R.push([u, Math.max(3, Math.min(lg, L - u - 2.4)), 1]); }
     if (p.rampa === 'izq' || p.rampa === 'ambas') { const u = Math.min(...us) - 5; R.push([u, Math.max(3, Math.min(lg, u - 2.4)), -1]); } }
   return R; }
-export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (q.alto || 2), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
+export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, bovedas: q.alto + (q.flecha || 2), modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (+q.u > 0 ? q.u * U_RACK + 0.17 : (q.alto || 2)), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2, grua: (q.alto || 40) + (q.tipo === 'movil' ? 12 : q.tipo === 'rtg' ? 3 : 20), volumen: q.alto, buque: 12, muelle: 0.8 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
 export { largoDe };
