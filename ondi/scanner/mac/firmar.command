@@ -86,11 +86,23 @@ paso "Sellando y comprobando…"
 xcrun stapler staple "$A" || falla "No se pudo sellar."
 spctl --assess --type execute -vv "$A" || falla "La Mac todavía no la acepta."
 mkdir -p listo
-rm -rf "listo/Ondi Scanner.app" "listo/OndiScanner-Mac.zip"
+rm -rf "listo/Ondi Scanner.app" "listo/OndiScanner-Mac.zip" "listo/OndiScanner.dmg"
 ditto -c -k --keepParent "$A" "listo/OndiScanner-Mac.zip"
 ditto "$A" "listo/Ondi Scanner.app"
+
+# 7) el instalador para la gente: un .dmg que se abre y se arrastra la app a Aplicaciones
+paso "Armando el instalador (.dmg)…"
+D="$T/dmg"; mkdir -p "$D"
+ditto "$A" "$D/Ondi Scanner.app"
+ln -s /Applications "$D/Aplicaciones"
+hdiutil create -volname "Ondi Scanner" -srcfolder "$D" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "listo/OndiScanner.dmg" || falla "No se pudo armar el .dmg."
+codesign --force --timestamp --sign "$ID" "listo/OndiScanner.dmg" || falla "No se pudo firmar el .dmg."
+xcrun notarytool submit "listo/OndiScanner.dmg" --keychain-profile "$PERFIL" --wait --output-format plist > "$T/nota2.plist"
+ESTADO="$(/usr/libexec/PlistBuddy -c 'Print :status' "$T/nota2.plist" 2>/dev/null)"
+[ "$ESTADO" = "Accepted" ] || falla "Apple no aprobó el .dmg."
+xcrun stapler staple "listo/OndiScanner.dmg" || falla "No se pudo sellar el .dmg."
 rm -rf "$T"
 
 paso "Listo: Ondi Scanner $V firmado y aprobado por Apple."
-echo "En la carpeta «listo» está OndiScanner-Mac.zip: mandáselo a Claude para publicarlo."
+echo "En la carpeta «listo» está OndiScanner.dmg: mandáselo a Claude para publicarlo."
 open listo
