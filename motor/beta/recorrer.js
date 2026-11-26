@@ -1,7 +1,7 @@
 // Motor común · recorrer a pie, como en un juego en tercera persona.
 // Caminar: W A S D o flechas (← → giran), Shift corre, clic en el piso camina hasta ahí (busca el camino por las puertas).
 // Mirar: arrastrar, o dos dedos de costado en el trackpad. Rueda o pellizco: acerca la cámara; del todo cerca se ve por los ojos (V).
-// E o clic sobre un equipo: abre su ficha. Esc sale. En el celular: palanca a la izquierda y arrastrar para mirar.
+// E abre o cierra la puerta que queda a mano (las puertas arrancan cerradas); si no hay puerta, E o clic sobre un equipo abre su ficha. Esc sale. En el celular: palanca a la izquierda y arrastrar para mirar.
 // V cambia la vista: tercera persona (para andar lejos), por los ojos (para armar de cerca) y vuelo (la cámara se suelta del muñeco:
 // W A S D la llevan, E o Espacio suben, Q baja, Shift apura; al salir del vuelo el muñeco baja donde quedó la cámara).
 // Se puede editar mientras se recorre: el toque pone o elige, arrastrar mira.
@@ -75,7 +75,7 @@ export function recorrer(M) {
   function choca(x, z, y = R.y, r = RADIO) { const L = R.hash.get(Math.floor(x / 8) + ',' + Math.floor(z / 8));
     if (L) for (const { P, c, w } of L) { if (w.y1 <= y + 0.35 || w.y0 >= y + 1.7 || x < w.x0 - r || x > w.x1 + r || z < w.z0 - r || z > w.z1 + r) continue; const [lx, lz] = enMarco(P, x, z); if (enCaja(c, lx, lz, r, y + 0.35 - P.oy, y + 1.7 - P.oy)) return true; }
     for (const Q of R.piezas) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const [lx, lz] = enMarco(Q.P, x, z), yy = y - Q.P.oy;
-      for (const s of Q.segs) if (s[6] > yy + 0.35 && s[5] < yy + 1.7 && aTramo(lx, lz, s) < s[4] + r) return true; }
+      for (const s of Q.segs) if (s[6] > yy + 0.35 && s[5] < yy + 1.7 && !(R.porPuertas && s[9] === 'puerta') && aTramo(lx, lz, s) < s[4] + r) return true; }
     for (const Q of R.pis) { if (x < Q.b.min.x || x > Q.b.max.x || z < Q.b.min.z || z > Q.b.max.z) continue; const [lx, lz] = enMarco(Q.P, x, z), yy = y - Q.P.oy;
       for (const S of Q.S) { const h = alturaS(S, lx, lz, Math.min(r, 0.1)); if (h != null && h > yy + 0.6 && (S.abierta ? h - S.abierta : S.base || 0) < yy + 1.7) return true; } }
     // las escaleras de adentro de los edificios son macizas desde el piso donde arrancan
@@ -107,7 +107,8 @@ export function recorrer(M) {
 
   // ---------- camino hasta donde se hizo clic: A* sobre una grilla de 40 cm, sin cortar esquinas, y después se endereza ----------
   function recta(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.2); for (let i = 1; i <= n; i++) if (choca(x0 + (x1 - x0) * i / n, z0 + (z1 - z0) * i / n)) return false; return true; }
-  function camino(x0, z0, x1, z1) { if (recta(x0, z0, x1, z1)) return [[x1, z1]];
+  function camino(x0, z0, x1, z1) { R.porPuertas = true; try { return camino0(x0, z0, x1, z1); } finally { R.porPuertas = false; } }   // el camino pasa por las puertas cerradas (se abren al llegar)
+  function camino0(x0, z0, x1, z1) { if (recta(x0, z0, x1, z1)) return [[x1, z1]];
     const P = 0.4, mg = 12, ox = Math.min(x0, x1) - mg, oz = Math.min(z0, z1) - mg, W = Math.ceil((Math.abs(x1 - x0) + 2 * mg) / P), H = Math.ceil((Math.abs(z1 - z0) + 2 * mg) / P); if (W * H > 60000) return null;
     const est = new Uint8Array(W * H), pasa = i => { if (!est[i]) est[i] = choca(ox + (i % W + 0.5) * P, oz + (Math.floor(i / W) + 0.5) * P, R.y, RADIO + 0.05) ? 2 : 1; return est[i] === 1; };
     const celda = (x, z) => Math.min(H - 1, Math.max(0, Math.floor((z - oz) / P))) * W + Math.min(W - 1, Math.max(0, Math.floor((x - ox) / P)));
@@ -164,7 +165,8 @@ export function recorrer(M) {
   const TECLAS = ['w', 'a', 's', 'd', 'q', 'e', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
   addEventListener('keydown', e => { if (!R.on || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; const k = motor.canon(e.key.toLowerCase());   // cada tecla pasa por las que eligió el jugador (Ajustes)
     if (k === 'escape') return;   // Esc ya no saca del recorrido: cierra lo que haya abierto y, si no hay nada, abre el menú de pausa (maqueta.js)
-    if (k === 'v') { vista(); ayudaTxt(); return; } if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); motor.mira(false); return; }
+    if (k === 'v') { vista(); ayudaTxt(); return; } if (k === 'e' && R.puerta && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.alternarPuerta(R.puerta); R.cerca = undefined; tCerca = 0; return; }
+    if (k === 'e' && R.cerca && !R.vuelo && !motor.editando) { e.stopImmediatePropagation(); M.elegir(R.cerca); motor.mira(false); return; }
     if (k === ' ' && !e.repeat) { const ya = e.timeStamp || performance.now(); if (ya - (R.tEsp || 0) < 300) { R.tEsp = 0; vuelo(!R.vuelo, true); ayudaTxt(); if (!R.vuelo) { R.k[' '] = 0; R.saltado = 1; e.preventDefault(); return; } } else R.tEsp = ya; }
     if (TECLAS.includes(k)) { R.k[k] = 1; if (k !== 'shift') { R.ruta = null; marca.visible = false; } if (k.startsWith('arrow') || k === ' ') e.preventDefault(); } }, true);
   addEventListener('keyup', e => { R.k[motor.canon(e.key.toLowerCase())] = 0; }); addEventListener('blur', () => { R.k = {}; }); addEventListener('resize', () => { if (R.on) ayudaTxt(); });
@@ -204,6 +206,9 @@ export function recorrer(M) {
     // el equipo que queda a mano (a menos de 2,2 m y adelante): E o clic lo abre
     if (t - tCerca > 220) { tCerca = t; let mejor = null, md = 2.2; for (const g of objs.values()) { const p = g.userData.pieza; if (!p || !g.visible || !TIPOS[p.t].equipo) continue; const d = Math.hypot((p.x || 0) - R.x, (p.z || 0) - R.z); if (d < md && Math.abs((+p.piso || 0) - R.y) < 2) { md = d; mejor = p; } }
       if (!mejor && M.apuntado) mejor = M.apuntado();   // lo que está en la mira aunque quede alto o lejos (un AP en el techo)
-      if (mejor !== R.cerca) { R.cerca = mejor; const el = $('#musar'); el.hidden = !mejor || motor.tactil; if (mejor) el.innerHTML = `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}`; } }
+      // una puerta a mano manda sobre el equipo: E la abre o la cierra
+      const pu = M.puertaCerca ? M.puertaCerca(R.x, R.z, R.y) : null, txt = pu ? `<kbd>E</kbd> ${M.puertaAbierta(pu) ? 'Cerrar' : 'Abrir'} la puerta` : mejor ? `<kbd>E</kbd> ${M.esc(mejor.nombre || TIPOS[mejor.t].n)}` : '';
+      if (pu && R.ruta && R.ruta.length && !M.puertaAbierta(pu) && Math.hypot(pu.x - R.x, pu.z - R.z) < 1.4) M.alternarPuerta(pu);   // yendo a donde se hizo clic, la puerta del camino se abre sola
+      if (mejor !== R.cerca || (pu && pu.k) !== (R.puerta && R.puerta.k) || txt !== R.txt) { R.cerca = mejor; R.puerta = pu; R.txt = txt; const el = $('#musar'); el.hidden = !txt || motor.tactil; if (txt) el.innerHTML = txt; } }
     return true; });
   return { R, paseo, irA, ojos, vuelo, vista, obstaculos, choca, alturaEn, sobre, puedeMira, ayudaTxt }; }

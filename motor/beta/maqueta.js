@@ -14,12 +14,12 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe } from './piezas.js?v=82';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe, uRack, U_RACK } from './piezas.js?v=83';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=5';
 import { construir } from './construir.js?v=63';
 import { juego } from './juego.js?v=8';
-import { recorrer } from './recorrer.js?v=23';
+import { recorrer } from './recorrer.js?v=24';
 import { transito } from './transito.js?v=63';
 import { extras } from './extras.js?v=5';
 
@@ -99,7 +99,17 @@ export async function abrirMaqueta(o) {
     EQ.porUid = new Map(EQ.lista.map(d => [d.uid, d]));
     for (const p of E.piezas) if (p.uid && TIPOS[p.t] && TIPOS[p.t].equipo) { const d = EQ.porUid.get(p.uid), g = objs.get(p.id); if (d && d.nombre && p.nombre !== d.nombre) p.nombre = d.nombre; if (g && g.userData.estado !== ESTADO(d && d.estado)) rehacer(p); }
     if (!$('#meq').hidden) listaEquipos(); if (SEL) info(); }
-  const ctx = { paredes: (host && host.paredes) || 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, modelo: o.catalogo ? modeloBase : null, piezas: () => E.piezas, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p) };
+  const ctx = { paredes: (host && host.paredes) || 'alta', estado: p => p.uid ? (EQ.porUid.has(p.uid) ? ESTADO(EQ.porUid.get(p.uid).estado) : 'off') : (p.estado || 'off'), glb: o.catalogo ? cargarGLB : null, modelo: o.catalogo ? modeloBase : null, piezas: () => E.piezas, dirty: () => { motor.dirty = true; }, vivo: p => vivoDe(p),
+    capRack: id => host && host.capRack ? host.capRack(id) : null, abierta: (p, h) => ABIERTAS.has(p.id + '#' + (p.huecos || []).indexOf(h)) };
+  // puertas: se ven cerradas; recorriendo, E abre o cierra la de adelante (no se guarda: al volver a entrar están cerradas)
+  const ABIERTAS = new Set(), PUERTA = { puerta: 1, doble: 1, vidrio: 1 };
+  function puertaCerca(x, z, y, r = 1.9) { let mejor = null, md = r;
+    for (const p of E.piezas) { if (!p.huecos || !p.huecos.length || !p.pts || (p.t !== 'pared' && p.t !== 'recinto')) continue; if (Math.abs(nivelDe(p) * ALTO_PLANTA + (p.y || 0) - y) > 1.4) continue;
+      const P = p.pts, n = P.length; p.huecos.forEach((h, i) => { if (!PUERTA[h.k]) return; const a = P[h.s], b = p.t === 'recinto' ? P[(h.s + 1) % n] : P[h.s + 1]; if (!a || !b) return; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.1) return;
+        const w = h.w || (ABERTURAS[h.k] || ABERTURAS.puerta).w, s0 = Math.min(Math.max(0.1, h.a), L - 0.1 - w) + w / 2, cx = a[0] + (b[0] - a[0]) / L * s0, cz = a[1] + (b[1] - a[1]) / L * s0, d = Math.hypot(cx - x, cz - z);
+        if (d < md) { md = d; mejor = { p, i, k: p.id + '#' + i, x: cx, z: cz }; } }); }
+    return mejor; }
+  function alternarPuerta(q) { if (!q) return; if (ABIERTAS.has(q.k)) ABIERTAS.delete(q.k); else ABIERTAS.add(q.k); rehacer(q.p); try { RC.obstaculos(); } catch (e) {} motor.dirty = true; return ABIERTAS.has(q.k); }
   if (host && host.equipos) { leerEquipos(true); setInterval(() => leerEquipos(true), 60000); }
 
   // ---------- puertas con control de acceso (Kliva): estado en vivo y movimiento ----------
@@ -249,7 +259,7 @@ export async function abrirMaqueta(o) {
       if (_v.distanceTo(motor.cam.position) > 90) continue; _v.project(motor.cam); if (_v.z > 1) continue;
       const d = Math.hypot(r.left + (_v.x + 1) / 2 * r.width - cx, r.top + (1 - _v.y) / 2 * r.height - cy); if (d < md) { md = d; mejor = p; } } return mejor; }
   function hallar(e) { const hit = motor.tocar(e.clientX, e.clientY, [...objs.values()].filter(g => g.visible && elegible(g.userData.pieza))); for (const h of hit) { const g = h.object.userData.dueño; if (g && g.visible) { if (h.object.userData.campo || g.userData.pieza._p || (!ED.on && g.userData.tipo.fondo)) continue; return { p: g.userData.pieza, h }; } } return null; }
-  function info() { const box = $('#minfo'); if (!SEL) { box.hidden = true; return; } const T = TIPOS[SEL.t], q = { ...T.def, ...SEL }, cerrar = `<button class="mx" data-sel="no" aria-label="Cerrar">${svg('cerrar', 16)}</button>`;
+  function info() { const box = $('#minfo'); if (!SEL) { box.hidden = true; return; } const T = TIPOS[SEL.t], q = { ...T.def, ...SEL, ...(SEL.t === 'rack' ? { u: uRack(SEL, ctx) || Math.max(4, Math.round(((+SEL.alto || 2) - 0.17) / U_RACK)) } : {}) }, cerrar = `<button class="mx" data-sel="no" aria-label="Cerrar">${svg('cerrar', 16)}</button>`;
     box.hidden = false; box.classList.toggle('abierta', UI.abierta); const propia = ED.on && puede && CON.ficha(); if (propia) { box.classList.add('abierta'); box.innerHTML = propia; return; }
     const d = SEL.uid && EQ.porUid.get(SEL.uid), est = T.equipo ? ctx.estado(SEL) : null, g = objs.get(SEL.id);
     const doc = T.protegido && host && host.abrirDoc ? `<button class="mic" data-acc="doc" title="Abrir su documentación (equipos, bocas y cables)" aria-label="Abrir documentación">${svg('doc')}</button>` : '';
@@ -290,6 +300,7 @@ export async function abrirMaqueta(o) {
     if (el.dataset.k === 'uid') { const d = EQ.porUid.get(v); if (d) Object.assign(SEL, { nombre: d.nombre, modelo: d.modelo || SEL.modelo, ip: d.ip || SEL.ip, mac: d.mac || SEL.mac }); }
     if (el.dataset.k === 'puerta') { const d = PU.porId.get(v); if (d) SEL.nombre = d.nombre; }
     if (el.dataset.k === 'nivel') v = +v || 0;
+    if (el.dataset.k === 'u' && SEL.t === 'rack') { if (v == null) return; v = Math.max(4, Math.min(48, Math.round(v))); if (host && host.ponerCapRack) { const r = host.ponerCapRack(SEL.id, v); if (r !== true) { if (r) toast(r); return; } } delete SEL.alto; }
     if (v === null || v === '') delete SEL[el.dataset.k]; else SEL[el.dataset.k] = v;
     if (el.dataset.k === 'nivel') { const p = SEL; setTimeout(() => { if (nivelDe(p) !== PL.act) { planta(nivelDe(p), false); elegir(p); } verPlantas(); toast(`${p.nombre || TIPOS[p.t].n}: ${NOM_PLANTA(nivelDe(p))}`); }, 0); }
     if (MEDIDAS.includes(el.dataset.k) && typeof v === 'number') { try { const M2 = JSON.parse(localStorage.getItem('motor.medidas') || '{}'), k = SEL.t + (SEL.estilo ? ':' + SEL.estilo : ''); M2[k] = { ...(M2[k] || {}), [el.dataset.k]: v }; localStorage.setItem('motor.medidas', JSON.stringify(M2)); } catch (er) {} } rehacer(SEL); cambio(true, el.type === 'text' || el.tagName === 'TEXTAREA'); if (el.dataset.k === 'uid' || el.dataset.k === 'puerta' || el.tagName === 'SELECT') info(); if (el.dataset.k === 'puerta') { capasLugar(); if (!$('#meq').hidden) listaPuertas(); } });
@@ -798,7 +809,7 @@ export async function abrirMaqueta(o) {
 
   // ---------- animación de equipos caídos y medición ----------
   // recorrer a pie con el avatar (recorrer.js). Se puede editar mientras se recorre: V cambia entre tercera persona, ojos y vuelo.
-  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
+  const RC = recorrer({ motor, mundo, objs, TIPOS, svg, esc, elegir, puertaCerca, alternarPuerta, puertaAbierta: q => ABIERTAS.has(q.k), apuntado: () => { if (!motor.mirando) return null; const r = canvas.getBoundingClientRect(); return equipoCerca(r.left + r.width / 2, r.top + r.height / 2, 40); }, AVM: () => AVM, completa: host && host.juego ? on => pantalla(on) : null, llena: () => document.documentElement.classList.contains('mfull'),
     avatar: async g => { await cargarGLB('avatares', (host && host.personaje) || motor.aj.personaje || 'tec-h', g, null, 'yo-paseo'); for (const ob of PERS) if (ob.dueño === g) { PERS.delete(ob); return ob; } return null; } });
   $('#bpaseo').addEventListener('click', () => { if (!ED.on) elegir(null); if (XT.camara) XT.verCamara(null); RC.paseo(!RC.R.on); });
   // «Salir de la maqueta» (menú de pausa): deja de recorrer y de editar, sale de la pantalla completa y le avisa a la app (host.salir); sola, vuelve a la vista general
@@ -831,7 +842,7 @@ export async function abrirMaqueta(o) {
   const enc = E.inicio || encuadre(); motor.inicio(enc); if (o.intro !== false) { Object.assign(motor.C, { ...enc, d: enc.d * 1.35, yaw: enc.yaw - 0.45, pitch: Math.min(1.2, enc.pitch + 0.2) }); motor.ir(enc, 1.8); }
   // la app pidió ir a una pieza (por ejemplo «Ver en la maqueta» desde la documentación): se la elige y se la enfoca
   if (host && host.ir) { const pi = E.piezas.find(q => q.id === host.ir); if (pi) setTimeout(() => elegir(pi, true), 500); }
-  const api = { multi: () => [...MULTI].map(q => q.id), importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, XT, PASEO: RC.R, paseo: RC.paseo, fisica: RC, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, juego: J, cancelarAgarre, salir, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
+  const api = { multi: () => [...MULTI].map(q => q.id), importar, vivo, leerPuertas, subirPlano, medir, lugarPuerta, motor, E, objs, TR, XT, PASEO: RC.R, paseo: RC.paseo, fisica: RC, irA: RC.irA, CON, ED, elegir, editar, herramienta, empezar, paredes, guardar, juego: J, cancelarAgarre, salir, snapshot, armarTodo, leerEquipos, lugarDe, get sel() { return SEL; }, rehacerId: id => { const p = E.piezas.find(q => q.id === id); if (p) { rehacer(p); motor.dirty = true; } }, cargar(esc2) { E = normal(esc2); api.E = E; foto = limpio(); undo.length = redo.length = 0; SEL = null; armarTodo(); info(); $('#mnom').textContent = E.nombre; motor.inicio(E.inicio || encuadre()); motor.vista(); } };
   return api;
 }
 function dentroDe([x, z], P) { let d = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, zi] = P[i], [xj, zj] = P[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) d = !d; } return d; }
