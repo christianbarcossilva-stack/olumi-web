@@ -27,4 +27,6 @@
 - Si se cambia `familia.css`, subir el `?v=` en todas las páginas para que llegue enseguida.
 - La Oficina viva vive en `olumi/oficina/` y se embebe con `?embed=1` (recibe el tema y avisa su alto).
 - Darvi (antes Estiba) está en pausa desde el 18/11: fuera de línea y sin vínculo con las otras apps (ver README).
+- **La página de Olumi (`olumi/index.html`) se arma, no se edita a mano** (desde el 26/11): fuentes, armado y pruebas en `servidor/web/olumi-v7/` (ver su `LEEME.md`). Para cambiar una tarjeta, un precio o una pregunta se edita `base-v6.html` ahí y se corre `construir.py`.
+- La oficina de ejemplo de la web (la página de Olumi y la portada) es la escena `motor/escenas/olumi-web-v7.json`. Si se cambia, se le cambia el nombre (el navegador la guarda).
 - Regla del sitio: nada de nombres reales de clientes en lo público.

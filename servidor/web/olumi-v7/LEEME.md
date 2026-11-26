@@ -2,7 +2,11 @@
 
 Pedido del 26/11: «hay que mejorar la web, que el camino sea mejor y nuevas animaciones para que impacte más».
 
+**Es la página oficial de Olumi (`unitytech.uy/olumi/`) desde el 26/11/2026**, con el OK de Christian («quedó muy buena la página, podés poner como oficial»).
+
 Esta carpeta (`servidor/web/olumi-v7/`) tiene las fuentes de la página, cómo se arma y cómo se prueba. `servidor/` no se publica (lo saca `actualizar.sh`).
+
+**`olumi/index.html` no se edita a mano**: se cambia la fuente y se vuelve a armar (lleva un aviso arriba). Lo de abajo de la historia (CRM, seguridad, la app, rubros, funciones, **planes y precios**, descargas, preguntas) sale de `base-v6.html`; la historia, el cierre, el estilo y el guion, de `historia.html`, `cierre.html`, `v7.css` y `v7.js`.
 
 ## La idea (una sola)
 El punto naranja del logo es **un pedido que recorre la empresa**. En la maqueta deja su línea pintada en el piso:
@@ -16,17 +20,18 @@ Con «reducir movimiento» nada se anima.
 - `cierre.html` · el cierre «Tu empresa, en Olumi. Desde hoy.» (`#probar`).
 - `v7.css` · todo lo nuevo de estilo (se mete antes de `.vprev{` de la v6).
 - `v7.js` · el guion completo de la página (reemplaza al de la v6).
-- `base-v6.html` · la página pública del 26/11 (v6), de donde salen los textos, planes y preguntas.
+- `base-v6.html` · la página anterior (v6, del 26/11): de ahí salen las secciones de abajo de la historia. **Para cambiar una tarjeta de funciones, un precio o una pregunta, se edita acá** y se vuelve a armar.
 - `construir.py SALIDA [previa]` · arma la página: toma `olumi/index.html` del repositorio y, si esa ya es la v7, `base-v6.html`. Antes revisa `v7.js` con `node --check` y no arma una página rota.
   Con `previa` sale sin indexar y con la chapita «Vista previa» (para `nuevo/olumi/`).
 - `prueba/` · `logica.js` (la historia con números), `web.js` (recorre y saca capturas), `tanda.sh` (todas las plataformas), `sin3d.js` (sin maqueta queda la foto), `fotos.js` (saca esas fotos de la portada: `olumi/img/oficina-{noche,dia}{,-m}.webp`), `quieta.js` (quién sigue pidiendo cuadros), `srv.js`.
 
 ## Armar
 ```
-python3 servidor/web/olumi-v7/construir.py nuevo/olumi/index.html previa     # la vista previa
-python3 servidor/web/olumi-v7/construir.py olumi/index.html                  # la pública (solo con el OK de Christian)
+python3 servidor/web/olumi-v7/construir.py olumi/index.html                  # la oficial
+python3 servidor/web/olumi-v7/construir.py nuevo/olumi/index.html previa     # una vista previa (sin indexar, con la chapita) para mostrar un cambio antes de publicarlo
 ```
-Al pasarla a pública, `nuevo/olumi/index.html` vuelve a ser la redirección a `/olumi/`.
+Después de mostrar una vista previa, `nuevo/olumi/index.html` vuelve a ser la redirección a `/olumi/` (`git show bec815b:nuevo/olumi/index.html`).
+Lo que se sube es lo que se probó: después de armar, `node prueba/logica.js` y `node prueba/sin3d.js` (las dos tienen que terminar en «todo bien»).
 
 ## El guion (`v7.js`), lo que hay que saber
 - `TOMA` · una toma por escena: `[centro x, centro z, giro, inclinación, distancia, corrimiento]`. El sexto número corre la escena hacia la derecha en la compu
@@ -62,22 +67,22 @@ Antes el texto de cada escena cruzaba por encima de la maqueta y no se leía. Ah
 - Cada escena se enciende (`.on`) cuando su aparato entra a la pantalla, así sus animaciones se ven.
 - En `correr()`: de cerca, la cámara se acerca un 16 % más y la escena baja (arriba la tapan la barra y el riel).
 
-## La escena (`motor/escenas/olumi-web-v7.json`, solo de esta página)
-Es la de la v6 (`olumi-web.json`, que siguen usando la página pública del 26/11 y la portada de unitytech.uy, **sin tocar**) más:
+## La escena (`motor/escenas/olumi-web-v7.json`)
+La usan esta página y la portada de unitytech.uy (desde el 26/11; la anterior, `olumi-web.json`, se borró ese día: queda en git). Es la de la v6 más:
 - **Entrada de vehículos** al final de la calle interna: la vereda se abre entre x −2,2 y 2,2 (`w2` termina en −2,2 y sigue `w2b` desde 2,2; `ver2` arranca en 2,2),
   con un paño de hormigón `acc1` (hormigón y no «calzada»: así los cordones de las dos calles se cortan ahí) y los cantos `w2c`, `w2d`, `ver2c`. La columna de luz `w7` se corrió a x −5,2.
 - Los autos de la calle (`w23`, `w24`, `w25`) estaban atravesados (r = π/2): ahora van a lo largo, junto al cordón y por su mano. En el motor un vehículo mira a +x con r = 0.
-- El nombre de la escena está en `ESC` (`v7.js`). Quedó aparte para que nada público cambiara antes del OK; cuando la v7 sea la pública, la portada de unitytech.uy puede pasar a esta misma escena.
+- El nombre de la escena está en `ESC` (`v7.js`) y en `index.html` de la raíz (la portada). **Si la escena cambia, se le cambia el nombre** (`olumi-web-v8.json`): el motor la pide sin versión y el servidor no le pone vencimiento, así que el navegador puede quedarse horas con la anterior.
 
 ## Probar (regla del 25/11: web al día, estética y todas las plataformas)
 ```
 cd servidor/web/olumi-v7/prueba
 node logica.js                                                        # la historia con números (tiene que terminar en «todo bien»)
 node sin3d.js                                                         # sin maqueta: queda la foto de la oficina (también «todo bien»)
-OUT=/tmp/w7 W=1440 H=900 MID=4.45 SECC='#crm,#probar' node web.js     # una pasada con capturas (prueba nuevo/olumi/ del repositorio)
+OUT=/tmp/w7 W=1440 H=900 MID=4.45 SECC='#crm,#probar' node web.js     # una pasada con capturas
 ./tanda.sh                                                            # teléfono, tablet de pie y acostada, claro, 1280, oscuro y sin movimiento
 ```
-- `SITIO=/carpeta` pone otra copia del sitio por delante (para probar una página armada fuera del repositorio).
+- Todas prueban la página oficial del repositorio (`/olumi/`); `PAG=/nuevo/olumi/` prueba una vista previa. `SITIO=/carpeta` pone otra copia del sitio por delante (para probar una página armada fuera del repositorio).
 - El 3D sin placa de video va con `--use-gl=angle --use-angle=gl-egl`. De lejos y a 1440 cada cuadro puede tardar más de un segundo: no es la página.
 - La página tiene `scroll-behavior:smooth`: en las pruebas se baja con `scrollTo({top,behavior:'instant'})`, y antes de mirar se espera a que `__olumiHist.S` llegue
   (el aviso de scroll llega con el cuadro siguiente; con el 3D lento, la quietud de antes engaña).

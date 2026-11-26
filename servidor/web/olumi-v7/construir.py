@@ -46,5 +46,7 @@ if shutil.which('node'):
     assert r.returncode == 0, 'v7.js no pasa la revisión:\n' + r.stderr[:600]
 else: print('aviso: no hay node, el guion sale sin revisar')
 s = s[:a] + '<script>\n' + js[:-5] + '  window.__olumiOk=1;\n})();\n</script>' + s[b:]
+AVISO = '<!-- Esta página se arma con servidor/web/olumi-v7/construir.py: no se edita a mano (lo de abajo de la historia sale de base-v6.html; la historia, el cierre, el estilo y el guion, de historia.html, cierre.html, v7.css y v7.js). -->'
+assert s.lstrip().lower().startswith('<!doctype html>') and AVISO not in s; i = s.lower().index('<!doctype html>') + len('<!doctype html>'); s = s[:i] + '\n' + AVISO + s[i:]
 tmp = sys.argv[1] + '.tmp'; open(tmp, 'w', encoding='utf-8').write(s); os.replace(tmp, sys.argv[1])   # de una: nadie lee la página a medio escribir
 print('v7 armada en', sys.argv[1], len(s), 'bytes', '(vista previa)' if previa else '')

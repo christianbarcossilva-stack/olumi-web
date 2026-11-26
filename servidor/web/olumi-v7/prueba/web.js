@@ -1,6 +1,6 @@
-// prueba la web nueva: recorre la historia y saca capturas. PAG=/nuevo/olumi/ W H MOVIL=1 TEMA=dia|noche POST=0 SOLO=0,2 MID=3,4 OUT=/tmp/w7
+// prueba la web nueva: recorre la historia y saca capturas. PAG=/olumi/ (o /nuevo/olumi/ para una vista previa) W H MOVIL=1 TEMA=dia|noche POST=0 SOLO=0,2 MID=3,4 OUT=/tmp/w7
 const {chromium}=require('playwright');const srv=require('./srv.js');const RAICES=[...(process.env.SITIO?[process.env.SITIO]:[]),require('path').resolve(__dirname,'../../../..')];const fs=require('fs');
-const PAG=process.env.PAG||'/nuevo/olumi/',OUT=process.env.OUT||'/tmp/w7',W=+(process.env.W||1280),HH=+(process.env.H||800),MOV=!!process.env.MOVIL;fs.mkdirSync(OUT,{recursive:true});
+const PAG=process.env.PAG||'/olumi/',OUT=process.env.OUT||'/tmp/w7',W=+(process.env.W||1280),HH=+(process.env.H||800),MOV=!!process.env.MOVIL;fs.mkdirSync(OUT,{recursive:true});
 (async()=>{const s=await srv(RAICES,+(process.env.PUERTO||8774));
  const b=await chromium.launch({args:['--use-gl=angle','--use-angle=gl-egl','--ignore-gpu-blocklist']});
  const c=await b.newContext({viewport:{width:W,height:HH},deviceScaleFactor:1,isMobile:MOV,hasTouch:MOV,colorScheme:'dark',reducedMotion:process.env.REDUCE?'reduce':'no-preference'});const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message.slice(0,300)));p.on('console',m=>{if(m.type()==='error'&&!/fonts\.g|ERR_TUNNEL|net::ERR/.test(m.text()))errs.push('C:'+m.text().slice(0,200))});

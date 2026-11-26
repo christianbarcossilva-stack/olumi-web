@@ -5,7 +5,7 @@ let mal=0;const T=(n,ok,x)=>{if(!ok)mal++;console.log((ok?'✓ ':'✗ ')+n+(!ok&
  const b=await chromium.launch({args:['--use-gl=angle','--use-angle=gl-egl','--ignore-gpu-blocklist']});
  const c=await b.newContext({viewport:{width:1100,height:700},deviceScaleFactor:1,colorScheme:'dark'});const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message.slice(0,200)));
  await p.route('**/fonts.googleapis.com/**',r=>r.abort());await p.route('**/fonts.gstatic.com/**',r=>r.abort());
- await p.goto('http://localhost:8776/nuevo/olumi/?post=0',{waitUntil:'domcontentloaded'});
+ await p.goto('http://localhost:8776'+(process.env.PAG||'/olumi/')+'?post=0',{waitUntil:'domcontentloaded'});
  await p.waitForFunction(()=>document.getElementById('cine').classList.contains('ready'),null,{timeout:120000});
  const quieta=async()=>{let n=0;for(let i=0;i<360;i++){await p.waitForTimeout(250);const a=await p.evaluate(()=>{const m=document.getElementById('ofi').contentWindow.__maqueta.motor;return __olumiHist.anda||m.dirty});if(!a){if(++n>=3)return}else n=0}console.log('(no se aquietó)')};
  await quieta();
