@@ -129,7 +129,7 @@
       else{rg=D.createRange();rg.selectNodeContents(c);q=rg.getClientRects()}
       for(j=0;j<q.length;j++)if(q[j].width>1)o.push([q[j].right,q[j].top,q[j].bottom])}return o}
   function mover(){if(M&&vis&&!raf){tAnt=performance.now()-16;raf=requestAnimationFrame(paso)}}
-  var TIT=chs.map(function(c){return $('h1,h2',c)}),CUE=chs.map(function(c){return $('.dev',c)||$('.txt',c)}),BG=$('.bg',cine),ZONA=.62,winB=0;
+  var TIT=chs.map(function(c){var t=$('.txt',c);return(t&&t.firstElementChild)||$('h1,h2',c)}),CUE=chs.map(function(c){return $('.dev',c)||$('.txt',c)}),BG=$('.bg',cine),ZONA=.62,winB=0;
   function anclas(){var z=innerHeight*(ancha?.5:ZONA),Y=[],i,r;for(i=0;i<N;i++){r=(ancha?chs[i]:TIT[i]).getBoundingClientRect();Y[i]=scrollY+r.top+r.height/2-z}Y[0]=Math.max(0,Y[0]);return Y}
   function yDe(i){return anclas()[i]}
   function upd(){var vh=innerHeight,Y=anclas(),y=scrollY,on=-1,i;

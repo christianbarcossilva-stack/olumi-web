@@ -10,7 +10,7 @@ const WEB = path.resolve(__dirname, '../../../..'), OUT = process.env.OUT || '/t
   console.log('lista en', ((Date.now() - t0) / 1000).toFixed(0), 's', await pg.evaluate(() => document.querySelector('#cine').className));
   await pg.waitForTimeout(6000);
   const n = await pg.evaluate(() => document.querySelectorAll('#cine .ch').length), sx = [];
-  for (let i = 0; i < n; i++) { await pg.evaluate(i => scrollTo({ top: __ondiHist.y(i), behavior: 'instant' }), i); await pg.waitForTimeout(4500); sx.push(await pg.evaluate(() => __ondiHist.est.concat(+__ondiHist.S.toFixed(2)))); await pg.screenshot({ path: `${OUT}/e${i}.png` }); }
-  for (const q of (process.env.SECC || '#conexiones,#planes,#probar').split(',')) { await pg.evaluate(q => document.querySelector(q).scrollIntoView({ behavior: 'instant' }), q); await pg.waitForTimeout(1500); await pg.screenshot({ path: `${OUT}/s-${q.slice(1)}.png` }); }
+  for (let i = 0; i < n; i++) { await pg.evaluate(i => scrollTo({ top: __ondiHist.y(i), behavior: 'instant' }), i); await pg.waitForTimeout(4500); sx.push(await pg.evaluate(() => __ondiHist.est.concat(+__ondiHist.S.toFixed(2)))); await pg.screenshot({ path: `${OUT}/e${i}.png`, timeout: 90000 }); }
+  for (const q of (process.env.SECC || '#conexiones,#planes,#probar').split(',')) { await pg.evaluate(q => document.querySelector(q).scrollIntoView({ behavior: 'instant' }), q); await pg.waitForTimeout(1500); await pg.screenshot({ path: `${OUT}/s-${q.slice(1)}.png`, timeout: 90000 }); }
   const ancho = await pg.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   console.log(JSON.stringify(sx)); console.log('scroll al costado', ancho, 'errores', errs.slice(0, 8)); await br.close(); s.close(); })();

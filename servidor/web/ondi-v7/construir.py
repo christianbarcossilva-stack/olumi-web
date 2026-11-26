@@ -17,7 +17,7 @@ rep('<meta name="viewport"', "<script>document.documentElement.classList.add('js
 if previa: rep('<link rel="canonical" href="https://unitytech.uy/ondi/">', '<meta name="robots" content="noindex">\n<link rel="canonical" href="https://unitytech.uy/ondi/">')
 rep('/* Ondi · la red como la ve quien la cableó.', '/* Ondi web v7 (26/11): la historia sobre el motor común (ver el bloque v7 al final).\n   Ondi · la red como la ve quien la cableó.')
 css = rd('v7.css').strip()
-if previa: css += '\n.vprev{position:fixed;left:24px;bottom:calc(26px + env(safe-area-inset-bottom,0px));z-index:30;margin:0;padding:8px 13px;border-radius:4px;font:500 12.5px/1 var(--fm);color:var(--ti2);background:var(--vidrio);box-shadow:0 0 0 1px var(--li);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:none}@media (max-width:900px){.vprev{top:calc(130px + env(safe-area-inset-top,0px));bottom:auto;left:16px;font-size:11px;padding:6px 10px}}'
+if previa: css += '\n.vprev{position:fixed;left:24px;bottom:calc(26px + env(safe-area-inset-bottom,0px));z-index:30;margin:0;padding:8px 13px;border-radius:4px;font:500 12.5px/1 var(--fm);color:var(--ti2);background:var(--vidrio);box-shadow:0 0 0 1px var(--li);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:none}@media (max-width:900px){.vprev{bottom:calc(10px + env(safe-area-inset-bottom,0px));left:16px;font-size:10.5px;padding:5px 9px}}'
 rep('</style>', css + '\n</style>')
 # la historia
 a = s.index('<section class="cine" id="cine"'); b = s.index('<section class="bloque" id="conexiones">'); s = s[:a] + rd('historia.html').strip() + '\n\n' + s[b:]
