@@ -17,7 +17,7 @@ Con «reducir movimiento» nada se anima.
 - `v7.css` · todo lo nuevo de estilo (se mete antes de `.vprev{` de la v6).
 - `v7.js` · el guion completo de la página (reemplaza al de la v6).
 - `base-v6.html` · la página pública del 26/11 (v6), de donde salen los textos, planes y preguntas.
-- `construir.py SALIDA [previa]` · arma la página: toma `olumi/index.html` del repositorio y, si esa ya es la v7, `base-v6.html`.
+- `construir.py SALIDA [previa]` · arma la página: toma `olumi/index.html` del repositorio y, si esa ya es la v7, `base-v6.html`. Antes revisa `v7.js` con `node --check` y no arma una página rota.
   Con `previa` sale sin indexar y con la chapita «Vista previa» (para `nuevo/olumi/`).
 - `prueba/` · `logica.js` (la historia con números), `web.js` (recorre y saca capturas), `tanda.sh` (todas las plataformas), `quieta.js` (quién sigue pidiendo cuadros), `srv.js`.
 
@@ -36,7 +36,8 @@ Al pasarla a pública, `nuevo/olumi/index.html` vuelve a ser la redirección a `
 - La línea es una cinta propia en la escena del motor (`armarCamino`). **Dos cosas que costaron**: los arreglos de números los arma el motor en su ventana
   (`T.Float32BufferAttribute`; uno de esta ventana da «Unsupported buffer data format») y lleva `polygonOffset` −20/−18 porque los pisos y calles del motor ya traen el suyo.
 - La chapita `T‑0152 · …` cuenta **por dónde va el pedido** (`estado()`: Ticket nuevo → Lo toma Diego → Retira los materiales → Cargado en la camioneta → En camino → Firmado → Resuelto), no la escena que se lee.
-  Va arriba del punto (abajo si arriba la tapan la barra o el riel); en la compu esquiva el teléfono o la tarjeta **solo si están a su altura** (`devs`, medido en cada scroll).
+  Va arriba del punto (abajo si arriba la tapan la barra o el riel). En la compu esquiva el teléfono o la tarjeta **solo si están a su altura** (`devs`) y los renglones del texto de la escena
+  (`renglones()`: renglón por renglón con `Range.getClientRects`, no la caja; con la letra de verdad los títulos miden distinto que en las pruebas). Si no hay lugar entre el texto y el teléfono, gana el teléfono.
 - La Fiorino (`veh_v1qk61`) espera de culata; cuando el pedido llega, el punto se sube al techo y ella lo lleva (`ponVan`, cada cuadro: si el motor rearma las piezas al cambiar de claro a oscuro, se vuelve a ubicar sola).
   Diego está dos veces en la escena, como en la v6: sentado en su escritorio (`per_p9kwpc`) y parado junto a la camioneta (`w26`). Su silla queda vacía cuando el pedido sale del escritorio
   (el punto que va al depósito y a la camioneta es él, llevándolo); el que está parado se sube cuando la camioneta arranca y baja si se vuelve atrás.
@@ -50,7 +51,7 @@ Al pasarla a pública, `nuevo/olumi/index.html` vuelve a ser la redirección a `
 
 ## El scroll
 `anclas()` da el scroll que deja cada escena en su lugar y `upd()` saca de ahí por dónde va la historia (`S`, de 0 a 7, con decimales entre escenas).
-- Compu: el centro de cada escena al centro de la pantalla.
+- Compu: el centro de cada escena al centro de la pantalla. Con menos de 1280 de ancho el texto no pasa del 46 % y la escena se corre un poco más (`correr()`).
 - Teléfono y tablet de pie (hasta 860 px): **el título de la escena al 62 % del alto** (`ZONA`) y la escena activa es `round(S)`.
 - La portada siempre es 0 con la página sin bajar. `yDe(i)` lo usan el riel y las pruebas (`__olumiHist.y(i)`).
 
@@ -81,4 +82,5 @@ OUT=/tmp/w7 W=1440 H=900 MID=4.45 SECC='#crm,#probar' node web.js     # una pasa
   (el aviso de scroll llega con el cuadro siguiente; con el 3D lento, la quietud de antes engaña).
 - `SIN3D=1` corta la maqueta (para mirar el resto de la página sin esperar).
 - Lo que anima el motor por dentro (el técnico subiendo) no se ve en `motor.dirty`: se espera mirando la pieza.
-- Antes de mostrar: mirarla en un navegador de verdad (3D y animación).
+- Antes de mostrar: mirarla en un navegador de verdad (3D y animación). El 26/11 se miró en vivo en el navegador de la app de Claude en la Mac (1024 × 768 y tamaño teléfono): ahí salió lo de la chapita.
+  Ese navegador, con el panel escondido, corre la página en segundo plano (un cuadro por segundo): sirve para ver cómo queda, no para medir fluidez.
