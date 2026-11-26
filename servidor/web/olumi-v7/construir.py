@@ -30,8 +30,8 @@ rep('<div class="phones">', '<div class="phones" data-a>')
 rep('<div class="grid3">', '<div class="grid3" data-a>', 2)
 rep('<ul class="feat">', '<ul class="feat" data-a>')
 rep('<div class="plans">', '<div class="plans" data-a>')
-rep('<div class="num">29<small>', '<div class="num" data-cuenta="29">29<small>')
-rep('<div class="num">79<small>', '<div class="num" data-cuenta="79">79<small>')
+# los precios cuentan al aparecer: cada número de plan pago lleva su data-cuenta (el que sea: los precios cambian en base-v6.html)
+s, n = re.subn(r'<div class="num">([1-9]\d*)<small>US\$', r'<div class="num" data-cuenta="\1">\1<small>US$', s); assert n == 2, n
 # el cierre, antes del pie
 rep('</main>', rd('cierre.html').strip() + '\n</main>')
 if previa: rep('<footer>', '<p class="vprev gl" aria-hidden="true">Vista previa · todavía no es la página pública</p>\n<footer>')
