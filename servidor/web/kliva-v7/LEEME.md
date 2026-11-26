@@ -7,7 +7,8 @@ llega a la planta, deja su línea pintada en el piso de la vereda a su puesto y 
 escena en escena con el scroll, la hora del día funde de una a otra y abajo va el riel de la semana. En la compu, al costado, **la app real** (la beta, en
 un teléfono) muestra lo mismo que pasa en la planta: es la misma historia que ya contaba la web anterior, capítulo por capítulo, con los mismos textos.
 
-Vista previa: `unitytech.uy/nuevo/kliva/` (sin indexar, con la chapita «Vista previa»). La pública (`/kliva/`) no cambia hasta que Christian dé el OK.
+**Es la página pública desde el 26/11** (`unitytech.uy/kliva/`): Christian la vio en la vista previa y dio el OK («ya podés pasar todo a la página oficial»).
+`/nuevo/kliva/` quedó redirigiendo a la pública.
 
 ## Piezas
 
@@ -21,19 +22,19 @@ Vista previa: `unitytech.uy/nuevo/kliva/` (sin indexar, con la chapita «Vista p
 | `base-v6.html` | Copia de la página pública del 26/11 (la v6). Se usa de base cuando la pública ya sea la v7 |
 | `prueba/` | `web.mjs` (recorre y saca fotos), `tanda.sh` (todas las plataformas), `resto.mjs` (sin 3D, secciones, reducir movimiento), `toma.mjs` (probar tomas de cámara), `foto.mjs` (las fotos de respaldo) |
 
-Todo lo que no es la historia (marcas, familia, datos, preguntas, cierre, pie) sale de la página pública tal cual: un cambio de texto se hace en
-`kliva/index.html` (mientras sea la v6) y se vuelve a armar.
+Todo lo que no es la historia (marcas, familia, datos, preguntas, cierre, pie) sale de `base-v6.html` tal cual: un cambio de texto de esas secciones se
+hace ahí y se vuelve a armar. **`kliva/index.html` no se edita a mano**: es el resultado de armar.
 
 ## Armar
 
 ```
 node escena.mjs                                      # solo si cambió la planta
-node construir.mjs ../../../nuevo/kliva/index.html previa   # la vista previa
-node construir.mjs ../../../kliva/index.html                # la pública (cuando Christian dé el OK)
+node construir.mjs ../../../kliva/index.html                # la pública
+node construir.mjs /tmp/k7-sitio/nuevo/kliva/index.html previa   # una vista previa para probar un cambio antes (con SITIO=/tmp/k7-sitio en las pruebas)
 ```
 
-Al pasar a pública: copiar también el resultado a `web/sitio/index.html` del repositorio de Kliva (ahí vive el fuente de la página pública) y sacar
-`nuevo/kliva/` o dejarla redirigiendo.
+Después de armar la pública, copiar el resultado a `web/sitio/index.html` del repositorio de Kliva (su armado lo copia a `dist/sitio/`): las dos copias
+tienen que ser iguales.
 
 ## Cómo está hecha
 

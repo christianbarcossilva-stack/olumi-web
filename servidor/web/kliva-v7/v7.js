@@ -9,7 +9,8 @@
   var M=null,MQ=null,vis=true,raf=0,tAnt=0,S=0,act=-1,hora='',intro=0,px=0,py=0,k=[0,0,0,0,0],kOn=false,rk=0,rkA=-1,CAM=null,ox=0,oy=0,V3=null;
   // una toma por escena: [centro x, centro z, giro, inclinación, distancia, corrimiento] sobre la escena «kliva-web-v7» (edificio de 30 × 15 m; al sur el patio, el cerco y la calle; al este la playa de carga)
   // el sexto número: cuánto se corre la escena hacia la derecha de la pantalla en la compu (fracción del ancho), para que quede en el hueco entre el texto y el teléfono
-  var TOMA=[[1,4,.5,.84,62,.13],[1,2,1.15,.98,56,.08],[-11.6,3.6,.3,.84,33,.08],[-12,1.4,.3,.9,19,.07],[18.5,16.5,.52,.8,36,.06],[17.5,9.5,-.3,.86,36,.1],[1,2,1,.92,60,.08]];
+  // el séptimo (opcional): la proporción de pantalla para la que está pensada la toma; en una pantalla menos apaisada la cámara se aleja para que la planta entre entera
+  var TOMA=[[1,4,.5,.84,62,.13,1.95],[1,2,1.15,.98,56,.08],[-11.6,3.6,.3,.84,33,.08],[-12,1.4,.3,.9,19,.07],[18.5,16.5,.52,.8,36,.06],[17.5,9.5,-.3,.86,36,.1],[1,2,1,.92,60,.08]];
   // el camino de Lucía, en metros de la maqueta. La entrada: de la vereda a su puesto (portería, hall, molinete de entrada, vestuario, pasillo, producción).
   // La salida: del puesto a la calle por el molinete de salida. Van por carriles distintos para que las dos líneas se lean.
   var ENT=[[-24,17.4],[-11.72,17.4,.7],[-11.72,6.6],[-11.9,3.6],[-12.2,2.5],[-12.2,-.5],[-11.7,-1.5],[-11.7,-5.6,.2],[-11.3,-5.6,.2],[-11.3,-1.7],[-9.8,-1],[-6.2,-1],[-5,-2.55],[-3.4,-2.55]],
@@ -22,7 +23,7 @@
   // en pantalla angosta (la maqueta es una ventana chica y no hay corrimiento) algunas tomas cambian: {número de la toma: {qué valor: cuánto}}
   var ANG={0:{0:-1,1:4,4:66},1:{0:1.5,1:2,2:.35,3:.95,4:68},2:{4:36},3:{4:15},4:{0:17,1:13,4:40},5:{4:42},6:{0:1.5,1:2,2:.35,3:.95,4:68}};
   function tomaDe(i){var a=TOMA[i],q=!ancha&&ANG[i],o,j;if(!q)return a;o=a.slice();for(j in q)o[j]=q[j];return o}
-  function toma(s){var t=tramo(s),a=tomaDe(t[0]),b=tomaDe(t[0]+1),e=t[1],o=[],j;for(j=0;j<6;j++)o[j]=a[j]+(b[j]-a[j])*e;
+  function toma(s){var t=tramo(s),a=tomaDe(t[0]),b=tomaDe(t[0]+1),e=t[1],o=[],j;for(j=0;j<7;j++)o[j]=(a[j]||0)+((b[j]||0)-(a[j]||0))*e;
     // entre dos escenas de cerca la cámara se levanta, viaja y vuelve a bajar
     var dist=Math.hypot(b[0]-a[0],b[1]-a[1]),arco=Math.sin(Math.PI*e),cerca=Math.max(a[4],b[4])<42;
     if(cerca){o[4]+=arco*Math.min(17,dist*.8);o[3]+=arco*Math.min(.16,dist*.011)}
@@ -176,7 +177,7 @@
     try{cruces();camino(rk,k[4]);chip();if(act===6)pins.forEach(function(p){p.classList.toggle('v',pinV&&rk>=.985)})}catch(e){}
     var C=M.C;C.tx=k[0];C.tz=k[1];C.yaw=k[2];C.pitch=k[3];C.d=k[4];M.dirty=true;
     if(!quieto||(CM&&CM.u!==camionMeta()))raf=requestAnimationFrame(paso)}
-  function correr(c){if(ancha){var sh=-(c[5]+Math.max(0,Math.min(.3,(1280-bw)/1280))*.2)*2*c[4]*.3443*asp;c[0]+=Math.cos(c[2])*sh;c[1]-=Math.sin(c[2])*sh}else{var cerca=c[4]<34;if(asp<1.3&&cerca)c[4]*=.86;   // en el teléfono, de cerca, un poco más cerca (la ventana de la maqueta es chica)
+  function correr(c){if(ancha){if(c[6]>asp)c[4]*=Math.min(1.45,c[6]/asp);var sh=-(c[5]+Math.max(0,Math.min(.3,(1280-bw)/1280))*.2)*2*c[4]*.3443*asp;c[0]+=Math.cos(c[2])*sh;c[1]-=Math.sin(c[2])*sh}else{var cerca=c[4]<34;if(asp<1.3&&cerca)c[4]*=.86;   // en el teléfono, de cerca, un poco más cerca (la ventana de la maqueta es chica)
       var sv=(cerca?.16:.13)*2*.3443*c[4]/Math.sin(c[3]);c[0]-=Math.sin(c[2])*sv;c[1]-=Math.cos(c[2])*sv}   // y la escena baja: arriba la tapa el riel
     return c}   // en la compu, la escena va al hueco libre de la pantalla
   // dónde termina cada renglón de un bloque de texto: [derecha, arriba, abajo] (los títulos son cajas del ancho de la columna; sus renglones, no)
