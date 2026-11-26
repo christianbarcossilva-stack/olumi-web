@@ -62,7 +62,8 @@ Al pasar a pública: copiar también el resultado a `web/sitio/index.html` del r
 - Solo lo que ya corre: las chapitas del alta nombran marcas que hoy reciben personas (Control iD, Hikvision, Intelbras, Dahua y los relojes ZKTeco). Las
   controladoras ZKTeco todavía no reciben personas: en la planta no llevan tilde de alta.
 - Los datos son inventados (Planta Ruta 5, Lucía Fernández y los nombres de la demostración). Nunca un cliente real.
-- Sigue el cartel «Kliva está en beta: todavía no tiene instalaciones con equipos reales».
+- El cartel amarillo de arriba («Kliva está en beta: todavía no tiene instalaciones con equipos reales») se sacó el 26/11 por pedido de Christian
+  («eso no vende»), de la pública y de la vista previa. No volver a ponerlo. El estado real sigue dicho en la letra chica de Marcas («Estado de hoy»).
 
 ## Probar
 
