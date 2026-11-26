@@ -13,15 +13,15 @@
 //   host.tema        'claro' u 'oscuro': lo decide la app (la maqueta no muestra su propio botón de día y noche)
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
-import { THREE, crearMotor } from './nucleo.js?v=1ad697a5';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe, uRack, U_RACK } from './piezas.js?v=1ad697a5';
-import { ve, dominio, DOMINIOS } from './plano.js?v=1ad697a5';
-import { svg } from './iconos.js?v=1ad697a5';
-import { construir } from './construir.js?v=1ad697a5';
-import { juego } from './juego.js?v=1ad697a5';
-import { recorrer } from './recorrer.js?v=1ad697a5';
-import { transito } from './transito.js?v=1ad697a5';
-import { extras } from './extras.js?v=1ad697a5';
+import { THREE, crearMotor } from './nucleo.js?v=06f6522e';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe, uRack, U_RACK } from './piezas.js?v=06f6522e';
+import { ve, dominio, DOMINIOS } from './plano.js?v=06f6522e';
+import { svg } from './iconos.js?v=06f6522e';
+import { construir } from './construir.js?v=06f6522e';
+import { juego } from './juego.js?v=06f6522e';
+import { recorrer } from './recorrer.js?v=06f6522e';
+import { transito } from './transito.js?v=06f6522e';
+import { extras } from './extras.js?v=06f6522e';
 
 const $ = (s, r = document) => r.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAPAS = [['plano', 'Plano del lugar'], ['base', 'Construcciones y caminos'], ['acceso', 'Puertas con control'], ['logistica', 'Contenedores y vehículos'], ['vegetacion', 'Árboles'], ['camaras', 'Cámaras'], ['campos', 'Campo de las cámaras'], ['wifi', 'Wi-Fi'], ['racks', 'Racks y gabinetes'], ['fibra', 'Fibra y cables'], ['equipos', 'Sensores y otros equipos'], ['etiquetas', 'Nombres'], ['techos', 'Techos'], ['transito', 'Camiones en movimiento (de ejemplo)']];
@@ -153,7 +153,7 @@ export async function abrirMaqueta(o) {
       const { clone } = await import('three/addons/SkeletonUtils.js'); const m = clone(base); m.traverse(k => { if (k.isMesh) { k.castShadow = k.receiveShadow = true; if (k.isSkinnedMesh) k.frustumCulled = false; if (color && tipo === 'vehiculos') for (const q of [].concat(k.material)) if (q.name === 'pintura') { k.material = q.clone(); k.material.color.set(color); } } k.userData.dueño = g; });
       let pon = m;
       // personas: el mismo núcleo y la misma variedad de Olumi (reposo natural, respira y cambia el peso de pierna; piel, pelo y ropa propios de cada una)
-      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=1ad697a5'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
+      if (tipo === 'avatares') { let ob = null; try { AVM = AVM || await import('./avatar.js?v=06f6522e'); ob = AVM.avatarGLB(m, it.alto * (1 + ((AVM.hsh(pid || id) % 7) - 3) * 0.006)); } catch (e) { ob = null; }
         if (ob) { AVM.variar(ob, pid || id); pon = new THREE.Group(); pon.rotation.y = -Math.PI / 2; pon.add(ob.g); ob.semilla = AVM.hsh(pid || id) % 997; const md = g.userData.pose === 'sentado' ? 'sit' : 'idle'; for (let i = 0; i < (md === 'sit' ? 12 : 1); i++) AVM.avPose(ob, md, md === 'sit' ? 0.2 : 0.016, { x: 0, y: 0, t: ob.semilla, asiento: 0.47, teclado: true }); ob.sync(); ob.dueño = g; PERS.add(ob); }
         else { const b = new THREE.Box3().setFromObject(m); m.scale.setScalar(it.alto / (b.max.y - b.min.y)); brazos(m); } }
       g.clear(); g.add(pon); motor.dirty = true; } catch (e) { /* sin catálogo: queda la figura simple */ } }
@@ -250,7 +250,16 @@ export async function abrirMaqueta(o) {
   const UI = { abierta: false }; try { UI.abierta = localStorage.getItem('motor.ficha') === '1'; } catch (e) {}
   // la caja de lo elegido no cuenta el campo de visión ni el aro del piso (si no, una cámara queda adentro de una caja enorme)
   const cajaDe = (g, b) => { b.makeEmpty(); g.updateMatrixWorld(true); g.traverse(m => { if (m.isMesh && m.visible && !m.userData.campo && !m.userData.noPica && m !== g.userData.aro) b.expandByObject(m); }); return b; };
-  function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaDe(g, caja.box).expandByScalar(0.15); puntos(); motor.dirty = true; }
+  // la caja de una pieza girada se mide en el marco de la pieza y se dibuja girada con ella (si no, a un bloque en diagonal le queda una caja enorme que cruza a los vecinos)
+  const _bl = new THREE.Box3(), _bm = new THREE.Box3(), _mi = new THREE.Matrix4(), _mr = new THREE.Matrix4(), _vc = new THREE.Vector3(), _vs = new THREE.Vector3();
+  const cajaGirada = (g, H, margen) => { const r = g.rotation.y; let ok = !!r && !g.rotation.x && !g.rotation.z; H.rotation.set(0, 0, 0);
+    if (ok) { g.updateMatrixWorld(true); _mi.copy(g.matrixWorld).invert(); _bl.makeEmpty();
+      g.traverse(m => { if (!ok || !m.isMesh || !m.visible || m.userData.campo || m.userData.noPica || m === g.userData.aro) return; let b = null;
+        if (m.isInstancedMesh) { if (m.computeBoundingBox) { if (!m.boundingBox) m.computeBoundingBox(); b = m.boundingBox; } } else if (!m.isSkinnedMesh) { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b = m.geometry.boundingBox; }
+        if (!b) { ok = false; return; } if (b.isEmpty()) return; _bl.union(_bm.copy(b).applyMatrix4(_mr.multiplyMatrices(_mi, m.matrixWorld))); });
+      if (ok && !_bl.isEmpty()) { _bl.expandByScalar(margen); _bl.getCenter(_vc).applyMatrix4(g.matrixWorld); _bl.getSize(_vs).multiplyScalar(0.5); H.box.min.copy(_vc).sub(_vs); H.box.max.copy(_vc).add(_vs); H.rotation.set(0, r, 0); return H.box; } }
+    return cajaDe(g, H.box).expandByScalar(margen); };
+  function marcar() { const g = SEL && objs.get(SEL.id); caja.visible = !!g && !(TIPOS[SEL.t].forma !== 'punto' && ED.on); if (g) cajaGirada(g, caja, 0.15); puntos(); motor.dirty = true; }
   function elegir(p, enfocar) { if (!p) soltarMulti(); SEL = p; CON.alElegir(p); marcar(); info(); if (enfocar && p) { const [x, z] = centro(p); motor.ir({ tx: x, tz: z, d: Math.min(motor.C.d, TIPOS[p.t].equipo ? 45 : 140) }); } }
   // un equipo chico y lejos (un AP en el techo de un galpón) casi no tiene superficie para el rayo: se acepta el equipo cuyo centro cae cerca del toque en pantalla
   const _v = new THREE.Vector3(), _bb = new THREE.Box3();
@@ -396,7 +405,7 @@ export async function abrirMaqueta(o) {
   // catálogo: cada tipo de pieza (y sus variantes: cámara domo, rack de pared…) con su dibujo, lo más usado arriba, y las aberturas, que van sobre una pared
   const USO = (() => { try { return JSON.parse(localStorage.getItem('motor.usados')) || {}; } catch (e) { return {}; } })(); let CATO = new Map();
   const usar = k => { USO[k] = (USO[k] || 0) + 1; try { localStorage.setItem('motor.usados', JSON.stringify(USO)); } catch (e) {} };
-  function ofertas() { const out = []; for (const [k, T] of Object.entries(TIPOS)) { if ((SIN[app] || []).includes(T.g)) continue; if (T.variantes) T.variantes.forEach((v, i) => out.push({ key: k + ':' + i, t: k, n: v.n, g: v.g || T.g, o: v.o, T })); else out.push({ key: k, t: k, n: T.n, g: T.g, o: {}, T }); }
+  function ofertas() { const out = []; for (const [k, T] of Object.entries(TIPOS)) { if (T.sinOferta || (SIN[app] || []).includes(T.g)) continue; if (T.variantes) T.variantes.forEach((v, i) => out.push({ key: k + ':' + i, t: k, n: v.n, g: v.g || T.g, o: v.o, T })); else out.push({ key: k, t: k, n: T.n, g: T.g, o: {}, T }); }
     for (const [k, a] of Object.entries(ABERTURAS)) out.push({ key: 'ab:' + k, ab: k, n: a.n, g: 'Puertas y ventanas' }); out.push({ key: 'zona', zona: true, n: 'Zona (nombra un sector)', g: 'Construcción' });
     if (TIPOS.recinto) for (const [pies, L] of [[20, 6.06], [40, 12.19]]) out.push({ key: 'cont:' + pies, t: 'recinto', n: `Contenedor oficina ${pies} pies`, g: 'Construcción', T: TIPOS.recinto,
       o: { molde: 1, estilo: 'contenedor', nombre: `Contenedor oficina ${pies}'`, tipo: 'chapa', alto: 2.59, grosor: 0.06, color: '#e6eaed', piso: 'goma', pts: [[-L / 2, -1.22], [L / 2, -1.22], [L / 2, 1.22], [-L / 2, 1.22]] } });
@@ -700,7 +709,7 @@ export async function abrirMaqueta(o) {
     else { const casa = !e.altKey && Math.hypot(dx, dz) < 0.3;   // cerca de donde estaba, vuelve justo ahí (aunque no estuviera en la grilla)
       D.p.x = casa ? D.orig[0] : pegar(D.orig[0] + dx, e.altKey); D.p.z = casa ? D.orig[1] : pegar(D.orig[1] + dz, e.altKey); mx = D.p.x - D.orig[0]; mz = D.p.z - D.orig[1]; let g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z);
       if (J) { J.probar(D.p, D, { ign: D.ign || (D.ign = new Set(D.con.map(c => c.q))), base: D.apoyado ? null : (D.y0 ?? null) }); g = objs.get(D.p.id); g.position.set(D.p.x, 0.25, D.p.z); if (!D.mal) D.bien = [D.p.x, D.p.z, D.p.y]; }
-      cajaDe(g, caja.box).expandByScalar(0.15); motor.dirty = true; }
+      cajaGirada(g, caja, 0.15); motor.dirty = true; }
     for (const { q, o } of D.con) { if (q.pts) { q.pts = o.map(k => [Math.round((k[0] + mx) * 100) / 100, Math.round((k[1] + mz) * 100) / 100]); rehacer(q); } else { q.x = Math.round((o[0] + mx) * 100) / 100; q.z = Math.round((o[1] + mz) * 100) / 100; const g = objs.get(q.id); if (g) g.position.set(q.x, 0, q.z); } } };
   motor.soltar = (e, gesto) => { if (recuadro) { const R = recuadro; recuadro = null; if (R.m) { motor.scene.remove(R.m); R.m.geometry.dispose(); R.m.material.dispose(); }
       if (!gesto && R.x1 != null && Math.abs(R.x1 - R.x0) + Math.abs(R.z1 - R.z0) > 1.5) { const a = Math.min(R.x0, R.x1), b = Math.max(R.x0, R.x1), c = Math.min(R.z0, R.z1), d = Math.max(R.z0, R.z1); if (!R.suma) MULTI.clear();
@@ -716,8 +725,8 @@ export async function abrirMaqueta(o) {
     if (ED.linea && p && ED.linea.rect && ED.linea.p && ED.linea.pts.length === 1) { const L = ED.linea; L.p.pts = rect(L.pts[0], [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]); rehacer(L.p); return; }
     if (ED.linea && p && ED.linea.p) { const L = ED.linea; L.p.pts = [...L.pts, [pegar(p.x, e.altKey), pegar(p.z, e.altKey)]]; if (L.p.pts.length >= 2) rehacer(L.p); return; }
     if (e.pointerType !== 'mouse') return; const h = hallar(e), g = h && objs.get(h.p.id);
-    if (!ED.on) { cajaH.material.color.set(0x8ecbff); cajaH.visible = !!g && h.p !== SEL && TIPOS[h.p.t].forma === 'punto' && (!motor.mirando || !!TIPOS[h.p.t].equipo); if (cajaH.visible) cajaDe(g, cajaH.box).expandByScalar(0.1); canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
-    else { cajaH.visible = motor.mirando && !!g && h.p !== SEL && h.p.t !== 'terreno' && !(h.p.fijo || h.p.candado); if (cajaH.visible) { cajaH.material.color.set(ED.h === 'maza' ? 0xff453a : ED.h === 'gotero' ? 0x30d158 : 0x8ecbff); cajaDe(g, cajaH.box).expandByScalar(0.06); } if (motor.mirando) motor.dirty = true; canvas.classList.toggle('sobre', (!!h && ED.h === 'mano' && h.p.t !== 'terreno' && (h.p === SEL || directo(h.p))) || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
+    if (!ED.on) { cajaH.material.color.set(0x8ecbff); cajaH.visible = !!g && h.p !== SEL && TIPOS[h.p.t].forma === 'punto' && (!motor.mirando || !!TIPOS[h.p.t].equipo); if (cajaH.visible) cajaGirada(g, cajaH, 0.1); canvas.classList.toggle('sobre', !!h && TIPOS[h.p.t].forma === 'punto'); motor.dirty = true; }
+    else { cajaH.visible = motor.mirando && !!g && h.p !== SEL && h.p.t !== 'terreno' && !(h.p.fijo || h.p.candado); if (cajaH.visible) { cajaH.material.color.set(ED.h === 'maza' ? 0xff453a : ED.h === 'gotero' ? 0x30d158 : 0x8ecbff); cajaGirada(g, cajaH, 0.06); } if (motor.mirando) motor.dirty = true; canvas.classList.toggle('sobre', (!!h && ED.h === 'mano' && h.p.t !== 'terreno' && (h.p === SEL || directo(h.p))) || !!(SEL && motor.tocar(e.clientX, e.clientY, manijas.children.filter(q => q.isMesh))[0])); } };
   // con la mira, la rueda gira lo que se tiene en la mano (lo que se está ubicando o lo que se lleva agarrado): un paso, 45°
   let ruG = 0; motor.alRueda = (e, dx, dy) => { if (!motor.mirando || !ED.on || !(ED.colocar || (ED.drag && ED.drag.p && !ED.drag.p.pts))) return false; ruG += dy; const n = Math.trunc(ruG / 60); if (n) { ruG -= n * 60; girarSel(Math.sign(n) * Math.PI / 4); if (ED.drag) ED.drag.movido = true; } return true; };
   let ultimoToque = 0;

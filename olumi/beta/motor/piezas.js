@@ -1,11 +1,11 @@
 // Motor común · piezas. Cada cosa de la maqueta es una pieza en datos: { id, t: tipo, x, z, r (giro), pts (líneas y áreas), ...opciones }.
 // Cada tipo dice cómo se llama, en qué grupo del catálogo va, qué se puede editar (campos) y cómo se dibuja (armar).
 // Sumar un tipo nuevo = sumar una entrada a TIPOS. Nada de la escena queda fijo en el código.
-import { THREE } from './nucleo.js?v=1ad697a5';
+import { THREE } from './nucleo.js?v=06f6522e';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
-import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=1ad697a5';
-import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=1ad697a5';
-import { matsCuerpo, marco as marcoCont, tanque as tanqueGeo, navieraDe, navieraAlAzar, H_CONT } from './contenedor.js?v=1ad697a5';
+import { chapa as chapaReal, METROS_CHAPA as MCH, sombraDeApoyo } from './materiales.js?v=06f6522e';
+import { suelo as texSuelo, METROS, chapa, frente, matTex, macroDe } from './texturas.js?v=06f6522e';
+import { matsCuerpo, marco as marcoCont, tanque as tanqueGeo, navieraDe, navieraAlAzar, H_CONT } from './contenedor.js?v=06f6522e';
 
 // ---------- muebles: Furniture Kit de Kenney (CC0) en muebles.json, el mismo de la oficina de Olumi ----------
 // { v, pal: [[r,g,b]…], m: { clave: { n, b: [ancho, alto, fondo], p: Int16 mm base64, q: Int8 normales base64, k: Uint8 índice de color base64 } } }
@@ -991,13 +991,47 @@ function estCamiones(p, g, os, C, R, po) { const LU = +p.lugar > 3.2 ? +p.lugar 
   // semirremolques esperando (sin tractor): los claros son furgones y los de color, contenedores
   const G = camionGeo(), M = matCamion(); lote(g, G.remolque, M.d, [...lisos, ...conts].map(q => q.slice(0, 7))); lote(g, G.lisa, M.t, lisos); lote(g, G.contenedor, M.t, conts); return g; }
 
+// ---------- ciudad de contexto y edificios por contorno ----------
+// Un barrio entero (manzanas, edificios, verde, vías, muros, líneas de carril y árboles) en pocas mallas, para dar contexto sin pesar.
+// Todo va en decímetros enteros: manz (manzanas) y verde son listas de polígonos [x0, z0, x1, z1, …]; edif: edificios [alto, color, techo, x0, z0, …] (color y techo son índices de pal);
+// vias y ejes (de calle) son líneas; muros: muros y cercos [alto, x0, z0, …]; arb: árboles [x, z, x, z, …].
+const TEX_VENT = {};
+function texVentanas(k) { if (TEX_VENT[k]) return TEX_VENT[k]; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 64, 64);
+  if (k === 'v') { x.fillStyle = '#8b96a0'; x.fillRect(15, 14, 34, 32); x.fillStyle = '#aab4bd'; x.fillRect(15, 14, 34, 5); x.fillStyle = '#eceae4'; x.fillRect(0, 59, 64, 5); }
+  else { x.fillStyle = '#dfe0de'; for (let i = 0; i < 64; i += 8) x.fillRect(i, 0, 2, 64); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return (TEX_VENT[k] = t); }
+const lineaDm = (a, i0 = 0) => { const P = []; for (let i = i0; i + 1 < a.length; i += 2) P.push([a[i] / 10, a[i + 1] / 10]); return P; };
+const anilloDm = (a, i0 = 0) => { const P = lineaDm(a, i0), n = P.length; if (n > 2 && P[0][0] === P[n - 1][0] && P[0][1] === P[n - 1][1]) P.pop(); return P; };
+const geoDe = (D, conUv) => { if (!D.ix.length) return null; const G = new THREE.BufferGeometry(); G.setAttribute('position', new THREE.Float32BufferAttribute(D.pos, 3)); if (D.col) G.setAttribute('color', new THREE.Float32BufferAttribute(D.col, 3)); if (conUv) G.setAttribute('uv', new THREE.Float32BufferAttribute(D.uv, 2)); G.setIndex(D.ix); G.computeVertexNormals(); G.computeBoundingSphere(); return G; };
+// prismas: de cada polígono { P, y0, y1, color, techo } salen la tapa de arriba y sus paredes (con el dibujo de la fachada repetido cada 3,2 m y un piso cada 3,1 m)
+function prismas(L) { const T = { pos: [], col: [], ix: [] }, W = { pos: [], col: [], uv: [], ix: [] }, c = new THREE.Color();
+  for (const q of L) { const P = q.P, n = P.length; if (n < 3) continue; c.set(q.techo || q.color); const b = T.pos.length / 3; for (const [x, z] of P) { T.pos.push(x, q.y1, z); T.col.push(c.r, c.g, c.b); }
+    let tri = []; try { tri = THREE.ShapeUtils.triangulateShape(P.map(v => new THREE.Vector2(v[0], v[1])), []); } catch (e) {} for (const t of tri) T.ix.push(b + t[0], b + t[1], b + t[2]);
+    c.set(q.color); const h = q.y1 - q.y0, v1 = Math.max(1, Math.round(h / 3.1)); let u = 0;
+    for (let i = 0; i < n; i++) { const A = P[i], B = P[(i + 1) % n], l = Math.hypot(B[0] - A[0], B[1] - A[1]), k = W.pos.length / 3, u0 = u / 3.2, u1 = Math.max(1, Math.round(l / 3.2)) + u0;
+      W.pos.push(A[0], q.y0, A[1], B[0], q.y0, B[1], B[0], q.y1, B[1], A[0], q.y1, A[1]); for (let j = 0; j < 4; j++) W.col.push(c.r, c.g, c.b); W.uv.push(u0, 0, u1, 0, u1, v1, u0, v1); W.ix.push(k, k + 1, k + 2, k, k + 2, k + 3); u = Math.round(u1) * 3.2; } }
+  return { tapas: geoDe(T), paredes: geoDe(W, true) }; }
+// franjas planas a lo largo de unas líneas (rieles, ejes de calle): ancho w, altura y, corridas d hacia un costado; gui = [lleno, vacío] las hace discontinuas
+function franjas(Ls, w, y, d = 0, gui) { const D = { pos: [], ix: [] }; const quad = (ax, az, bx, bz) => { const l = Math.hypot(bx - ax, bz - az); if (l < 0.01) return; const nx = -(bz - az) / l, nz = (bx - ax) / l, k = D.pos.length / 3, ox = nx * d, oz = nz * d, hx = nx * w / 2, hz = nz * w / 2;
+    D.pos.push(ax + ox - hx, y, az + oz - hz, bx + ox - hx, y, bz + oz - hz, bx + ox + hx, y, bz + oz + hz, ax + ox + hx, y, az + oz + hz); D.ix.push(k, k + 2, k + 1, k, k + 3, k + 2); };
+  for (const P of Ls) { let acc = 0; for (let i = 0; i + 1 < P.length; i++) { const [ax, az] = P[i], [bx, bz] = P[i + 1]; if (!gui) { quad(ax, az, bx, bz); continue; } const l = Math.hypot(bx - ax, bz - az), per = gui[0] + gui[1]; if (l < 0.01) continue;
+      for (let s = -acc; s < l; s += per) { const s0 = Math.max(0, s), s1 = Math.min(l, s + gui[0]); if (s1 - s0 > 0.2) quad(ax + (bx - ax) * s0 / l, az + (bz - az) * s0 / l, ax + (bx - ax) * s1 / l, az + (bz - az) * s1 / l); } acc = (acc + l) % per; } }
+  return geoDe(D); }
+function murosDm(L, color) { const D = { pos: [], col: [], ix: [] }, c = new THREE.Color(color); for (const a of L) { const h = a[0] / 10, P = lineaDm(a, 1); for (let i = 0; i + 1 < P.length; i++) { const k = D.pos.length / 3; D.pos.push(P[i][0], 0, P[i][1], P[i + 1][0], 0, P[i + 1][1], P[i + 1][0], h, P[i + 1][1], P[i][0], h, P[i][1]); for (let j = 0; j < 4; j++) D.col.push(c.r, c.g, c.b); D.ix.push(k, k + 1, k + 2, k, k + 2, k + 3); } } return geoDe(D); }
+// carro pórtico (straddle carrier): pasa por encima de una hilera de contenedores y los lleva colgando. Va a lo largo de X.
+function straddle(p) { const g = new THREE.Group(), os = oscuro(), c = mat(os ? mix(p.color || '#c23b2a', '#000', 0.35) : (p.color || '#c23b2a'), { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { roughness: 0.8 }), gr = mat('#5a6065', { roughness: 0.55, metalness: 0.45 }), v = mat('#2f4656', { roughness: 0.1, metalness: 0.6 }), am = mat('#e2b12a', { roughness: 0.5, metalness: 0.3 }), H = 13.2;
+  for (const z of [-2.15, 2.15]) { caja(g, -4.6, 0.7, z - 0.35, 4.6, 1.5, z + 0.35, c); for (const x of [-3.9, -1.3, 1.3, 3.9]) malla(g, CILX, n, x, 0.6, z, 1.2, 1.2, 0.5); for (const x of [-3.6, 3.6]) caja(g, x - 0.3, 1.5, z - 0.3, x + 0.3, H, z + 0.3, c); caja(g, -3.9, H - 0.8, z - 0.35, 3.9, H, z + 0.35, c); }
+  for (const x of [-3.6, 3.6]) caja(g, x - 0.35, H - 0.8, -2.5, x + 0.35, H, 2.5, c); caja(g, -2.6, H, -1.6, 1.2, H + 1.5, 1.6, gr);
+  caja(g, 3.9, H - 2.6, -2.45, 5.5, H - 0.4, -0.6, c); caja(g, 5.45, H - 2.3, -2.3, 5.52, H - 0.9, -0.75, v, false);
+  const ys = 9.5; caja(g, -6.05, ys, -1.2, 6.05, ys + 0.45, 1.2, am); for (const x of [-2.4, 2.4]) for (const z of [-0.9, 0.9]) caja(g, x - 0.05, ys + 0.45, z - 0.05, x + 0.05, H - 0.8, z + 0.05, gr, false);
+  return g; }
 export const TIPOS = {
   // terreno y caminos
   terreno: { n: 'Terreno', g: 'Terreno', forma: 'area', capa: 'base', def: { mat: 'tierra' },
-    campos: [F.nombre, { k: 'mat', n: 'Superficie', t: 'sel', ops: [['tierra', 'Tierra o balasto'], ['ripio', 'Ripio'], ['tosca', 'Tosca (patio de contenedores)'], ['hormigon', 'Hormigón'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['adoquin', 'Adoquines'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro'], ['monte', 'Monte'], ['cultivo', 'Cultivo en hileras'], ['agua', 'Agua']] }, { k: 'cordon', n: 'Con cordón alrededor (cantero o isla)', t: 'bool' }, { k: 'borde', n: 'Cordón ancho de hormigón hacia adentro (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'flechas', n: 'Flechas de sentido en el cordón', t: 'sel', ops: [['', 'Sin flechas'], ['anti', 'Giro antihorario'], ['hor', 'Giro horario']] }],
-    armar(p, ctx) { const g = new THREE.Group(), y = ({ agua: 0.012, pasto: 0.016, pasto2: 0.018, monte: 0.018, cultivo: 0.02, tierra: 0.026, ripio: 0.03, tosca: 0.03, hormigon: 0.034, asfalto: 0.038, calzada: 0.038 }[p.mat] ?? 0.026) + (p.sobre ? 0.03 : 0), bo = +p.borde > 0 && p.pts.length > 2 ? adentro(p.pts, +p.borde) : null;
+    campos: [F.nombre, { k: 'mat', n: 'Superficie', t: 'sel', ops: [['tierra', 'Tierra o balasto'], ['ripio', 'Ripio'], ['tosca', 'Tosca (patio de contenedores)'], ['hormigon', 'Hormigón'], ['calzada', 'Hormigón de calzada'], ['asfalto', 'Asfalto'], ['adoquin', 'Adoquines'], ['pasto', 'Pasto'], ['pasto2', 'Pasto oscuro'], ['monte', 'Monte'], ['cultivo', 'Cultivo en hileras'], ['agua', 'Agua']] }, { k: 'cordon', n: 'Con cordón alrededor (cantero o isla)', t: 'bool' }, { k: 'orden', n: 'Va encima de otros terrenos (0 a 5)', t: 'num', min: 0, max: 5, paso: 1 }, { k: 'borde', n: 'Cordón ancho de hormigón hacia adentro (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'flechas', n: 'Flechas de sentido en el cordón', t: 'sel', ops: [['', 'Sin flechas'], ['anti', 'Giro antihorario'], ['hor', 'Giro horario']] }],
+    armar(p, ctx) { const g = new THREE.Group(), ord = Math.max(0, +p.orden || 0), y = ({ agua: 0.012, pasto: 0.016, pasto2: 0.018, monte: 0.018, cultivo: 0.02, tierra: 0.026, ripio: 0.03, tosca: 0.03, hormigon: 0.034, asfalto: 0.038, calzada: 0.038 }[p.mat] ?? 0.026) + (p.sobre ? 0.03 : 0) + ord * 0.002, bo = +p.borde > 0 && p.pts.length > 2 ? adentro(p.pts, +p.borde) : null;
       let m; if (p.mat === 'cultivo') { const t = rayas(suelo('cultivo'), oscuro() ? '#1d2818' : '#8eaa72', 10).clone(); t.needsUpdate = true; t.repeat.set(1 / 20, 1 / 20); m = new THREE.MeshStandardMaterial({ map: t, roughness: 1 }); }
-      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0), polygonOffsetUnits: -2 }; m = matSuelo(p.textura || p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); else if (/^(pasto|pasto2)$/.test(p.mat) && m.map && !oscuro()) m = conManchas(m); }
+      else { const po = { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - (bo ? 2 : 0) - ord, polygonOffsetUnits: -2 - ord * 4 }; m = matSuelo(p.textura || p.mat, po) || mat(suelo(p.mat), { roughness: p.mat === 'agua' ? 0.15 : 0.97, metalness: p.mat === 'agua' ? 0.1 : 0, ...po }); if (p.mat === 'calzada' && m.map) m = calzadaReal(m); else if (/^(pasto|pasto2)$/.test(p.mat) && m.map && !oscuro()) m = conManchas(m); }
       // con borde: cordón ancho de hormigón con caída alrededor y la superficie adentro, un escalón más arriba (la isla de una rotonda)
       const ALTO_B = 0.15; if (bo) try { bordeIsla(g, p.pts, bo, y + 0.004, y + ALTO_B, p.flechas, { polygonOffset: true, polygonOffsetFactor: -Math.round(y * 100) - 1, polygonOffsetUnits: -2 }); } catch (e) { console.warn('borde', e); }
       const k = area(g, bo || p.pts, y + (bo ? ALTO_B : 0), m, bo ? null : p.huecos); if (p.cordon && !bo) try { cordonDe(g, p); } catch (e) {} if (ctx && ctx.piezas && /^(pasto|pasto2|monte)$/.test(p.mat) && p.matas !== false) try { matas(g, bo ? { ...p, pts: bo, huecos: null } : p, ctx); } catch (e) { console.warn('matas', e); } if (k && p.mat === 'cultivo') { const uv = k.geometry.attributes.uv, pos = k.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i)); } return g; } },
@@ -1550,13 +1584,13 @@ export const TIPOS = {
 
   // logística
   fila: { n: 'Fila de contenedores', g: 'Logística', forma: 'punto', capa: 'logistica', siempre: true, etiqueta: p => [p.nombre, p.naviera].filter(Boolean).join(' · '), def: { largo: 100, ancho: 5, alto: 6, pies: 40, carga: 'seco', color: '#2f6fd6', ocupacion: 75, mezcla: 12 },
-    campos: [F.nombre, { k: 'naviera', n: 'Naviera', t: 'txt' }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 600, paso: 0.5 }, { k: 'ancho', n: 'Ancho (contenedores)', t: 'num', min: 1, max: 20, paso: 1 }, { k: 'orient', n: 'Contenedores', t: 'sel', ops: [['largo', 'A lo largo de la fila'], ['trans', 'Atravesados (uno al lado del otro)']] }, { k: 'bloque', n: 'Bloques de (0 = seguido)', t: 'num', min: 0, max: 30, paso: 1 }, { k: 'alto', n: 'Alto máximo (contenedores)', t: 'num', min: 1, max: 9, paso: 1 },
+    campos: [F.nombre, { k: 'naviera', n: 'Naviera', t: 'txt' }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 600, paso: 0.5 }, { k: 'ancho', n: 'Ancho (contenedores)', t: 'num', min: 1, max: 20, paso: 1 }, { k: 'sep', n: 'Calle entre hileras (m)', t: 'num', min: 0, max: 12, paso: 0.1 }, { k: 'orient', n: 'Contenedores', t: 'sel', ops: [['largo', 'A lo largo de la fila'], ['trans', 'Atravesados (uno al lado del otro)']] }, { k: 'bloque', n: 'Bloques de (0 = seguido)', t: 'num', min: 0, max: 30, paso: 1 }, { k: 'alto', n: 'Alto máximo (contenedores)', t: 'num', min: 1, max: 9, paso: 1 },
       { k: 'pies', n: 'Contenedores de', t: 'sel', ops: [[40, '40 pies'], [20, '20 pies']] }, { k: 'carga', n: 'Tipo', t: 'sel', ops: [['seco', 'Secos'], ['reefer', 'Refrigerados (reefer)'], ['tanque', 'Tanques (cisterna de 20 pies)']] }, { k: 'color', n: 'Color de la naviera', t: 'color' },
       { k: 'colores', n: 'Colores', t: 'sel', ops: [['', 'El color que elegí'], ['navieras', 'El de la naviera real más parecida']] },
       { k: 'ocupacion', n: 'Ocupación (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'mezcla', n: 'Otras navieras mezcladas (%)', t: 'num', min: 0, max: 100, paso: 5 }, { k: 'semilla', n: 'Variante', t: 'num', min: 0, max: 999, paso: 1 }, F.r],
     // cada contenedor: el cuerpo (chapa con relieve, puertas, óxido) y su esqueleto (esquineros, encastres, largueros, barras) en un tono más oscuro.
     // Tanques: cilindro en marco abierto, siempre de 20 pies. Colores «navieras»: el color medido pasa al de la naviera real más parecida.
-    armar(p) { const tq = p.carga === 'tanque', pies = tq ? 20 : +p.pies === 20 ? 20 : 40, g = new THREE.Group(), L = pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = tr ? L + 0.34 : 2.74, ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], esq = [], celdas = [], som = [];
+    armar(p) { const tq = p.carga === 'tanque', pies = tq ? 20 : +p.pies === 20 ? 20 : 40, g = new THREE.Group(), L = pies === 20 ? 6.06 : 12.19, tr = p.orient === 'trans', pitch = tr ? 2.74 : L + 0.34, paso = (tr ? L + 0.34 : 2.74) + Math.max(0, +p.sep || 0), ns = Math.max(1, Math.floor(p.largo / pitch)), nr = p.ancho | 0, R = azar(semilla(p)), rf = p.carga === 'reefer', its = [], esq = [], celdas = [], som = [];
       const x0 = -ns * pitch / 2, z0 = -(nr - 1) * paso / 2, H = H_CONT, occ = (p.ocupacion ?? 75) / 100, propio = p.colores === 'navieras' ? navieraDe(p.color || '#2f6fd6')[1] : p.color;
       const blq = p.bloque | 0; for (let s = 0; s < ns; s++) for (let r = 0; r < nr; r++) { if (blq && s % (blq + 1) === blq) continue; const borde = tr && nr <= 2 ? R() < 0.25 : r === 0 || r === nr - 1, lleno = R() < Math.min(1, occ * (borde ? 0.9 : 1.15)); if (!lleno) continue;
         const h = Math.max(1, Math.min(p.alto, Math.round((borde ? 0.45 : 0.62) * p.alto + (R() - 0.35) * p.alto * 0.7 * occ + occ * 1.2))); som.push([x0 + (s + 0.5) * pitch, z0 + r * paso]);
@@ -1578,8 +1612,8 @@ export const TIPOS = {
     campos: [F.nombre, { k: 'carga', n: 'Contenedor (color, vacío = sin carga)', t: 'color' }, { k: 'cabina', n: 'Cabina', t: 'color' }, F.r],
     armar(p) { return camionQuieto(new THREE.Group(), p.carga, p.cabina || '#f2f4f5'); } },
   maquina: { n: 'Máquina de patio', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'apiladora', color: '#d8a31a' },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
-    armar(p) { const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['apiladora', 'Apiladora de vacíos'], ['reach', 'Reach stacker'], ['straddle', 'Carro pórtico (straddle carrier)'], ['autoelevador', 'Autoelevador']] }, F.color('Color'), F.r],
+    armar(p) { if (p.tipo === 'straddle') return straddle(p); const g = new THREE.Group(), c = mat(p.color, { roughness: 0.5, metalness: 0.3 }), n = mat('#24282c', { metalness: 0.4 }), big = p.tipo !== 'autoelevador';
       caja(g, -3.2 * (big ? 1 : 0.5), 0.6, -1.4 * (big ? 1 : 0.6), 2.2 * (big ? 1 : 0.5), 2.2 * (big ? 1 : 0.7), 1.4 * (big ? 1 : 0.6), c); caja(g, -1.6, 2.2, -0.9, 0, 4.4, 0.9, mat('#2c3e4f', { roughness: 0.15, metalness: 0.5 }));
       if (p.tipo === 'reach') return reachStacker(g, p);
       else { for (const z of [-0.9, 0.9]) caja(g, 2.3, 0.4, z - 0.15, 2.6, big ? 16 : 4.5, z + 0.15, n); caja(g, 2.6, big ? 12 : 1.2, -1.3, 3.1, big ? 12.5 : 1.4, 1.3, n); }
@@ -1588,8 +1622,8 @@ export const TIPOS = {
   // grúa de muelle. Pórtico (STS): los rieles van a lo largo de X y la pluma sale sobre el agua hacia -Z; el punto (x, z) es el centro del pórtico.
   // Móvil: grúa sobre neumáticos con torre, pluma inclinada hacia -Z y patas estabilizadoras.
   grua: { n: 'Grúa de puerto', g: 'Puerto', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { tipo: 'sts', estructura: '#e9ecee', color: '#c8402e', alto: 40, trocha: 30.5, alcance: 52, pluma: 'baja', carro: 0.35 },
-    variantes: [{ n: 'Grúa pórtico de muelle (STS)', o: { tipo: 'sts', alto: 40, alcance: 52 } }, { n: 'Grúa móvil de puerto', o: { tipo: 'movil', alto: 30, alcance: 48, color: '#e0a21b' } }],
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['sts', 'Pórtico de muelle (STS)'], ['movil', 'Móvil sobre neumáticos']] }, { k: 'estructura', n: 'Color de la estructura', t: 'color' }, F.color('Color de máquinas y cabina'),
+    variantes: [{ n: 'Grúa pórtico de muelle (STS)', o: { tipo: 'sts', alto: 40, alcance: 52 } }, { n: 'Grúa móvil de puerto', o: { tipo: 'movil', alto: 30, alcance: 48, color: '#e0a21b' } }, { n: 'Grúa pórtico de patio (RTG)', o: { tipo: 'rtg', alto: 18, trocha: 23.5, color: '#e0b020', estructura: '#f2f2ee' } }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['sts', 'Pórtico de muelle (STS)'], ['movil', 'Móvil sobre neumáticos'], ['rtg', 'Pórtico de patio sobre neumáticos (RTG)']] }, { k: 'estructura', n: 'Color de la estructura', t: 'color' }, F.color('Color de máquinas y cabina'),
       F.alto('Alto de la pluma (m)', 12, 60, 0.5), { k: 'trocha', n: 'Trocha entre rieles (m, pórtico)', t: 'num', min: 10, max: 40, paso: 0.5 }, { k: 'alcance', n: 'Alcance sobre el agua (m)', t: 'num', min: 15, max: 80, paso: 1 },
       { k: 'pluma', n: 'Pluma', t: 'sel', ops: [['baja', 'Baja (trabajando)'], ['alta', 'Levantada (parada)']] }, { k: 'carro', n: 'Carro (0 = punta, 1 = muelle)', t: 'num', min: 0, max: 1, paso: 0.05 }, F.r],
     armar(p) { const g = new THREE.Group(), os = oscuro(), E = mat(os ? mix(p.estructura, '#000', 0.45) : p.estructura, { roughness: 0.55, metalness: 0.35 }), C = mat(os ? mix(p.color, '#000', 0.3) : p.color, { roughness: 0.5, metalness: 0.3 }),
@@ -1597,6 +1631,12 @@ export const TIPOS = {
         LUZ = mat('#ff2a1a', { emissive: '#ff2a1a', emissiveIntensity: os ? 2 : 0.5 }), AM = mat('#e2b12a', { roughness: 0.5, metalness: 0.3 }), _a = new THREE.Vector3(), _u = new THREE.Vector3(0, 1, 0);
       const palo = (G, a, b, r, m, redondo) => { _a.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const L = _a.length(); if (L < 0.01) return; const k = new THREE.Mesh(redondo ? CIL : CAJA, m); k.scale.set(r * 2, L, r * 2); k.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); k.quaternion.setFromUnitVectors(_u, _a.normalize()); G.add(sombra(k)); return k; };
       const alta = p.pluma === 'alta';
+      if (p.tipo === 'rtg') { const T = Math.max(8, +p.trocha || 23.5), H = Math.max(8, Math.min(30, +p.alto || 18)), hz = T / 2;
+        for (const z of [-hz, hz]) { caja(g, -5.2, 0.9, z - 0.45, 5.2, 1.7, z + 0.45, C); for (const x of [-4.2, -2.8, 2.8, 4.2]) malla(g, CILX, N, x, 0.6, z, 1.2, 1.2, 0.8); for (const x of [-4.4, 4.4]) caja(g, x - 0.35, 1.7, z - 0.35, x + 0.35, H, z + 0.35, C); caja(g, -4.75, H * 0.55, z - 0.2, 4.75, H * 0.55 + 0.4, z + 0.2, C); }
+        for (const x of [-4.4, 4.4]) caja(g, x - 0.5, H, -hz - 1.2, x + 0.5, H + 1.3, hz + 1.2, C);
+        const zt = (+(p.carro ?? 0.4) - 0.5) * (T - 6); caja(g, -3.4, H + 1.3, zt - 2.2, 3.4, H + 2.3, zt + 2.2, E); caja(g, 3.4, H - 2.4, zt - 1.1, 5.6, H, zt + 1.1, E); caja(g, 5.55, H - 2.1, zt - 1, 5.62, H - 0.6, zt + 1, V, false);
+        const ys = H * 0.6; caja(g, -6.1, ys, zt - 1.25, 6.1, ys + 0.5, zt + 1.25, AM); for (const sx of [-1, 1]) for (const sz of [-1, 1]) palo(g, [sx * 2.2, H + 1.3, zt + sz * 0.9], [sx * 2.2, ys + 0.5, zt + sz * 0.9], 0.05, CAB, true);
+        caja(g, -5.3, 1.7, hz + 0.45, -3.6, 4.2, hz + 2.3, mat(os ? '#4b5157' : '#d9dcdf', { roughness: 0.6 })); return g; }
       if (p.tipo !== 'movil') {
         const T = Math.max(10, +p.trocha || 30.5), H = Math.max(20, +p.alto || 40), A = Math.max(15, +p.alcance || 52), R = Math.max(10, T * 0.55), B = 8.5, zw = -T / 2, zl = T / 2, yb = H;
         // carros con ruedas al pie de cada pata, patas, vigas del pórtico y riostras
@@ -1693,21 +1733,41 @@ export const TIPOS = {
       { k: 'rieles', n: 'Rieles de grúa: trocha (m, 0 = sin)', t: 'num', min: 0, max: 40, paso: 0.5 }, F.ancho('Ancho del espigón (m)', 2, 60)],
     armar(p) { const g = new THREE.Group(); if (!p.pts || p.pts.length < 2) return g; const os = oscuro(), t = p.tipo || 'muelle', n0 = Math.max(0.3, +p.nivel || 1.5), s = p.agua === 'der' ? 1 : -1, R = azar(semilla(p));
       const HO = mat(os ? '#4a4f53' : '#b9bcb6', { roughness: 0.9 }), CO = mat(os ? '#5a5f63' : '#d6d7d1', { roughness: 0.85 }), NE = mat('#1b1d1f', { roughness: 0.9 }), BI = mat(os ? '#4a4030' : '#2b2f33', { roughness: 0.5, metalness: 0.5 }), RI = mat('#6d7277', { roughness: 0.35, metalness: 0.7 }), AMA = mat(os ? '#6b5a20' : '#e2b72c', { roughness: 0.7 });
-      const rocas = [], piedras = ['#8e8c86', '#7b7974', '#9e9b94', '#6f6d68', '#a6a39b'];
-      const talud = (G, len, lado, y0, ancho, z0 = 0) => { for (let x = 0.6; x < len; x += 1.4) for (let k = 0; k * 1.4 < ancho; k++) { const z = z0 + lado * (k * 1.4 + 0.5 + R() * 0.4), y = y0 - (k * 1.4) * (n0 + 0.6) / ancho, sc = 1.3 + R() * 1.1; rocas.push([G, x + R() * 0.6 - 0.3, y, z, R() * 6, sc, sc * (0.6 + R() * 0.3), sc * (0.8 + R() * 0.4), piedras[(R() * piedras.length) | 0]]); } };
-      for (let i = 0; i < p.pts.length - 1; i++) { const a = p.pts[i], b = p.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz); if (len < 0.2) continue;
-        const G = new THREE.Group(); G.position.set(a[0], 0, a[1]); G.rotation.y = Math.atan2(-dz, dx); g.add(G);
-        if (t === 'espigon') { const w = Math.max(2, +p.ancho || 8); caja(G, 0, -n0 - 0.5, -w / 2, len, 0.6, w / 2, CO); const an = Math.max(3, n0 * 2.2); talud(G, len, 1, 0.3, an, w / 2); talud(G, len, -1, 0.3, an, -w / 2); continue; }
-        if (t === 'escollera') { talud(G, len, s, 0, Math.max(3, n0 * 2.2)); continue; }
-        caja(G, 0, -n0 - 0.8, Math.min(0, -s * 1.2), len, 0.03, Math.max(0, -s * 1.2), HO);
-        if (t === 'pared') continue;
-        caja(G, 0, 0.02, Math.min(0, -s * 1.5), len, 0.2, Math.max(0, -s * 1.5), CO); caja(G, 0, 0.2, Math.min(-s * 1.65, -s * 1.8), len, 0.215, Math.max(-s * 1.65, -s * 1.8), AMA, false);
-        const fd = +p.defensas || 0, bt = +p.bitas || 0;
-        if (fd > 0) for (let x = fd / 2; x < len - 0.6; x += fd) caja(G, x - 0.9, -n0 - 0.2, Math.min(0, s * 0.85), x + 0.9, -0.05, Math.max(0, s * 0.85), NE);
-        if (bt > 0) for (let x = bt / 2; x < len - 0.4; x += bt) { cil(G, x, 0.2, -s * 0.85, 0.3, 0.55, BI); cil(G, x, 0.72, -s * 0.85, 0.42, 0.12, BI); }
-        const tr = +p.rieles || 0; if (tr > 0) for (const zz of [-s * 2.5, -s * (2.5 + tr)]) caja(G, 0, 0.02, zz - 0.09, len, 0.1, zz + 0.09, RI, false); }
-      if (rocas.length) { const by = new Map(); for (const r of rocas) { if (!by.has(r[0])) by.set(r[0], []); by.get(r[0]).push([r[1], r[2], r[3], r[4], r[5], r[6], r[7], os ? mix(r[8], '#000', 0.5) : r[8]]); } for (const [G, its] of by) lote(G, BOLA2, mat('#ffffff', { roughness: 0.95 }), its); }
+      // todo va en pocos dibujos (uno por material), aunque la orilla tenga cientos de tramos
+      const B = { ho: [], co: [], am: [], ne: [], ri: [], bi: [], ro: [] }, piedras = ['#8e8c86', '#7b7974', '#9e9b94', '#6f6d68', '#a6a39b'], w = Math.max(2, +p.ancho || 8), an = Math.max(3, n0 * 2.2), fd = +p.defensas || 0, bt = +p.bitas || 0, tr = +p.rieles || 0; let ad = fd / 2, ab = bt / 2;
+      for (let i = 0; i < p.pts.length - 1; i++) { const a = p.pts[i], b = p.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz); if (len < 0.05) continue; const ux = dx / len, uz = dz / len, nx = -uz, nz = ux, gi = Math.atan2(-dz, dx);
+        // una caja en el marco del tramo: u a lo largo, v de costado (el agua queda hacia s·v) y la altura
+        const caja2 = (L, u0, u1, y0, y1, v0, v1) => { const um = (u0 + u1) / 2, vm = (v0 + v1) / 2; L.push([a[0] + ux * um + nx * vm, (y0 + y1) / 2, a[1] + uz * um + nz * vm, gi, Math.max(0.01, u1 - u0), Math.max(0.01, y1 - y0), Math.max(0.01, Math.abs(v1 - v0))]); };
+        const talud = (lado, y0, ancho, v00) => { for (let u = 0.6; u < len; u += 1.4) for (let k = 0; k * 1.4 < ancho; k++) { const v = v00 + lado * (k * 1.4 + 0.5 + R() * 0.4), uu = u + R() * 0.6 - 0.3, sc = 1.3 + R() * 1.1, c = piedras[(R() * piedras.length) | 0]; B.ro.push([a[0] + ux * uu + nx * v, y0 - (k * 1.4) * (n0 + 0.6) / ancho, a[1] + uz * uu + nz * v, R() * 6, sc, sc * (0.6 + R() * 0.3), sc * (0.8 + R() * 0.4), os ? mix(c, '#000', 0.5) : c]); } };
+        if (t === 'espigon') { caja2(B.co, -w * 0.25, len + w * 0.25, -n0 - 0.5, 0.6, -w / 2, w / 2); talud(1, 0.3, an, w / 2); talud(-1, 0.3, an, -w / 2); continue; }
+        if (t === 'escollera') { talud(s, 0, an, 0); continue; }
+        caja2(B.ho, -0.3, len + 0.3, -n0 - 0.8, 0.03, -s * 1.2, 0); if (t === 'pared') continue;
+        caja2(B.co, -0.3, len + 0.3, 0.02, 0.2, -s * 1.5, 0); caja2(B.am, 0, len, 0.2, 0.215, -s * 1.8, -s * 1.65);
+        if (fd > 0) { for (; ad < len; ad += fd) caja2(B.ne, ad - 0.9, ad + 0.9, -n0 - 0.2, -0.05, 0, s * 0.85); ad -= len; }
+        if (bt > 0) { for (; ab < len; ab += bt) { const x = a[0] + ux * ab - nx * s * 0.85, z = a[1] + uz * ab - nz * s * 0.85; B.bi.push([x, 0.475, z, 0, 0.6, 0.55, 0.6], [x, 0.78, z, 0, 0.84, 0.12, 0.84]); } ab -= len; }
+        if (tr > 0) for (const v of [-s * 2.5, -s * (2.5 + tr)]) caja2(B.ri, 0, len, 0.02, 0.1, v - 0.09, v + 0.09); }
+      lote(g, CAJA, HO, B.ho); lote(g, CAJA, CO, B.co); lote(g, CAJA, AMA, B.am, false); lote(g, CAJA, NE, B.ne); lote(g, CAJA, RI, B.ri, false); lote(g, CIL, BI, B.bi); if (B.ro.length) lote(g, BOLA2, mat('#ffffff', { roughness: 0.95 }), B.ro);
       return g; } },
+  ciudad: { n: 'Ciudad de contexto', g: 'Terreno', forma: 'punto', capa: 'base', fondo: true, sinOferta: true, def: {}, campos: [F.nombre],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), pal = p.pal || ['#d9d4c8'], tinte = os ? '#59606a' : '#ffffff', DS = THREE.DoubleSide;
+      const pon = (geo, m, da) => { if (!geo) return null; const k = new THREE.Mesh(geo, m); k.castShadow = !!da; k.receiveShadow = true; k.userData.noChoca = true; g.add(k); return k; };
+      const liso = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: 0.92, side: DS, ...o });
+      if (p.manz && p.manz.length) { const G = prismas(p.manz.map(a => ({ P: anilloDm(a), y0: 0, y1: 0.15, color: '#b3b1aa', techo: '#c9c7c0' }))); pon(G.tapas, liso({ polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -8 })); pon(G.paredes, liso()); }
+      if (p.verde && p.verde.length) { const G = prismas(p.verde.map(a => ({ P: anilloDm(a), y0: 0.15, y1: 0.2, color: '#86a672', techo: '#86a672' }))); pon(G.tapas, liso({ polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -14 })); }
+      if (p.edif && p.edif.length) { const G = prismas(p.edif.map(a => ({ P: anilloDm(a, 3), y0: 0.1, y1: a[0] / 10, color: pal[a[1]] || pal[0], techo: pal[a[2]] || pal[0] }))); pon(G.tapas, liso(), true); pon(G.paredes, liso({ map: texVentanas('v'), roughness: 0.86 }), true); }
+      if (p.vias && p.vias.length) for (const d of [-0.7175, 0.7175]) pon(franjas(p.vias.map(a => lineaDm(a)), 0.08, 0.09, d), mat(os ? '#5b6166' : '#62676c', { roughness: 0.4, metalness: 0.7, side: DS, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -30 }));
+      if (p.ejes && p.ejes.length) pon(franjas(p.ejes.map(a => lineaDm(a)), 0.16, 0.07, 0, [3, 6]), mat(os ? '#8d949b' : '#f1f1ee', { roughness: 0.8, side: DS, polygonOffset: true, polygonOffsetFactor: -7, polygonOffsetUnits: -26 }));
+      if (p.muros && p.muros.length) pon(murosDm(p.muros, '#b4b7b2'), liso(), true);
+      if (p.arb && p.arb.length) { const R = azar(7), co = [], tr = []; for (let i = 0; i + 1 < p.arb.length; i += 2) { const x = p.arb[i] / 10, z = p.arb[i + 1] / 10, s = 3.6 + R() * 2.4; co.push([x, 2.2 + s * 0.45, z, R() * 6, s, s * 0.85, s, VERDES[(R() * VERDES.length) | 0]]); tr.push([x, 1.2, z, 0, 0.32, 2.4, 0.32]); }
+        const a = lote(g, BOLA2, mat('#ffffff', { roughness: 0.9 }), co), b = lote(g, CIL, mat('#6b5a48', { roughness: 0.9 }), tr, false); if (a) a.userData.noChoca = true; if (b) b.userData.noChoca = true; }
+      return g; } },
+  volumen: { n: 'Edificio por contorno', g: 'Construcción', forma: 'area', capa: 'base', etiqueta: p => p.nombre, def: { alto: 9, color: '#e4e8eb', techo: '#c9ced2', fachada: 'lisa' },
+    campos: [F.nombre, F.alto('Alto (m)', 2, 150, 0.5), F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'fachada', n: 'Fachada', t: 'sel', ops: [['lisa', 'Lisa'], ['ventanas', 'Con ventanas'], ['chapa', 'De chapa']] }],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), P = (p.pts || []).map(q => [q[0], q[1]]); if (P.length < 3) return g; const h = Math.max(1, +p.alto || 9), DS = THREE.DoubleSide, tinte = os ? '#59606a' : '#ffffff', ch = p.fachada === 'chapa';
+      const G = prismas([{ P, y0: 0, y1: h, color: p.color || '#e4e8eb', techo: p.techo || p.color || '#c9ced2' }]);
+      const a = new THREE.Mesh(G.tapas, new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: 0.82, side: DS })), b = new THREE.Mesh(G.paredes, new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: ch ? 0.6 : 0.88, metalness: ch ? 0.25 : 0, side: DS, map: p.fachada === 'ventanas' ? texVentanas('v') : ch ? texVentanas('c') : null }));
+      g.add(sombra(a), sombra(b)); a.userData.noChoca = b.userData.noChoca = true;
+      g.userData.segs = P.map((q, i) => { const r = P[(i + 1) % P.length]; return [q[0], q[1], r[0], r[1], 0.15, 0, h]; }); return g; } },
   vehiculo: { n: 'Vehículo', g: 'Personas y vehículos', forma: 'punto', capa: 'logistica', def: { modelo: 'suv', color: '' },
     campos: [F.nombre, { k: 'modelo', n: 'Modelo', t: 'sel', ops: [['suv', 'SUV'], ['eq7', 'Chery eQ7'], ['toro', 'Pickup (Fiat Toro)'], ['fiorino', 'Furgón chico (Fiorino)'], ['bipper', 'Utilitario (Bipper)']] }, { k: 'color', n: 'Color', t: 'color' }, F.r],
     armar(p, ctx) { const g = new THREE.Group(), c = mat(p.color || '#c9ced2', { roughness: 0.35, metalness: 0.4 }); caja(g, -2.2, 0.35, -0.9, 2.2, 1.1, 0.9, c); caja(g, -1.2, 1.1, -0.82, 1.0, 1.6, 0.82, mat('#2c3e4f', { roughness: 0.1, metalness: 0.6 }));
@@ -2081,5 +2141,5 @@ export function rampasDe(p, AN, L) { const R = (p.rampaEn || []).slice(); if (p.
     if (p.rampa === 'der' || p.rampa === 'ambas') { const u = Math.max(...us) + 5; R.push([u, Math.max(3, Math.min(lg, L - u - 2.4)), 1]); }
     if (p.rampa === 'izq' || p.rampa === 'ambas') { const u = Math.min(...us) - 5; R.push([u, Math.max(3, Math.min(lg, u - 2.4)), -1]); } }
   return R; }
-export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, bovedas: q.alto + (q.flecha || 2), modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (+q.u > 0 ? q.u * U_RACK + 0.17 : (q.alto || 2)), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2, grua: (q.alto || 40) + (q.tipo === 'movil' ? 12 : 20), buque: 12, muelle: 0.8 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
+export function altoDe(p) { const q = { ...(TIPOS[p.t] || {}).def, ...p }; return { galpon: q.alto, bovedas: q.alto + (q.flecha || 2), modulo: (q.pisos || 1) * 3.1, edificio: (q.pisos || 1) * (q.altoPiso || 3.6) + 0.8, columna: q.alto, fila: (q.alto || 1) * 2.59, alero: q.alto, maquina: 6, tanque: q.alto, cartel: (q.altura || 0) + (q.alto || 0), recinto: 0.2, pared: q.alto - 1.4, rack: (q.clase === 'pared' ? (q.base ?? 1.5) : 0) + (+q.u > 0 ? q.u * U_RACK + 0.17 : (q.alto || 2)), gabinete: (q.base ?? 1) + (q.alto || 0.8), plano: 0.1, acceso: (ACC[q.clase] || ACC.puerta).h + 0.5, porton: q.alto + 0.3, pilar: q.alto + 0.1, caseta: q.alto + 0.2, grua: (q.alto || 40) + (q.tipo === 'movil' ? 12 : q.tipo === 'rtg' ? 3 : 20), volumen: q.alto, buque: 12, muelle: 0.8 }[p.t] ?? (q.y != null ? q.y + 0.4 : 2); }
 export { largoDe };
