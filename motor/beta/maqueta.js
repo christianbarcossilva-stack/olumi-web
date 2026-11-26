@@ -14,7 +14,7 @@
 //   host.alTocar(pieza, [x, z])  mirando (sin editar ni recorrer), un toque: si devuelve true, la app se queda con él y la maqueta no abre la ficha
 //   host.paredes     vista de paredes al abrir: 'alta' (si no dice), 'corte' (cortadas para ver adentro, como una maqueta de arquitecto) o 'baja'
 import { THREE, crearMotor } from './nucleo.js?v=20';
-import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe, uRack, U_RACK } from './piezas.js?v=84';
+import { TIPOS, GRUPOS, armarPieza, centro, altoDe, matSuelo, matAgua, andenesDe, nivelesDe, rampasDe, ABERTURAS, areaSig, ACCESOS, claseAcceso, colorAcceso, AMB, cotaEn, cajones, ALTO_PLANTA, altoPlanta, nivelDe, NOM_PLANTA, postesDe, uRack, U_RACK } from './piezas.js?v=85';
 import { ve, dominio, DOMINIOS } from '../plano.js?v=3';
 import { svg } from './iconos.js?v=5';
 import { construir } from './construir.js?v=63';
@@ -396,7 +396,7 @@ export async function abrirMaqueta(o) {
   // catálogo: cada tipo de pieza (y sus variantes: cámara domo, rack de pared…) con su dibujo, lo más usado arriba, y las aberturas, que van sobre una pared
   const USO = (() => { try { return JSON.parse(localStorage.getItem('motor.usados')) || {}; } catch (e) { return {}; } })(); let CATO = new Map();
   const usar = k => { USO[k] = (USO[k] || 0) + 1; try { localStorage.setItem('motor.usados', JSON.stringify(USO)); } catch (e) {} };
-  function ofertas() { const out = []; for (const [k, T] of Object.entries(TIPOS)) { if ((SIN[app] || []).includes(T.g)) continue; if (T.variantes) T.variantes.forEach((v, i) => out.push({ key: k + ':' + i, t: k, n: v.n, g: v.g || T.g, o: v.o, T })); else out.push({ key: k, t: k, n: T.n, g: T.g, o: {}, T }); }
+  function ofertas() { const out = []; for (const [k, T] of Object.entries(TIPOS)) { if (T.sinOferta || (SIN[app] || []).includes(T.g)) continue; if (T.variantes) T.variantes.forEach((v, i) => out.push({ key: k + ':' + i, t: k, n: v.n, g: v.g || T.g, o: v.o, T })); else out.push({ key: k, t: k, n: T.n, g: T.g, o: {}, T }); }
     for (const [k, a] of Object.entries(ABERTURAS)) out.push({ key: 'ab:' + k, ab: k, n: a.n, g: 'Puertas y ventanas' }); out.push({ key: 'zona', zona: true, n: 'Zona (nombra un sector)', g: 'Construcción' });
     if (TIPOS.recinto) for (const [pies, L] of [[20, 6.06], [40, 12.19]]) out.push({ key: 'cont:' + pies, t: 'recinto', n: `Contenedor oficina ${pies} pies`, g: 'Construcción', T: TIPOS.recinto,
       o: { molde: 1, estilo: 'contenedor', nombre: `Contenedor oficina ${pies}'`, tipo: 'chapa', alto: 2.59, grosor: 0.06, color: '#e6eaed', piso: 'goma', pts: [[-L / 2, -1.22], [L / 2, -1.22], [L / 2, 1.22], [-L / 2, 1.22]] } });
