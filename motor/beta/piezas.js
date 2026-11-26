@@ -751,7 +751,7 @@ function caseta(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2
     for (let zz = -0.36; zz <= 0.37; zz += 0.06) caja(g, lado > 0 ? x + 0.26 : x - 0.265, 1.9, zz - 0.008, lado > 0 ? x + 0.265 : x - 0.26, 2.12, zz + 0.008, mat('#9aa1a7'), false); }
   return g; }
 // dónde quedan los postes de un cerco, tal como se arma (con sus cortes): el editor pone una manija en cada uno
-export function postesDe(p, ctx) { const q = { ...TIPOS.cerco.def, ...p }; if (!q.pts || q.pts.length < 2) return []; const paso = { premoldeado: 2, baranda: 2.4, guardarrail: 4, vidrio: 1.5 }[q.tipo] || 3, P0 = q.cerrado ? [...q.pts, q.pts[0]] : q.pts;
+export function postesDe(p, ctx) { const q = { ...TIPOS.cerco.def, ...p }; if (!q.pts || q.pts.length < 2) return []; const paso = { premoldeado: 2, baranda: 2.4, guardarrail: 4, vidrio: 1.5, reja: 2.5 }[q.tipo] || 3, P0 = q.cerrado ? [...q.pts, q.pts[0]] : q.pts;
   return cortarLinea(P0, cortesCerco(ctx)).flatMap(P => P.length > 1 ? aLoLargo(P, paso).map(([x, z]) => [x, z]) : []); }
 // un tramo de cerco (entre dos cortes)
 function cercoTramo(g, p, P, h, gr) {
@@ -762,6 +762,13 @@ function cercoTramo(g, p, P, h, gr) {
         const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(ix); geo.computeVertexNormals();
         g.add(new THREE.Mesh(geo, mat(os ? '#7f9aa8' : '#bcd3df', { transparent: true, opacity: os ? 0.35 : 0.28, roughness: 0.05, metalness: 0.15, side: THREE.DoubleSide, depthWrite: false })));
         g.add(sombra(new THREE.Mesh(cintaVertical(P, 0.05, h), mat(os ? '#5d646b' : '#8f979d', { roughness: 0.4, metalness: 0.55, side: THREE.DoubleSide })))); return; }
+      // reja: murete bajo de hormigón o bloque y barrotes de hierro hasta arriba, con parantes cada 2,5 m y dos planchuelas (el cerco de frente de una planta sobre la vereda)
+      if (p.tipo === 'reja') { const os = oscuro(), hm = Math.min(h - 0.3, Math.max(0, p.murete ?? 0.5)), me = mat(p.color ? (os ? mix(p.color, '#000', 0.4) : p.color) : (os ? '#6a7076' : '#b9bec2'), { roughness: 0.45, metalness: 0.55 }), mu = mat(os ? '#55595d' : '#c9c8c2', { roughness: 0.95 });
+        for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.05) continue; const d = Math.atan2(b[0] - a[0], b[1] - a[1]), cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2;
+          if (hm > 0.02) { const k = new THREE.Mesh(CAJA, mu); k.scale.set(0.2, hm, L); k.position.set(cx, hm / 2, cz); k.rotation.y = d; g.add(sombra(k)); }
+          for (const yy of [hm + 0.12, h - 0.1]) { const k = new THREE.Mesh(CAJA, me); k.scale.set(0.04, 0.05, L); k.position.set(cx, yy, cz); k.rotation.y = d; g.add(k); } }
+        lote(g, CAJA, me, aLoLargo(P, 0.14).map(([x, z, d]) => [x, hm + (h - hm) / 2, z, d, 0.022, h - hm, 0.022]), false);
+        lote(g, CAJA, me, aLoLargo(P, 2.5).map(([x, z, d]) => [x, h / 2 + 0.03, z, d, 0.07, h + 0.06, 0.07])); return; }
       if (p.tipo === 'muro') { for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = new THREE.Mesh(CAJA, mat(oscuro() ? '#5b6166' : '#d6d8da')); k.scale.set(0.2, h, L); k.position.set((a[0] + b[0]) / 2, h / 2, (a[1] + b[1]) / 2); k.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]); g.add(sombra(k)); } return; }
       // placas premoldeadas: postes de hormigón cada 2 m y placas de 50 cm encastradas entre ellos, con la junta de cada placa
       if (p.tipo === 'premoldeado') { const os = oscuro(), ph = mat(os ? '#676c70' : '#c3c4bf', { roughness: 0.92 }), pl = new THREE.MeshStandardMaterial({ map: placas(), color: os ? '#6f7478' : '#ffffff', roughness: 0.95, side: THREE.DoubleSide }), v = [], uv = [], ix = [];
@@ -1141,9 +1148,9 @@ export const TIPOS = {
       if (p.linea !== 'no' && p.tipo !== 'tierra') { if (p.linea === 'continua') { for (const r of libres(p.pts)) g.add(new THREE.Mesh(cinta(r, 0.15, y + 0.005), blanca)); } else if (p.linea === 'corta') { const mc = oscuro() ? mat('#8d969d', { roughness: 0.6, ...lo }) : blanca; for (const [x, z, d] of aLoLargo(p.pts, 3)) { if (tapada(x, z)) continue; const k = new THREE.Mesh(CAJA, mc); k.scale.set(0.1, 0.01, 1.5); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } } else for (const [x, z, d] of aLoLargo(p.pts, 9)) { if (tapada(x, z)) continue; const k = new THREE.Mesh(CAJA, blanca); k.scale.set(0.15, 0.01, 4.2); k.position.set(x, y + 0.005, z); k.rotation.y = d; g.add(k); } }
       if (p.tipo === 'ruta') for (const s of [-1, 1]) for (const r of libres(offset(p.pts, s * (p.ancho / 2 - 0.6)))) g.add(new THREE.Mesh(cinta(r, 0.18, y + 0.005), blanca)); return g; } },
   vereda: { n: 'Vereda', g: 'Terreno', forma: 'linea', capa: 'base', def: { ancho: 1.8 },
-    campos: [F.nombre, F.ancho('Ancho (m)', 0.6, 12)],
+    campos: [F.nombre, F.ancho('Ancho (m)', 0.6, 12), F.color('Color de la baldosa (vacío = hormigón)')],
     armar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho, t = texVereda().clone(); t.needsUpdate = true; t.repeat.set(w / 1.6, 1 / 1.6);
-      const l = [conUV(cinta(p.pts, w, 0.15)), conUV(cintaVertical(offset(p.pts, w / 2), 0.15, 0.075)), conUV(cintaVertical(offset(p.pts, -w / 2), 0.15, 0.075))], k = new THREE.Mesh(l[0], new THREE.MeshStandardMaterial({ map: t, color: os ? '#6a7078' : '#ffffff', roughness: 0.93 })); k.receiveShadow = true; k.userData.noChoca = true; g.add(k);
+      const l = [conUV(cinta(p.pts, w, 0.15)), conUV(cintaVertical(offset(p.pts, w / 2), 0.15, 0.075)), conUV(cintaVertical(offset(p.pts, -w / 2), 0.15, 0.075))], k = new THREE.Mesh(l[0], new THREE.MeshStandardMaterial({ map: t, color: p.color ? (os ? mix(p.color, '#000', 0.5) : p.color) : (os ? '#6a7078' : '#ffffff'), roughness: 0.93 })); k.receiveShadow = true; k.userData.noChoca = true; g.add(k);
       const b = new THREE.Mesh(mergeGeometries([l[1], l[2]]), mat(os ? '#5b6066' : '#cfccc4', { roughness: 0.9, side: THREE.DoubleSide })); b.receiveShadow = true; b.userData.noChoca = true; g.add(b); return g; } },
   balanza: { n: 'Balanza de camiones', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre, def: { largo: 22, ancho: 3.4, guias: 'baranda', piso: 'acero' },
     campos: [F.nombre, { k: 'largo', n: 'Largo (m)', t: 'num', min: 6, max: 40, paso: 0.5 }, F.ancho('Ancho (m)', 2.5, 6), { k: 'piso', n: 'Plataforma', t: 'sel', ops: [['acero', 'Chapa de acero'], ['hormigon', 'Hormigón']] }, { k: 'guias', n: 'Guías a los costados', t: 'sel', ops: [['baranda', 'Baranda amarilla'], ['cordon', 'Cordones de hormigón (alto del lado de la calle)']] }, F.r],
@@ -1260,7 +1267,7 @@ export const TIPOS = {
       // la isla va por encima de las calles que cruzan por el centro (más alta y dibujada adelante)
       if (p.isla > 0) { const ad = { polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -12 }, i = new THREE.Mesh(new THREE.CylinderGeometry(p.isla, p.isla + 0.2, 0.35, 48), matSuelo('pasto', ad, 0.5)); i.position.y = 0.175; g.add(sombra(i)); const cir = r => { const l = []; for (let k = 0; k < 48; k++) l.push([r * Math.cos(k / 48 * 6.2832), -r * Math.sin(k / 48 * 6.2832)]); return l; }; try { bordeIsla(g, cir(p.isla + 0.62), cir(p.isla + 0.02), 0.058, 0.33, p.flechas === 'no' ? '' : (p.flechas || 'anti'), ad); } catch (e) { console.warn('borde', e); } g.userData.segs = []; } return g; } },
   cerco: { n: 'Cerco', g: 'Construcción', forma: 'linea', capa: 'base', def: { tipo: 'hormigon', alto: 2.4, cerrado: false },
-    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)'], ['vidrio', 'Paneles de vidrio']] }, F.alto('Alto (m)', 0.5, 6), { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
+    campos: [F.nombre, { k: 'tipo', n: 'Tipo', t: 'sel', ops: [['hormigon', 'Postes de hormigón y malla'], ['malla', 'Malla metálica'], ['muro', 'Muro'], ['premoldeado', 'Placas de hormigón premoldeado'], ['guardarrail', 'Guardarraíl'], ['baranda', 'Baranda de caño'], ['jersey', 'Bloques de hormigón (New Jersey)'], ['vidrio', 'Paneles de vidrio'], ['reja', 'Reja de barrotes sobre murete']] }, F.alto('Alto (m)', 0.5, 6), { k: 'murete', n: 'Murete de abajo (m, reja)', t: 'num', min: 0, max: 3, paso: 0.1 }, { k: 'color', n: 'Color (baranda o bloques)', t: 'color' }, { k: 'cerrado', n: 'Cerrado (vuelve al inicio)', t: 'bool' }],
     // lo que se pone sobre la línea del cerco (portón, pilar, caseta, puerta con control) le abre el paso: el cerco se corta ahí solo
     armar(p, ctx) { const g = new THREE.Group(), gr = p.tipo === 'guardarrail', h = gr ? 0.8 : p.alto, P0 = p.cerrado ? [...p.pts, p.pts[0]] : p.pts;
       for (const P of cortarLinea(P0, cortesCerco(ctx))) if (P.length > 1) cercoTramo(g, p, P, h, gr); return g; } },
@@ -1293,15 +1300,17 @@ export const TIPOS = {
       return g; } },
   // galpón de techo curvo: varias bóvedas de chapa una al lado de la otra, sobre paredes bajas, con sus tímpanos en las puntas y canaletas entre bóvedas
   bovedas: { n: 'Galpón de techo curvo (bóvedas)', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre, def: { ancho: 25, fondo: 30, alto: 3.5, naves: 6, flecha: 2, color: '#e9ebec', techo: '#d9dcdc' },
-    campos: [F.nombre, F.ancho('Largo (m)', 3, 200), F.fondo('Fondo (m)', 3, 200), F.alto('Alto de las paredes (m)', 2, 15, 0.5), { k: 'naves', n: 'Cantidad de bóvedas', t: 'num', min: 1, max: 30, paso: 1 }, { k: 'flecha', n: 'Alto de cada bóveda (m)', t: 'num', min: 0.5, max: 10, paso: 0.5 }, F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, F.r],
+    campos: [F.nombre, F.ancho('Largo (m)', 3, 200), F.fondo('Fondo (m)', 3, 200), F.alto('Alto de las paredes (m)', 2, 15, 0.5), { k: 'naves', n: 'Cantidad de bóvedas', t: 'num', min: 1, max: 30, paso: 1 }, { k: 'flecha', n: 'Alto de cada bóveda (m)', t: 'num', min: 0.5, max: 10, paso: 0.5 }, F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'abierto', n: 'Techado abierto (columnas, sin paredes)', t: 'bool' }, { k: 'traslucido', n: 'Techo translúcido', t: 'bool' }, F.r],
     armar(p) { const g = new THREE.Group(), os = oscuro(), w = p.ancho / 2, d = p.fondo / 2, H = p.alto, n = Math.max(1, p.naves | 0), b = p.fondo / n, f = Math.max(0.3, Math.min(+p.flecha || b / 2, 10));
       const mp = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.85, side: THREE.DoubleSide }), mt = mat(os ? mix(p.techo, '#000', 0.45) : p.techo, { roughness: 0.55, metalness: 0.3, side: THREE.DoubleSide });
-      caja(g, -w, 0, -d, w, H, d, mp);
+      const mtr = p.traslucido ? mat(os ? '#5d6468' : '#f4f6f4', { roughness: 0.35, transparent: true, opacity: os ? 0.55 : 0.82, side: THREE.DoubleSide }) : null, col = mat(os ? mix(p.color, '#000', 0.4) : p.color, { roughness: 0.55, metalness: 0.4 });
+      if (p.abierto) { for (let i = 0; i <= n; i++) for (const s of [-1, 1]) caja(g, s * (w - 0.15) - 0.12, 0, -d + b * i - 0.12, s * (w - 0.15) + 0.12, H, -d + b * i + 0.12, col); for (const s of [-1, 1]) caja(g, s * (w - 0.15) - 0.1, H - 0.3, -d, s * (w - 0.15) + 0.1, H, d, col); }
+      else caja(g, -w, 0, -d, w, H, d, mp);
       const media = new THREE.CylinderGeometry(1, 1, p.ancho, 28, 1, true, 0, Math.PI); media.rotateZ(Math.PI / 2);
       const fr = new THREE.Shape(); for (let i = 0; i <= 24; i++) { const t = Math.PI * i / 24, u = Math.cos(t) * b / 2, v = Math.sin(t) * f; if (i) fr.lineTo(u, v); else fr.moveTo(u, v); }
       const tim = new THREE.ShapeGeometry(fr);
-      for (let i = 0; i < n; i++) { const zc = -d + b * (i + 0.5), m = new THREE.Mesh(media, mt); m.scale.set(1, f, b / 2 - 0.04); m.position.set(0, H, zc); g.add(sombra(m));
-        for (const s of [-1, 1]) { const t = new THREE.Mesh(tim, mp); t.rotation.y = Math.PI / 2; t.position.set(s * w, H, zc); g.add(t); }
+      for (let i = 0; i < n; i++) { const zc = -d + b * (i + 0.5), m = new THREE.Mesh(media, mtr || mt); m.scale.set(1, f, b / 2 - 0.04); m.position.set(0, H, zc); g.add(sombra(m));
+        if (!p.abierto) for (const s of [-1, 1]) { const t = new THREE.Mesh(tim, mp); t.rotation.y = Math.PI / 2; t.position.set(s * w, H, zc); g.add(t); }
         if (i) caja(g, -w - 0.1, H - 0.05, zc - b / 2 - 0.12, w + 0.1, H + 0.12, zc - b / 2 + 0.12, mat(os ? '#5b6066' : '#9aa1a7', { metalness: 0.5, roughness: 0.4 }), false);
         for (let x = -w + 2.5; x < w - 1; x += 2.5) { const r = new THREE.Mesh(media, mat(os ? '#4c5157' : '#c2c7ca', { roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide })); r.scale.set(0.06 / p.ancho, f + 0.02, b / 2 - 0.02); r.position.set(x, H, zc); g.add(r); } }
       return g; } },
