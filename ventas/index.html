@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ventas · Unity Tech</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0C0F">
+<link rel="icon" href="/kliva/icono.svg">
+<style>
+:root{color-scheme:dark;--bg:#0B0C0F;--fg:#F3F4F6;--muted:#A9AFBB;--line:rgb(255 255 255/.09);--card:rgb(30 31 37/.72);--field:rgb(255 255 255/.06);--acc:#9D7CFF;--acc-ink:#C9B8FF;--pass:#55D69B;--warn:#F0BE62;--deny:#FF8A8A;--mo:cubic-bezier(.22,1,.36,1);--shadow:inset 0 1px 0 rgb(255 255 255/.08),0 24px 48px -24px rgb(0 0 0/.8)}
+@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#ECEEF2;--fg:#15171B;--muted:#4A4F5B;--line:rgb(16 20 28/.1);--card:rgb(255 255 255/.82);--field:rgb(16 20 28/.05);--acc-ink:#5B3FC2;--pass:#08663A;--warn:#7A4500;--deny:#B42318;--shadow:inset 0 1px 0 #fff,0 20px 40px -24px rgb(20 24 32/.3)}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh;background:radial-gradient(1000px 520px at 85% -12%,color-mix(in srgb,var(--acc) 20%,transparent),transparent 62%),var(--bg);color:var(--fg);font:400 15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:1120px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 64px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+header img{width:36px;height:36px;border-radius:10px}
+header h1{font-size:22px;letter-spacing:-.02em;margin:0;flex:1}
+header h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0}
+.round{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--card);cursor:pointer;transition:transform .25s var(--mo)}
+.round:active{transform:scale(.94)}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;text-align:left;transition:border-color .25s var(--mo)}
+.stat b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+.stat[aria-pressed=true]{border-color:var(--acc)}
+.tools{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.search{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:44px}
+.search input{flex:1;border:0;background:none;outline:none;height:100%}
+select{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--field);padding:0 12px}
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:1fr auto;gap:6px 16px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);cursor:pointer;text-align:left;width:100%;transition:border-color .25s var(--mo)}
+.item:hover{border-color:color-mix(in srgb,var(--acc) 55%,var(--line))}
+.item h2{margin:0;font-size:16px;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:13px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.why{grid-column:1/-1;color:var(--muted);font-size:14px;margin:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--field);border:1px solid var(--line)}
+.state{align-self:start;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent);color:var(--c,var(--muted));white-space:nowrap}
+.dots{display:inline-flex;gap:3px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--acc)}
+.empty{padding:48px 20px;text-align:center;color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:16px}
+.empty svg{width:32px;height:32px;margin-bottom:8px;color:var(--acc)}
+.gate{max-width:380px;margin:12vh auto 0;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow);display:grid;gap:12px}
+.gate h1{margin:0;font-size:22px}.gate p{margin:0;color:var(--muted)}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+input[type=email],input[type=password],textarea,.field{width:100%;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:11px 12px;outline:none}
+textarea{min-height:120px;resize:vertical;line-height:1.5}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+.btn{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--field);padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-weight:600;text-decoration:none;transition:transform .25s var(--mo)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);border-color:transparent;color:#120B26}
+.err{color:var(--deny);font-size:14px;min-height:1em;margin:0}
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.45);opacity:0;pointer-events:none;transition:opacity .3s var(--mo);z-index:10}
+.sheet{position:fixed;top:12px;right:12px;bottom:12px;width:min(480px,calc(100vw - 24px));background:var(--bg);border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 80px -20px rgb(0 0 0/.6);transform:translateX(calc(100% + 24px));transition:transform .42s var(--mo);z-index:11;display:flex;flex-direction:column;overflow:hidden}
+body.open .scrim{opacity:1;pointer-events:auto}body.open .sheet{transform:none}
+.sheet-head{display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.sheet-head h2{margin:0;font-size:18px;flex:1;letter-spacing:-.01em}
+.sheet-body{padding:16px;overflow:auto;display:grid;gap:14px;align-content:start}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.facts dt{color:var(--muted)}.facts dd{margin:0;overflow-wrap:anywhere}
+.facts a{color:var(--acc-ink)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{height:36px;border-radius:999px;border:1px solid var(--line);background:var(--field);padding:0 12px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--acc);border-color:transparent;color:#120B26;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:13px;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translate(-50%,80px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;transition:transform .35s var(--mo);z-index:20}
+.toast.on{transform:translate(-50%,0)}
+@media (max-width:720px){.stats{grid-template-columns:repeat(3,1fr)}.stat b{font-size:20px}.sheet{top:auto;left:0;right:0;bottom:0;width:100%;height:92vh;border-radius:22px 22px 0 0;transform:translateY(100%)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="scrim" data-act="close"></div>
+<aside class="sheet" aria-modal="true" role="dialog" id="sheet"></aside>
+<div class="toast" id="toast" role="status"></div>
+<script src="/olumi/app/config.js"></script>
+<script src="/olumi/app/vendor/supabase.js"></script>
+<script>
+const I = {
+  close: '<path d="M18 6 6 18M6 6l12 12"/>', reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  chat: '<path d="M4 20l1.5-4A8 8 0 1 1 8 18.5z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h9"/>',
+  web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/>',
+};
+const icon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ESTADOS = [['nuevo', 'Nuevos', 'Nuevo', 'var(--acc-ink)'], ['contactado', 'Contactados', 'Contactado', 'var(--warn)'], ['respondio', 'Respondieron', 'Respondió', 'var(--pass)'],
+  ['demo', 'En demo', 'En demo', 'var(--pass)'], ['cliente', 'Clientes', 'Cliente', 'var(--pass)'], ['descartado', 'Descartados', 'Descartado', 'var(--muted)']];
+const TIPO = { instaladora: 'Instaladora', integrador: 'Integrador', distribuidor: 'Distribuidor', empresa: 'Empresa' };
+const CFG = window.OLUMI_CONFIG, sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+const S = { rows: [], estado: 'nuevo', pais: '', q: '', open: null };
+const $ = s => document.querySelector(s);
+
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+
+function gate(msg = '') {
+  $('#app').innerHTML = `<form class="gate" id="login"><img src="/kliva/icono-180.png" alt="" width="44" height="44" style="border-radius:12px">
+    <h1>Ventas</h1><p>Entrá con tu cuenta de Olumi. Este panel lo ven solo los administradores de Unity Tech.</p>
+    <label>Email<input type="email" name="email" autocomplete="username" required></label>
+    <label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label>
+    <p class="err" role="alert">${esc(msg)}</p><button class="btn pri" type="submit">Entrar</button></form>`;
+}
+
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return gate();
+  const { data: admin } = await sb.rpc('is_platform_admin');
+  if (!admin) return gate('Tu cuenta no es de administración de Unity Tech.');
+  await load();
+}
+
+async function load() {
+  const { data, error } = await sb.from('ventas_prospectos').select('*').eq('producto', 'kliva').order('creado', { ascending: false }).limit(2000);
+  if (error) { toast('No se pudo leer el panel'); return; }
+  S.rows = data;
+  draw();
+}
+
+const fold = t => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const dots = n => `<span class="dots" title="Puntaje ${n ?? 0} de 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= (n ?? 0) ? 'on' : ''}"></i>`).join('')}</span>`;
+const when = iso => new Date(iso).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
+
+function draw() {
+  const count = e => S.rows.filter(r => r.estado === e).length;
+  const paises = [...new Set(S.rows.map(r => r.pais))].sort();
+  const q = fold(S.q);
+  const rows = S.rows.filter(r => r.estado === S.estado && (!S.pais || r.pais === S.pais)
+    && (!q || fold([r.empresa, r.ciudad, r.pais, r.dominio, r.email, r.marcas.join(' ')].join(' ')).includes(q)));
+  $('#app').innerHTML = `<header><img src="/kliva/icono-180.png" alt=""><h1>Ventas<small>Kliva · lo que va encontrando el agente</small></h1>
+      <button class="round" data-act="reload" aria-label="Actualizar" title="Actualizar">${icon('reload')}</button></header>
+    <div class="stats">${ESTADOS.map(([id, plural]) => `<button class="stat" data-estado="${id}" aria-pressed="${S.estado === id}"><b>${count(id)}</b><span>${plural}</span></button>`).join('')}</div>
+    <div class="tools"><label class="search">${icon('search')}<input id="q" type="search" placeholder="Buscar empresa, ciudad, marca" value="${esc(S.q)}" aria-label="Buscar"></label>
+      <select id="pais" aria-label="País"><option value="">Todos los países</option>${paises.map(p => `<option ${p === S.pais ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
+    <div class="list">${rows.length ? rows.map(r => {
+      const st = ESTADOS.find(e => e[0] === r.estado);
+      return `<button class="item" data-id="${r.id}"><div><h2>${esc(r.empresa)}</h2>
+          <div class="meta">${esc([r.ciudad, r.pais].filter(Boolean).join(', '))} · ${TIPO[r.tipo] ?? ''} · ${dots(r.puntaje)} · ${when(r.creado)}</div></div>
+        <span class="state" style="--c:${st[3]}">${st[2]}</span>
+        ${r.porque ? `<p class="why">${esc(r.porque)}</p>` : ''}
+        ${r.marcas.length ? `<div class="chips">${r.marcas.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>` : ''}</button>`;
+    }).join('') : `<div class="empty">${icon('radar')}<div>${S.rows.length ? 'Nada en esta lista.' : 'El agente todavía no cargó a nadie. Busca de lunes a viernes, dos veces por día.'}</div></div>`}</div>`;
+}
+
+function sheet(r) {
+  S.open = r.id;
+  const st = r.estado, mail = r.email ? `mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent(r.asunto ?? '')}&body=${encodeURIComponent(r.mensaje ?? '')}` : '';
+  const wa = (r.telefono ?? '').replace(/\D/g, '');
+  $('#sheet').innerHTML = `<div class="sheet-head"><h2>${esc(r.empresa)}</h2><button class="round" data-act="close" aria-label="Cerrar">${icon('close')}</button></div>
+    <div class="sheet-body">
+      <dl class="facts"><dt>Dónde</dt><dd>${esc([r.ciudad, r.pais].filter(Boolean).join(', '))}</dd><dt>Qué es</dt><dd>${TIPO[r.tipo] ?? ''}</dd>
+        ${r.web ? `<dt>Web</dt><dd><a href="${esc(r.web)}" target="_blank" rel="noopener">${esc(r.dominio || r.web)}</a></dd>` : ''}
+        ${r.email ? `<dt>Email</dt><dd>${esc(r.email)}</dd>` : ''}${r.telefono ? `<dt>Teléfono</dt><dd>${esc(r.telefono)}</dd>` : ''}
+        ${r.contacto ? `<dt>Contacto</dt><dd>${esc(r.contacto)}</dd>` : ''}<dt>Puntaje</dt><dd>${dots(r.puntaje)}</dd>
+        ${r.fuente ? `<dt>Visto en</dt><dd><a href="${esc(r.fuente)}" target="_blank" rel="noopener">fuente</a></dd>` : ''}</dl>
+      ${r.porque ? `<p class="note">${esc(r.porque)}</p>` : ''}
+      <div class="seg" role="group" aria-label="Estado">${ESTADOS.map(([id, , uno]) => `<button data-set="${id}" aria-pressed="${st === id}">${uno}</button>`).join('')}</div>
+      <label>Asunto<input class="field" id="asunto" value="${esc(r.asunto)}"></label>
+      <label>Mensaje (lo mandás vos)<textarea id="mensaje">${esc(r.mensaje)}</textarea></label>
+      <div class="row">${mail ? `<a class="btn pri" href="${mail}" data-act="sent">${icon('mail')}Abrir en el correo</a>` : ''}
+        ${wa ? `<a class="btn" href="https://wa.me/${wa}?text=${encodeURIComponent(r.mensaje ?? '')}" target="_blank" rel="noopener" data-act="sent">${icon('chat')}WhatsApp</a>` : ''}
+        <button class="btn" data-act="copy">${icon('copy')}Copiar</button></div>
+      ${r.seguimiento ? `<label>Seguimiento sugerido<textarea id="seguimiento">${esc(r.seguimiento)}</textarea></label>` : ''}
+      <label>Notas<textarea id="notas" placeholder="Qué te dijeron, próximos pasos">${esc(r.notas)}</textarea></label>
+      <p class="note">El agente busca y escribe el borrador; el mensaje sale solo cuando lo mandás vos. Al abrirlo en el correo o en WhatsApp queda como contactado.</p>
+    </div>`;
+  document.body.classList.add('open');
+}
+
+async function save(id, patch, msg) {
+  const r = S.rows.find(x => x.id === id), before = { ...r };
+  Object.assign(r, patch);
+  const { error } = await sb.from('ventas_prospectos').update(patch).eq('id', id);
+  if (error) { Object.assign(r, before); toast('No se pudo guardar'); return false; }
+  if (msg) toast(msg);
+  return true;
+}
+
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'login') return;
+  e.preventDefault();
+  const f = new FormData(e.target), { error } = await sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
+  if (error) return gate('El email o la contraseña no coinciden.');
+  start();
+});
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act],[data-estado],[data-id],[data-set]');
+  if (!t) return;
+  if (t.dataset.estado) { S.estado = t.dataset.estado; return draw(); }
+  if (t.dataset.id && !t.dataset.act) return sheet(S.rows.find(r => r.id === t.dataset.id));
+  const r = S.rows.find(x => x.id === S.open);
+  if (t.dataset.set && r) { if (await save(r.id, { estado: t.dataset.set }, 'Guardado')) { sheet(r); draw(); } return; }
+  switch (t.dataset.act) {
+    case 'close': document.body.classList.remove('open'); S.open = null; return draw();
+    case 'reload': return load();
+    case 'copy': await navigator.clipboard.writeText(`${$('#asunto').value}\n\n${$('#mensaje').value}`).catch(() => {}); return toast('Copiado');
+    case 'sent': if (r && r.estado === 'nuevo') { await save(r.id, { estado: 'contactado' }, 'Quedó como contactado'); sheet(r); } return;
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { S.q = e.target.value; clearTimeout(draw.t); draw.t = setTimeout(() => { draw(); const q = $('#q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 180); }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'pais') { S.pais = e.target.value; draw(); }
+  const field = { asunto: 'asunto', mensaje: 'mensaje', notas: 'notas', seguimiento: 'seguimiento' }[e.target.id];
+  if (field && S.open) save(S.open, { [field]: e.target.value }, 'Guardado');
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('open')) { document.body.classList.remove('open'); S.open = null; draw(); } });
+start();
+</script>
+</body>
+</html>
