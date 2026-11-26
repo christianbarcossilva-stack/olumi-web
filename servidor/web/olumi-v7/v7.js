@@ -89,9 +89,11 @@
   function sobre(){if(!M||!V3||(!pinV&&!tkV))return;var i,s;
     if(pinV)for(i=0;i<pins.length;i++){var p=pins[i];V3.set(+p.dataset.x,+p.dataset.y,+p.dataset.z);s=M.aPantalla(V3);p.style.transform='translate('+(ox+s.x).toFixed(1)+'px,'+(oy+s.y).toFixed(1)+'px)'}
     if(tkV){V3.set(cab.x,cab.y,cab.z);s=M.aPantalla(V3);var X=ox+s.x,Y=oy+s.y,lo=10,hi=bw-10,j,q;for(j=0;j<devs.length;j++){q=devs[j];if(X<q[0]-24&&Y-54<q[2]&&Y-8>q[1])hi=Math.min(hi,q[0]-14)}
-      if(txtR&&X>txtR[0]-70&&Y-54<txtR[2]&&Y-8>txtR[1])lo=txtR[0]+12;   // al borde del texto de la escena: la chapita va del lado libre
+      var edge=0;if(txtR)for(j=0;j<txtR.length;j++){q=txtR[j];if(Y-56<q[2]&&Y-6>q[1]&&q[0]>edge)edge=q[0]}
+      if(edge&&X>edge-90)lo=edge+12;   // al borde de un renglón del texto de la escena: la chapita va del lado libre
       var aba=Y-56<(ancha?84:dia.classList.contains('v')?138:84);if(aba!==tkAba){tkAba=aba;tk3.classList.toggle('aba',aba)}
-      var izq=Math.max(lo,Math.min(hi-tkW,X-tkW/2));tk3.style.transform='translate('+X.toFixed(1)+'px,'+Y.toFixed(1)+'px)';tk3b.style.transform='translateX('+(izq-X).toFixed(1)+'px)'}}
+      var izq=Math.max(10,Math.min(hi-tkW,Math.max(lo,X-tkW/2)));   /* si no hay lugar entre el texto y el teléfono, queda del lado del teléfono sin meterse abajo */
+      tk3.style.transform='translate('+X.toFixed(1)+'px,'+Y.toFixed(1)+'px)';tk3b.style.transform='translateX('+(izq-X).toFixed(1)+'px)'}}
   var ancha=false,asp=1.6,bw=0,tk3b=$('b',tk3),tkW=180,DEV=$$('.ch .dev',cine),devs=[],TXT=chs.map(function(c){return $('.txt',c)}),txtR=null;
   function medir(){ox=f.offsetLeft;oy=f.offsetTop;ancha=innerWidth>860;asp=f.clientWidth/Math.max(1,f.clientHeight);bw=f.clientWidth;medirTk();
     winB=BG.offsetHeight;ZONA=Math.min(.84,winB/Math.max(1,innerHeight)+.14)}   // en pantalla angosta: dónde termina la ventana de la maqueta y a qué altura se lee el título de cada escena
@@ -125,9 +127,14 @@
     var rt=ruta(S);rk+=(rt-rk)*a;if(Math.abs(rt-rk)>.0003)quieto=false;else rk=rt;ponEstado();
     var C=M.C;C.tx=k[0];C.tz=k[1];C.yaw=k[2];C.pitch=k[3];C.d=k[4];try{camino(rk,k[4])}catch(e){}M.dirty=true;
     if(!quieto)raf=requestAnimationFrame(paso)}
-  function correr(c){if(ancha){var sh=-c[5]*2*c[4]*.3443*asp;c[0]+=Math.cos(c[2])*sh;c[1]-=Math.sin(c[2])*sh}else{var cerca=c[4]<34;if(asp<1.3&&cerca)c[4]*=.84;   // en el teléfono, de cerca, un poco más cerca (la ventana de la maqueta es chica)
+  function correr(c){if(ancha){var sh=-(c[5]+Math.max(0,Math.min(.3,(1280-bw)/1280))*.2)*2*c[4]*.3443*asp;c[0]+=Math.cos(c[2])*sh;c[1]-=Math.sin(c[2])*sh}else{var cerca=c[4]<34;if(asp<1.3&&cerca)c[4]*=.84;   // en el teléfono, de cerca, un poco más cerca (la ventana de la maqueta es chica)
       var sv=(cerca?.2:.12)*2*.3443*c[4]/Math.sin(c[3]);c[0]-=Math.sin(c[2])*sv;c[1]-=Math.cos(c[2])*sv}   // y la escena baja: arriba la tapan la barra y el riel
     return c}   // en la compu, la escena va al hueco libre de la pantalla
+  // dónde termina cada renglón de un bloque de texto: [derecha, arriba, abajo] (los títulos son cajas del ancho de la columna; sus renglones, no)
+  function renglones(el){var o=[],k=el.children,i,j,c,q,rg;for(i=0;i<k.length;i++){c=k[i];
+      if(c.classList.contains('stats')||c.classList.contains('cta'))q=[].map.call(c.children,function(x){return x.getBoundingClientRect()});
+      else{rg=D.createRange();rg.selectNodeContents(c);q=rg.getClientRects()}
+      for(j=0;j<q.length;j++)if(q[j].width>1)o.push([q[j].right,q[j].top,q[j].bottom])}return o}
   function mover(){if(M&&vis&&!raf){tAnt=performance.now()-16;raf=requestAnimationFrame(paso)}}
   // dónde manda el scroll: en la compu, el centro de cada escena al centro de la pantalla; en el teléfono (la maqueta es una ventana arriba y la historia pasa
   // por debajo), el título de cada escena en la zona de lectura. Cada escena se enciende cuando lo suyo se ve: en el teléfono, su aparato (o su texto si no tiene)
@@ -140,7 +147,7 @@
     for(i=0;i<N;i++){var q=(ancha?chs[i]:CUE[i]).getBoundingClientRect(),v=ancha?q.top<vh*.62&&q.bottom>vh*.38:q.top<vh*.88&&q.bottom>winB;chs[i].classList.toggle('on',v);if(v)on=i}
     if(!ancha)on=Math.round(S);
     devs=ancha?DEV.map(function(e){var r=e.getBoundingClientRect();return[r.left,r.top,r.bottom]}):[];   // dónde están los teléfonos y tarjetas: la chapita del pedido no se mete debajo
-    if(ancha&&on>=0){var tr=TXT[on].getBoundingClientRect();txtR=[tr.right,tr.top,tr.bottom]}else txtR=null;   // y dónde está el texto de la escena que se lee
+    txtR=ancha&&on>=0?renglones(TXT[on]):null;   // y dónde termina cada renglón del texto de la escena que se lee
     if(on>=0&&on!==act){act=on;alCapitulo(on)}
     top.classList.toggle('sc',scrollY>20);cine.classList.toggle('bajo',S>.05);riel();mover()}
   var ESC='olumi-web-v7';   // la escena de esta página (la de la v6 y la portada de unitytech.uy, «olumi-web», no tiene la entrada de vehículos)

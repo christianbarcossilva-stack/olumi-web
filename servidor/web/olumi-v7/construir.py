@@ -38,6 +38,13 @@ if previa: rep('<footer>', '<p class="vprev gl" aria-hidden="true">Vista previa 
 # el guion
 a = s.index('<script>\n(function(){'); b = s.index('</script>', a) + 9
 js = rd('v7.js').strip(); assert js.endswith('})();')
+# el guion se revisa antes de armar (un «//» en el medio de un renglón ya se comió el resto una vez: no se arma una página rota)
+import shutil, subprocess, tempfile
+if shutil.which('node'):
+    with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as t: t.write(js)
+    r = subprocess.run(['node', '--check', t.name], capture_output=True, text=True); os.unlink(t.name)
+    assert r.returncode == 0, 'v7.js no pasa la revisión:\n' + r.stderr[:600]
+else: print('aviso: no hay node, el guion sale sin revisar')
 s = s[:a] + '<script>\n' + js[:-5] + '  window.__olumiOk=1;\n})();\n</script>' + s[b:]
 tmp = sys.argv[1] + '.tmp'; open(tmp, 'w', encoding='utf-8').write(s); os.replace(tmp, sys.argv[1])   # de una: nadie lee la página a medio escribir
 print('v7 armada en', sys.argv[1], len(s), 'bytes', '(vista previa)' if previa else '')
