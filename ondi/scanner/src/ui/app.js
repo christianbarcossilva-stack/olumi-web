@@ -1,5 +1,6 @@
 // Ondi Scanner: la pantalla. Habla solo con el programa que corre en esta compu.
 'use strict';
+const APP = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ondi || null; // dentro de la app de Mac
 const TOKEN = document.querySelector('meta[name="ondi-ui"]').content;
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,8 +76,9 @@ async function escanear() {
   ST.corre = null; pintar(); }
 
 function csv() { const L = [['IP', 'Nombre', 'Qué es', 'Fabricante', 'MAC', 'Página', 'Servicios', 'Respuesta (ms)']].concat(ST.filas.map(r => [r.ip, r.nombre, TIPN[r.tipo], r.fab, r.mac, r.web, (r.puertos || []).join(' '), r.ms == null ? '' : Math.round(r.ms)]));
-  const b = new Blob(['﻿' + L.map(f => f.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(';')).join('\r\n')], { type: 'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'ondi-scanner-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+  const txt = '﻿' + L.map(f => f.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(';')).join('\r\n'), nom = 'ondi-scanner-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.csv';
+  if (APP) { APP.postMessage({ guardar: nom, texto: txt }); return; } // la app de Mac abre «Guardar como»
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = nom; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 
 $('#form').addEventListener('submit', e => { e.preventDefault(); escanear(); });
 $('#ir2').addEventListener('click', escanear);
@@ -90,7 +92,7 @@ $('#detalle').addEventListener('click', async e => { const b = e.target.closest(
   if (b.hasAttribute('data-cerrar')) { ST.sel = null; pintar(); return; }
   if (b.dataset.web) api('/api/abrir', { que: 'web', ip: r.ip, puerto: +b.dataset.web });
   if (b.hasAttribute('data-rdp')) api('/api/abrir', { que: 'rdp', ip: r.ip });
-  if (b.dataset.copia) { try { await navigator.clipboard.writeText(b.dataset.copia); toast('Copiado: ' + b.dataset.copia); } catch (_) { toast(b.dataset.copia); } }
+  if (b.dataset.copia) { try { if (APP) APP.postMessage({ copiar: b.dataset.copia }); else await navigator.clipboard.writeText(b.dataset.copia); toast('Copiado: ' + b.dataset.copia); } catch (_) { toast(b.dataset.copia); } }
   if (b.dataset.wol) { const x = await api('/api/wol', { mac: b.dataset.wol }); toast(x.ok ? 'Señal de encendido enviada a ' + b.dataset.wol : 'No se pudo enviar'); } });
 $('#ondiweb').addEventListener('click', () => { const p = $('#pop'); p.hidden = !p.hidden; $('#ondiweb').setAttribute('aria-expanded', String(!p.hidden)); });
 document.addEventListener('click', e => { if (!$('#pop').hidden && !e.target.closest('#pop,#ondiweb')) { $('#pop').hidden = true; $('#ondiweb').setAttribute('aria-expanded', 'false'); } });

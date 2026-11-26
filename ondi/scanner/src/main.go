@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	VERSION = "1.0.0"
+	VERSION = "1.1.0"
 	PUERTO  = 47800
 )
 
@@ -66,6 +66,10 @@ func main() {
 	url := fmt.Sprintf("http://127.0.0.1:%d/", PUERTO)
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", PUERTO))
 	if err != nil { // ya está abierto: se muestra la pantalla del que está corriendo
+		if ventana {
+			avisarApp("URL " + url)
+			escucharApp()
+		}
 		abrirURL(url)
 		return
 	}
@@ -77,6 +81,13 @@ func main() {
 	ultimaUI.Store(time.Now().Unix())
 	mux := http.NewServeMux()
 	rutas(mux)
+	if ventana { // la app de Mac muestra la pantalla y decide cuándo cerrar
+		go escucharApp()
+		ln2 := ln
+		go func() { time.Sleep(100 * time.Millisecond); avisarApp("URL " + url) }()
+		http.Serve(ln2, mux)
+		return
+	}
 	go func() {
 		// se cierra solo si nadie lo usa: ni la pantalla (que avisa cada 5 s) ni Ondi web
 		for range time.Tick(30 * time.Second) {

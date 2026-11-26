@@ -10,6 +10,9 @@ import (
 
 // Mac: system_profiler (da señal y ruido en dBm; desde macOS 14 no muestra la MAC de los otros equipos)
 func leerWifi() *Lectura {
+	if l := wifiNativo(); l != nil { // la app de Mac lo lee con CoreWLAN
+		return l
+	}
 	out, _ := salida(cmdOculto("system_profiler", "SPAirPortDataType", "-json"), 25*time.Second)
 	var d map[string][]struct {
 		Ifs []struct {
