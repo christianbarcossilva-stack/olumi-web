@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>if (location.protocol === 'http:' && /(^|\.)unitytech\.uy$/.test(location.hostname)) location.replace('https:' + location.href.slice(5));</script>
+<title>Kliva · Todas las marcas, una sola llave</title>
+<meta name="description" content="Control de acceso y de horario multimarca: ZKTeco, Hikvision, Dahua, Intelbras y Control iD en una sola pantalla. Una sola alta de persona, un solo historial. Hecho en Uruguay por Unity Tech.">
+<meta name="theme-color" content="#030304">
+<link rel="icon" href="icono.svg">
+<link rel="apple-touch-icon" href="/kliva/icono-180.png">
+<link rel="canonical" href="https://unitytech.uy/kliva/">
+<meta property="og:title" content="Kliva · Todas las marcas, una sola llave">
+<meta property="og:description" content="Control de acceso y de horario multimarca: ZKTeco, Hikvision, Dahua, Intelbras y Control iD en una sola app, con cada empresa y sus plantas, los relojes de personal y las puertas en 3D sobre el plano.">
+<meta property="og:image" content="https://unitytech.uy/kliva/og.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://unitytech.uy/kliva/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>try { document.documentElement.dataset.mode = localStorage.getItem('kliva.web') || 'dark'; } catch { /* noche */ }</script>
+<style>
+/* Web de Kliva · la identidad de la app (negro, vidrio y el violeta del punto), de noche por defecto.
+   La historia corre sobre la app real en modo cine: cada capítulo le pide una escena a /kliva/beta/. */
+:root { --accent: #9D7CFF; --ink: #1E1F23; --mo: cubic-bezier(.22, 1, .36, 1);
+  --text: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Hanken Grotesk', 'Segoe UI', Roboto, sans-serif;
+  --glow: color-mix(in srgb, var(--accent) 34%, transparent); }
+:root[data-mode="dark"] { color-scheme: dark; --bg: #030304; --fg: #F3F4F6; --muted: #B4BAC6; --line: rgb(255 255 255 / .1); --surface: rgb(40 42 48 / .4); --bar: rgb(10 11 14 / .72);
+  --sheen: rgb(255 255 255 / .07); --accent-ink: #C9B8FF; --pass: #55D69B; --warn: #F0BE62;
+  --rim: linear-gradient(135deg, rgb(255 255 255 / .34), rgb(255 255 255 / .08) 26%, rgb(255 255 255 / .02) 54%, rgb(255 255 255 / .18));
+  --shadow: inset 0 1px 0 rgb(255 255 255 / .1), 0 30px 60px -20px rgb(0 0 0 / .85); }
+:root[data-mode="light"] { color-scheme: light; --bg: #E3E6EA; --fg: #15171B; --muted: #454A56; --line: rgb(16 20 28 / .11); --surface: rgb(255 255 255 / .5); --bar: rgb(246 247 249 / .76);
+  --sheen: rgb(255 255 255 / .55); --accent-ink: #5B3FC2; --pass: #08552F; --warn: #6E3D00;
+  --rim: linear-gradient(135deg, #fff, rgb(255 255 255 / .4) 26%, rgb(255 255 255 / .1) 54%, rgb(255 255 255 / .9));
+  --shadow: inset 0 1px 1px rgb(255 255 255 / .9), 0 26px 50px -20px rgb(20 24 32 / .28); }
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.55 var(--text); -webkit-font-smoothing: antialiased; }
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: radial-gradient(46vmax 36vmax at 96% 104%, var(--glow), transparent 70%), radial-gradient(40vmax 30vmax at 0% -6%, rgb(150 160 180 / .16), transparent 70%); }
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.035em; line-height: 1.04; text-wrap: balance; }
+h1 { font-size: clamp(42px, 6.2vw, 84px); }
+h2 { font-size: clamp(32px, 4vw, 54px); }
+h3 { font-size: 20px; letter-spacing: -.02em; line-height: 1.2; }
+p { margin: 0; text-wrap: pretty; }
+a { color: inherit; }
+.two { display: block; color: var(--muted); }
+.wrap { width: min(1200px, 100% - 40px); margin-inline: auto; }
+.glass { border: 1px solid transparent; border-radius: 20px;
+  background: linear-gradient(180deg, var(--sheen), transparent 46%) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box, var(--rim) border-box;
+  -webkit-backdrop-filter: blur(22px) saturate(170%); backdrop-filter: blur(22px) saturate(170%); box-shadow: var(--shadow); }
+.btn { display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; font-weight: 600; text-decoration: none; white-space: nowrap; color: var(--fg);
+  background: rgb(127 127 127 / .14); box-shadow: inset 0 0 0 1px var(--line); transition: transform .14s var(--mo); }
+.btn:active { transform: scale(.965); }
+.btn.pri { color: var(--ink); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent) 52%, color-mix(in srgb, var(--accent) 91%, #000));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 8px 24px var(--glow); }
+.btn.sm { min-height: 40px; padding: 0 16px; font-size: 15px; }
+.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 6px; }
+
+/* barra */
+.top { position: sticky; top: 0; z-index: 20; background: var(--bar); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 18px; min-height: 64px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: -.03em; text-decoration: none; }
+.logo small { color: var(--muted); font-size: 12.5px; font-weight: 500; letter-spacing: 0; align-self: flex-end; padding-bottom: 4px; }
+.mark { width: 34px; height: 34px; border-radius: 12px; background: var(--ink); box-shadow: inset 0 1px 0 rgb(255 255 255 / .14); }
+.mark svg { display: block; width: 100%; height: 100%; fill: none; stroke: #F3F4F6; stroke-linecap: round; }
+.tabs { display: flex; gap: 4px; margin-inline: auto; }
+.tabs a { padding: 8px 14px; border-radius: 999px; color: var(--muted); font-size: 15px; font-weight: 500; text-decoration: none; }
+.tabs a:hover { color: var(--fg); }
+.modo { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgb(127 127 127 / .14); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); cursor: pointer; }
+:root[data-mode="dark"] .modo .moon, :root[data-mode="light"] .modo .sun { display: none; }
+.prev { padding: 9px 20px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); font-size: 14px; font-weight: 600; text-align: center; }
+
+/* la historia */
+.cine .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 8fr); gap: 56px; align-items: start; }
+.ch { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 40px 0; opacity: .28; transition: opacity .5s var(--mo); }
+.ch.on { opacity: 1; }
+.ch.hero { min-height: calc(100vh - 110px); }
+.time { display: flex; align-items: baseline; gap: 10px; color: var(--muted); font-weight: 500; }
+.time b { color: var(--accent-ink); font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.lede { color: var(--muted); font-size: clamp(17px, 1.5vw, 20px); max-width: 46ch; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.stage { position: sticky; top: 84px; height: calc(100vh - 104px); display: grid; place-items: center; }
+.win { position: relative; width: 100%; border-radius: 20px; padding: 0; overflow: hidden; }
+.win-bar { display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+.win-bar i { width: 10px; height: 10px; border-radius: 50%; background: rgb(127 127 127 / .4); }
+.win-bar span { margin-inline: auto; padding: 3px 14px; border-radius: 999px; background: rgb(127 127 127 / .14); color: var(--muted); font-size: 12.5px; transform: translateX(-24px); }
+.scr { position: relative; overflow: hidden; background: var(--bg); }
+.scr iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+
+/* secciones */
+section.blk { padding: clamp(72px, 11vw, 150px) 0; }
+.head { display: flex; flex-direction: column; gap: 16px; max-width: 760px; margin-bottom: 44px; }
+.brands { display: grid; gap: 12px; }
+.brand { display: grid; grid-template-columns: 196px minmax(230px, 1fr) minmax(0, 1.5fr); gap: 8px 24px; align-items: center; padding: 20px 24px; }
+.brand h3 { font-size: 24px; }
+.brand p { color: var(--muted); font-size: 15.5px; }
+.caps { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: rgb(127 127 127 / .14); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.chip.ok { background: color-mix(in srgb, var(--pass) 16%, transparent); color: var(--pass); }
+.chip.soon { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.fine { margin-top: 18px; color: var(--muted); font-size: 15px; max-width: 78ch; }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; margin-top: 56px; }
+.vs > div { padding: 16px 0; border-top: 1px solid var(--line); }
+.vs .h { border-top: 0; padding-top: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+.vs .was { color: var(--muted); }
+.vs .now { font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px; }
+.card { display: flex; flex-direction: column; gap: 10px; padding: 24px; }
+.card p { color: var(--muted); font-size: 16px; }
+.card .i { width: 26px; height: 26px; color: var(--accent-ink); margin-bottom: 6px; }
+.fam { display: flex; flex-direction: column; gap: 14px; padding: 28px; }
+.fam .chip { align-self: flex-start; }
+.fam h3 { font-size: 28px; }
+.fam p { color: var(--muted); }
+.fam b { color: var(--fg); font-weight: 600; }
+.faq { display: grid; gap: 0; max-width: 820px; }
+.faq details { border-top: 1px solid var(--line); }
+.faq summary { padding: 20px 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::after { content: '+'; color: var(--muted); font-weight: 400; }
+.faq details[open] summary::after { content: '–'; }
+.faq p { padding: 0 0 22px; color: var(--muted); max-width: 68ch; }
+.close { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+footer { border-top: 1px solid var(--line); padding: 44px 0 56px; color: var(--muted); font-size: 15px; }
+.fcols { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 28px; }
+.fcols b { display: block; color: var(--fg); margin-bottom: 8px; }
+.fcols a { display: block; padding: 3px 0; text-decoration: none; }
+.fcols a:hover { color: var(--fg); }
+.fbase { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 14px; }
+
+@media (max-width: 899px) {
+  body { font-size: 16px; }
+  .tabs, .logo small { display: none; }
+  .top .wrap { gap: 10px; }
+  .top .right { margin-left: auto; }
+  .cine .wrap { display: block; }
+  .stage { top: 64px; height: 50vh; z-index: 5; margin: 0 -20px; padding: 12px 20px 10px; background: linear-gradient(var(--bg) 92%, transparent); }
+  .win { height: 100%; width: auto; aspect-ratio: 390 / 700; border-radius: 30px; margin-inline: auto; }
+  .win-bar { display: none; }
+  .scr { height: 100%; border-radius: 30px; }
+  .ch { min-height: 62vh; justify-content: flex-start; padding: 26px 0 0; }
+  .ch.hero { min-height: 0; padding: 30px 0 36px; }
+  .brand { grid-template-columns: 1fr; padding: 18px; }
+  .caps { justify-content: flex-start; }
+  .vs { grid-template-columns: 1fr; }
+  .vs .h { display: none; }
+  .vs .was { padding-bottom: 2px; }
+  .vs .now { border-top: 0; padding-top: 0; }
+  .fcols { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 900px) { .cine .chs { order: 0; } .cine .stage { order: 1; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .ch { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="./" aria-label="Kliva, inicio"><span class="mark"><svg viewBox="0 0 38 38" aria-hidden="true"><path d="M12 9v20" stroke-width="3.2"/><path d="M14.5 19.5l9-8.3" stroke-width="2.4"/><path d="M16.5 21.5L25 29" stroke-width="1.4" stroke-dasharray="1.6 2.4" opacity=".6"/><circle cx="26.5" cy="9.5" r="2.8" fill="#9D7CFF" stroke="none"/></svg></span>kliva<small>by Unity Tech</small></a>
+  <nav class="tabs" aria-label="Secciones"><a href="#historia">La historia</a><a href="#marcas">Marcas</a><a href="#familia">Con Olumi y Ondi</a><a href="#datos">Tus datos</a><a href="#preguntas">Preguntas</a></nav>
+  <div class="right" style="display:flex;gap:10px;align-items:center"><button type="button" class="modo" id="modo" aria-label="Cambiar entre día y noche" title="Día o noche"><svg class="i moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><svg class="i sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg></button>
+    <a class="btn pri sm" href="beta/">Probar la beta</a></div>
+</div></header>
+<p class="prev">Kliva está en beta: todavía no tiene instalaciones con equipos reales.</p>
+
+<main>
+<section class="cine" id="historia" aria-label="Una semana con Kliva"><div class="wrap">
+  <div class="stage" aria-hidden="true"><div class="win glass" id="win"><div class="win-bar"><i></i><i></i><i></i><span>unitytech.uy/kliva</span></div><div class="scr" id="scr"><iframe id="demo" title="Kliva funcionando" tabindex="-1" loading="eager"></iframe></div></div></div>
+  <div class="chs">
+    <article class="ch hero on" data-ev="inicio">
+      <h1>Todas las marcas.<span class="two">Una sola llave.</span></h1>
+      <p class="lede">Controladoras y relojes ZKTeco en una planta, faciales Hikvision en la otra, Dahua, Intelbras y Control iD en los portones. Kliva los maneja juntos: una sola alta de persona, un solo historial y una sola pantalla, en la compu y en el celular.</p>
+      <div class="cta"><a class="btn pri" href="beta/">Probar la beta</a><a class="btn" href="mailto:hola@unitytech.uy?subject=Quiero%20ver%20Kliva">Pedir una demo</a></div>
+    </article>
+    <article class="ch" data-ev="alta">
+      <p class="time"><b>Lunes, 7:40</b>empieza Lucía</p>
+      <h2>Una ficha.<span class="two">Todas las puertas.</span></h2>
+      <p class="lede">Hoy, darla de alta es abrir un programa por marca, cada uno en su computadora, y cargarla de nuevo en cada uno. En Kliva es una ficha: su nombre, su tarjeta y su foto. Kliva la lleva a cada equipo en el idioma de su marca y te muestra cuándo llegó.</p>
+    </article>
+    <article class="ch" data-ev="pasa">
+      <p class="time"><b>7:52</b>llega al vestuario</p>
+      <h2>Pasa.<span class="two">Y la ves pasar.</span></h2>
+      <p class="lede">El facial reconoce a Lucía, la puerta gira en el plano y su nombre aparece arriba de todo, con la hora y la puerta. No importa de qué marca sea cada equipo: el historial es uno solo.</p>
+    </article>
+    <article class="ch" data-ev="rechazo">
+      <p class="time"><b>9:15</b>una tarjeta que nadie conoce</p>
+      <h2>El rechazo,<span class="two">en palabras.</span></h2>
+      <p class="lede">«Tarjeta no registrada». «Sin permiso en esta puerta». «Fuera de horario». El motivo se lee en la pantalla, sin ir a buscar un código en el manual de cada marca.</p>
+    </article>
+    <article class="ch" data-ev="abre">
+      <p class="time"><b>11:03</b>el camión llegó antes</p>
+      <h2>Abrí el portón<span class="two">desde donde estés.</span></h2>
+      <p class="lede">Desde la compu o desde el celular, con dos toques para que no se abra por error. Queda anotado quién abrió, qué puerta y a qué hora.</p>
+    </article>
+    <article class="ch" data-ev="cae">
+      <p class="time"><b>14:20</b>un equipo deja de responder</p>
+      <h2>Te dice cuál.<span class="two">Y por qué.</span></h2>
+      <p class="lede">Kliva vigila cada equipo. Si uno se cae, lo nombra, te dice qué pasó y marca sus puertas en el plano. Cuando vuelve, se reconecta solo y le manda las altas que le habían quedado pendientes.</p>
+    </article>
+    <article class="ch" data-ev="baja">
+      <p class="time"><b>Viernes, 18:00</b>Lucía deja la empresa</p>
+      <h2>Un toque.<span class="two">Fuera de todos los equipos.</span></h2>
+      <p class="lede">Deshabilitás su ficha y Kliva la da de baja en cada equipo donde estaba. Nadie se olvida del facial del otro galpón.</p>
+    </article>
+  </div>
+</div></section>
+
+<section class="blk" id="marcas"><div class="wrap">
+  <div class="head"><h2>Cinco marcas.<span class="two">Cada una en su idioma.</span></h2>
+    <p class="lede" style="max-width:62ch">Kliva no reemplaza los equipos: habla con los que ya están instalados, usando el protocolo de cada fabricante. Esto es lo que hace hoy con cada marca.</p></div>
+  <div class="brands">
+    <div class="brand glass"><h3>Hikvision</h3><p>Terminales faciales, controladoras y porteros, por ISAPI.</p><div class="caps"><span class="chip ok">Eventos en vivo</span><span class="chip ok">Abrir puertas</span><span class="chip ok">Personas: tarjeta, clave y rostro</span><span class="chip ok">Evacuación y bloqueo</span><span class="chip ok">Recupera los cortes</span></div></div>
+    <div class="brand glass"><h3>Dahua</h3><p>Controladoras ASC y terminales ASI, por su API.</p><div class="caps"><span class="chip ok">Eventos en vivo</span><span class="chip ok">Abrir puertas</span><span class="chip ok">Personas: tarjeta, clave y rostro</span><span class="chip ok">Evacuación y bloqueo</span><span class="chip ok">Recupera los cortes</span></div></div>
+    <div class="brand glass"><h3>Intelbras</h3><p>Faciales y controladoras de la línea Bio-T.</p><div class="caps"><span class="chip ok">Eventos en vivo</span><span class="chip ok">Abrir puertas</span><span class="chip ok">Personas: tarjeta, clave y rostro</span><span class="chip ok">Evacuación y bloqueo</span><span class="chip ok">Recupera los cortes</span></div></div>
+    <div class="brand glass"><h3>ZKTeco</h3><p>Paneles C3 e inBio, por su protocolo de red.</p><div class="caps"><span class="chip ok">Eventos en vivo</span><span class="chip ok">Abrir puertas</span><span class="chip ok">Evacuación</span><span class="chip soon">Personas: en desarrollo</span></div></div>
+    <div class="brand glass"><h3>Relojes ZKTeco</h3><p>Relojes de personal K40, MB160, SpeedFace y los compatibles con su sistema.</p><div class="caps"><span class="chip ok">Marcas en vivo</span><span class="chip ok">Personas: tarjeta y clave</span><span class="chip ok">Recupera los cortes</span><span class="chip ok">Los pone en hora</span><span class="chip ok">Abrir, si tiene cerradura</span></div></div>
+    <div class="brand glass"><h3>Control iD</h3><p>Faciales y controladoras iDFace, iDFlex, iDAccess e iDBlock, por su API.</p><div class="caps"><span class="chip ok">Eventos en vivo</span><span class="chip ok">Abrir puertas</span><span class="chip ok">Personas: tarjeta, clave y rostro</span><span class="chip ok">Recupera los cortes</span></div></div>
+  </div>
+  <p class="fine">Estado de hoy: los seis conectores pasan las pruebas de laboratorio, contra equipos simulados que respetan el protocolo de cada marca. Lo que sigue es validarlos modelo por modelo con equipos reales.</p>
+  <div class="vs"><div class="h">Con el programa de cada marca</div><div class="h">Con Kliva</div>
+    <div class="was">Un programa por marca, cada uno con su propia lista de personas.</div><div class="now">Una sola lista. Cada persona se carga una vez.</div>
+    <div class="was">Instalado en una computadora de la oficina.</div><div class="now">En el navegador y en el celular, con tu usuario.</div>
+    <div class="was">El historial repartido entre programas.</div><div class="now">Todas las puertas en un historial, que se baja como planilla.</div>
+    <div class="was">«Enviar al dispositivo» a mano, y revisar si llegó.</div><div class="now">El envío es automático y cada ficha muestra en qué equipos está.</div>
+    <div class="was">Cambiar de programa es cargar a todos de nuevo.</div><div class="now">Las personas se traen de los equipos que ya estaban en uso, o de una planilla.</div>
+    <div class="was">Las visitas, en un cuaderno en portería.</div><div class="now">Cada visita con su tarjeta o su clave, que vence sola.</div>
+  </div>
+</div></section>
+
+<section class="blk" id="familia" style="padding-top:0"><div class="wrap">
+  <div class="head"><h2>Trabaja sola.<span class="two">Y mejor con Olumi y Ondi.</span></h2>
+    <p class="lede" style="max-width:62ch">Kliva se vende sola. Si además usás las otras apps de Unity Tech, se pasan los datos entre ellas.</p></div>
+  <div class="cards">
+    <div class="fam glass"><span class="chip soon">En preparación</span><h3>Con Olumi</h3><p><b>Las marcas del personal pasan a Olumi</b>: la primera y la última pasada de cada día, listas para Personal. Y una puerta forzada o un equipo caído <b>abren un ticket</b> para el técnico.</p></div>
+    <div class="fam glass"><span class="chip soon">En preparación</span><h3>Con Ondi</h3><p><b>Cada equipo de acceso aparece en la maqueta de Ondi</b>, con su estado y el de sus puertas, junto a las cámaras y los switches del predio.</p></div>
+    <div class="fam glass"><span class="chip ok">Funciona hoy</span><h3>Con cualquier otro sistema</h3><p>Kliva <b>avisa en el momento</b> a la dirección que le indiques, con cada aviso firmado, y responde consultas con una clave de solo lectura. Sirve para n8n o para un sistema de sueldos.</p></div>
+  </div>
+  <p class="fine">Del lado de Kliva, los avisos y las consultas ya funcionan. La conexión del lado de Olumi y de Ondi llega en sus próximas versiones.</p>
+</div></section>
+
+<section class="blk" id="datos" style="padding-top:0"><div class="wrap">
+  <div class="head"><h2>Quién entra a tu empresa<span class="two">es un dato tuyo.</span></h2>
+    <p class="lede" style="max-width:62ch">Nombres, tarjetas y fotos de rostro son información sensible. Kliva está hecha para que queden donde vos decidas y bajo tu control.</p></div>
+  <div class="cards">
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg><h3>Vos elegís dónde viven</h3><p>En la primera instalación se decide: en tu propio servidor, sin instalar nada más, o en una base PostgreSQL tuya o en la nube.</p></div>
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg><h3>Entrada en dos pasos</h3><p>Además de la contraseña, un código del teléfono. La empresa puede exigirlo a todos los que administran.</p></div>
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><h3>Rostros y claves, cifrados</h3><p>Las fotos de rostro y las contraseñas de los equipos se guardan cifradas. De las contraseñas de quienes operan Kliva solo se guarda una huella que no se puede revertir.</p></div>
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><h3>Queda anotado quién hizo qué</h3><p>Cada alta, cada cambio y cada puerta abierta desde Kliva quedan en la bitácora, con nombre y hora.</p></div>
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><h3>Tus datos son tuyos</h3><p>Bajás una copia completa cuando quieras. Y con la base en tu servidor, Kliva hace una copia de respaldo por día.</p></div>
+    <div class="card glass"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M17 12v3M20.5 12v2"/></svg><h3>Cada uno ve lo que le toca</h3><p>Una instalación atiende a varias empresas, cada una dividida en áreas: plantas, depósitos, oficinas. Cada usuario ve su empresa, o solo su planta, y hace lo de su función: sistemas configura equipos y puertas, recursos humanos lleva las personas y los horarios, portería abre y recibe visitas, y el resto solo mira.</p></div>
+  </div>
+</div></section>
+
+<section class="blk" id="preguntas" style="padding-top:0"><div class="wrap">
+  <div class="head"><h2>Preguntas.</h2></div>
+  <div class="faq">
+    <details><summary>¿Tengo que cambiar los equipos que ya tengo?</summary><p>No. Kliva se conecta a los que ya están instalados y funcionando. Lo que cambia es el programa con el que los manejás.</p></details>
+    <details><summary>¿Qué pasa si se corta la red o se apaga el servidor?</summary><p>Las puertas siguen funcionando: cada equipo guarda sus personas y decide solo. Cuando vuelve la conexión, Kliva se reconecta, manda lo que había quedado pendiente y le pide al equipo lo que pasó durante el corte, para que el historial no quede con huecos. Eso último, hoy, con Hikvision, Dahua e Intelbras.</p></details>
+    <details><summary>¿Y si hay una emergencia?</summary><p>Cada área tiene dos botones: evacuación, que deja todas sus puertas abiertas, y bloqueo, que las deja cerradas, hasta que alguien la vuelve a la normalidad. Queda anotado quién lo hizo. Y Kliva muestra quién está adentro según las últimas pasadas, en una lista que se descarga.</p></details>
+    <details><summary>¿Puedo registrar visitas?</summary><p>Sí. Cada visita se carga con a quién viene a ver y hasta qué hora vale su tarjeta o su clave. Cuando vence, Kliva la da de baja en los equipos sola.</p></details>
+    <details><summary>¿Sirve para controlar la asistencia?</summary><p>Sí. Cada persona puede tener su turno, también de noche, con su tolerancia. Con las pasadas por las puertas que marcan horario, Kliva cuenta entrada, salida, horas, llegadas tarde y faltas, y lo baja como planilla para el sistema de sueldos. La liquidación la hace ese sistema.</p></details>
+    <details><summary>¿Funciona en el celular?</summary><p>Sí, hoy desde el navegador del teléfono, con el mismo usuario. La app para iPhone y Android viene después.</p></details>
+    <details><summary>¿Con qué modelos funciona?</summary><p>Estamos validando modelo por modelo. Escribinos con las marcas y los modelos que tenés instalados y te decimos en qué estado está cada uno.</p></details>
+    <details><summary>¿Cómo se instala?</summary><p>En un servidor de la empresa o de la instaladora, con una licencia según la cantidad de equipos. Sin licencia funciona en modo evaluación con dos equipos, para probarlo antes de decidir.</p></details>
+  </div>
+</div></section>
+
+<section class="blk close" style="padding-top:0"><div class="wrap close">
+  <h2>Hecha por instaladores.<span class="two">Para instaladores.</span></h2>
+  <p class="lede" style="max-width:52ch">Kliva nace de instalar control de acceso todos los días y de pelear con un programa distinto en cada cliente.</p>
+  <div class="cta" style="justify-content:center"><a class="btn pri" href="beta/">Probar la beta</a><a class="btn" href="mailto:hola@unitytech.uy?subject=Quiero%20ver%20Kliva">Pedir una demo</a></div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div class="fcols">
+    <div><b>Unity Tech</b><p>Software hecho en Montevideo por gente que instala fibra, cámaras y redes todos los días.</p></div>
+    <div><b>Kliva</b><a href="beta/">Beta</a><a href="#marcas">Marcas</a><a href="#datos">Tus datos</a><a href="privacidad/">Privacidad</a><a href="soporte/">Soporte</a></div>
+    <div><b>Apps</b><a href="/">Unity Tech</a><a href="/olumi/">Olumi</a><a href="/ondi/">Ondi</a></div>
+    <div><b>Contacto</b><a href="mailto:hola@unitytech.uy">hola@unitytech.uy</a><a href="https://www.instagram.com/unitytech.uy/" target="_blank" rel="noopener">Instagram</a></div>
+  </div>
+  <div class="fbase">© 2026 Unity Tech, Montevideo, Uruguay</div>
+</div></footer>
+
+<script>
+(() => {
+  const root = document.documentElement, frame = document.getElementById('demo'), scr = document.getElementById('scr'), win = document.getElementById('win');
+  const phone = matchMedia('(max-width: 899px)');
+  let ready = false, current = 'inicio';
+
+  // La app real, a un tamaño fijo, escalada para que entre en el escenario.
+  function fit() {
+    const [w, h] = phone.matches ? [390, 700] : [1240, 760];
+    if (!phone.matches) { const room = document.querySelector('.stage').clientHeight - 60; win.style.width = `${Math.min(100, room / (h / w) / win.parentElement.clientWidth * 100)}%`; }
+    else win.style.width = '';
+    const scale = scr.clientWidth / w;
+    scr.style.height = phone.matches ? '' : `${h * scale}px`;
+    Object.assign(frame.style, { width: `${w}px`, height: `${(phone.matches ? scr.clientHeight / scale : h)}px`, transform: `scale(${scale})` });
+  }
+  const say = ev => { if (ready) frame.contentWindow.postMessage({ kliva: 'cine', ev, tema: root.dataset.mode }, location.origin); };
+  frame.addEventListener('load', () => { setTimeout(() => { ready = true; say(current); }, 900); });
+  frame.src = 'beta/?cine=1';
+  fit();
+  addEventListener('resize', fit);
+  phone.addEventListener('change', fit);
+
+  // Cada capítulo, al quedar en el centro de la pantalla, le pide su escena a la app.
+  const chapters = [...document.querySelectorAll('.ch')];
+  const watch = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      chapters.forEach(c => c.classList.toggle('on', c === e.target));
+      if (e.target.dataset.ev !== current) say(current = e.target.dataset.ev);
+    }
+  }, { rootMargin: phone.matches ? '-58% 0px -30% 0px' : '-45% 0px -45% 0px' });
+  chapters.forEach(c => watch.observe(c));
+
+  document.getElementById('modo').addEventListener('click', () => {
+    root.dataset.mode = root.dataset.mode === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('kliva.web', root.dataset.mode); } catch { /* sin almacenamiento */ }
+    document.querySelector('meta[name="theme-color"]').content = root.dataset.mode === 'dark' ? '#030304' : '#E3E6EA';
+    if (ready) frame.contentWindow.postMessage({ kliva: 'cine', tema: root.dataset.mode }, location.origin);
+  });
+})();
+</script>
+</body>
+</html>
