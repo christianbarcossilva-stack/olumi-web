@@ -546,6 +546,7 @@ th{font-size:12.5px}
 @media (min-width:861px){.app{grid-template-columns:264px minmax(0,1fr)}html.navmini .app{grid-template-columns:104px minmax(0,1fr)}}
 .mtop .cpk-b{width:auto;max-width:48vw;height:36px;border-radius:999px;background:var(--surface2);font-weight:600;font-size:14px}.mtop .logo,.mtop .logo span{white-space:nowrap}
 </style>
+<script src="../../idiomas.js?v=1" data-app="ondi" data-v="1"></script>
 </head>
 <body>
 <div class="beta">Versión de prueba de Ondi<span class="long"> con cuentas · lo que cargues acá queda guardado de verdad</span></div>
@@ -685,7 +686,7 @@ function authView() {
   else if (S.auth === 'solsent') b = `<h1>Listo, recibimos tu pedido</h1><p class="muted">Cuando te den acceso, entrás a Ondi con esta misma cuenta y ves la maqueta de tu empresa.</p><button class="btn full" data-a="logout">Salir</button>`;
   else if (S.auth === 'join') b = `<div><h1>Entrar con un código</h1><p class="muted">El código de un cliente es así: <span class="mono">ABCD-1234</span>. También sirve el código de equipo de tu empresa.</p></div>
     <form class="form" data-f="join"><label class="fld">Código<input id="a_code" required autocomplete="off" autocapitalize="characters" value="${esc(CODE)}"></label>${m}<button class="btn pri full" type="submit">Entrar</button></form><div class="links"><button class="lnk" data-a="start">Volver</button></div>`;
-  return `<div class="auth"><div class="authcard">${logo()}${b}</div></div>`;
+  return `<div class="auth"><div class="authcard">${logo()}${b}${window.idiomas ? `<div style="margin-top:18px">${idiomas.selector()}</div>` : ''}</div></div>`;
 }
 function showAuth(mode, msg) { S.auth = mode; S.msg = msg || ''; render(); }
 const myName = () => (S.user && S.user.user_metadata && S.user.user_metadata.name) || (S.user && S.user.email) || '';
@@ -1262,6 +1263,7 @@ function cuentaView() { const u = S.user;
   return `<div class="grid2"><div class="card pad"><h2>Mi cuenta</h2><form class="form" data-do-f="perfil"><label class="fld">Nombre<input id="pf_name" value="${esc((u.user_metadata && u.user_metadata.name) || '')}" maxlength="80"></label><label class="fld">Email<input value="${esc(u.email)}" disabled></label><div><button class="btn pri" type="submit">Guardar</button></div></form></div>
     <div class="card pad"><h2>Contraseña</h2><form class="form" data-do-f="pass"><label class="fld">Contraseña nueva<input id="pf_pass" type="password" minlength="6" autocomplete="new-password" required></label><div><button class="btn" type="submit">Cambiar la contraseña</button></div></form>
       <div class="acts" style="margin-top:12px"><button class="btn" data-a="logout">Salir</button></div></div>
+    ${window.idiomas ? `<div class="card pad"><h2>Idioma</h2>${idiomas.selector()}<p class="muted" style="margin:10px 0 0">La app se muestra en este idioma en este dispositivo. Tus datos no se traducen.</p></div>` : ''}
     <div class="card pad"><h2>Eliminar mi cuenta</h2><p class="muted">Borra tu usuario y tus accesos para siempre. Es la misma cuenta que se usa en Olumi: se elimina de las dos aplicaciones. Los datos de la empresa (clientes, maquetas, equipos) quedan para el resto del equipo.</p>
       <div class="acts" style="margin-top:12px"><button class="btn danger ${S.armed === 'delacct' ? 'arm' : ''}" data-a="delacct">${S.armed === 'delacct' ? 'Se borra para siempre. Tocá de nuevo' : 'Eliminar mi cuenta'}</button></div></div></div>`; }
 
