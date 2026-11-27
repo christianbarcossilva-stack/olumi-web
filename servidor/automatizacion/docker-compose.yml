@@ -1,0 +1,34 @@
+# Motor de automatización de Unity Tech. Lo levanta instalar.sh; el código se lee de ./codigo (copia del repositorio).
+services:
+  motor:
+    image: node:22-alpine
+    container_name: motor
+    restart: always
+    working_dir: /app
+    command: ["node", "motor.mjs"]
+    env_file: .env
+    environment:
+      - TZ=America/Montevideo
+      - NODE_ENV=production
+    volumes:
+      - ./codigo/servidor/automatizacion:/app:ro
+    read_only: true
+    user: "node"
+    mem_limit: 256m
+    networks: [app_network]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/salud"]
+      interval: 30s
+    labels:
+      # Entrada pública solo para /h/<token> (webhooks de las apps). Evolution le habla por adentro: http://motor:8080/h/<token>
+      - "traefik.enable=true"
+      - "traefik.docker.network=n8n-traefik_app_network"
+      - "traefik.http.routers.motor.rule=Host(`unitytech.uy`) && PathPrefix(`/h/`)"
+      - "traefik.http.routers.motor.priority=100"
+      - "traefik.http.routers.motor.entrypoints=websecure"
+      - "traefik.http.routers.motor.tls.certresolver=le"
+      - "traefik.http.services.motor.loadbalancer.server.port=8080"
+networks:
+  app_network:
+    external: true
+    name: n8n-traefik_app_network

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Automatización · Unity Tech</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0C0F">
+<link rel="icon" href="/icono.svg">
+<style>
+:root{color-scheme:dark;--bg:#0B0C0F;--fg:#F3F4F6;--muted:#A9AFBB;--line:rgb(255 255 255/.09);--card:rgb(30 31 37/.72);--field:rgb(255 255 255/.06);--acc:#FF6A13;--acc-ink:#FF9A5C;--pass:#55D69B;--warn:#F0BE62;--deny:#FF7A7A;--shadow:0 1px 0 rgb(255 255 255/.04) inset,0 12px 32px -18px rgb(0 0 0/.7);--mo:cubic-bezier(.2,.8,.2,1)}
+@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#ECEEF2;--fg:#15171B;--muted:#4A4F5B;--line:rgb(16 20 28/.1);--card:rgb(255 255 255/.82);--field:rgb(16 20 28/.05);--acc-ink:#B84300;--pass:#08663A;--warn:#8A5A00;--deny:#B42318;--shadow:0 12px 32px -22px rgb(16 20 28/.35)}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh;background:radial-gradient(1000px 520px at 85% -12%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 62%),var(--bg);color:var(--fg);font:400 15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:1120px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 64px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+header img{width:36px;height:36px;border-radius:10px}
+header h1{font-size:22px;letter-spacing:-.02em;margin:0;flex:1}
+header h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0}
+.round{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--card);cursor:pointer;transition:transform .25s var(--mo)}
+.round:active{transform:scale(.94)}
+.round.gira svg{animation:gira .8s linear infinite}@keyframes gira{to{transform:rotate(360deg)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:flex;align-items:center;gap:8px;font-size:22px;letter-spacing:-.02em;line-height:1.15}
+.stat span{font-size:13px;color:var(--muted)}
+.luz{width:10px;height:10px;border-radius:50%;background:var(--c,var(--muted));box-shadow:0 0 0 4px color-mix(in srgb,var(--c,var(--muted)) 22%,transparent)}
+h2.sec{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:10px}
+h2.sec .seg{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400}
+.list{display:grid;gap:10px;margin-bottom:26px}
+.item{display:grid;grid-template-columns:1fr auto;gap:8px 16px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow)}
+.item h3{margin:0;font-size:16px;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:13px;display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center}
+.acts{display:flex;gap:8px;align-items:start;flex-wrap:wrap;justify-content:end}
+.state{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent);color:var(--c,var(--muted));white-space:nowrap}
+.btn{height:40px;border-radius:12px;border:1px solid var(--line);background:var(--field);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-weight:600;font-size:14px;transition:transform .2s var(--mo)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);border-color:transparent;color:#1A0A00;height:44px}
+.btn.peligro{color:var(--deny)}
+.item.gasto{grid-template-columns:1fr;gap:8px}
+.barra{height:8px;border-radius:999px;background:var(--field);overflow:hidden}
+.barra i{display:block;height:100%;min-width:6px;border-radius:inherit;background:var(--c,var(--acc))}
+.seg{display:inline-flex;gap:4px;padding:3px;border-radius:999px;border:1px solid var(--line);background:var(--field)}
+.seg button{height:30px;border-radius:999px;border:0;background:none;padding:0 12px;cursor:pointer;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--fg);font-weight:600;box-shadow:var(--shadow)}
+.log{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.fila{display:grid;grid-template-columns:72px 1fr auto auto;gap:12px;align-items:center;padding:11px 16px;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left;cursor:pointer}
+.fila:first-child{border-top:0}
+.fila:hover{background:var(--field)}
+.fila time{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.fila .q{min-width:0}.fila .q b{font-weight:600}.fila .q span{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .ms{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.gate{max-width:380px;margin:12vh auto 0;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow);display:grid;gap:12px}
+.gate h1{margin:0;font-size:22px}.gate p{margin:0;color:var(--muted)}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+input[type=email],input[type=password],input[type=number]{width:100%;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:11px 12px;outline:none}
+input:focus{border-color:var(--acc)}
+.err{color:var(--deny);font-size:14px;min-height:1em;margin:0}
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.45);opacity:0;pointer-events:none;transition:opacity .3s var(--mo);z-index:10}
+.sheet{position:fixed;top:12px;right:12px;bottom:12px;width:min(480px,calc(100vw - 24px));background:var(--bg);border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 80px -20px rgb(0 0 0/.6);transform:translateX(calc(100% + 24px));transition:transform .4s var(--mo);z-index:11;display:flex;flex-direction:column}
+body.open .scrim{opacity:1;pointer-events:auto}body.open .sheet{transform:none}
+.sheet-head{display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.sheet-head h2{margin:0;font-size:18px;flex:1;letter-spacing:-.01em}
+.sheet-body{padding:16px;overflow:auto;display:grid;gap:14px;align-content:start}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.facts dt{color:var(--muted)}.facts dd{margin:0;overflow-wrap:anywhere}
+.burbuja{background:var(--field);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:10px 12px;white-space:pre-wrap;font-size:14px}
+.note{font-size:13px;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translate(-50%,80px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;transition:transform .3s var(--mo);z-index:20}
+.toast:not(.on){opacity:0}
+.toast.on{transform:translate(-50%,0)}
+@media (max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.item{grid-template-columns:1fr}.acts{justify-content:start}.fila{grid-template-columns:56px 1fr auto}.fila .ms{display:none}
+  .sheet{top:auto;left:0;right:0;bottom:0;width:100%;height:88vh;border-radius:22px 22px 0 0;transform:translateY(100%)}h2.sec{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="scrim" data-act="cerrar"></div>
+<aside class="sheet" aria-modal="true" role="dialog" id="sheet"></aside>
+<div class="toast" id="toast" role="status"></div>
+<script src="/olumi/app/config.js"></script>
+<script src="/olumi/app/vendor/supabase.js"></script>
+<script>
+const I = { cerrar: '<path d="M18 6 6 18M6 6l12 12"/>', recargar: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', salir: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/>' };
+const icon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const CFG = window.OLUMI_CONFIG, sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+const S = { d: null, filtro: 'todo', abierto: null };
+const $ = s => document.querySelector(s);
+// En palabras de todos los días: qué hizo cada paso y cómo terminó.
+const RECETA = { tickets: 'Tickets por WhatsApp' };
+const PASO = { preparar: 'Recibió el mensaje', entender: 'Leyó la charla y entendió el pedido', registrar: 'Lo anotó en Olumi', contestar: 'Le contestó al cliente' };
+const ESTADO = { ok: ['Siguió', 'var(--pass)'], fin: ['Terminó', 'var(--muted)'], error: ['Error', 'var(--deny)'] };
+const EFECTO = { whatsapp: 'Mandar un WhatsApp', 'olumi:registrar': 'Crear o sumar el pedido en Olumi' };
+
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+const hace = iso => { if (!iso) return 'nunca'; const s = Math.max(0, (Date.parse(S.d.ahora) - Date.parse(iso)) / 1000);
+  return s < 60 ? `hace ${Math.round(s)} s` : s < 3600 ? `hace ${Math.round(s / 60)} min` : s < 86400 ? `hace ${Math.round(s / 3600)} h` : new Date(iso).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' }); };
+const hora = iso => new Date(iso).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false });
+const usd = n => 'US$ ' + Number(n || 0).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function gate(msg = '') {
+  $('#app').innerHTML = `<form class="gate" id="login"><img src="/icono.svg" alt="" width="44" height="44" style="border-radius:12px">
+    <h1>Automatización</h1><p>Entrá con tu cuenta de Olumi. Esta página la ven solo los administradores de Unity Tech.</p>
+    <label>Email<input type="email" name="email" autocomplete="username" required></label>
+    <label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label>
+    <p class="err" role="alert">${esc(msg)}</p><button class="btn pri" type="submit">Entrar</button></form>`;
+}
+
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return gate();
+  const { data: admin } = await sb.rpc('is_platform_admin');
+  if (!admin) return gate('Tu cuenta no es de administración de Unity Tech.');
+  await cargar();
+  setInterval(() => document.visibilityState === 'visible' && !document.body.classList.contains('open') && cargar(true), 15000);
+}
+
+async function cargar(callado) {
+  const b = $('[data-act=recargar]'); b?.classList.add('gira');
+  const { data, error } = await sb.rpc('auto_panel');
+  b?.classList.remove('gira');
+  if (error) { if (!callado) toast('No se pudo leer el motor'); return; }
+  S.d = data; dibujar();
+}
+
+function dibujar() {
+  const d = S.d, vivo = d.motor && Date.parse(d.ahora) - Date.parse(d.motor.visto) < 120e3;
+  const err24 = d.flujos.reduce((a, f) => a + f.errores, 0), gastoTot = d.gasto.reduce((a, g) => a + Number(g.usd), 0);
+  const ej = d.ejecuciones.filter(e => S.filtro === 'todo' || (S.filtro === 'error' ? e.estado === 'error' : e.detalle?.sombra));
+  $('#app').innerHTML = `<header><img src="/icono.svg" alt=""><h1>Automatización<small>El motor de Unity Tech: flujos de cada empresa y lo que van haciendo</small></h1>
+      <button class="round" data-act="recargar" aria-label="Actualizar" title="Actualizar">${icon('recargar')}</button>
+      <button class="round" data-act="salir" aria-label="Salir" title="Salir">${icon('salir')}</button></header>
+    <div class="stats">
+      <div class="stat"><b><i class="luz" style="--c:${vivo ? 'var(--pass)' : 'var(--deny)'}"></i>${vivo ? 'En línea' : d.motor ? 'Sin señal' : 'Sin instalar'}</b><span>Motor${d.motor ? ` · ${hace(d.motor.visto)}` : ''}</span></div>
+      <div class="stat"><b>${d.cola.esperando + d.cola.corriendo}</b><span>Esperando en la cola</span></div>
+      <div class="stat"><b style="${err24 ? 'color:var(--deny)' : ''}">${err24}</b><span>Errores en 24 h</span></div>
+      <div class="stat"><b>${usd(gastoTot)}</b><span>IA este mes</span></div></div>
+    <h2 class="sec">Flujos</h2>
+    <div class="list">${d.flujos.length ? d.flujos.map(f => `<div class="item">
+        <div><h3>${esc(f.nombre || RECETA[f.receta] || f.receta)}</h3>
+          <div class="meta"><span>${esc(f.empresa)}</span><span>${esc(RECETA[f.receta] || f.receta)}</span>
+            <span class="state" style="--c:${!f.prendido ? 'var(--muted)' : f.modo === 'real' ? 'var(--pass)' : 'var(--warn)'}">${!f.prendido ? 'Apagado' : f.modo === 'real' ? 'Funcionando' : 'En prueba (sombra)'}</span></div>
+          <div class="meta"><span>${f.hoy} pasos en 24 h</span>${f.errores ? `<span style="color:var(--deny)">${f.errores} con error</span>` : ''}<span>Último: ${hace(f.ultima)}</span></div></div>
+        <div class="acts">${f.prendido ? `<button class="btn" data-act="modo" data-id="${f.id}">${f.modo === 'real' ? 'Volver a prueba' : 'Pasar a funcionando'}</button>` : ''}
+          <button class="btn ${f.prendido ? 'peligro' : ''}" data-act="prender" data-id="${f.id}">${f.prendido ? 'Apagar' : 'Prender'}</button></div></div>`).join('')
+      : '<div class="item"><p class="note">Todavía no hay flujos dados de alta.</p></div>'}</div>
+    ${d.gasto.length ? `<h2 class="sec">Gasto de IA por empresa · este mes</h2><div class="list">${d.gasto.map(g => { const p = Math.min(100, g.usd / g.tope * 100);
+      return `<div class="item gasto"><div class="meta" style="justify-content:space-between"><b style="color:var(--fg)">${esc(g.empresa)}</b><span>${usd(g.usd)} de ${usd(g.tope)}</span></div>
+        <div class="barra"><i style="width:${p}%;--c:${p >= 100 ? 'var(--deny)' : p >= 75 ? 'var(--warn)' : 'var(--acc)'}"></i></div>
+        <p class="note">${p >= 100 ? 'Llegó al tope: los pedidos siguen entrando, pero sin IA hasta el mes que viene.' : 'Al llegar al tope el motor sigue sin IA; nunca se pasa.'}</p></div>`; }).join('')}</div>` : ''}
+    <h2 class="sec">Actividad <span class="seg" role="group" aria-label="Filtrar">${[['todo', 'Todo'], ['error', 'Errores'], ['sombra', 'En prueba']].map(([k, t]) => `<button data-filtro="${k}" aria-pressed="${S.filtro === k}">${t}</button>`).join('')}</span></h2>
+    <div class="log">${ej.length ? ej.map(e => { const [t, c] = ESTADO[e.estado] || [e.estado, 'var(--muted)'];
+      return `<button class="fila" data-act="ver" data-id="${e.id}"><time>${hora(e.creado)}</time>
+        <span class="q"><b>${esc(PASO[e.paso] || e.paso)}</b><span>${esc(e.empresa)} · ${esc(e.flujo)}${e.detalle?.sombra ? ' · en prueba' : ''}</span></span>
+        <span class="state" style="--c:${c}">${t}</span><span class="ms">${e.ms ?? '—'} ms</span></button>`; }).join('')
+      : `<div class="empty">${S.filtro === 'todo' ? 'Sin actividad todavía. Cuando entre un mensaje, acá se ve cada paso.' : 'Nada para mostrar con este filtro.'}</div>`}</div>`;
+}
+
+function verPaso(e) {
+  const [t, c] = ESTADO[e.estado] || [e.estado, 'var(--muted)'], d = e.detalle || {};
+  const efectos = (d.efectos || []).map(x => typeof x === 'string' ? { nombre: x } : x);
+  $('#sheet').innerHTML = `<div class="sheet-head"><h2>${esc(PASO[e.paso] || e.paso)}</h2><button class="round" data-act="cerrar" aria-label="Cerrar">${icon('cerrar')}</button></div>
+    <div class="sheet-body"><dl class="facts"><dt>Estado</dt><dd><span class="state" style="--c:${c}">${t}</span></dd><dt>Empresa</dt><dd>${esc(e.empresa)}</dd><dt>Flujo</dt><dd>${esc(e.flujo)}</dd>
+      <dt>Cuándo</dt><dd>${new Date(e.creado).toLocaleString('es-UY', { dateStyle: 'medium', timeStyle: 'short' })}</dd><dt>Tardó</dt><dd>${e.ms ?? '—'} ms</dd>
+      ${Number(e.gasto_usd) ? `<dt>IA</dt><dd>${usd(e.gasto_usd)}</dd>` : ''}${d.intento ? `<dt>Intento</dt><dd>${d.intento} de 4${d.intento < 4 ? ' · lo vuelve a probar solo' : ''}</dd>` : ''}</dl>
+      ${d.error ? `<p class="err">${esc(d.error)}</p>` : ''}
+      ${efectos.length ? `<h2 class="sec">${d.sombra ? 'Lo que habría hecho (en prueba no se manda nada)' : 'Lo que hizo'}</h2>${efectos.map(x => `<div><p class="note">${esc(EFECTO[x.nombre] || x.nombre)}${x.a ? ' · a ' + esc(x.a) : ''}</p>${x.texto ? `<div class="burbuja">${esc(x.texto)}</div>` : ''}</div>`).join('')}` : ''}
+      ${!d.error && !efectos.length ? `<p class="note">${e.estado === 'fin' ? 'Este mensaje no necesitaba nada más (por ejemplo, el cliente siguió escribiendo y lo toma el mensaje siguiente).' : 'Paso interno: no cambió nada afuera.'}</p>` : ''}</div>`;
+  document.body.classList.add('open');
+}
+
+function confirmar(titulo, texto, si, accion) {
+  $('#sheet').innerHTML = `<div class="sheet-head"><h2>${esc(titulo)}</h2><button class="round" data-act="cerrar" aria-label="Cerrar">${icon('cerrar')}</button></div>
+    <div class="sheet-body"><p>${texto}</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="si">${esc(si)}</button><button class="btn" data-act="cerrar">Cancelar</button></div></div>`;
+  document.body.classList.add('open');
+  $('#si').onclick = async () => { $('#si').disabled = true; await accion(); document.body.classList.remove('open'); };
+}
+
+async function cambiar(id, cambios, ok) {
+  const { error } = await sb.rpc('auto_cambiar', { flujo: id, ...cambios });
+  if (error) return toast('No se pudo cambiar');
+  toast(ok); await cargar(true);
+}
+
+document.addEventListener('submit', async ev => {
+  if (ev.target.id !== 'login') return; ev.preventDefault();
+  const f = new FormData(ev.target), btn = ev.target.querySelector('button'); btn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
+  btn.disabled = false;
+  if (error) return gate('El email o la contraseña no coinciden.');
+  start();
+});
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act],[data-filtro]'); if (!t) return;
+  if (t.dataset.filtro) { S.filtro = t.dataset.filtro; return dibujar(); }
+  const f = S.d?.flujos.find(x => x.id === t.dataset.id), a = t.dataset.act;
+  if (a === 'cerrar') document.body.classList.remove('open');
+  if (a === 'recargar') cargar();
+  if (a === 'salir') sb.auth.signOut().then(() => gate());
+  if (a === 'ver') verPaso(S.d.ejecuciones.find(x => String(x.id) === t.dataset.id));
+  if (a === 'prender') f.prendido
+    ? confirmar('Apagar el flujo', `<b>${esc(f.nombre)}</b> de ${esc(f.empresa)} deja de atender mensajes nuevos. Lo que estaba esperando en la cola tampoco sigue.`, 'Apagar', () => cambiar(f.id, { prender: false }, 'Flujo apagado'))
+    : cambiar(f.id, { prender: true }, 'Flujo prendido');
+  if (a === 'modo') f.modo === 'real'
+    ? cambiar(f.id, { nuevo_modo: 'sombra' }, 'Vuelve a prueba: no manda nada')
+    : confirmar('Pasar a funcionando', `Desde ahora <b>${esc(f.nombre)}</b> de ${esc(f.empresa)} va a mandar WhatsApp y crear pedidos en Olumi de verdad. Antes conviene haber mirado en «En prueba» qué habría contestado.`, 'Pasar a funcionando', () => cambiar(f.id, { nuevo_modo: 'real' }, 'Funcionando'));
+});
+document.addEventListener('keydown', ev => ev.key === 'Escape' && document.body.classList.remove('open'));
+start();
+</script>
+</body>
+</html>
