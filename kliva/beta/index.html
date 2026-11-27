@@ -611,7 +611,7 @@ details.creds[open] { display: grid; gap: 14px; }
 .pcard .chip { white-space: normal; text-align: left; }
 
 </style>
-<script src="../../idiomas.js?v=2" data-app="kliva" data-v="1"></script>
+<script src="../../idiomas.js?v=2" data-app="kliva" data-v="2"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -1356,6 +1356,7 @@ function demoApi() {
   on('GET', '/api/doors', () => db.doors.filter(p => scope().sites.has(doorSite(p.id))).map(doorRow));
   on('PATCH', '/api/doors/:id', ({ params, body }) => {
     const door = db.doors.find(p => p.id === params.id);
+    if (!door) throw fail(404, 'Esa puerta ya no existe');
     if (body.clock !== undefined) door.clock = Number(Boolean(body.clock));
     if (['in', 'out', 'both'].includes(body.dir)) door.dir = body.dir;
     if (body.name === undefined) return;
@@ -1363,7 +1364,8 @@ function demoApi() {
     door.name = body.name.trim();
   });
   on('POST', '/api/doors/:id/open', ({ params }) => {
-    const door = db.doors.find(p => p.id === params.id), d = device(door.device_id);
+    const door = db.doors.find(p => p.id === params.id), d = door && device(door.device_id);
+    if (!d) throw fail(404, 'Esa puerta ya no existe');
     if (d.status !== 'online') throw fail(409, `${d.name} está sin conexión: no se puede abrir desde acá`);
     const e = event(now(), 'remote_open', door, null, { method: 'remote', actor: me.name });
     db.events.unshift(e);
@@ -1435,9 +1437,10 @@ function demoApi() {
     log('Alta de persona', p.name);
     return { id: p.id };
   });
-  on('PATCH', '/api/people/:id', ({ params, body }) => { savePerson(db.people.find(p => p.id === params.id), body); });
+  on('PATCH', '/api/people/:id', ({ params, body }) => { const p = db.people.find(x => x.id === params.id); if (!p) throw fail(404, 'Esa persona ya no existe'); savePerson(p, body); });
   on('DELETE', '/api/people/:id', ({ params }) => {
     const p = db.people.find(x => x.id === params.id);
+    if (!p) throw fail(404, 'Esa persona ya no existe');
     db.people = db.people.filter(x => x !== p);
     for (const key of [...db.sync.keys()]) if (key.startsWith(`${p.ref}|`)) db.sync.delete(key);
     log('Baja de persona', p.name);
@@ -1656,7 +1659,11 @@ function demoApi() {
     const [path, search = ''] = fullPath.split('?');
     for (const [m, pattern, fn] of routes) {
       const hit = m === method && pattern.exec(path);
-      if (hit) return structuredClone(fn({ params: hit.groups ?? {}, query: new URLSearchParams(search), body }) ?? { ok: true });
+      if (!hit) continue;
+      let out;
+      try { out = fn({ params: hit.groups ?? {}, query: new URLSearchParams(search), body }); }
+      catch (e) { if (e?.status) throw e; console.error(e); throw fail(404, 'Eso ya no existe o cambió recién. La pantalla se pone al día sola.'); }   // como el servidor: nunca un error del programa
+      return structuredClone(out ?? { ok: true });
     }
     throw fail(404, 'Ese recurso no existe');
   }
@@ -1966,6 +1973,30 @@ function setHTML(el, content) {
 }
 
 let toastTimer;
+/** Lo que se le dice a la persona cuando algo falla. Los mensajes del servidor ya vienen en palabras de todos los días; un error
+ *  del programa o de la red no se muestra tal cual: queda en la consola y se dice algo que se entienda. */
+function failText(error) {
+  const tech = error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError || error instanceof SyntaxError || (typeof DOMException !== 'undefined' && error instanceof DOMException);
+  if (!tech || error?.status) return error?.message || 'No se pudo completar. Probá de nuevo.';
+  console.error(error);
+  return /fetch|network|load failed/i.test(error.message) ? 'No se pudo conectar con el servidor. Revisá la conexión y probá de nuevo.' : 'No se pudo completar. Actualizá la página y probá de nuevo.';
+}
+/** Lo que se toca puede haber cambiado por debajo (alguien lo borró, se cambió de empresa o de lugar): se avisa y se pone al día, no se rompe. */
+function still(found, what = 'Eso') {
+  if (found) return found;
+  sheet.close(); refreshSoon('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'notices');
+  throw new Error(`${what} ya no está en lo que estás mirando. La pantalla se puso al día.`);
+}
+// Red de seguridad: un error que nadie atajó no deja la pantalla muda. Queda en la consola y se avisa, como mucho, una vez cada tanto.
+let lastOops = 0;
+function oops(error) {
+  console.error(error);
+  if (Date.now() - lastOops < 15_000 || !document.getElementById('toast')) return;
+  lastOops = Date.now(); toast('Algo no salió bien. Si se repite, actualizá la página.', 'deny');
+}
+window.addEventListener('error', e => { if (e.error) oops(e.error); });
+window.addEventListener('unhandledrejection', e => { e.preventDefault(); oops(e.reason); });
+
 function toast(message, mood = '') {
   const el = $('#toast');
   el.textContent = message;
@@ -2027,7 +2058,7 @@ async function submit(form) {
   try {
     await forms[form.dataset.form](form, values(form));
   } catch (e) {
-    if (error?.isConnected) error.textContent = e.message; else toast(e.message, 'deny');
+    if (error?.isConnected) error.textContent = failText(e); else toast(failText(e), 'deny');
   } finally {
     if (button?.isConnected) button.disabled = false;
   }
@@ -2336,7 +2367,7 @@ function siteCard(site) {
 }
 
 actions.door = async el => {
-  const d = S.doors.find(p => p.id === el.dataset.door), off = d.device_status !== 'online';
+  const d = still(S.doors.find(p => p.id === el.dataset.door), 'Esa puerta'), off = d.device_status !== 'online';
   const recent = await S.api.get(`/api/events?door=${encodeURIComponent(d.id)}&group=main&limit=8`);
   sheet.open(d.name, html`
     ${canOperate() ? html`<button class="btn go wide" type="button" data-action="door-open" data-id="${d.id}" ${off ? raw('disabled') : ''}>Abrir puerta</button>` : ''}
@@ -2355,14 +2386,14 @@ actions['door-open'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para abrir')) return;
   el.disabled = true;
   try { await S.api.post(`/api/doors/${el.dataset.id}/open`); toast('Puerta abierta'); }
-  catch (e) { toast(e.message, 'deny'); }
+  catch (e) { toast(failText(e), 'deny'); }
   finally { el.disabled = false; disarm(el); }
 };
 actions['door-clock'] = async el => {
-  const d = S.doors.find(p => p.id === $('#sheet [data-form="door-name"]').dataset.id), on = !d.clock;
+  const d = still(S.doors.find(p => p.id === $('#sheet [data-form="door-name"]')?.dataset.id), 'Esa puerta'), on = !d.clock;
   el.setAttribute('aria-checked', String(on));
   try { await S.api.patch(`/api/doors/${d.id}`, { clock: on }); d.clock = Number(on); $('#door-dir').hidden = !on; toast(on ? 'Esta puerta marca horario' : 'Esta puerta deja de marcar horario'); refreshSoon('presence'); }
-  catch (e) { el.setAttribute('aria-checked', String(!on)); toast(e.message, 'deny'); }
+  catch (e) { el.setAttribute('aria-checked', String(!on)); toast(failText(e), 'deny'); }
 };
 forms['door-name'] = async (form, v) => {
   await S.api.patch(`/api/doors/${form.dataset.id}`, { name: v.name });
@@ -2733,7 +2764,7 @@ actions['device-test'] = async el => {
     const info = await S.api.post('/api/devices/test', { id: form.dataset.id || undefined, brand: v.brand, host: v.host, port: Number(v.port), username: v.username, password: v.password });
     box.innerHTML = html`<p class="result" data-tone="pass">Responde: ${[info.model, info.serial && `serie ${info.serial}`, info.firmware].filter(Boolean).join(', ')}. ${count(info.doors.length, 'puerta', 'puertas')}.</p>`;
   } catch (e) {
-    box.innerHTML = html`<p class="result" data-tone="deny">${e.message}</p>`;
+    box.innerHTML = html`<p class="result" data-tone="deny">${failText(e)}</p>`;
   } finally { el.disabled = false; }
 };
 actions['device-delete'] = async el => {
@@ -3016,7 +3047,7 @@ async function preparePlan() {
       timer = setTimeout(async () => {
         const body = pending; pending = null;
         try { await S.api.put(`/api/sites/${site.id}/plano`, { plano: body }); for (const x of body.puertas ?? []) S.places[x.puerta] = x.lugar; }
-        catch (e) { toast(e.status === 413 ? 'El plano es demasiado grande: probá con una imagen más liviana' : e.message, 'deny'); }
+        catch (e) { toast(e.status === 413 ? 'El plano es demasiado grande: probá con una imagen más liviana' : failText(e), 'deny'); }
       }, 600);
     },
     puertas: async () => S.doors.filter(d => d.site_id === site.id).map(d => ({ id: d.id, nombre: d.name, equipo: d.device_name, estado: doorPlanState(d) })),
@@ -3112,7 +3143,7 @@ actions['replay-play'] = async el => {
       if (page.length < 1000) break;
       before = page.at(-1).ts;
     }
-  } catch (e) { return toast(e.message, 'deny'); }
+  } catch (e) { return toast(failText(e), 'deny'); }
   events = events.filter(e => doors.has(e.door_id)).reverse();
   if (!events.length || !host) return toast('No hubo pasadas en ese rato en este lugar');
   stopReplay();
@@ -3214,11 +3245,12 @@ actions['scope-area'] = el => el.dataset.id !== S.vista.area && setVista({ ...S.
 
 /** Cambia lo que se mira: vuelve a traer todo recortado a eso y reengancha lo que llega en vivo. */
 async function setVista(v) {
+  if (sheet.isOpen) sheet.close();   // lo abierto era de la vista anterior
   S.vista = v;
   fixVista();
   saved.set('kliva.vista', JSON.stringify(S.vista));
   try { await load('overview', 'sites', 'devices', 'doors', 'levels', 'people', 'feed', 'notices', 'places', 'schedules', 'presence'); }
-  catch (e) { return toast(e.message, 'deny'); }
+  catch (e) { return toast(failText(e), 'deny'); }
   if (!S.sites.some(s => s.id === S.planoSite)) S.planoSite = null;
   S.stop?.();
   S.stop = S.api.stream(onLive);
@@ -3314,7 +3346,7 @@ actions['company-new'] = () => companySheet(null);
 actions['company-edit'] = el => companySheet(companyById(el.dataset.id));
 actions['company-delete'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
-  try { await S.api.del(`/api/companies/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  try { await S.api.del(`/api/companies/${el.dataset.id}`); } catch (e) { disarm(el); return toast(failText(e), 'deny'); }
   S.companyOpen = null;
   sheet.close();
   await setVista({ ...S.vista });
@@ -3342,16 +3374,16 @@ actions['site-new'] = el => siteSheet(null, el?.dataset?.company || viewCompany(
 actions['site-edit'] = el => isAdmin() && siteSheet(areaById(el.dataset.id) ?? S.sites.find(s => s.id === el.dataset.id));
 actions['site-delete'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
-  try { await S.api.del(`/api/sites/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  try { await S.api.del(`/api/sites/${el.dataset.id}`); } catch (e) { disarm(el); return toast(failText(e), 'deny'); }
   sheet.close();
   await setVista({ ...S.vista });
-  toast('Lugar eliminada');
+  toast('Lugar eliminado');
 };
 forms.site = async (form, v) => {
   const id = form.dataset.id;
   if (id) await S.api.patch(`/api/sites/${id}`, v); else await S.api.post('/api/sites', { ...v, company_id: form.dataset.company || undefined });
   await load('companies', 'sites', 'doors');
-  sheet.close(); drawScope(); render(); toast(id ? 'Lugar guardada' : 'Lugar agregada');
+  sheet.close(); drawScope(); render(); toast(id ? 'Lugar guardado' : 'Lugar agregado');
 };
 
 const ROLE_HINT = 'Administrador: sistemas o quien instala; configura equipos, puertas y zonas, y ve todo lo de su empresa. Recursos humanos: personas, turnos, feriados y planillas; no abre ni configura puertas. Operador: portería; visitas, personas y apertura de puertas. Solo lectura: mirar.';
@@ -3379,7 +3411,7 @@ actions['user-new'] = el => userSheet(null, el?.dataset?.company);
 actions['user-edit'] = el => userSheet(S.users.find(u => u.id === el.dataset.id));
 actions['user-delete'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para eliminar')) return;
-  try { await S.api.del(`/api/users/${el.dataset.id}`); } catch (e) { disarm(el); return toast(e.message, 'deny'); }
+  try { await S.api.del(`/api/users/${el.dataset.id}`); } catch (e) { disarm(el); return toast(failText(e), 'deny'); }
   sheet.close(); fillSettings(); toast('Usuario eliminado');
 };
 actions['user-reset2fa'] = async el => {
@@ -3493,8 +3525,8 @@ actions['picker-new'] = async el => {
     await load('companies', 'sites');
     drawScope();
     pickerSet(box, S.sites.find(x => x.id === s.id) ?? s);
-    toast(`Lugar «${s.name}» creada`);
-  } catch (e) { el.disabled = false; toast(e.message, 'deny'); }
+    toast(`Lugar «${s.name}» creado`);
+  } catch (e) { el.disabled = false; toast(failText(e), 'deny'); }
 };
 
 // Control de horario: a qué hora entró y salió cada persona contra su turno, con las pasadas de las puertas que marcan horario.
@@ -3579,21 +3611,21 @@ forms.holiday = async (_form, v) => { await S.api.post('/api/holidays', { day: v
 actions['holiday-uy'] = async el => {
   const company_id = $('#sheet select[name="company_id"]')?.value || viewCompany()?.id;
   try { for (const [day, name] of UY_NO_LABORABLES) await S.api.post('/api/holidays', { day: `${el.dataset.year}-${day}`, name, company_id }); }
-  catch (e) { return toast(e.message, 'deny'); }
+  catch (e) { return toast(failText(e), 'deny'); }
   await holidayDone(`Feriados de ${el.dataset.year} agregados`);
 };
 actions['holiday-delete'] = async el => {
-  try { await S.api.del(`/api/holidays/${el.dataset.id}`); } catch (e) { return toast(e.message, 'deny'); }
+  try { await S.api.del(`/api/holidays/${el.dataset.id}`); } catch (e) { return toast(failText(e), 'deny'); }
   await load('holidays', 'attendance'); render(); toast('Feriado quitado');
 };
 actions['horario-period'] = async el => { S.horarioPeriod = el.dataset.id; await load('attendance'); render(); };
 
 actions['horario-person'] = el => {
-  const p = S.attendance.people.find(x => x.id === el.dataset.id), days = S.attendance.days.filter(d => d.person_id === p.id).reverse();
+  const p = still(S.attendance?.people.find(x => x.id === el.dataset.id), 'Esa persona'), days = S.attendance.days.filter(d => d.person_id === p.id).reverse();
   const dayName = date => new Date(`${date}T12:00`).toLocaleDateString('es-UY', { weekday: 'long', day: 'numeric', month: 'short' });
   sheet.open(p.name, html`
     <dl class="facts"><dt>Turno</dt><dd>${p.schedule || 'Sin turno'}</dd>${areaById(p.site_id) ? html`<dt>Lugar</dt><dd>${areaById(p.site_id).name}</dd>` : ''}
-      <dt>${PERIODS.find(x => x[0] === S.horarioPeriod)[1]}</dt><dd>${hoursText(p.minutes)} en ${count(p.days, 'día', 'días')}${p.late ? `, ${count(p.late, 'llegada tarde', 'llegadas tarde')}` : ''}${p.absent ? `, ${count(p.absent, 'falta', 'faltas')}` : ''}</dd></dl>
+      <dt>${PERIODS.find(x => x[0] === S.horarioPeriod)?.[1] ?? 'Período'}</dt><dd>${hoursText(p.minutes)} en ${count(p.days, 'día', 'días')}${p.late ? `, ${count(p.late, 'llegada tarde', 'llegadas tarde')}` : ''}${p.absent ? `, ${count(p.absent, 'falta', 'faltas')}` : ''}</dd></dl>
     <ul class="rows">${days.length ? days.map(d => html`<li class="row flat">
       <span class="row-main"><strong>${dayName(d.date)}</strong><span>${d.start ? `Turno ${clockText(d.start)} a ${clockText(d.end)}` : 'Sin turno ese día'}</span></span>
       <span class="row-side">${stateChip(d.state)}<span>${d.entry ? `${clockText(d.entry)} a ${d.exit ? clockText(d.exit) : '…'}${d.minutes ? `, ${hoursText(d.minutes)}` : ''}` : 'Sin pasadas'}${d.late ? `, ${d.late} min tarde` : ''}${d.early ? `, ${d.early} min antes` : ''}</span></span></li>`)
@@ -3760,20 +3792,20 @@ actions['mode-set'] = async el => {
   if (!confirmed(el, 'Tocá de nuevo para confirmar')) return;
   el.disabled = true;
   try {
-    const site = S.sites.find(s => s.id === el.dataset.id), r = await S.api.post(`/api/sites/${site.id}/mode`, { mode: el.dataset.mode });
+    const site = still(S.sites.find(s => s.id === el.dataset.id), 'Ese lugar'), r = await S.api.post(`/api/sites/${site.id}/mode`, { mode: el.dataset.mode });
     Object.assign(site, { mode: r.mode, mode_at: r.mode_at, mode_by: r.mode_by });
     S.modeFailed = { site: site.id, list: r.failed ?? [] };
     drawAlarm();
     if (S.view === 'panel') for (const d of S.doors) if (d.site_id === site.id) patchDoor(d.id);
     toast(r.mode === 'normal' ? `${site.name} volvió a la normalidad` : `${MODE[r.mode][0]} en ${site.name}`, r.mode === 'open' ? 'deny' : undefined);
     await insideSheet(site, true);
-  } catch (e) { toast(e.message, 'deny'); el.disabled = false; disarm(el); }
+  } catch (e) { toast(failText(e), 'deny'); el.disabled = false; disarm(el); }
 };
-actions['presence-download'] = () => S.api.download('/api/presence.csv', `kliva-adentro-${toLocalInput(Date.now()).replace(/[T:]/g, '-')}.csv`).then(() => toast('Lista descargada'), e => toast(e.message, 'deny'));
+actions['presence-download'] = () => S.api.download('/api/presence.csv', `kliva-adentro-${toLocalInput(Date.now()).replace(/[T:]/g, '-')}.csv`).then(() => toast('Lista descargada'), e => toast(failText(e), 'deny'));
 actions['door-dir'] = async el => {
-  const d = S.doors.find(p => p.id === $('#sheet [data-form="door-name"]').dataset.id);
+  const d = still(S.doors.find(p => p.id === $('#sheet [data-form="door-name"]')?.dataset.id), 'Esa puerta');
   try { await S.api.patch(`/api/doors/${d.id}`, { dir: el.dataset.id }); d.dir = el.dataset.id; refreshSoon('presence'); }
-  catch (e) { toast(e.message, 'deny'); }
+  catch (e) { toast(failText(e), 'deny'); }
 };
 
 // Otras formas de cargar gente: muchas personas de una vez
@@ -3784,7 +3816,7 @@ actions['door-dir'] = async el => {
 const visitEnd = () => { const d = new Date(); d.setHours(18, 0, 0, 0); return d.getTime() > Date.now() + 3600_000 ? d.getTime() : Date.now() + 4 * 3600_000; };
 actions['pin-new'] = () => { $('#sheet input[name="pin"]').value = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000); };
 actions['visit-out'] = async el => {
-  try { await S.api.patch(`/api/people/${el.dataset.id}`, { active: false }); } catch (e) { return toast(e.message, 'deny'); }
+  try { await S.api.patch(`/api/people/${el.dataset.id}`, { active: false }); } catch (e) { return toast(failText(e), 'deny'); }
   await load('people', 'overview');
   sheet.close(); render(); toast('Salida registrada: se da de baja en los equipos');
 };
@@ -3841,7 +3873,7 @@ async function importPreview(input) {
     S.importRows = rows;
     go.disabled = !named.length; go.textContent = `Cargar ${count(named.length, 'persona', 'personas')}`;
     setHTML(box, html`<p class="result" data-tone="pass">${count(rows.length, 'fila', 'filas')} en la planilla${rows.length > named.length ? `, ${rows.length - named.length} sin nombre` : ''}. Empieza con ${named.slice(0, 3).map(r => r.name).join(', ')}${named.length > 3 ? '…' : '.'}</p>`);
-  } catch (e) { setHTML(box, html`<p class="result" data-tone="deny">${e.message}</p>`); }
+  } catch (e) { setHTML(box, html`<p class="result" data-tone="deny">${failText(e)}</p>`); }
 }
 forms.import = async (form, v) => {
   const r = await S.api.post('/api/people/import', { rows: S.importRows, company_id: v.company_id || viewCompany()?.id });
@@ -3856,10 +3888,10 @@ forms.import = async (form, v) => {
 
 // ── Las personas que ya están en un equipo ───────────────────────────────────
 actions['device-people'] = async el => {
-  const d = S.devices.find(x => x.id === el.dataset.id), title = `Personas en ${d.name}`;
+  const d = still(S.devices.find(x => x.id === el.dataset.id), 'Ese equipo'), title = `Personas en ${d.name}`;
   sheet.open(title, html`<p class="empty">Leyendo el equipo…</p>`);
   let list;
-  try { list = await S.api.get(`/api/devices/${d.id}/people`); } catch (e) { return sheet.open(title, html`<p class="result" data-tone="deny">${e.message}</p>`); }
+  try { list = await S.api.get(`/api/devices/${d.id}/people`); } catch (e) { return sheet.open(title, html`<p class="result" data-tone="deny">${failText(e)}</p>`); }
   const fresh = list.filter(p => !p.known);
   sheet.open(title, html`<form class="form" data-form="device-people" data-id="${d.id}">
     <p class="hint">${fresh.length ? `${count(fresh.length, 'persona de este equipo no está', 'personas de este equipo no están')} en Kliva. Al traerlas conservan su legajo, sus tarjetas y el paso por las puertas de este equipo. El rostro queda en el equipo, tal como está.`
@@ -3891,7 +3923,7 @@ const NAV = [
 const isInstaller = () => isGlobal() && isAdmin();
 const navItems = () => NAV.filter(n => !n.installer || isInstaller());
 const DOCK = ['panel', 'plano', 'eventos', 'personas'];
-const label = id => NAV.find(n => n.id === id).label;
+const label = id => NAV.find(n => n.id === id)?.label ?? '';
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function shell() {
@@ -3953,7 +3985,7 @@ function render() {
   setHTML(view, views[S.view]());
   $$('.seg-in', view).forEach(el => movePill(el, 'x'));
   drawChrome();
-  if (S.view === 'ajustes' || S.view === 'instaladora') fillSettings().catch(e => toast(e.message, 'deny'));
+  if (S.view === 'ajustes' || S.view === 'instaladora') fillSettings().catch(e => toast(failText(e), 'deny'));
 }
 
 async function route() {
@@ -3967,7 +3999,7 @@ async function route() {
     if (S.view === 'integraciones') { S.integrations = isAdmin() ? await S.api.get('/api/integrations') : null; }
     if (S.view === 'plano') await preparePlan();
     else { root.classList.remove('plano-full'); stopReplay(); }
-  } catch (e) { toast(e.message, 'deny'); }
+  } catch (e) { toast(failText(e), 'deny'); }
   render();
   // La pantalla aterriza y el punto del logo late: solo al cambiar de pantalla, nunca por algo que llegó en vivo.
   const view = $('#view'), main = $('#main');
@@ -4219,7 +4251,7 @@ async function boot() {
     else await enter();
   } catch (e) {
     $('#root').innerHTML = html`<div class="gate"><div class="gate-card">${brand('Kliva')}<h1>No se pudo conectar</h1>
-      <p class="muted">${isApp() ? `No se llega a ${serverHost()}. Revisá que el teléfono tenga red; si es una dirección de la empresa, conectate a su Wi-Fi.` : e.message}</p>
+      <p class="muted">${isApp() ? `No se llega a ${serverHost()}. Revisá que el teléfono tenga red; si es una dirección de la empresa, conectate a su Wi-Fi.` : failText(e)}</p>
       <div class="form-actions"><button class="btn pri" type="button" data-action="retry">Reintentar</button>${isApp() ? html`<button class="btn" type="button" data-action="server-change">Cambiar de servidor</button>` : ''}</div></div></div>`;
   }
 }
@@ -4231,7 +4263,10 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]'), fn = el && actions[el.dataset.action];
   if (!fn) return;
   if (el.tagName !== 'A') e.preventDefault();
-  (async () => fn(el, e))().catch(error => toast(error.message, 'deny'));
+  if (el.dataset.working != null) return;                       // un segundo toque mientras el primero todavía trabaja no repite la acción
+  el.dataset.working = '';
+  const free = () => { clearTimeout(guard); delete el.dataset.working; }, guard = setTimeout(free, 8000);
+  (async () => fn(el, e))().catch(error => toast(failText(error), 'deny')).finally(free);
 });
 document.addEventListener('submit', e => {
   const form = e.target.closest('form[data-form]');
@@ -4286,13 +4321,15 @@ document.addEventListener('change', async e => {
   if (el.name === 'sheet' && el.form?.dataset.form === 'import') importPreview(el);
   if (el.name === 'brand') {
     const b = S.brands.find(x => x.brand === el.value);
-    el.form.elements.port.value = b.defaultPort;
-    el.form.elements.username.value = b.defaultUser ?? 'admin';
-    $('#brand-hint').textContent = brandHint(b);
+    if (b && el.form) {
+      el.form.elements.port.value = b.defaultPort;
+      el.form.elements.username.value = b.defaultUser ?? 'admin';
+      const hint = $('#brand-hint'); if (hint) hint.textContent = brandHint(b);
+    }
   }
   if (el.id === 'idle-hours') {
     try { await S.api.post('/api/security', { idle_hours: Number(el.value) }); S.security.idle_hours = Number(el.value); toast('Guardado'); }
-    catch (error) { toast(error.message, 'deny'); }
+    catch (error) { toast(failText(error), 'deny'); }
   }
   if (el.id === 'look-custom') render();
   if (el.id === 'face-file' && el.files[0]) {
@@ -4301,7 +4338,7 @@ document.addEventListener('change', async e => {
       Object.assign($('#face-preview'), { textContent: '' }).style.backgroundImage = `url(${S.draftFace})`;
       $('#face-clear').hidden = false;
       $('#face-hint').textContent = 'Foto lista. Se envía a los equipos al guardar.';
-    } catch (error) { toast(error.message, 'deny'); }
+    } catch (error) { toast(failText(error), 'deny'); }
     el.value = '';
   }
 });
