@@ -11,7 +11,7 @@
   const LOC = { es: 'es-UY', en: 'en-US', pt: 'pt-BR', fr: 'fr-FR', zh: 'zh-CN', hi: 'hi-IN' };
   const leer = k => { try { return localStorage.getItem(k); } catch (_) { return null; } }, poner = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
   const elegido = () => { const q = new URLSearchParams(location.search).get('idioma'); if (q && LOC[q]) { poner(APP + '.idioma', q); return q; } const v = leer(APP + '.idioma'); if (v && LOC[v]) return v; const n = (navigator.language || 'es').slice(0, 2).toLowerCase(); return LOC[n] ? n : 'es'; };
-  const L = elegido(); let DIC = null, PAT = null; const JUNTA = leer(APP + '.i18n.juntar') === '1', FALTAN = new Set(), HECHAS = new Set();
+  const L = elegido(); let DIC = null, PAT = null, COMOD = null; const NOES = new Set(); const JUNTA = leer(APP + '.i18n.juntar') === '1', FALTAN = new Set(), HECHAS = new Set();
   document.documentElement.lang = L;
   if (L !== 'es') {                                           // fechas y números en el formato del idioma (las apps los piden en es-UY)
     const loc = LOC[L], fix = a => (a === 'es-UY' || a === 'es' || a === 'es-ES' || a === undefined) ? loc : a;
@@ -23,14 +23,20 @@
   const norm = s => s.replace(/\s+/g, ' ').trim();
   function traduce(s) { const t = traduce0(s); if (JUNTA && t != null) HECHAS.add(norm(t)); return t; }
   function traduce0(s) {
-    if (!DIC) return null; const k = norm(s); if (!k || k.length > 400) return null; let t = DIC[k]; if (t != null) return t;
+    if (!DIC) return null; const k = norm(s); if (!k || k.length > 400) return null; let t = DIC[k]; if (t != null) return t; if (NOES.has(k)) return null;
     if (/\d/.test(k)) {                                        // con números adentro: «6 abiertos» → «{n} abiertos»
       const nums = []; const m = k.replace(/\d+(?:[.,]\d+)*/g, x => { nums.push(x); return '{n}'; }); const t2 = DIC[m];
       if (t2 != null) { let i = 0; return t2.replace(/\{n\}/g, () => nums[i++] ?? '').replace(/\{([1-9])\}/g, (_, q) => nums[q - 1] ?? ''); }
     }
-    if (k.includes(' · ')) { const ps = k.split(' · '); let alguna = false; const out = ps.map(p => { const x = traduce0(p); if (x != null) { alguna = true; return x; } return p; }); if (alguna) return out.join(' · '); }
     const fin = k.match(/^(.*?)([:.…]+)$/); if (fin && fin[1] && DIC[fin[1]] != null) return DIC[fin[1]] + fin[2];      // «Nombre:» con «Nombre» en el diccionario
     if (PAT) for (const [re, rep] of PAT) { if (re.test(k)) return k.replace(re, rep); }
+    if (COMOD && k.length <= 220) for (const [re, t2] of COMOD) {     // «Usuarios de {n}» también vale con un nombre en lugar del número
+      const m = re.exec(k); if (m && !m.slice(1).some(c => /, | · |; |: /.test(c))) { let i = 1; return t2.replace(/\{n\}/g, () => { const c = m[i++] ?? ''; const x = /^[\d.,:]+$/.test(c) ? null : traduce0(c); return x != null ? x : c; }); } }
+    if (k.length <= 260) for (const sep of [' · ', '; ', ': ', ', ']) {   // textos armados con partes: «Portón 2, Planta Ruta 8, tarjeta»
+      if (!k.includes(sep)) continue; const ps = k.split(sep); if (ps.length > 12) continue; let alguna = false;
+      const out = ps.map(p => { const x = traduce0(p); if (x != null) { alguna = true; return x; } return p; }); if (alguna) return out.join(sep);
+    }
+    if (NOES.size < 6000) NOES.add(k);
     if (JUNTA && /[a-záéíóúñ]{3}/i.test(k) && !HECHAS.has(k)) FALTAN.add(k.replace(/\d+(?:[.,]\d+)*/g, '{n}'));
     return null;
   }
@@ -51,7 +57,10 @@
   async function cargar() {
     if (L === 'es' && !JUNTA) return; let txt = null; const K = APP + '.i18n.' + L;
     if (L !== 'es') { try { const r = await fetch(BASE + L + '.json?v=' + VER, { cache: 'no-cache' }); if (r.ok) { txt = await r.text(); poner(K, txt); } } catch (_) {} if (!txt) txt = leer(K); }
-    try { const j = txt ? JSON.parse(txt) : { t: {} }; DIC = j.t || j; PAT = (j.p || []).map(([a, b]) => [new RegExp(a), b]); } catch (e) { return; }
+    try { const j = txt ? JSON.parse(txt) : { t: {} }; DIC = j.t || j; PAT = (j.p || []).map(([a, b]) => [new RegExp(a), b]);
+      const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), letras = c => c.replace(/\{n\}/g, ' ').replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ ]/g, '');
+      COMOD = Object.keys(DIC).filter(c => { if (!c.includes('{n}')) return false; const l = letras(c); return l.replace(/ /g, '').length >= 7 && l.trim().split(/\s+/).length >= 2; }).sort((a, b) => b.length - a.length).map(c => [new RegExp('^' + c.split('{n}').map(esc).join('(.{1,80}?)') + '$'), DIC[c]]);
+    } catch (e) { return; }
     nodo(document.body); obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATR });
     if (document.title) { const t = traduce(document.title); if (t != null) document.title = t; }
   }

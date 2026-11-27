@@ -611,6 +611,7 @@ details.creds[open] { display: grid; gap: 14px; }
 .pcard .chip { white-space: normal; text-align: left; }
 
 </style>
+<script src="../../idiomas.js?v=2" data-app="kliva" data-v="1"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -743,6 +744,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 // html`…` escapa todo lo que se interpola; solo lo ya armado con html`…` o raw() entra tal cual.
 class Raw { constructor(s) { this.s = s; } toString() { return this.s; } }
 const raw = s => new Raw(s);
+const idiomaSel = () => window.idiomas ? raw('<div class="idiomas-gate" style="margin-top:16px">' + idiomas.selector() + '</div>') : '';   // idiomas (idiomas.js): mismo selector en Conectar, Ingresar y Apariencia
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESCAPES[c]);
 const piece = v => v instanceof Raw ? v.s : v == null || v === false ? '' : esc(v);
@@ -2904,7 +2906,8 @@ const settings = {
     <section class="card flush"><div class="card-head"><h2>Vidrio y fondo</h2></div><ul class="rows">
       <li>${toggle('look-solid', l.solid, 'Reducir transparencia', 'Las superficies pasan a ser sólidas. Ayuda en pantallas viejas o con mucho sol.')}</li>
       <li>${toggle('look-plain', l.plain, 'Fondo liso', 'Saca los brillos de color del fondo.')}</li></ul>
-      <p class="hint" style="padding:0 2px 12px">La apariencia queda guardada en este dispositivo.</p></section>`; },
+      <p class="hint" style="padding:0 2px 12px">La apariencia queda guardada en este dispositivo.</p></section>
+    <section class="card"><div class="card-head"><h2>Idioma<small>Kliva se muestra en este idioma en este dispositivo. Los datos no se traducen.</small></h2></div><div style="padding:0 2px 12px">${idiomaSel()}</div></section>`; },
 
   bitacora: () => html`<section class="card flush"><div class="card-head"><h2>Bitácora<small>Quién cambió cada cosa y cuándo</small></h2></div><ol class="events" id="audit-list"><li class="empty">Cargando…</li></ol></section>`,
 };
@@ -3673,7 +3676,7 @@ function showConnect(message = '', value = '') {
     <label class="field"><span>Dirección</span><input type="text" name="server" value="${value}" placeholder="acceso.tuempresa.uy" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="url" required autofocus></label>
     <p class="form-error" role="alert">${message}</p><button class="btn pri wide" type="submit">Conectar</button>
     <button class="btn wide" type="button" data-action="connect-demo">Ver la demostración</button>
-    <p class="hint">La demostración usa datos inventados y no se conecta a ningún equipo.</p></form></div>`;
+    <p class="hint">La demostración usa datos inventados y no se conecta a ningún equipo.</p>${idiomaSel()}</form></div>`;
 }
 
 forms.connect = async (_form, v) => {
@@ -4106,7 +4109,7 @@ function showLogin(message = '') {
   $('#root').innerHTML = html`<div class="gate"><form class="gate-card form" data-form="login">${brand('Kliva', S.org || 'Control de acceso')}<h1>Ingresar</h1>
     <label class="field"><span>Correo</span><input type="email" name="email" autocomplete="username" required autofocus></label>
     <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
-    <p class="form-error" role="alert">${message}</p><button class="btn pri wide" type="submit">Ingresar</button>${serverLine()}</form></div>`;
+    <p class="form-error" role="alert">${message}</p><button class="btn pri wide" type="submit">Ingresar</button>${serverLine()}${idiomaSel()}</form></div>`;
 }
 async function signIn(credentials) {
   const out = await S.api.post('/api/login', credentials);
