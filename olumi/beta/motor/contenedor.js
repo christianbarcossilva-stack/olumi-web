@@ -2,7 +2,7 @@
 // Lo que tiene uno real y se ve de cerca: chapa trapezoidal con relieve, esquineros con sus encastres (corner castings),
 // largueros arriba y abajo, las dos puertas con sus cuatro barras de cierre y manijas, óxido y polvo.
 // Todo en geometría instanciada: un depósito de 3.000 contenedores sigue siendo un puñado de dibujos.
-import { THREE } from './nucleo.js?v=06f6522e';
+import { THREE } from './nucleo.js?v=5214cd8e';
 import { mergeGeometries } from 'three/addons/BufferGeometryUtils.js';
 
 export const H_CONT = 2.59, W_CONT = 2.44;
