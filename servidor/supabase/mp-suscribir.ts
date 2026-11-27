@@ -24,6 +24,24 @@ const cors = {
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 const r2 = (n) => Math.round(n * 100) / 100;
 
+// Cotización del dólar: BROU, dólar billete, venta (la de la pizarra). Se guarda en cobro_ajustes.
+async function brou() {
+  const r = await fetch('https://www.brou.com.uy/cotizaciones', { headers: { 'user-agent': 'Mozilla/5.0' } });
+  if (!r.ok) return null;
+  const t = (await r.text()).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&oacute;/g, 'ó').replace(/\s+/g, ' ');
+  const m = t.match(/Dólar\s+([\d.]+,\d+)\s+([\d.]+,\d+)/);   // la primera fila «Dólar» (no la de eBROU)
+  const n = m ? Number(m[2].replace(/\./g, '').replace(',', '.')) : NaN;
+  return n > 10 && n < 200 ? n : null;
+}
+async function cotizacion(db) {
+  const { data } = await db.from('cobro_ajustes').select('valor').eq('clave', 'cotizacion').maybeSingle();
+  const c = data?.valor || {};
+  if (c.usd_uyu && c.fecha && Date.now() - Date.parse(c.fecha) < 2 * 86400e3) return Number(c.usd_uyu);
+  const v = await brou();
+  if (v) { await db.from('cobro_ajustes').update({ valor: { ...c, usd_uyu: v, fecha: new Date().toISOString() } }).eq('clave', 'cotizacion'); return v; }
+  return c.usd_uyu ? Number(c.usd_uyu) : null;   // si el BROU no contesta, la última que se guardó
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const token = Deno.env.get('MP_ACCESS_TOKEN');
@@ -89,13 +107,33 @@ Deno.serve(async (req) => {
     auto_recurring: { frequency: ciclo === 'anual' ? 12 : 1, frequency_type: 'months', transaction_amount: amount, currency_id: moneda },
     status: 'pending',
   };
-  const r = await mp('/preapproval', { method: 'POST', headers: { 'X-Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(pre) });
-  const d = await r.json().catch(() => ({}));
+  // Moneda: el precio está en dólares. «auto» = se intenta en dólares y, si Mercado Pago no los acepta,
+  // se cobra en pesos al dólar BROU del día (cobro-avisos actualiza el monto antes de cada cobro).
+  const { data: aj } = await db.from('cobro_ajustes').select('valor').eq('clave', 'cobrar_en').maybeSingle();
+  const modo = String(aj?.valor || 'auto');
+  const crear = (b) => mp('/preapproval', { method: 'POST', headers: { 'X-Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(b) });
+  const enPesos = async () => {
+    const tc = await cotizacion(db);
+    if (!tc) return null;
+    pre.auto_recurring = { ...pre.auto_recurring, transaction_amount: Math.round(amount * tc), currency_id: 'UYU' };
+    pre.reason = `${pre.reason.slice(0, 80)} · US$ ${amount} al dólar BROU`;
+    return crear(pre);
+  };
+  let r = modo === 'UYU' && moneda === 'USD' ? await enPesos() : await crear(pre);
+  let d = r ? await r.json().catch(() => ({})) : {};
+  if (r && !r.ok && modo === 'auto' && moneda === 'USD' && /currency/i.test(JSON.stringify(d))) {
+    console.log('Mercado Pago no aceptó dólares; se cobra en pesos', JSON.stringify(d));
+    await db.from('billing_events').insert({ org_id: org, app, kind: 'moneda', status: 'usd_rechazado', raw: d });
+    await db.from('cobro_ajustes').update({ valor: 'UYU' }).eq('clave', 'cobrar_en');   // las próximas van directo en pesos
+    r = await enPesos(); d = r ? await r.json().catch(() => ({})) : {};
+  }
+  if (!r) return json({ error: 'No se pudo tomar la cotización del dólar. Probá de nuevo en un rato.' }, 502);
   if (!r.ok || !d.init_point) {
     console.error('Mercado Pago', app, r.status, JSON.stringify(d));
     await db.from('billing_events').insert({ org_id: org, app, kind: 'error', status: String(r.status), amount, currency: moneda, raw: d });
     return json({ error: 'Mercado Pago no pudo crear la suscripción. Revisá que el email sea el de tu cuenta de Mercado Pago.' }, 502);
   }
-  await db.from('billing_events').insert({ org_id: org, app, kind: 'preapproval', mp_id: String(d.id), status: d.status, amount, currency: moneda, raw: d });
+  await db.from('billing_events').insert({ org_id: org, app, kind: 'preapproval', mp_id: String(d.id), status: d.status,
+    amount: d.auto_recurring?.transaction_amount ?? amount, currency: d.auto_recurring?.currency_id ?? moneda, raw: d });
   return json({ url: d.init_point });
 });

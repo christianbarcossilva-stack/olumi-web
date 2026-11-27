@@ -1,5 +1,7 @@
-// Unity Tech · avisos de pago atrasado para Olumi, Ondi y Kliva.
-// La corre la base una vez por día. Mira cada empresa con un plan pago vencido y:
+// Unity Tech · cobro diario para Olumi, Ondi y Kliva. La corre la base una vez por día.
+// 1. Toma el dólar BROU (billete, venta) y pone al día el monto en pesos de las suscripciones
+//    que Mercado Pago cobra en pesos (el precio se publica en dólares).
+// 2. Mira cada empresa con un plan pago vencido y:
 //  · el día 1, 5 y 10 de atraso deja un aviso (cobro_ajustes.avisos_dias);
 //  · el día de la gracia (cobro_ajustes.gracia_dias, 14) anota la suspensión.
 // En Olumi y Kliva la suspensión es automática (la app queda «solo para mirar»; no se borra nada).
@@ -18,6 +20,48 @@ const db = createClient(Deno.env.get('SUPABASE_URL'), SERVICE_KEY);
 const DIA = 86400e3;
 const APPS = { olumi: 'Olumi', ondi: 'Ondi', kliva: 'Kliva' };
 
+const MP = 'https://api.mercadopago.com';
+const token = Deno.env.get('MP_ACCESS_TOKEN');
+
+// Cotización del dólar: BROU, dólar billete, venta (la de la pizarra)
+async function brou() {
+  const r = await fetch('https://www.brou.com.uy/cotizaciones', { headers: { 'user-agent': 'Mozilla/5.0' } }).catch(() => null);
+  if (!r || !r.ok) return null;
+  const t = (await r.text()).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&oacute;/g, 'ó').replace(/\s+/g, ' ');
+  const m = t.match(/Dólar\s+([\d.]+,\d+)\s+([\d.]+,\d+)/);
+  const n = m ? Number(m[2].replace(/\./g, '').replace(',', '.')) : NaN;
+  return n > 10 && n < 200 ? n : null;
+}
+
+// Las suscripciones que se cobran en pesos: se pone al día el monto con el dólar de hoy
+async function ponerAlDia(tc) {
+  const subs = [];
+  const { data: os } = await db.from('orgs').select('id,plan,billing_cycle,extra_users,mp_preapproval_id').eq('mp_status', 'authorized').not('mp_preapproval_id', 'is', null);
+  for (const o of os || []) subs.push({ org: o.id, app: 'olumi', plan: o.plan, ciclo: o.billing_cycle, extra: o.extra_users, cantidad: 1, pre: o.mp_preapproval_id });
+  const { data: ss } = await db.from('suscripciones').select('org_id,app,plan,ciclo,extra,cantidad,mp_preapproval_id').eq('mp_status', 'authorized').not('mp_preapproval_id', 'is', null);
+  for (const s of ss || []) subs.push({ org: s.org_id, app: s.app, plan: s.plan, ciclo: s.ciclo, extra: s.extra, cantidad: s.cantidad, pre: s.mp_preapproval_id });
+  const hechos = [];
+  for (const s of subs) {
+    const r = await fetch(`${MP}/preapproval/${s.pre}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) continue;
+    const p = await r.json();
+    if (p.auto_recurring?.currency_id !== 'UYU' || p.status !== 'authorized') continue;
+    // el plan que pagó (en Olumi, si todavía no entró el primer cobro, el de la suscripción)
+    const ref = String(p.external_reference || '').split('|');
+    const [plan, ciclo, extra, cant] = ref[0] === 'v2' ? [ref[3], ref[4], ref[5], ref[6]] : [s.plan, s.ciclo, s.extra, s.cantidad];
+    const { data: usd } = await db.rpc('cobro_monto_usd', { a: s.app, p: plan, ciclo, extra: Number(extra) || 0, cantidad: Number(cant) || 1 });
+    if (!usd) continue;
+    const nuevo = Math.round(Number(usd) * tc);
+    if (Math.abs(nuevo - Number(p.auto_recurring.transaction_amount)) < 1) continue;
+    const u = await fetch(`${MP}/preapproval/${s.pre}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_recurring: { transaction_amount: nuevo, currency_id: 'UYU' } }) });
+    await db.from('billing_events').insert({ org_id: s.org, app: s.app, kind: 'monto', mp_id: s.pre, status: u.ok ? 'actualizado' : `error ${u.status}`,
+      amount: nuevo, currency: 'UYU', raw: { usd: Number(usd), dolar_brou: tc, antes: p.auto_recurring.transaction_amount } });
+    hechos.push({ app: s.app, antes: p.auto_recurring.transaction_amount, ahora: nuevo, ok: u.ok });
+  }
+  return hechos;
+}
+
 async function ajuste(clave, def) {
   const { data } = await db.from('cobro_ajustes').select('valor').eq('clave', clave).maybeSingle();
   return data ? data.valor : def;
@@ -29,6 +73,15 @@ Deno.serve(async () => {
   const activos = (await ajuste('avisos_activos', false)) === true;
   const hook = Deno.env.get('AVISOS_WEBHOOK');
   const ahora = Date.now();
+
+  // 1. El dólar BROU de hoy y los montos en pesos al día
+  let montos = [];
+  const tc = await brou();
+  if (tc) {
+    const c = await ajuste('cotizacion', {});
+    await db.from('cobro_ajustes').update({ valor: { ...c, usd_uyu: tc, fecha: new Date().toISOString() } }).eq('clave', 'cotizacion');
+    if (token) montos = await ponerAlDia(tc);
+  }
 
   // Empresas con plan pago vencido, de las tres apps
   const lista = [];
@@ -64,5 +117,5 @@ Deno.serve(async () => {
       hechos.push({ app: x.app, empresa: x.nombre, kind: p.kind, etapa: p.etapa, status });
     }
   }
-  return new Response(JSON.stringify({ ok: true, revisadas: lista.length, hechos }), { headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify({ ok: true, dolar_brou: tc, montos, revisadas: lista.length, hechos }), { headers: { 'content-type': 'application/json' } });
 });

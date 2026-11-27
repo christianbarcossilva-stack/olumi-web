@@ -22,7 +22,10 @@ alter table public.cobro_ajustes enable row level security;
 insert into public.cobro_ajustes (clave, valor, nota) values
   ('gracia_dias',    '14',       'Días después de la fecha pagada hasta pasar a «solo para mirar»'),
   ('avisos_dias',    '[1,5,10]', 'Días de atraso en que sale cada aviso'),
-  ('avisos_activos', 'false',    'false = los avisos quedan en el registro para Christian y no le llegan al cliente')
+  ('avisos_activos', 'false',    'false = los avisos quedan en el registro para Christian y no le llegan al cliente'),
+  ('cobrar_en',      '"auto"',   'auto = se intenta en dólares; si Mercado Pago no acepta dólares, se cobra en pesos al dólar BROU. También: "USD" o "UYU"'),
+  ('cotizacion',     '{"usd_uyu": null, "fecha": null, "fuente": "BROU, dólar billete, venta"}',
+                                 'La actualiza cobro-avisos cada día desde brou.com.uy/cotizaciones')
 on conflict (clave) do nothing;
 
 create or replace function public.cobro_gracia() returns int
@@ -140,3 +143,15 @@ select cron.schedule('cobro-avisos', '7 12 * * *', $$
   select net.http_post(url := 'https://pgriavmcmscchxdnfglv.supabase.co/functions/v1/cobro-avisos',
                        headers := '{"content-type":"application/json"}'::jsonb, body := '{}'::jsonb)
 $$);
+
+-- 7. Cuánto vale en dólares (con IVA, por mes o por año) la suscripción de una empresa ---------
+create or replace function public.cobro_monto_usd(a text, p text, ciclo text, extra int, cantidad int default 1)
+returns numeric language sql stable security definer set search_path to 'public' as $$
+  select round(((base + coalesce(extra, 0) * ex) * greatest(coalesce(cantidad, 1), 1)
+         * case when ciclo = 'anual' then 10 else 1 end)::numeric, 2)
+  from (
+    select charge_amount as base, extra_user_amount as ex from plans where a = 'olumi' and id = p
+    union all
+    select monto, extra_monto from cobro_planes where a <> 'olumi' and app = a and id = p
+  ) x
+$$;
