@@ -992,6 +992,10 @@ function estCamiones(p, g, os, C, R, po) { const LU = +p.lugar > 3.2 ? +p.lugar 
   const G = camionGeo(), M = matCamion(); lote(g, G.remolque, M.d, [...lisos, ...conts].map(q => q.slice(0, 7))); lote(g, G.lisa, M.t, lisos); lote(g, G.contenedor, M.t, conts); return g; }
 
 // ---------- ciudad de contexto y edificios por contorno ----------
+// Ciudades que vienen de un archivo del motor (carpeta «ciudades»): solo ese lugar y solo .json; se bajan una vez por sesión.
+const CIUDADES = new Map();
+function ciudadDatos(src) { if (!/^ciudades\/[a-z0-9-]+\.json$/.test(src)) return Promise.resolve(null);
+  if (!CIUDADES.has(src)) CIUDADES.set(src, fetch(new URL(src, import.meta.url).href).then(r => r.ok ? r.json() : null).catch(() => null)); return CIUDADES.get(src); }
 // Un barrio entero (manzanas, edificios, verde, vías, muros, líneas de carril y árboles) en pocas mallas, para dar contexto sin pesar.
 // Todo va en decímetros enteros: manz (manzanas) y verde son listas de polígonos [x0, z0, x1, z1, …]; edif: edificios [alto, color, techo, x0, z0, …] (color y techo son índices de pal);
 // vias y ejes (de calle) son líneas; muros: muros y cercos [alto, x0, z0, …]; arb: árboles [x, z, x, z, …].
@@ -1749,7 +1753,10 @@ export const TIPOS = {
       lote(g, CAJA, HO, B.ho); lote(g, CAJA, CO, B.co); lote(g, CAJA, AMA, B.am, false); lote(g, CAJA, NE, B.ne); lote(g, CAJA, RI, B.ri, false); lote(g, CIL, BI, B.bi); if (B.ro.length) lote(g, BOLA2, mat('#ffffff', { roughness: 0.95 }), B.ro);
       return g; } },
   ciudad: { n: 'Ciudad de contexto', g: 'Terreno', forma: 'punto', capa: 'base', fondo: true, sinOferta: true, def: {}, campos: [F.nombre],
-    armar(p) { const g = new THREE.Group(), os = oscuro(), pal = p.pal || ['#d9d4c8'], tinte = os ? '#59606a' : '#ffffff', DS = THREE.DoubleSide;
+    // Los datos (manzanas, edificios, vías…) pueden venir en la pieza o en un archivo del motor («src»): una ciudad pesa cientos de KB y no cambia,
+    // así que no viaja con cada guardado de la maqueta. Se baja una vez y se dibuja cuando llega.
+    armar(q, ctx) { const g = new THREE.Group(); if (q.src) { ciudadDatos(q.src).then(d => { if (!d) return; llenar({ ...d, ...q }); if (ctx && ctx.dirty) ctx.dirty(); }); return g; } llenar(q); return g;
+     function llenar(p) { const os = oscuro(), pal = p.pal || ['#d9d4c8'], tinte = os ? '#59606a' : '#ffffff', DS = THREE.DoubleSide;
       const pon = (geo, m, da) => { if (!geo) return null; const k = new THREE.Mesh(geo, m); k.castShadow = !!da; k.receiveShadow = true; k.userData.noChoca = true; g.add(k); return k; };
       const liso = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, color: tinte, roughness: 0.92, side: DS, ...o });
       if (p.manz && p.manz.length) { const G = prismas(p.manz.map(a => ({ P: anilloDm(a), y0: 0, y1: 0.15, color: '#b3b1aa', techo: '#c9c7c0' }))); pon(G.tapas, liso({ polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -8 })); pon(G.paredes, liso()); }
@@ -1760,7 +1767,7 @@ export const TIPOS = {
       if (p.muros && p.muros.length) pon(murosDm(p.muros, '#b4b7b2'), liso(), true);
       if (p.arb && p.arb.length) { const R = azar(7), co = [], tr = []; for (let i = 0; i + 1 < p.arb.length; i += 2) { const x = p.arb[i] / 10, z = p.arb[i + 1] / 10, s = 3.6 + R() * 2.4; co.push([x, 2.2 + s * 0.45, z, R() * 6, s, s * 0.85, s, VERDES[(R() * VERDES.length) | 0]]); tr.push([x, 1.2, z, 0, 0.32, 2.4, 0.32]); }
         const a = lote(g, BOLA2, mat('#ffffff', { roughness: 0.9 }), co), b = lote(g, CIL, mat('#6b5a48', { roughness: 0.9 }), tr, false); if (a) a.userData.noChoca = true; if (b) b.userData.noChoca = true; }
-      return g; } },
+     } } },
   volumen: { n: 'Edificio por contorno', g: 'Construcción', forma: 'area', capa: 'base', etiqueta: p => p.nombre, def: { alto: 9, color: '#e4e8eb', techo: '#c9ced2', fachada: 'lisa' },
     campos: [F.nombre, F.alto('Alto (m)', 2, 150, 0.5), F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'fachada', n: 'Fachada', t: 'sel', ops: [['lisa', 'Lisa'], ['ventanas', 'Con ventanas'], ['chapa', 'De chapa']] }],
     armar(p) { const g = new THREE.Group(), os = oscuro(), P = (p.pts || []).map(q => [q[0], q[1]]); if (P.length < 3) return g; const h = Math.max(1, +p.alto || 9), DS = THREE.DoubleSide, tinte = os ? '#59606a' : '#ffffff', ch = p.fachada === 'chapa';
