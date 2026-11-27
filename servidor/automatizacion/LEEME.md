@@ -25,5 +25,5 @@ node --test 'servidor/automatizacion/prueba/*.test.mjs'
 
 ## Instalar en el VPS (con el OK de Christian)
 1. Correr `esquema.sql` en Supabase (crea las tablas `auto_*`; no toca nada de lo que existe).
-2. En el servidor: `bash /opt/automatizacion/codigo/servidor/automatizacion/instalar.sh`. La primera vez hay que clonar antes el repositorio en `/opt/automatizacion/codigo`. Pide una sola cosa, la clave secreta de Supabase, y carga solo las claves de Phitel que ya están en el servidor (Evolution, Olumi y Groq).
+2. En el servidor, como root: `curl -fsSL https://raw.githubusercontent.com/christianbarcossilva-stack/olumi-web/main/servidor/automatizacion/instalar.sh | bash` (sirve también para actualizar). La primera vez pide una sola cosa, la clave secreta de Supabase, y carga solo las claves de Phitel que ya están en el servidor (Evolution, Olumi y Groq).
 3. Dar de alta el flujo en `auto_flujos` (receta `tickets`, org de Phitel, modo `sombra`) y apuntar el webhook de la instancia de Evolution a `http://motor:8080/h/<token>`.
