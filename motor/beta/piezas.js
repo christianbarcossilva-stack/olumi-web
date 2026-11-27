@@ -995,11 +995,15 @@ function estCamiones(p, g, os, C, R, po) { const LU = +p.lugar > 3.2 ? +p.lugar 
 // Ciudades que vienen de un archivo del motor (carpeta «ciudades»): solo ese lugar y solo .json; se bajan una vez por sesión.
 const CIUDADES = new Map();
 function ciudadDatos(src) { if (!/^ciudades\/[a-z0-9-]+\.json$/.test(src)) return Promise.resolve(null);
-  if (!CIUDADES.has(src)) CIUDADES.set(src, fetch(new URL(src, import.meta.url).href).then(r => r.ok ? r.json() : null).catch(() => null)); return CIUDADES.get(src); }
+  if (!CIUDADES.has(src)) CIUDADES.set(src, fetch(new URL(src, import.meta.url).href + '?v=87').then(r => r.ok ? r.json() : null).catch(() => null)); return CIUDADES.get(src); }
 // Un barrio entero (manzanas, edificios, verde, vías, muros, líneas de carril y árboles) en pocas mallas, para dar contexto sin pesar.
 // Todo va en decímetros enteros: manz (manzanas) y verde son listas de polígonos [x0, z0, x1, z1, …]; edif: edificios [alto, color, techo, x0, z0, …] (color y techo son índices de pal);
 // vias y ejes (de calle) son líneas; muros: muros y cercos [alto, x0, z0, …]; arb: árboles [x, z, x, z, …].
 const TEX_VENT = {};
+// vidrio de una torre: paños claros, una franja más oscura por piso y un parante cada tanto; el color lo pone el material
+let TEX_VIDRIO = null;
+function texVidrio() { if (TEX_VIDRIO) return TEX_VIDRIO; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 64, 64); x.fillStyle = 'rgba(18,32,46,0.36)'; x.fillRect(0, 50, 64, 14); x.fillStyle = 'rgba(18,32,46,0.55)'; x.fillRect(0, 48, 64, 2); x.fillRect(0, 0, 2, 64);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return (TEX_VIDRIO = t); }
 function texVentanas(k) { if (TEX_VENT[k]) return TEX_VENT[k]; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 64, 64);
   if (k === 'v') { x.fillStyle = '#8b96a0'; x.fillRect(15, 14, 34, 32); x.fillStyle = '#aab4bd'; x.fillRect(15, 14, 34, 5); x.fillStyle = '#eceae4'; x.fillRect(0, 59, 64, 5); }
   else { x.fillStyle = '#dfe0de'; for (let i = 0; i < 64; i += 8) x.fillRect(i, 0, 2, 64); }
@@ -1768,6 +1772,109 @@ export const TIPOS = {
       if (p.arb && p.arb.length) { const R = azar(7), co = [], tr = []; for (let i = 0; i + 1 < p.arb.length; i += 2) { const x = p.arb[i] / 10, z = p.arb[i + 1] / 10, s = 3.6 + R() * 2.4; co.push([x, 2.2 + s * 0.45, z, R() * 6, s, s * 0.85, s, VERDES[(R() * VERDES.length) | 0]]); tr.push([x, 1.2, z, 0, 0.32, 2.4, 0.32]); }
         const a = lote(g, BOLA2, mat('#ffffff', { roughness: 0.9 }), co), b = lote(g, CIL, mat('#6b5a48', { roughness: 0.9 }), tr, false); if (a) a.userData.noChoca = true; if (b) b.userData.noChoca = true; }
      } } },
+  // ---------- puente o viaducto: una calle en altura, con rampa en las puntas, pilas y, si hace falta, un tramo en arco ----------
+  puente: { n: 'Puente o viaducto', g: 'Terreno', forma: 'linea', capa: 'base', etiqueta: p => p.nombre,
+    def: { ancho: 12, alto: 8, rampaA: 60, rampaB: 60, pilas: 30, carriles: 2, cantero: true, arco: 0, arcoEn: 50, arcoAlto: 40, color: '#c4c8cb', acero: '#f1f3f4' },
+    campos: [F.nombre, F.ancho('Ancho (m)', 3, 60), F.alto('Alto de la calzada (m)', 2, 40, 0.5),
+      { k: 'rampaA', n: 'Rampa en la punta donde se empezó a dibujar (m, 0 = sin rampa)', t: 'num', min: 0, max: 600, paso: 5 }, { k: 'rampaB', n: 'Rampa en la otra punta (m, 0 = sin rampa)', t: 'num', min: 0, max: 600, paso: 5 },
+      { k: 'pilas', n: 'Una pila cada (m)', t: 'num', min: 10, max: 80, paso: 1 }, { k: 'carriles', n: 'Carriles por mano', t: 'num', min: 1, max: 4, paso: 1 }, { k: 'cantero', n: 'Con separador en el medio', t: 'bool' },
+      { k: 'arco', n: 'Tramo en arco: largo entre apoyos (m, 0 = sin arco)', t: 'num', min: 0, max: 300, paso: 5 }, { k: 'arcoEn', n: 'Dónde va el arco (% del recorrido)', t: 'num', min: 5, max: 95, paso: 0.5 }, { k: 'arcoAlto', n: 'Alto del arco sobre la calzada (m)', t: 'num', min: 5, max: 90, paso: 1 },
+      F.color('Color del hormigón'), { k: 'acero', n: 'Color del arco', t: 'color' }],
+    armar(p) { const g = new THREE.Group(), P = (p.pts || []).map(q => [q[0], q[1]]); if (P.length < 2) return g;
+      const os = oscuro(), W = Math.max(1.5, p.ancho / 2), H = Math.max(1, +p.alto || 8), DS = THREE.DoubleSide, sua = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+      // el recorrido, con un punto cada 5 m como mucho; en cada punto, hacia dónde va y a qué altura está la calzada
+      const S = []; let L = 0;
+      for (let i = 0; i < P.length - 1; i++) { const a = P[i], b = P[i + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d < 0.01) continue; const n = Math.max(1, Math.ceil(d / 5));
+        for (let k = S.length ? 1 : 0; k <= n; k++) S.push({ x: a[0] + (b[0] - a[0]) * k / n, z: a[1] + (b[1] - a[1]) * k / n, s: L + d * k / n }); L += d; }
+      if (S.length < 2) return g;
+      S.forEach((q, i) => { const a = S[Math.max(0, i - 1)], b = S[Math.min(S.length - 1, i + 1)], l = Math.hypot(b.x - a.x, b.z - a.z) || 1; q.tx = (b.x - a.x) / l; q.tz = (b.z - a.z) / l;
+        q.h = H * Math.min(p.rampaA > 0 ? sua(q.s / p.rampaA) : 1, p.rampaB > 0 ? sua((L - q.s) / p.rampaB) : 1); });
+      const en = s => { let i = 0; while (i < S.length - 2 && S[i + 1].s < s) i++; const a = S[i], b = S[i + 1], t = Math.max(0, Math.min(1, (s - a.s) / ((b.s - a.s) || 1))); return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, h: a.h + (b.h - a.h) * t, tx: a.tx, tz: a.tz }; };
+      // una viga que sigue el recorrido: entre dos corrimientos al costado y entre dos alturas. Con eso se arma todo lo que es largo
+      const B = {}, CARAS = [3, 2, 6, 3, 6, 7, 0, 4, 5, 0, 5, 1, 0, 3, 7, 0, 7, 4, 1, 5, 6, 1, 6, 2, 0, 1, 2, 0, 2, 3, 4, 7, 6, 4, 6, 5];
+      const tira = (k, o0, o1, y0, y1, cada) => { const b = B[k] || (B[k] = { v: [], ix: [] });
+        for (let i = 0; i < S.length - 1; i++) { if (cada && !cada(i)) continue; const q = S[i], r = S[i + 1], n = b.v.length / 3;
+          for (const [e, o, y] of [[q, o0, y0(q)], [q, o1, y0(q)], [q, o1, y1(q)], [q, o0, y1(q)], [r, o0, y0(r)], [r, o1, y0(r)], [r, o1, y1(r)], [r, o0, y1(r)]]) b.v.push(e.x - e.tz * o, y, e.z + e.tx * o);
+          for (const c of CARAS) b.ix.push(n + c); } };
+      const top = q => q.h, abajo = q => q.h < 4.5 ? 0 : q.h - 1.5;   // la rampa va entre muros hasta los 4,5 m; de ahí en más, el tablero sobre pilas
+      tira('h', -W, W, abajo, top); tira('a', -W + 0.45, W - 0.45, top, q => q.h + 0.05);
+      tira('h', -W, -W + 0.45, top, q => q.h + 0.95); tira('h', W - 0.45, W, top, q => q.h + 0.95);
+      const med = p.cantero && W > 5, nc = Math.max(1, p.carriles | 0), c0 = med ? 0.75 : 0, wc = (W - 0.9 - c0) / nc, y5 = q => q.h + 0.05, y7 = q => q.h + 0.075;
+      if (med) tira('h', -0.3, 0.3, top, q => q.h + 0.85); else tira('l', -0.07, 0.07, y5, y7);
+      for (const sg of [-1, 1]) { tira('l', sg * (W - 0.9) - 0.07, sg * (W - 0.9) + 0.07, y5, y7); if (med) tira('l', sg * c0 - 0.07, sg * c0 + 0.07, y5, y7);
+        for (let k = 1; k < nc; k++) tira('l', sg * (c0 + wc * k) - 0.07, sg * (c0 + wc * k) + 0.07, y5, y7, i => i % 3 === 0); }
+      // pilas: dos columnas y un dintel (una sola columna si es angosto); debajo del arco no hay
+      const A0 = p.arco > 0 ? L * (p.arcoEn ?? 50) / 100 - p.arco / 2 : -1, A1 = p.arco > 0 ? A0 + p.arco : -1, hayArco = p.arco > 0 && A0 > 1 && A1 < L - 1, cajas = [];
+      const pila = (s, gr) => { const q = en(s); if (q.h < 4.5) return; const ry = Math.atan2(-q.tz, q.tx);
+        for (const o of W > 6.5 ? [-W * 0.52, W * 0.52] : [0]) cajas.push([q.x - q.tz * o, (q.h - 2.6) / 2, q.z + q.tx * o, ry, 1.5 * gr, q.h - 2.6, 1.8 * gr]);
+        cajas.push([q.x, q.h - 2.05, q.z, ry, 2.0 * gr, 1.1, W * 1.7]); };
+      const np = Math.max(1, Math.round(L / Math.max(10, +p.pilas || 30)));
+      for (let k = 0; k <= np; k++) { const s = L * k / np; if (hayArco && s > A0 - 6 && s < A1 + 6) continue; pila(s, 1); }
+      if (hayArco) { pila(A0, 1.6); pila(A1, 1.6);
+        // el arco: una viga cajón que sigue una parábola, derecha de apoyo a apoyo, con las péndolas que cuelgan la calzada
+        const a = en(A0), b = en(A1), fl = Math.max(5, +p.arcoAlto || 40), dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l, n = 32, ar = B.ar = { v: [], ix: [] }, pe = [];
+        const pt = t => [a.x + dx * t, a.h + (b.h - a.h) * t + 0.4 + fl * 4 * t * (1 - t), a.z + dz * t];
+        for (let i = 0; i < n; i++) { const k = ar.v.length / 3; for (const c of [pt(i / n), pt((i + 1) / n)]) for (const [o, y] of [[-1.1, -1.2], [1.1, -1.2], [1.1, 1.2], [-1.1, 1.2]]) ar.v.push(c[0] - uz * o, c[1] + y, c[2] + ux * o); for (const c of CARAS) ar.ix.push(k + c); }
+        for (let i = 2; i < n - 1; i++) { const c = pt(i / n), y0 = a.h + (b.h - a.h) * i / n + 0.8; if (c[1] - 1.2 - y0 > 1.5) pe.push([c[0], (c[1] - 1.2 + y0) / 2, c[2], 0, 0.24, c[1] - 1.2 - y0, 0.24]); }
+        lote(g, CAJA, mat(os ? '#8b9096' : (p.acero || '#f1f3f4'), { roughness: 0.4, metalness: 0.35 }), pe); }
+      const M = { h: mat(os ? '#6c7176' : (p.color || '#c4c8cb'), { roughness: 0.9, side: DS }), a: mat(os ? '#2b3036' : '#62686e', { roughness: 0.95, side: DS }), l: mat(os ? '#b8bcc0' : '#f4f5f3', { roughness: 0.7, side: DS }), ar: mat(os ? '#8b9096' : (p.acero || '#f1f3f4'), { roughness: 0.4, metalness: 0.35, side: DS }) };
+      for (const k in B) { if (!B[k].v.length) continue; let geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(B[k].v, 3)); geo.setIndex(B[k].ix); geo = geo.toNonIndexed(); geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, M[k]); m.userData.noChoca = true; g.add(sombra(m, k === 'h' || k === 'ar')); }
+      const lp = lote(g, CAJA, mat(os ? '#6c7176' : (p.color || '#c4c8cb'), { roughness: 0.9 }), cajas); if (lp) lp.userData.noChoca = true;
+      return g; } },
+  // ---------- torre vidriada: el edificio alto que se reconoce de lejos. En «vela», la espalda es recta, el frente es curvo y el remate sube de una punta a la otra ----------
+  torre: { n: 'Torre vidriada', g: 'Construcción', forma: 'punto', capa: 'base', etiqueta: p => p.nombre,
+    def: { ancho: 40, fondo: 30, alto: 120, forma: 'vela', vidrio: '#86a9bd', estructura: '#e7eaec', antena: 0 },
+    campos: [F.nombre, F.ancho('Frente (m)', 8, 120), F.fondo('Fondo (m)', 8, 120), F.alto('Alto (m)', 20, 400, 1), { k: 'forma', n: 'Forma', t: 'sel', ops: [['vela', 'Vela (frente curvo y remate inclinado)'], ['prisma', 'Prisma recto']] },
+      { k: 'vidrio', n: 'Color del vidrio', t: 'color' }, { k: 'estructura', n: 'Color de la estructura', t: 'color' }, { k: 'antena', n: 'Mástil arriba (m, 0 = sin mástil)', t: 'num', min: 0, max: 80, paso: 1 }, F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), a = Math.max(3, p.ancho / 2), f = Math.max(3, +p.fondo || 30), H = Math.max(6, +p.alto || 120), vela = p.forma !== 'prisma', C = [];
+      if (vela) for (let i = 0; i <= 36; i++) { const t = Math.PI * i / 36; C.push([a * Math.cos(t), -f / 2 + f * Math.sin(t)]); } else C.push([a, -f / 2], [a, f / 2], [-a, f / 2], [-a, -f / 2]);
+      const tope = x => vela ? H * (0.68 + 0.32 * Math.pow((x + a) / (2 * a), 1.7)) : H, v = [], uv = [], ix = [], n = C.length; let per = 0;
+      for (let i = 0; i < n; i++) { const c = C[i], d = C[(i + 1) % n], l = Math.hypot(d[0] - c[0], d[1] - c[1]), k = v.length / 3, h0 = tope(c[0]), h1 = tope(d[0]);
+        v.push(c[0], 0, c[1], d[0], 0, d[1], d[0], h1, d[1], c[0], h0, c[1]); uv.push(per / 3.2, 0, (per + l) / 3.2, 0, (per + l) / 3.2, h1 / 3.9, per / 3.2, h0 / 3.9); ix.push(k, k + 1, k + 2, k, k + 2, k + 3); per += l; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(ix); geo.computeVertexNormals();
+      g.add(sombra(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: os ? mix(p.vidrio, '#000', 0.45) : p.vidrio, map: texVidrio(), roughness: 0.3, metalness: 0.25, side: THREE.DoubleSide }))));
+      // el remate: una tapa que sigue la pendiente
+      const tv = [0, tope(0), vela ? -f * 0.12 : 0], ti = []; for (const c of C) tv.push(c[0], tope(c[0]), c[1]); for (let i = 0; i < n; i++) ti.push(0, 1 + i, 1 + (i + 1) % n);
+      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(tv, 3)); tg.setIndex(ti); tg.computeVertexNormals(); const me = mat(os ? mix(p.estructura, '#000', 0.45) : p.estructura, { roughness: 0.7, side: THREE.DoubleSide }); g.add(sombra(new THREE.Mesh(tg, me)));
+      // la espalda: el núcleo de hormigón, que asoma arriba, y el mástil
+      if (vela) caja(g, a * 0.12, 0, -f / 2 - 2.4, a * 0.78, H + 4, -f / 2 + 0.8, me); caja(g, -a - 1.5, 0, -f / 2 - 1.5, a + 1.5, 0.6, f / 2 + 1.5, me);
+      if (p.antena > 0) caja(g, (vela ? a * 0.45 : 0) - 0.35, vela ? H + 4 : H, (vela ? -f / 2 - 0.8 : 0) - 0.35, (vela ? a * 0.45 : 0) + 0.35, (vela ? H + 4 : H) + p.antena, (vela ? -f / 2 - 0.8 : 0) + 0.35, mat(os ? '#9aa0a6' : '#f3f4f5', { metalness: 0.4, roughness: 0.4 }));
+      return g; } },
+  // ---------- control de camiones: los carriles de una entrada, cada uno con su isleta, su caseta, su barrera y, si lleva, su balanza, bajo un techo ----------
+  control: { n: 'Control de camiones (carriles con caseta, barrera y balanza)', g: 'Logística', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre,
+    def: { carriles: 4, paso: 6.6, largo: 42, alto: 6.4, techo: true, casetas: true, barreras: true, balanzas: true, color: '#e9ecee', cartel: '' },
+    campos: [F.nombre, { k: 'carriles', n: 'Carriles', t: 'num', min: 1, max: 16, paso: 1 }, { k: 'paso', n: 'Ancho de cada carril con su isleta (m)', t: 'num', min: 4.5, max: 12, paso: 0.1 }, { k: 'largo', n: 'Largo (m)', t: 'num', min: 8, max: 120, paso: 1 }, F.alto('Alto libre del techo (m)', 4, 12, 0.1),
+      { k: 'techo', n: 'Con techo', t: 'bool' }, { k: 'casetas', n: 'Con casetas', t: 'bool' }, { k: 'barreras', n: 'Con barreras', t: 'bool' }, { k: 'balanzas', n: 'Con balanza en cada carril', t: 'bool' }, { k: 'cartel', n: 'Texto del cartel (vacío = sin cartel)', t: 'txt' }, F.color('Color del techo'), F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), n = Math.max(1, p.carriles | 0), ps = Math.max(4.5, +p.paso || 6.6), L = Math.max(8, +p.largo || 42) / 2, Hh = Math.max(4, +p.alto || 6.4), z0 = -n * ps / 2, I = Math.min(L * 0.72, L - 2);
+      const hor = mat(os ? '#5a6066' : '#b9bbb6', { roughness: 0.95 }), am = mat(os ? '#8a6f1a' : '#f0b429', { roughness: 0.6 }), ac = mat(os ? '#6d737a' : '#9aa1a8', { metalness: 0.4, roughness: 0.5 }), te = mat(os ? mix(p.color, '#000', 0.45) : p.color, { roughness: 0.6, metalness: 0.2 });
+      for (let i = 0; i <= n; i++) { const z = z0 + i * ps;   // una isleta a cada lado de cada carril
+        caja(g, -I, 0, z - 0.8, I, 0.22, z + 0.8, hor); caja(g, -I - 0.6, 0, z - 0.8, -I, 0.95, z + 0.8, am); caja(g, I, 0, z - 0.8, I + 0.6, 0.95, z + 0.8, am);
+        if (p.techo) for (const x of [-I * 0.75, I * 0.75]) caja(g, x - 0.2, 0.22, z - 0.2, x + 0.2, Hh, z + 0.2, ac);
+        if (i === n) break;
+        if (p.casetas) { const c = caseta({ ...TIPOS.caseta.def, ancho: 2.6, fondo: 1.4, alto: 2.5 }); c.position.set(-I * 0.1, 0.22, z); g.add(c); }
+        if (p.barreras) { const b = TIPOS.barrera.armar({ ...TIPOS.barrera.def, estilo: 'brazo', ancho: ps - 2.2 }); b.position.set(I * 0.45, 0.22, z + 0.55); b.rotation.y = -Math.PI / 2; g.add(b); }
+        if (p.balanzas) { const b = TIPOS.balanza.armar({ ...TIPOS.balanza.def, largo: Math.min(22, I * 1.7), ancho: Math.min(3.4, ps - 2.6), guias: 'no' }); b.position.set(-I * 0.05, 0, z + ps / 2); g.add(b); } }
+      if (p.techo) { caja(g, -I * 0.92, Hh, z0 - 1.6, I * 0.92, Hh + 0.55, -z0 + 1.6, te); caja(g, -I * 0.92 - 0.15, Hh - 0.35, z0 - 1.6, -I * 0.92, Hh + 0.9, -z0 + 1.6, te); caja(g, I * 0.92, Hh - 0.35, z0 - 1.6, I * 0.92 + 0.15, Hh + 0.9, -z0 + 1.6, te); }
+      if (p.cartel) { const an = Math.min(n * ps * 0.8, Math.max(8, String(p.cartel).length * 1.1)), m = new THREE.MeshStandardMaterial({ map: textoTex(p.cartel, '#0f4c81', '#ffffff', 1024, Math.round(1024 * 1.8 / an)), roughness: 0.6 }), y = p.techo ? Hh + 0.9 : 5.2;
+        if (!p.techo) for (const z of [-an / 2 + 0.3, an / 2 - 0.3]) caja(g, -I - 1.2, 0, z - 0.12, -I - 0.96, y, z + 0.12, ac);
+        const k = new THREE.Mesh(CAJA, m); k.scale.set(0.16, 1.8, an); k.position.set(p.techo ? -I * 0.92 - 0.24 : -I - 1.08, y + 0.9, 0); g.add(sombra(k)); }
+      return g; } },
+  // ---------- andén de reefers: las pasarelas de acero con las tomas de corriente, una por cada contenedor de alto, y la escalera en una punta ----------
+  anden: { n: 'Andén de reefers (pasarelas con tomas)', g: 'Puerto', forma: 'punto', capa: 'logistica', etiqueta: p => p.nombre,
+    def: { largo: 30, niveles: 4, ancho: 1.5, color: '#d6dadd' },
+    campos: [F.nombre, { k: 'largo', n: 'Largo (m)', t: 'num', min: 4, max: 300, paso: 0.5 }, { k: 'niveles', n: 'Niveles (contenedores de alto)', t: 'num', min: 1, max: 7, paso: 1 }, F.ancho('Ancho de la pasarela (m)', 1, 4), F.color('Color'), F.r],
+    armar(p) { const g = new THREE.Group(), os = oscuro(), L = Math.max(4, +p.largo || 30) / 2, w = Math.max(1, +p.ancho || 1.5) / 2, nv = Math.max(1, p.niveles | 0), HC = 2.9, np = Math.max(1, Math.round(2 * L / 6)), dx = 2 * L / np;
+      const ac = mat(os ? mix(p.color, '#000', 0.45) : p.color, { metalness: 0.45, roughness: 0.5 }), pi = mat(os ? '#3a4046' : '#8f979e', { metalness: 0.5, roughness: 0.6 }), am = mat(os ? '#8a6f1a' : '#f0b429', { roughness: 0.6 }), az = mat(os ? '#24405c' : '#2d6da3', { roughness: 0.5 });
+      const postes = [], pisos = [], bar = [], tomas = [], top = (nv - 1) * HC + 1.1;
+      for (let i = 0; i <= np; i++) for (const z of [-w, w]) postes.push([-L + i * dx, top / 2, z, 0, 0.14, top, 0.14]);
+      for (let k = 1; k < nv; k++) { pisos.push([0, k * HC, 0, 0, 2 * L, 0.08, 2 * w]); for (const z of [-w, w]) { bar.push([0, k * HC + 1.05, z, 0, 2 * L, 0.06, 0.06]); bar.push([0, k * HC + 0.55, z, 0, 2 * L, 0.04, 0.04]); } }
+      for (let k = 0; k < nv; k++) for (let x = -L + 1.4; x < L - 0.5; x += 2.8) for (const z of [-w - 0.12, w + 0.12]) tomas.push([x, k * HC + 1.25, z, 0, 0.5, 0.42, 0.2]);
+      lote(g, CAJA, pi, postes); lote(g, CAJA, ac, pisos); lote(g, CAJA, am, bar); lote(g, CAJA, az, tomas);
+      // la escalera, en una punta: un tramo por nivel, en zigzag, con su descanso
+      for (let k = 0; k < nv - 1; k++) { const sube = k % 2 ? -1 : 1, e = new THREE.Mesh(CAJA, ac); e.scale.set(Math.hypot(3.4, HC), 0.1, 0.9); e.position.set(L + 2.0, k * HC + HC / 2, 0); e.rotation.z = sube * Math.atan2(HC, 3.4); g.add(sombra(e)); caja(g, L + (sube > 0 ? 3.5 : 0.1), (k + 1) * HC - 0.04, -0.55, L + (sube > 0 ? 4.1 : 0.7), (k + 1) * HC + 0.04, 0.55, ac); }
+      if (nv > 1) for (const x of [L + 0.2, L + 4.0]) for (const z of [-0.5, 0.5]) caja(g, x - 0.06, 0, z - 0.06, x + 0.06, top, z + 0.06, pi);
+      return g; } },
   volumen: { n: 'Edificio por contorno', g: 'Construcción', forma: 'area', capa: 'base', etiqueta: p => p.nombre, def: { alto: 9, color: '#e4e8eb', techo: '#c9ced2', fachada: 'lisa' },
     campos: [F.nombre, F.alto('Alto (m)', 2, 150, 0.5), F.color('Color de las paredes'), { k: 'techo', n: 'Color del techo', t: 'color' }, { k: 'fachada', n: 'Fachada', t: 'sel', ops: [['lisa', 'Lisa'], ['ventanas', 'Con ventanas'], ['chapa', 'De chapa']] }],
     armar(p) { const g = new THREE.Group(), os = oscuro(), P = (p.pts || []).map(q => [q[0], q[1]]); if (P.length < 3) return g; const h = Math.max(1, +p.alto || 9), DS = THREE.DoubleSide, tinte = os ? '#59606a' : '#ffffff', ch = p.fachada === 'chapa';
