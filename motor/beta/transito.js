@@ -4,7 +4,7 @@
 // Todos los camiones se dibujan juntos (cinco mallas instanciadas: cabina, tractor, las dos cajas y el semirremolque), así no pesa aunque haya muchos.
 // El tractor gira sobre el perno: en las curvas y al maniobrar el camión se quiebra como uno de verdad.
 import { THREE } from './nucleo.js?v=20';
-import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=88';
+import { andenesDe, camionGeo, matCamion, PERNO } from './piezas.js?v=89';
 
 const CAJAS = ['#F4F5F6', '#F4F5F6', '#F4F5F6', '#E6EAED', '#c2415b', '#2f6fd6', '#8a5a3c', '#5f7e6c', '#d9a441'], CABINAS = ['#2B333B', '#FFFFFF', '#4B6D83', '#C9D3DA', '#b8584e', '#FFFFFF'];
 const MAX = 96, ang = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -25,7 +25,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     // v = hacia dónde se puede seguir desde el nodo; w = todos los vecinos (en una calle de mano única se avanza solo en el sentido en que se dibujó)
     // k = cuánto se corre el camión a su carril: nada en mano única o en una calle angosta, 2,1 m en una calle de doble mano
     const nuevo = (x, z, ruta, an, uno) => { const n = { x, z, v: [], w: [], ruta, an, uno, k: uno ? 0 : Math.min(1, Math.max(0, (an / 2 - 1.6) / 2.1)), i: nodos.length }; nodos.push(n); return n; }, une = (a, b, uno) => { if (a === b) return; if (!a.w.includes(b)) { a.w.push(b); b.w.push(a); } if (!a.v.includes(b)) a.v.push(b); if (!uno && !b.v.includes(a)) b.v.push(a); };
-    const filas = calles.map(c => { const f = [], an = c.ancho || 8, ruta = c.tipo === 'ruta', uno = c.mano === 'unica'; for (let i = 0; i < c.pts.length - 1; i++) { const [ax, az] = c.pts[i], [bx, bz] = c.pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 10));
+    const filas = calles.map(c => { const f = [], an = c.ancho || 8, ruta = c.tipo === 'ruta' || !!c.entrada, uno = c.mano === 'unica'; for (let i = 0; i < c.pts.length - 1; i++) { const [ax, az] = c.pts[i], [bx, bz] = c.pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 10));
         for (let k = i ? 1 : 0; k <= n; k++) f.push(nuevo(ax + (bx - ax) * k / n, az + (bz - az) * k / n, ruta, an, uno)); } for (let i = 0; i < f.length - 1; i++) une(f[i], f[i + 1], uno); return f; });
     // rotondas: los nodos que caen sobre la isla se corren al anillo, así los camiones la rodean en vez de cruzarla
     for (const ro of E.piezas) { if (ro.t !== 'rotonda' || !(ro.isla > 0)) continue; const Ri = ro.isla + 3.5, Ra = Math.max(ro.isla + 4.5, ((ro.radio || 14) + ro.isla) / 2);
@@ -45,7 +45,11 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     // andenes: lugar donde queda el camión, hacia dónde mira y el nodo de calle más cercano al frente
     T.andenes = []; for (const p of E.piezas) { if (p.t !== 'galpon' || p.estilo !== 'logistico' || p.libre) continue; const r = p.r || 0, cs = Math.cos(r), sn = Math.sin(r), w = p.ancho / 2, d = p.fondo / 2, nx = sn, nz = cs;
       for (const [u, num] of andenesDe({ andenes: 6, desde: 1, ...p })) { const lx = -w + u, X = p.x + lx * cs + d * sn, Z = p.z - lx * sn + d * cs, a = { p, num, x: X + nx * 6.9, z: Z + nz * 6.9, h: Math.atan2(-nz, nx), nx, nz, nodo: null, cam: null };
-        let mj = 1e9; for (const n of nodos) { const dd = Math.hypot(n.x - (X + nx * 24), n.z - (Z + nz * 24)); if (dd < mj) { mj = dd; a.nodo = n; } } if (mj > 70) a.nodo = null; T.andenes.push(a); } } }
+        let mj = 1e9; for (const n of nodos) { const dd = Math.hypot(n.x - (X + nx * 24), n.z - (Z + nz * 24)); if (dd < mj) { mj = dd; a.nodo = n; } } if (mj > 70) a.nodo = null; T.andenes.push(a); } }
+    // puestos de carga: el camión llega de frente, espera y sigue de largo (bajo una grúa, al lado de una pila, en la puerta de un depósito)
+    for (const p of E.piezas) { if (p.t !== 'carga') continue; const h = p.r || 0, dx = Math.cos(h), dz = -Math.sin(h), a = { p, num: 1, x: p.x, z: p.z, h, nx: dx, nz: dz, pasa: true, nodo: null, nodo2: null, cam: null }; let m1 = 1e9, m2 = 1e9;
+      for (const n of nodos) { const d1 = Math.hypot(n.x - (p.x - dx * 20), n.z - (p.z - dz * 20)), d2 = Math.hypot(n.x - (p.x + dx * 20), n.z - (p.z + dz * 20)); if (d1 < m1) { m1 = d1; a.nodo = n; } if (d2 < m2) { m2 = d2; a.nodo2 = n; } }
+      if (m1 > 70) a.nodo = null; if (m2 > 70 || (a.nodo && a.nodo2 && a.nodo2.c !== a.nodo.c)) a.nodo2 = a.nodo; T.andenes.push(a); } }
 
   // camino más corto entre dos nodos (Dijkstra simple: la red es chica)
   function camino(a, b) { if (!a || !b || a.c !== b.c) return null; const dist = new Map([[a, 0]]), ant = new Map(), abiertos = [a], visto = new Set();
@@ -65,10 +69,15 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   function sacar(c) { T.camiones.splice(T.camiones.indexOf(c), 1); for (const k of TODAS) { k.setMatrixAt(c.i, CERO); k.instanceMatrix.needsUpdate = true; } il.setMatrixAt(c.i, CERO); il.instanceMatrix.needsUpdate = true; if (c.anden && c.anden.cam === c) c.anden.cam = null; }
   const dirH = h => [Math.cos(h), -Math.sin(h)];
   // maniobra de entrada: pasa de largo unos metros y retrocede en curva hasta quedar de cola contra el andén
-  function entrar(c, a, ruta) { const pts = ruta.map(n => [n.x, n.z]), k = pts[pts.length - 1], pv = pts[pts.length - 2] || [k[0] - a.nz, k[1] + a.nx]; let dx = k[0] - pv[0], dz = k[1] - pv[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  function entrarP(c, a, ruta) { const pts = ruta.map(n => [n.x, n.z]), k = pts[pts.length - 1], pv = pts[pts.length - 2] || [k[0] - a.nx, k[1] - a.nz]; let dx = k[0] - pv[0], dz = k[1] - pv[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const A = [a.x - a.nx * 12, a.z - a.nz * 12], cc = Math.min(18, Math.hypot(A[0] - k[0], A[1] - k[1]) * 0.5); c.cola = [tramo(pts, { carril: true, car: ruta.map(n => n.k) }), tramo([...curva(k, [k[0] + dx * cc, k[1] + dz * cc], [A[0] - a.nx * cc, A[1] - a.nz * cc], A), [a.x, a.z]], { v: 3 })]; c.s = 0; c.anden = a; a.cam = c; c.estado = 'va'; }
+  function salirP(c) { const a = c.anden, ini = a.nodo2 || a.nodo, sal = T.entradas.filter(n => ini && n.c === ini.c), fin = sal.length ? de(sal) : null, ruta = fin && camino(ini, fin); if (!ruta || ruta.length < 2) { c.estado = 'chau'; c.t = 1; return; }
+    const k = [ruta[0].x, ruta[0].z], sg = [ruta[1].x, ruta[1].z]; let dx = sg[0] - k[0], dz = sg[1] - k[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const B = [a.x + a.nx * 12, a.z + a.nz * 12], cc = Math.min(18, Math.hypot(k[0] - B[0], k[1] - B[1]) * 0.5);
+    c.cola = [tramo([[a.x, a.z], ...curva(B, [B[0] + a.nx * cc, B[1] + a.nz * cc], [k[0] - dx * cc, k[1] - dz * cc], k)], { v: 3 }), tramo(ruta.map(n => [n.x, n.z]), { carril: true, car: ruta.map(n => n.k) })]; c.s = 0; c.estado = 'sale'; }
+  function entrar(c, a, ruta) { if (a.pasa) return entrarP(c, a, ruta); const pts = ruta.map(n => [n.x, n.z]), k = pts[pts.length - 1], pv = pts[pts.length - 2] || [k[0] - a.nz, k[1] + a.nx]; let dx = k[0] - pv[0], dz = k[1] - pv[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     const F = [k[0] + dx * 15, k[1] + dz * 15], D = [a.x, a.z], D2 = [a.x + a.nx * 9, a.z + a.nz * 9], dist = Math.hypot(F[0] - D2[0], F[1] - D2[1]), cc = Math.min(22, dist * 0.55), car = ruta.map(n => n.k); pts.push(F); car.push(car[car.length - 1]);
     c.cola = [tramo(pts, { carril: true, car }), tramo([...curva(F, [F[0] - dx * cc, F[1] - dz * cc], [D2[0] + a.nx * cc, D2[1] + a.nz * cc], D2), D], { atras: true, v: 1.9 })]; c.s = 0; c.anden = a; a.cam = c; c.estado = 'va'; }
-  function salir(c) { const a = c.anden, sal = T.entradas.filter(n => a.nodo && n.c === a.nodo.c), fin = sal.length ? de(sal) : null, ruta = fin && camino(a.nodo, fin); if (!ruta || ruta.length < 2) { c.estado = 'chau'; c.t = 1; return; }
+  function salir(c) { if (c.anden && c.anden.pasa) return salirP(c); const a = c.anden, sal = T.entradas.filter(n => a.nodo && n.c === a.nodo.c), fin = sal.length ? de(sal) : null, ruta = fin && camino(a.nodo, fin); if (!ruta || ruta.length < 2) { c.estado = 'chau'; c.t = 1; return; }
     const k = [ruta[0].x, ruta[0].z], sg = [ruta[1].x, ruta[1].z]; let dx = sg[0] - k[0], dz = sg[1] - k[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const D = [a.x, a.z], D2 = [a.x + a.nx * 9, a.z + a.nz * 9], cc = Math.min(20, Math.hypot(k[0] - D2[0], k[1] - D2[1]) * 0.55);
     c.cola = [tramo([D, ...curva(D2, [D2[0] + a.nx * cc, D2[1] + a.nz * cc], [k[0] - dx * cc, k[1] - dz * cc], k)], { v: 2.6 }), tramo(ruta.map(n => [n.x, n.z]), { carril: true, car: ruta.map(n => n.k) })]; c.s = 0; c.estado = 'sale'; }
 
@@ -76,7 +85,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
     // de entrada, cuatro de cada diez andenes ya tienen un camión
     for (const a of T.andenes) { if (Math.random() > 0.4) continue; const c = nuevoCamion(); if (!c) break; c.x = a.x; c.z = a.z; c.h = a.h; c.esc = 1; c.anden = a; a.cam = c; c.estado = 'anden'; c.t = a.nodo ? rnd(20, 240) : 1e9; pintar(c); ubicar(c); }
     T.con = con; T.prox = 1.5; avisar(); motor.dirty = true; }
-  let avisado = ''; function avisar() { const porNave = new Map(); for (const a of T.andenes) { const o = porNave.get(a.p.id) || porNave.set(a.p.id, [0, 0]).get(a.p.id); o[1]++; if (a.cam && a.cam.estado === 'anden') o[0]++; }
+  let avisado = ''; function avisar() { const porNave = new Map(); for (const a of T.andenes) { if (a.pasa) continue; const o = porNave.get(a.p.id) || porNave.set(a.p.id, [0, 0]).get(a.p.id); o[1]++; if (a.cam && a.cam.estado === 'anden') o[0]++; }
     const f = JSON.stringify([...porNave]) + T.on; if (f === avisado) return; avisado = f; if (M.subtitulo) for (const [id, [oc, tot]] of porNave) M.subtitulo(id, T.on && tot ? `${oc}/${tot} andenes` : ''); }
 
   // ¿hay otro camión en el camino? Mira un pasillo del ancho del camión hacia donde se mueve (adelante, o atrás si retrocede).
@@ -111,7 +120,7 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
   function paso(dt) { if (!T.on || !T.andenes.length || document.hidden) return false; dt = Math.min(dt, 0.1); let movio = false;
     if ((estT -= dt) <= 0) { estT = 3; EST = estorbos(); }
     T.prox -= dt; const andando = T.camiones.filter(c => c.estado === 'va' || c.estado === 'sale').length;
-    if (T.prox <= 0) { T.prox = rnd(3.5, 8); const libres = (T.con || []).filter(a => !a.cam); if (libres.length && andando < Math.min(9, 2 + Math.ceil(T.andenes.length / 12))) { const a = de(libres), ent = T.entradas.filter(n => n.c === a.nodo.c), ini = ent.length ? de(ent) : null, ruta = ini && camino(ini, a.nodo);
+    if (T.prox <= 0) { T.prox = rnd(3.5, 8); const libres = (T.con || []).filter(a => !a.cam); if (libres.length && andando < Math.min(16, 2 + Math.ceil(T.andenes.length / 8))) { const a = de(libres), ent = T.entradas.filter(n => n.c === a.nodo.c), ini = ent.length ? de(ent) : null, ruta = ini && camino(ini, a.nodo);
         if (ruta && ruta.length > 1 && T.camiones.some(q => q.estado !== 'anden' && Math.hypot(q.x - ruta[0].x, q.z - ruta[0].z) < 34)) T.prox = 1.5; else if (ruta && ruta.length > 1) { const c = nuevoCamion(); if (c) { c.x = ruta[0].x; c.z = ruta[0].z; c.h = Math.atan2(-(ruta[1].z - ruta[0].z), ruta[1].x - ruta[0].x); pintar(c); entrar(c, a, ruta); } } } }
     for (const c of T.camiones.slice()) {
       if (c.estado === 'anden') { c.t -= dt; if (c.t <= 0) salir(c); continue; }
@@ -128,8 +137,23 @@ export function transito(M) { const { motor, mundo } = M, oscuro = () => documen
       c.lado += ((tr.carril ? 1 : 0) - c.lado) * Math.min(1, dt * 0.8); const [hx, hz] = dirH(c.h), off = 2.1 * c.lado * (tr.car ? tr.car[i - 1] + (tr.car[i] - tr.car[i - 1]) * f : 1); c.x = a[0] + (b[0] - a[0]) * f - hz * off; c.z = a[1] + (b[1] - a[1]) * f + hx * off; ubicar(c); movio = true; }
     return movio; }
 
+  // ---------- operarios: caminan por los caminos peatonales pintados, ida y vuelta, con casco y chaleco (todos juntos en tres dibujos) ----------
+  const PMAX = 220, mallaP = (geo, c) => { const k = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }), PMAX); k.castShadow = true; k.frustumCulled = false; k.raycast = () => {}; k.visible = false; mundo.add(k); for (let i = 0; i < PMAX; i++) k.setMatrixAt(i, CERO); return k; };
+  const pPie = mallaP(new THREE.BoxGeometry(0.36, 0.82, 0.24).translate(0, 0.41, 0), '#2d3742'), pTor = mallaP(new THREE.BoxGeometry(0.46, 0.62, 0.3).translate(0, 1.13, 0), '#ffffff'), pCab = mallaP(new THREE.SphereGeometry(0.15, 10, 8).translate(0, 1.6, 0), '#f3f4f2');
+  for (let i = 0; i < PMAX; i++) pTor.setColorAt(i, col.set(i % 3 ? '#f2992e' : '#d6e23a'));
+  const P = { lista: [] };
+  function armarP() { P.lista = []; for (const p of M.E.piezas) { if (p.t !== 'peatonal' || p.operarios === false || !p.pts || p.pts.length < 2) continue; const L = [0]; for (let i = 1; i < p.pts.length; i++) L.push(L[i - 1] + Math.hypot(p.pts[i][0] - p.pts[i - 1][0], p.pts[i][1] - p.pts[i - 1][1]));
+      const largo = L[L.length - 1]; if (largo < 4) continue; const n = Math.max(1, Math.min(6, Math.round(largo / 45))); for (let k = 0; k < n && P.lista.length < PMAX; k++) P.lista.push({ pts: p.pts, L, largo, s: Math.random() * largo, dir: Math.random() < 0.5 ? 1 : -1, v: rnd(1.1, 1.5), lado: rnd(-0.4, 0.4), t: Math.random() * 6, para: 0 }); }
+    for (let i = 0; i < PMAX; i++) for (const k of [pPie, pTor, pCab]) k.setMatrixAt(i, CERO); for (const k of [pPie, pTor, pCab]) { k.visible = T.on && P.lista.length > 0; k.instanceMatrix.needsUpdate = true; } }
+  function pasoP(dt) { if (!T.on || !P.lista.length || document.hidden) return false; dt = Math.min(dt, 0.1);
+    P.lista.forEach((o, i) => { if (o.para > 0) o.para -= dt; else { o.s += o.dir * o.v * dt; if (o.s > o.largo) { o.s = o.largo; o.dir = -1; o.para = rnd(2, 12); } else if (o.s < 0) { o.s = 0; o.dir = 1; o.para = rnd(2, 12); } } o.t += dt;
+      let j = 1; while (j < o.L.length - 1 && o.L[j] < o.s) j++; const a = o.pts[j - 1], b = o.pts[j], f = (o.s - o.L[j - 1]) / Math.max(0.001, o.L[j] - o.L[j - 1]); let dx = b[0] - a[0], dz = b[1] - a[1]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const h = Math.atan2(-dz * o.dir, dx * o.dir), y = o.para > 0 ? 0 : Math.abs(Math.sin(o.t * 7)) * 0.05; eu.set(0, h + Math.PI / 2, 0); q4.setFromEuler(eu); m4.compose(v3.set(a[0] + (b[0] - a[0]) * f - dz * o.lado, y, a[1] + (b[1] - a[1]) * f + dx * o.lado), q4, s3.set(1, 1, 1));
+      for (const k of [pPie, pTor, pCab]) k.setMatrixAt(i, m4); });
+    for (const k of [pPie, pTor, pCab]) k.instanceMatrix.needsUpdate = true; return true; }
+  motor.cada.push(pasoP);
   motor.cada.push(paso); motor.alTema.push(() => { for (const c of T.camiones) { pintar(c); ubicar(c); } });
   // si cambian las calles o las naves (se editó), la red se arma de nuevo
-  T.revisar = () => { const f = JSON.stringify(M.E.piezas.filter(p => p.t === 'calle' || (p.t === 'galpon' && p.estilo === 'logistico')).map(p => [p.id, p.x, p.z, p.r, p.ancho, p.fondo, p.pts, p.andenes, p.andenesEn, p.anexo, p.tipo, p.mano, p.libre])); if (f === T.firma) return; T.firma = f; armar(); };
-  T.ver = on => { T.on = !!on; for (const k of [...TODAS, il]) k.visible = T.on && T.andenes.length > 0; avisado = ''; avisar(); motor.dirty = true; };
+  T.revisar = () => { const f = JSON.stringify(M.E.piezas.filter(p => p.t === 'calle' || p.t === 'carga' || p.t === 'peatonal' || (p.t === 'galpon' && p.estilo === 'logistico')).map(p => [p.id, p.x, p.z, p.r, p.ancho, p.fondo, p.pts, p.andenes, p.andenesEn, p.anexo, p.tipo, p.mano, p.libre, p.entrada, p.operarios])); if (f === T.firma) return; T.firma = f; armar(); armarP(); };
+  T.ver = on => { T.on = !!on; for (const k of [...TODAS, il]) k.visible = T.on && T.andenes.length > 0; for (const k of [pPie, pTor, pCab]) k.visible = T.on && P.lista.length > 0; avisado = ''; avisar(); motor.dirty = true; };
   T.revisar(); return T; }
