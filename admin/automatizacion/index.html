@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Automatización · Unity Tech</title>
+<title>Girvo · Unity Tech</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0B0C0F">
-<link rel="icon" href="/icono.svg">
+<link rel="icon" href="/girvo/icono.svg">
 <style>
-:root{color-scheme:dark;--bg:#0B0C0F;--fg:#F3F4F6;--muted:#A9AFBB;--line:rgb(255 255 255/.09);--card:rgb(30 31 37/.72);--field:rgb(255 255 255/.06);--acc:#FF6A13;--acc-ink:#FF9A5C;--pass:#55D69B;--warn:#F0BE62;--deny:#FF7A7A;--shadow:0 1px 0 rgb(255 255 255/.04) inset,0 12px 32px -18px rgb(0 0 0/.7);--mo:cubic-bezier(.2,.8,.2,1)}
-@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#ECEEF2;--fg:#15171B;--muted:#4A4F5B;--line:rgb(16 20 28/.1);--card:rgb(255 255 255/.82);--field:rgb(16 20 28/.05);--acc-ink:#B84300;--pass:#08663A;--warn:#8A5A00;--deny:#B42318;--shadow:0 12px 32px -22px rgb(16 20 28/.35)}}
+:root{color-scheme:dark;--bg:#0B0C0F;--fg:#F3F4F6;--muted:#A9AFBB;--line:rgb(255 255 255/.09);--card:rgb(30 31 37/.72);--field:rgb(255 255 255/.06);--acc:#1FD1B2;--acc-ink:#66E6D0;--pass:#55D69B;--warn:#F0BE62;--deny:#FF7A7A;--shadow:0 1px 0 rgb(255 255 255/.04) inset,0 12px 32px -18px rgb(0 0 0/.7);--mo:cubic-bezier(.2,.8,.2,1)}
+@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#ECEEF2;--fg:#15171B;--muted:#4A4F5B;--line:rgb(16 20 28/.1);--card:rgb(255 255 255/.82);--field:rgb(16 20 28/.05);--acc-ink:#00715F;--pass:#08663A;--warn:#8A5A00;--deny:#B42318;--shadow:0 12px 32px -22px rgb(16 20 28/.35)}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{min-height:100vh;background:radial-gradient(1000px 520px at 85% -12%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 62%),var(--bg);color:var(--fg);font:400 15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
@@ -38,7 +38,7 @@ h2.sec .seg{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:40
 .state{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent);color:var(--c,var(--muted));white-space:nowrap}
 .btn{height:40px;border-radius:12px;border:1px solid var(--line);background:var(--field);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-weight:600;font-size:14px;transition:transform .2s var(--mo)}
 .btn:active{transform:scale(.97)}
-.btn.pri{background:var(--acc);border-color:transparent;color:#1A0A00;height:44px}
+.btn.pri{background:var(--acc);border-color:transparent;color:#04201B;height:44px}
 .btn.peligro{color:var(--deny)}
 .item.gasto{grid-template-columns:1fr;gap:8px}
 .barra{height:8px;border-radius:999px;background:var(--field);overflow:hidden}
@@ -105,8 +105,8 @@ const hora = iso => new Date(iso).toLocaleTimeString('es-UY', { hour: '2-digit',
 const usd = n => 'US$ ' + Number(n || 0).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function gate(msg = '') {
-  $('#app').innerHTML = `<form class="gate" id="login"><img src="/icono.svg" alt="" width="44" height="44" style="border-radius:12px">
-    <h1>Automatización</h1><p>Entrá con tu cuenta de Olumi. Esta página la ven solo los administradores de Unity Tech.</p>
+  $('#app').innerHTML = `<form class="gate" id="login"><img src="/girvo/icono.svg" alt="" width="44" height="44" style="border-radius:12px">
+    <h1>Girvo</h1><p>La automatización de Unity Tech. Entrá con tu cuenta de Olumi; esta página la ven solo los administradores.</p>
     <label>Email<input type="email" name="email" autocomplete="username" required></label>
     <label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label>
     <p class="err" role="alert">${esc(msg)}</p><button class="btn pri" type="submit">Entrar</button></form>`;
@@ -133,7 +133,7 @@ function dibujar() {
   const d = S.d, vivo = d.motor && Date.parse(d.ahora) - Date.parse(d.motor.visto) < 120e3;
   const err24 = d.flujos.reduce((a, f) => a + f.errores, 0), gastoTot = d.gasto.reduce((a, g) => a + Number(g.usd), 0);
   const ej = d.ejecuciones.filter(e => S.filtro === 'todo' || (S.filtro === 'error' ? e.estado === 'error' : e.detalle?.sombra));
-  $('#app').innerHTML = `<header><img src="/icono.svg" alt=""><h1>Automatización<small>El motor de Unity Tech: flujos de cada empresa y lo que van haciendo</small></h1>
+  $('#app').innerHTML = `<header><img src="/girvo/icono.svg" alt=""><h1>Girvo<small>Automatización de Unity Tech: los flujos de cada empresa y lo que van haciendo</small></h1>
       <button class="round" data-act="recargar" aria-label="Actualizar" title="Actualizar">${icon('recargar')}</button>
       <button class="round" data-act="salir" aria-label="Salir" title="Salir">${icon('salir')}</button></header>
     <div class="stats">
