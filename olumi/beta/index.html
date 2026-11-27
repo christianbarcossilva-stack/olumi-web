@@ -1335,6 +1335,15 @@ html.d2[data-paleta][data-mode="dark"] #sheet .reltools{background:linear-gradie
 /* la cabecera tiene vidrio y eso la hace una capa propia: sin altura quedaba debajo del cuerpo y el menú ⋯ salía tapado */
 html #sheet>.sh-h{z-index:20}
 /* fin 1.53u */
+/* 1.53w */
+/* un botón que está guardando (solo se ve si tarda) */
+.ocupado{opacity:.55;cursor:progress}
+/* avisos del examen de diseño: «Recomendado» con más contraste en claro; el enlace del resumen de la obra, más alto para el dedo */
+.aj-rec{color:color-mix(in srgb,var(--accent) 50%,var(--fg))}
+@media (pointer:coarse){.pr-f b>a{display:inline-block;padding:9px 0;margin:-9px 0}}
+/* En vivo en modo TV en un teléfono: la columna fija de 380 px se salía de la pantalla */
+@media (max-width:900px){html body.tv .vivo-grid{grid-template-columns:minmax(0,1fr)}html body.tv .vivo-map{height:auto;min-height:380px;aspect-ratio:auto}}
+/* fin 1.53w */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -2502,6 +2511,7 @@ const money=(n,mon,dec=0)=>((mon||'UYU')==='USD'?'US$ ':'$ ')+nfmt(dec).format(n
 const QF=new Intl.NumberFormat('es-UY',{maximumFractionDigits:2});const qty=n=>QF.format(n0(n));
 const DTF_S=new Intl.DateTimeFormat('es-UY',{day:'numeric',month:'short'});const fdate=d=>d?DTF_S.format(new Date(d.slice(0,10)+'T12:00')):'';
 const DTF_L=new Intl.DateTimeFormat('es-UY',{day:'numeric',month:'long',year:'numeric'});const fdateL=d=>d?DTF_L.format(new Date(d.slice(0,10)+'T12:00')):'';
+/* 1.53w: para momentos exactos (número o texto con zona): el día que es acá */const fdZ=d=>{if(!d)return'';const x=new Date(d);return isNaN(x)?'':fdate(localISO(x))};
 const fdt=f=>{if(!f)return'Sin fecha';const d=f.slice(0,10),t=f.slice(11,16);const l=d===today()?'Hoy':fdate(d);return t?l+' · '+t:l};
 const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
 const ARRC=new Map();let ARRV=0;const arrDirty=()=>{ARRV++};
@@ -2747,7 +2757,7 @@ function vAgenda(){
   const byDate=(a,b)=>(a.fecha||'9').localeCompare(b.fecha||'9');
   const pend=list.filter(a=>!a.hecha);
   const groups=[['Vencidas',pend.filter(a=>a.fecha&&a.fecha.slice(0,10)<t).sort(byDate)],['Hoy',pend.filter(a=>a.fecha&&a.fecha.slice(0,10)===t).sort(byDate)],['Próximas',pend.filter(a=>!a.fecha||a.fecha.slice(0,10)>t).sort(byDate)],['Hechas recientemente',list.filter(a=>a.hecha).sort((a,b)=>n0(b.hechaEn)-n0(a.hechaEn)).slice(0,12)]];
-  const head=`<div class="vhead"><div><h1>Agenda</h1><p class="sub">${pl(pend.length,'pendiente','pendientes')}${groups[0][1].length?` · <span style="color:var(--bad)">${pl(groups[0][1].length,'vencida','vencidas')}</span>`:''}</p></div><div class="tools">${ME?`<button class="tgl${mine?' on':''}" data-act="mine" aria-pressed="${mine}">Solo mías</button>`:''}<button class="btn pri" data-new="act">+ Actividad</button></div></div>`;
+  const head=`<div class="vhead"><div><h1>Seguimientos</h1><p class="sub">${pl(pend.length,'pendiente','pendientes')}${groups[0][1].length?` · <span style="color:var(--bad)">${pl(groups[0][1].length,'vencida','vencidas')}</span>`:''}</p></div><div class="tools">${ME?`<button class="tgl${mine?' on':''}" data-act="mine" aria-pressed="${mine}">Solo mías</button>`:''}<button class="btn pri" data-new="act">+ Actividad</button></div></div>`;
   if(!all.length)return head+empty('Nada agendado','Programá visitas técnicas, llamadas de seguimiento e instalaciones. Las vencidas se marcan en rojo en el CRM.','act','+ Programar actividad');
   return head+groups.filter(g=>g[1].length).map(([n,l])=>`<section class="group"><h2>${n} <span class="num">${l.length}</span></h2><div class="list">${l.map(aRow).join('')}</div></section>`).join('')||`<p class="muted">Nada coincide con la búsqueda.</p>`;
 }
@@ -2890,7 +2900,7 @@ function sheetTk(id,p){
   if(id){
     const jobs=arr('trabajos').filter(j=>j.ticketId===id).sort((a,b)=>((a.fecha||'')+(a.hora||'')).localeCompare((b.fecha||'')+(b.hora||'')));
     if((t.fotos||[]).length)body+=`<section class="rel"><h3>Fotos que mandó el cliente</h3>${photosHtmlRO(t.fotos)}</section>`;
-    if((t.chat||[]).length)body+=`<section class="rel"><h3>Conversación de WhatsApp</h3>${t.chat.slice(-30).map(c=>`<div class="item"><span class="grow"><b>${c.dir==='out'?'Empresa':esc(c.name||'Cliente')}:</b> ${esc(c.text)}</span><span>${new Date(c.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
+    if((t.chat||[]).length)body+=`<section class="rel"><h3>Conversación de WhatsApp</h3>${t.chat.slice(-30).map(c=>`<div class="item"><span class="grow"><b>${c.dir==='out'?'Empresa':esc(c.name||'Cliente')}:</b> ${esc(c.text)}</span><span>${new Date(c.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Visitas</h3>${jobs.map(j=>`<div class="item link" role="button" tabindex="0" data-open="trab:${j.id}"><span class="grow">${esc(j.titulo||'Visita')}</span><span>${fdate(j.fecha)} ${esc(j.hora||'')}</span><span class="tag ${j.estado==='terminado'?'t-ok':'t-acc'}">${esc(TRE.find(e=>e[0]===j.estado)?.[1]||'Programado')}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin visitas agendadas.</p>'}
       ${arr('facturas').filter(f=>f.ticketId===id&&!f.anulada).map(f=>`<div class="item link" role="button" tabindex="0" data-open="fact:${f.id}"><span class="code">${esc(f.numero||'')}</span><span class="grow">${fdate(f.fecha)}</span><span class="num">${money(factCalc(f).total,f.moneda)}</span><span class="tag ${FST[factState(f)][1]}">${FST[factState(f)][0]}</span></div>`).join('')}<div class="actions"><button class="btn pri" data-new="trab" data-tk="${id}">Agendar visita</button>${has('presupuestos')&&canMoney()?'<button class="btn" data-act="tk2pres">Presupuestar</button>':''}${has('facturas')&&canMoney()&&!arr('facturas').some(f=>f.ticketId===id&&!f.anulada)?'<button class="btn" data-act="tk2fact">Facturar</button>':''}</div></section>
       <section class="rel"><h3>Avisar al cliente</h3><p class="hint">${PLAN&&PLAN.whatsapp&&has('whatsapp')?'Se envía desde el WhatsApp de la empresa ('+esc(PLAN.whatsapp)+').':'Abre WhatsApp con el mensaje ya escrito; lo revisás y lo enviás vos.'}</p><div class="actions">${waBtns(t)}</div></section>`;
@@ -4098,7 +4108,7 @@ const rpvFrec=k=>`<div class="ajpv rpv rpv-cal" aria-hidden="true">${Array.from(
 function rspOp(g,v,on,t,x,pv,rec,dis){return`<button type="button" class="aj-op${on?' on':''}" role="radio" aria-checked="${on}" data-rsp="${g}:${v}"${dis?' disabled':''}>${pv}<span class="aj-tx"><b>${esc(t)}${rec?' <em class="aj-rec">Recomendado</em>':''}</b><span>${esc(x)}</span></span></button>`}
 function respaldoHtml(){
   const c=rspCfg(),u=c.ultimo,auto=c.modo==='auto',fs=rspPuede();
-  const cuando=u?.fecha?`${fdate(u.fecha)} a las ${new Date(u.fecha).toLocaleTimeString('es-UY',{timeZone:'America/Montevideo',hour:'2-digit',minute:'2-digit'})}`:'';
+  const cuando=u?.fecha?`${fdZ(u.fecha)} a las ${new Date(u.fecha).toLocaleTimeString('es-UY',{timeZone:'America/Montevideo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}`:'';
   const est=u?.fecha?`<p class="rsp-est${rspVence()&&auto?' tarde':''}"><b>Último respaldo:</b> ${esc(cuando)}${u.donde?` en «${esc(u.donde)}»`:''}${u.kb?` · ${u.kb>1024?(u.kb/1024).toFixed(1).replace('.',',')+' MB':u.kb+' KB'}`:''}</p>`:`<p class="rsp-est tarde"><b>Todavía no hay ningún respaldo.</b> Hacé el primero ahora.</p>`;
   const carpeta=RSPH?`<div class="rsp-dir">${RSPDIR}<span><b>${esc(RSPH.name)}</b><small>${RSPPERM==='granted'?'Lista en esta compu':'Hay que confirmarla una vez (el navegador lo pide)'}</small></span><button type="button" class="btn ghost" data-act="rspdir">Cambiar</button></div>`
     :fs?`<div class="rsp-dir vacia">${RSPDIR}<span><b>Ninguna carpeta elegida en esta compu</b><small>Elegí la de Google Drive, OneDrive o Dropbox para que suba sola a la nube.</small></span><button type="button" class="btn pri" data-act="rspdir">Elegir carpeta</button></div>`
@@ -4898,6 +4908,46 @@ let TXP=null;
 document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('textarea,.rte[contenteditable="true"]');TXP=t?{t,h:t.offsetHeight}:null},true);
 document.addEventListener('pointerup',()=>{if(!TXP)return;const {t,h}=TXP;TXP=null;const n=t.offsetHeight;if(Math.abs(n-h)>4){t.dataset.alto=n;t.classList.add('tx-mano')}},true);
 /* === fin 1.53t === */
+/* === 1.53w · toque doble (Christian 27/11: «revisar errores en general y ajustar») ===
+   Tres cosas que pasaban al tocar dos veces seguidas (un rebote del dedo, o la costumbre del doble clic):
+   1) El segundo toque caía en OTRO botón que apareció debajo del dedo. «Empezar trabajo»: al tocarlo, en el mismo lugar aparece «Terminar trabajo»
+      y el trabajo quedaba terminado (y el ticket resuelto). Lo mismo cuando se abre o se cierra una ficha: en la compu, el doble clic en una fila
+      abría la ficha y la cerraba en el acto (el segundo clic caía en el fondo); en el teléfono, abría el cliente y encima «Agendar trabajo».
+      Regla: si en menos de medio segundo y en el mismo punto ya hay otra cosa que la que se tocó, ese toque era para lo anterior: no cuenta.
+   2) «Tocá de nuevo» (confirmar un borrado, emitir un CFE, cancelar la suscripción): el toque doble confirmaba sin dar tiempo a leer.
+      Regla: la confirmación vale si llega al menos medio segundo después.
+   3) Acciones que guardan: mientras la primera no terminó, la misma acción no vuelve a correr (aunque la pantalla haya redibujado el botón), y si tarda el botón se ve en espera.
+      Pasaba con «Cliente aceptó» (dos obras), «Registrar cobro» (el cobro dos veces), notas y seguimientos (dos veces), «Croquis» (dos planos), «Duplicar» del calendario (dos copias), «Anular».
+   No frena tocar varias veces seguidas el mismo botón que no guarda (flechas, acercar), ni los toques que hace el programa. La prueba es prueba/doble.js. */
+(()=>{const Q='button,a[href],[data-act],[data-new],[data-open],[data-view],[role=button],label,summary,select,input[type=checkbox],input[type=radio]',MS=500;
+  const clave=e=>{if(!e)return'';const d=e.dataset||{},k=[e.tagName,d.act,d.new,d.open,d.view,e.id].join('|');if(d.act||d.new||d.open||d.view||e.id)return k;
+    const c=e.className;return k+'|'+String(c&&c.baseVal!==undefined?c.baseVal:c||'').slice(0,40)+(e.matches&&e.matches(Q)?'|'+(e.textContent||'').trim().slice(0,24):'')};
+  const en=(x,y)=>{const t=document.elementFromPoint(x,y);return t?(t.closest(Q)||t):null};
+  let u=null,tA=0,clic=null,ue=null,ut=0;
+  window.addEventListener('click',e=>{
+    if(!e.isTrusted)return;                                   // los toques que hace el programa no cuentan
+    const tg=e.target&&e.target.closest?e.target:null;if(!tg)return;const t=performance.now(),frena=()=>{e.stopImmediatePropagation();e.preventDefault()};
+    // 2) la confirmación no puede ser el rebote del toque que la pidió
+    if(armed&&armed.isConnected&&(armed===tg||armed.contains(tg))&&(t-tA<MS||(ue&&(ue===armed||armed.contains(ue))&&t-ut<MS)))return frena();
+    {const era=armed;let ya=false;for(const d of [0,120,300,600,1200,2500,5000])setTimeout(()=>{if(!ya&&armed&&armed!==era){ya=true;tA=performance.now()}},d)}   // la pregunta puede aparecer después de guardar
+    ue=tg;ut=t;
+    const ba=tg.closest('[data-act]');clic=ba?{a:ba.dataset.act,el:ba,t}:null;
+    if(e.detail===0){u=null;return}                           // teclado (Enter o espacio sobre un botón): no tiene punto
+    // 1) lo que se tocó ya no está ahí: este toque era para aquello
+    const b=tg.closest(Q);
+    if(u&&t-u.t<MS&&Math.hypot(e.clientX-u.x,e.clientY-u.y)<16&&clave(b||tg)!==u.k&&clave(en(u.x,u.y))!==u.k){clic=null;return frena()}   // también si cae en el fondo: el doble clic en una fila abría la ficha y la cerraba
+    u={k:clave(b||tg),x:e.clientX,y:e.clientY,t}},true);
+  // 3) una sola vez mientras dura
+  const LIBRE=/^(agsend)$/,ocup=new Map(),act0=act;        // por nombre de la acción y no por botón: la pantalla puede redibujar el botón mientras guarda
+  act=function(a,el){const t=performance.now();
+    if(!(clic&&clic.a===a&&t-clic.t<120)||!el||LIBRE.test(String(a).split(':')[0]))return act0.apply(this,arguments);
+    if(ocup.has(a)&&t-ocup.get(a)<8000)return Promise.resolve();
+    ocup.set(a,t);const tv=setTimeout(()=>{if(ocup.get(a)===t&&el.isConnected)el.classList.add('ocupado')},220),tm=setTimeout(()=>libre(),8000);   // a los 8 s se suelta solo, por si algo no contesta nunca
+    const libre=()=>{if(ocup.get(a)===t)ocup.delete(a);el.classList.remove('ocupado');clearTimeout(tv);clearTimeout(tm)};
+    let r;try{r=act0.apply(this,arguments)}catch(x){libre();throw x}
+    return Promise.resolve(r).then(v=>{libre();return v},x=>{libre();throw x})};
+})();
+/* === fin 1.53w === */
 async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
@@ -5592,7 +5642,7 @@ function cpkAbre(sel){
   box.innerHTML=`<div class="cpk-q"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.4 10.4 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input type="search" id="na_cpk_q" placeholder="${CPK_TXT[cpkKind(sel)][0]}" aria-label="Buscar${cpkNombre(sel)?' '+esc(cpkNombre(sel)):''}" autocomplete="off" enterkeyhint="go"></div><div class="cpk-l" role="listbox"></div>`;
   sel._cpk.after(box);sel._cpk.setAttribute('aria-expanded','true');
   CPK={sel,box,i:0,items:[]};
-  const q=box.querySelector('input');q.addEventListener('input',()=>{CPK.i=0;cpkPinta()});q.addEventListener('keydown',cpkTecla);
+  const q=box.querySelector('input');q.addEventListener('input',()=>{if(!CPK)return;CPK.i=0;cpkPinta()});q.addEventListener('keydown',cpkTecla);
   box.addEventListener('pointerdown',e=>e.stopPropagation());
   box.addEventListener('click',e=>{e.stopPropagation();if(e.target.tagName!=='INPUT')e.preventDefault();const r=e.target.closest('[data-cpk]');if(r)cpkElige(r.dataset.cpk)});
   cpkPinta();q.focus({preventScroll:true});
@@ -5627,8 +5677,8 @@ function cpkTecla(e){
 }
 async function cpkElige(id){
   if(!CPK)return;const {sel,box}=CPK;
-  if(id==='+'){const nom=box.querySelector('input').value.trim();if(!nom)return;
-    const nid=uid();try{await put('clientes',nid,{nombre:nom,creado:Date.now(),actualizado:Date.now()})}catch(err){if(!(err&&err.code==='loading'))handleErr(err);return}
+  if(id==='+'){const nom=box.querySelector('input').value.trim();if(!nom||CPK.creando)return;CPK.creando=true;
+    const nid=uid();try{await put('clientes',nid,{nombre:nom,creado:Date.now(),actualizado:Date.now()})}catch(err){if(CPK)CPK.creando=false;if(!(err&&err.code==='loading'))handleErr(err);return}
     if(![...sel.options].some(o=>o.value===nid)){const o=document.createElement('option');o.value=nid;o.textContent=nom;sel.append(o)}
     id=nid;toast(`Cliente «${nom}» creado`)}
   sel.value=id;cpkCierra(true);
@@ -5858,7 +5908,7 @@ function mfaAjustesHtml(){return`<div class="vhead" style="margin-top:34px"><div
 function mfaPinta(){const b=document.getElementById('mfaBox');if(b)b.innerHTML=mfaBoxHtml();const o=document.getElementById('mfaObl');if(o){const x=o.querySelector('.mfa-obl-box');if(x)x.innerHTML=mfaBoxHtml();if(mfaActiva()&&!MFA.alta)o.remove()}}
 async function mfaAlta(){const api=mfaApi();MFA.err='';MFA.ocupado=true;mfaPinta();
   try{const {data:l}=await api.listFactors();for(const f of ((l&&l.all)||[]).filter(f=>f.status!=='verified'))await api.unenroll({factorId:f.id}).catch(()=>{});
-    const {data,error}=await api.enroll({factorType:'totp',friendlyName:'Olumi '+new Date().toISOString().slice(0,16),issuer:'Olumi'});if(error)throw error;
+    const {data,error}=await api.enroll({factorType:'totp',friendlyName:'Olumi '+localISO(new Date()).slice(0,16).replace('T',' '),issuer:'Olumi'});if(error)throw error;
     MFA.alta={id:data.id,qr:data.totp&&data.totp.qr_code,secret:data.totp&&data.totp.secret,uri:data.totp&&data.totp.uri}}
   catch(e){MFA.err=/disabled|not enabled|mfa_totp_enroll/i.test(e&&e.message||'')?'La doble verificación todavía no está prendida en el servidor.':'No se pudo empezar. Probá de nuevo.'}
   MFA.ocupado=false;mfaPinta();setTimeout(()=>document.getElementById('mfa_cod')?.focus(),50)}
@@ -7526,7 +7576,7 @@ function informeHtml(j){
     ${fld({k:'informe',l:'Qué se hizo',t:'textarea',w:'full',ph:'Trabajo realizado, pruebas hechas, cómo quedó'},j.informe)}
     ${fld({k:'materiales',l:'Materiales usados',t:'textarea',w:'full',ph:'Ej.: 40 m UTP cat6, 2 cámaras domo 4 MP, 1 fuente 12 V'},j.materiales)}</div>${msHtml(j)}${ckHtml(j)}<div class="grid">
     ${fld({k:'pendientes',l:'Pendientes y recomendaciones',t:'textarea',w:'full',ph:'Lo que queda por hacer o lo que conviene revisar'},j.pendientes)}</div>
-    <div class="sigview">${f&&f.id?`<img src="${esc(blobUrl(f.id))}" alt="Firma del cliente"><p style="margin:6px 0 0"><b>${esc(f.nombre||'')}</b>${f.ci?' · CI '+esc(f.ci):''} · ${new Date(f.en).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'<p class="muted" style="margin:0">Todavía sin firma del cliente.</p>'}</div>
+    <div class="sigview">${f&&f.id?`<img src="${esc(blobUrl(f.id))}" alt="Firma del cliente"><p style="margin:6px 0 0"><b>${esc(f.nombre||'')}</b>${f.ci?' · CI '+esc(f.ci):''} · ${new Date(f.en).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</p>`:'<p class="muted" style="margin:0">Todavía sin firma del cliente.</p>'}</div>
     <div class="actions">${AS&&!PORTAL()?`<button class="btn ${f&&f.id?'':'pri'}" data-act="firmar">${f&&f.id?'Volver a firmar':'Firma del cliente'}</button>`:''}<button class="btn" data-act="informe">Informe en PDF</button></div></section>`;
 }
 let SIG=null;
@@ -7718,7 +7768,7 @@ function inviteHtml(){
   return`<div class="panel" style="margin-top:12px"><b>Invitar por email</b><p class="hint" style="margin:4px 0 10px">Le llega un email para elegir su contraseña y queda sumado con el rol que elijas.</p>
     <div class="grid"><label class="fld" for="inv_n"><span>Nombre</span><input id="inv_n" type="text" autocomplete="off"></label><label class="fld" for="inv_e"><span>Email</span><input id="inv_e" type="email" autocomplete="off" inputmode="email"></label>
     <label class="fld" for="inv_r"><span>Rol</span><select id="inv_r">${opts(ROLES,'tecnico')}</select></label><div class="fld" style="justify-content:flex-end"><span>&nbsp;</span><button class="btn pri" data-act="invite">Mandar invitación</button></div></div>
-    ${INVITES.length?`<div class="list" style="margin-top:12px">${INVITES.map(i=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto auto;cursor:default"><div><strong>${esc(i.display_name||i.email)}</strong><span class="muted">${esc(i.email)} · invitado el ${fdate(i.created_at)}</span></div><span class="tag t-acc">${ROLEN[i.role]||i.role}</span><button class="btn ghost" data-act="uninv:${esc(i.email)}">Cancelar</button></div>`).join('')}</div>`:''}</div>`;
+    ${INVITES.length?`<div class="list" style="margin-top:12px">${INVITES.map(i=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto auto;cursor:default"><div><strong>${esc(i.display_name||i.email)}</strong><span class="muted">${esc(i.email)} · invitado el ${fdZ(i.created_at)}</span></div><span class="tag t-acc">${ROLEN[i.role]||i.role}</span><button class="btn ghost" data-act="uninv:${esc(i.email)}">Cancelar</button></div>`).join('')}</div>`:''}</div>`;
 }
 
 /* --- acciones --- */
@@ -9195,7 +9245,7 @@ async function offFlush(){
 }
 function offBanner(){
   if(OFF.q.length)return`<p class="note">${ic('senal','in')}Sin señal: ${OFF.q.length} cambio${OFF.q.length===1?'':'s'} guardado${OFF.q.length===1?'':'s'} en este equipo. Se suben solos cuando vuelva la conexión.${navigator.onLine?' <button class="btn ghost" data-act="offsync">Subir ahora</button>':''}</p>`;
-  if(OFF.stale||!navigator.onLine)return`<p class="note">${ic('senal','in')}Sin señal: estás viendo lo último guardado en este equipo${typeof OFF.stale==='number'?` (${new Date(OFF.stale).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})})`:''}. Podés seguir trabajando: lo que cargues se sube después.</p>`;
+  if(OFF.stale||!navigator.onLine)return`<p class="note">${ic('senal','in')}Sin señal: estás viendo lo último guardado en este equipo${typeof OFF.stale==='number'?` (${new Date(OFF.stale).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})})`:''}. Podés seguir trabajando: lo que cargues se sube después.</p>`;
   return'';
 }
 async function offAct(k){if(k==='offsync'){await offFlush();return true}return false}
@@ -9579,7 +9629,7 @@ document.addEventListener('paste',e=>{const ed=e.target.closest&&e.target.closes
 const fldv=(f,o)=>fld(f,f.t==='rich'?(o[f.k+'Html']??o[f.k]):o[f.k]);
 
 /* --- historial (bitácora) de la oportunidad: notas, mensajes y cambios de etapa --- */
-const fdtMs=ms=>{const d=new Date(Number(ms)||0);return d.toLocaleDateString('es-UY',{day:'numeric',month:'short'})+' · '+d.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})};
+const fdtMs=ms=>{const d=new Date(Number(ms)||0);return d.toLocaleDateString('es-UY',{day:'numeric',month:'short'})+' · '+d.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})};
 function opLogHtml(o){
   const l=[...(o.bitacora||[])];if(o.creado)l.push({ts:o.creado,text:'Oportunidad creada'+(o.odoo?' (importada de Odoo)':''),tipo:'sys'});
   if(o.ganadoEn&&!l.some(x=>/Ganad/.test(x.text||'')))l.push({ts:new Date(o.ganadoEn+'T12:00').getTime(),text:'Marcada como ganada',tipo:'sys'});
@@ -9718,7 +9768,7 @@ function relToolsHtml(r){
   if(readonly)return'';
   return`<div class="reltools">${AS?`<label class="btn pri upl">${ic('foto','in')}Foto<input type="file" accept="image/*" capture="environment" data-up="relfoto"></label>`:''}<button type="button" class="btn" data-act="riadd">+ Ítem</button>${AS?'<button type="button" class="btn" data-act="croquis">'+ic('editar','in')+'Croquis</button>':''}<button type="button" class="btn" data-act="relgeo" id="relGeoBtn">${r.geo?''+ic('mapa','in')+'Guardada':''+ic('mapa','in')+'Ubicación'}</button><button type="button" class="btn ghost" data-act="relshare" title="Copiar o compartir como texto">Compartir</button>${AS?`<label class="btn ghost upl">Galería<input type="file" accept="image/*" multiple data-up="relfoto"></label>`:''}</div>`;
 }
-function relGeoHtml(r){return r.geo?`<p class="hint" id="relGeo"><a href="https://maps.google.com/?q=${encodeURIComponent(r.geo.lat+','+r.geo.lng)}" target="_blank" rel="noopener">Ver ubicación en el mapa</a> · ${fdate(new Date(r.geo.at||Date.now()).toISOString().slice(0,10))}</p>`:'<p class="hint" id="relGeo"></p>'}
+function relGeoHtml(r){return r.geo?`<p class="hint" id="relGeo"><a href="https://maps.google.com/?q=${encodeURIComponent(r.geo.lat+','+r.geo.lng)}" target="_blank" rel="noopener">Ver ubicación en el mapa</a> · ${fdZ(r.geo.at||Date.now())}</p>`:'<p class="hint" id="relGeo"></p>'}
 function sheetRel(id,p){
   const r=id?{...D.relevamientos[id]}:{fecha:today(),responsable:ME||'',clienteId:p.cli||(D.proyectos[p.pry]||{}).clienteId||'',proyectoId:p.pry||'',servicio:p.serv||'CCTV',q:{},fotos:[],items:[],jornales:1};
   r.items=(r.items||[]).map(x=>({...x}));RELJ=r;
@@ -9884,7 +9934,7 @@ function sheetEnt(id,p){
   if(id){
     const tk=e.ticketId&&D.tickets[e.ticketId];const tel=c.telefono||D.clientes[e.clienteId]?.telefono||'';
     body+=entInformeHtml(e);
-    if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</section>`;
+    if((e.mensajes||[]).length)body+=`<section class="rel"><h3>Conversación</h3>${e.mensajes.slice(-30).map(m=>`<div class="item"><span class="grow"><b>${m.dir==='out'?(m.auto?'Asistente':'Empresa'):esc(m.name||'Cliente')}:</b> ${esc(m.text||'')}</span><span class="muted">${new Date(m.ts).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</span></div>`).join('')}</section>`;
     body+=`<section class="rel"><h3>Qué hacer con este pedido</h3><p class="hint">${e.clienteId?'Es de un cliente registrado.':c.telefono||c.nombre?'No está registrado como cliente: queda como <b>posible cliente</b> y se registra solo cuando le hagas un presupuesto o una factura.':''}</p>
       <div class="actions">${tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:`<button class="btn pri" data-act="ent2tk">Pasar a ticket</button>`}<button class="btn${e.tipo==='informe'?' pri':''}" data-act="ent2trab">${e.tipo==='informe'?'Crear informe de visita':'Agendar visita'}</button><button class="btn" data-act="ent2rel">Relevar</button>${has('presupuestos')?'<button class="btn" data-act="ent2pres">Presupuestar</button>':''}${!e.clienteId&&(c.nombre||c.empresa||c.telefono)?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}</div>
       <div class="actions" style="margin-top:8px">${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}" target="_blank" rel="noopener">Responder por email</a>`:''}${entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div></section>`;
@@ -9918,7 +9968,7 @@ async function entAct(k,el,arg){
       openSheet('tk',null,{cli:e.clienteId||'',draft:{titulo:e.titulo||'',descripcion:e.texto||'',mensaje:e.texto||'',tipo,origen:e.canal==='mail'?'Email':e.canal==='llamada'?'Llamada':e.canal==='web'?'Web':'WhatsApp',contacto:e.clienteId?null:c,entradaId:SH.id,waFrom:(c.telefono||'').replace(/\D/g,''),waNombre:c.nombre||''}});SH.dirty=true;return true}
     case'ent2trab':{if(!e)return true;const c=e.contacto||{};
       if(e.tipo==='informe'){const eid=SH.id;const cid=e.clienteId||$('#f_clienteId')?.value||'';const tid=memberByName(e.tecnico);const id=uid();
-        const j={creado:Date.now(),actualizado:Date.now(),estado:'terminado',terminadoEn:Date.now(),fecha:e.creado?new Date(e.creado).toISOString().slice(0,10):today(),hora:'',duracion:2,tecnicos:tid?[tid]:[],ticketId:'',proyectoId:'',clienteId:cid,titulo:e.titulo||'Informe de visita',obra:cid?'':(e.clienteNombre||''),notas:'Reporte enviado por '+(e.tecnico||'el técnico')+' por WhatsApp'+(e.origen?' ('+e.origen+')':'')+'.',informe:e.resumen||e.texto||'',materiales:(e.materiales||[]).map(x=>(x.cant?x.cant+' ':'')+(x.desc||'')).join(', '),pendientes:e.pendientes||'',fotos:(e.fotos||[]).map(f=>({...f})),planos:[],entradaId:eid};
+        const j={creado:Date.now(),actualizado:Date.now(),estado:'terminado',terminadoEn:Date.now(),fecha:n0(e.creado)?localISO(n0(e.creado)).slice(0,10):today(),hora:'',duracion:2,tecnicos:tid?[tid]:[],ticketId:'',proyectoId:'',clienteId:cid,titulo:e.titulo||'Informe de visita',obra:cid?'':(e.clienteNombre||''),notas:'Reporte enviado por '+(e.tecnico||'el técnico')+' por WhatsApp'+(e.origen?' ('+e.origen+')':'')+'.',informe:e.resumen||e.texto||'',materiales:(e.materiales||[]).map(x=>(x.cant?x.cant+' ':'')+(x.desc||'')).join(', '),pendientes:e.pendientes||'',fotos:(e.fotos||[]).map(f=>({...f})),planos:[],entradaId:eid};
         await put('trabajos',id,j);D.trabajos[id]=j;const ne={...e,estado:'ticket',trabajoId:id,clienteId:cid||e.clienteId||'',actualizado:Date.now()};delete ne.id;await put('entradas',eid,ne);D.entradas[eid]=ne;toast('Informe de visita creado');openSheet('trab',id);return true}
       openSheet('trab',null,{cli:e.clienteId||''});const t=$('#f_titulo');if(t&&!t.value){t.value=e.titulo||'';}const o=$('#f_obra');if(o&&!o.value&&c.empresa)o.value=c.empresa;const n=$('#f_notas');if(n&&!n.value)n.value=(e.texto||'')+(c.nombre||c.telefono?`\nContacto: ${[c.nombre,c.telefono].filter(Boolean).join(' · ')}`:'');SH.dirty=true;return true}
     case'ent2rel':{if(!e)return true;const c=e.contacto||{};openSheet('rel',null,{cli:e.clienteId||''});const t=$('#f_titulo');if(t)t.value=e.titulo||'';const ct=$('#f_contacto');if(ct)ct.value=[c.nombre,c.telefono].filter(Boolean).join(' · ');const d=$('#f_direccion');if(d&&c.empresa)d.value=c.empresa;SH.dirty=true;return true}
@@ -10182,7 +10232,7 @@ function vVivo(){if(!hasVivo())return`<div class="vhead vhead-top"><div><h1>En v
   const alertas=d.urg.map(t=>{const c=D.clientes[t.clienteId];const n=nearestByRoad(t.clienteId,d.techs);return`<div class="card alert"><h2>Emergencia · ${esc(t.numero||'')}</h2><p><b>${esc(cliName(t.clienteId)||(t.contacto&&t.contacto.nombre)||'Sin cliente')}</b> · ${esc(t.titulo||'')}</p>
     ${n?`<div class="near"><span class="av" style="background:${techColor(n.t.id)}">${esc(n.t.n[0])}</span><div><b>${esc(n.t.n)}</b><br><span class="muted">la más cercana · <span data-eta="${n.t.id}|${t.clienteId}">${n.r?`${n.r.km.toFixed(1)} km por calle · ${n.r.min} min`:`${n.km.toFixed(1)} km · ~${etaMin(n.km)} min`}</span></span></div></div><button class="btn pri" data-act="vivoasig:${t.id}:${n.t.id}">Mandar a ${esc(n.t.n)}</button>`
     :`<div class="vr-alact"><span class="muted">${!t.clienteId?'Sin cliente asignado':c&&c.geo?'Nadie compartiendo ubicación':'Falta la dirección del cliente'}</span><button class="vr-btn sm" data-open="tk:${t.id}">Abrir</button></div>`}</div>`}).join('');
-  const feed=vivoFeed().map(i=>`<div class="vev ${i.cls}" role="button" tabindex="0" data-open="${i.open}"><i></i><div><b>${esc(i.b)}</b><span>${esc(i.s)}</span></div><time>${minAgo(i.ts)<1?'ahora':minAgo(i.ts)<60?minAgo(i.ts)+' min':minAgo(i.ts)<1440?Math.round(minAgo(i.ts)/60)+' h':fdate(new Date(i.ts).toISOString().slice(0,10))}</time></div>`).join('')||'<p class="muted">Todavía no pasó nada hoy.</p>';
+  const feed=vivoFeed().map(i=>`<div class="vev ${i.cls}" role="button" tabindex="0" data-open="${i.open}"><i></i><div><b>${esc(i.b)}</b><span>${esc(i.s)}</span></div><time>${minAgo(i.ts)<1?'ahora':minAgo(i.ts)<60?minAgo(i.ts)+' min':minAgo(i.ts)<1440?Math.round(minAgo(i.ts)/60)+' h':fdZ(i.ts)}</time></div>`).join('')||'<p class="muted">Todavía no pasó nada hoy.</p>';
   const fleet=d.techs.map(t=>`<button class="tech" type="button" data-act="vivofoco:${t.id}"><span class="av" style="background:${techColor(t.id)}">${esc(t.n[0])}</span><span><b>${esc(t.n)}</b>${vehOf(t.id)?`<span>${ic('camioneta','in')}${esc(vehTxt(vehOf(t.id)))}</span>`:''}<span>${t.cur?esc((cliName(t.cur.clienteId)||t.cur.obra||'')+' · '+(t.cur.titulo||'')):t.total?`${t.done} de ${t.total} visitas hechas`:'Sin visitas hoy'}</span><span class="st ${t.fresh?(t.st==='obra'?'obra':'camino'):'fin'}">${t.fresh?(t.st==='obra'?'En obra':'En movimiento')+' · hace '+minAgo(t.p.ts)+' min':t.p?(minAgo(t.p.ts)<60?'Última posición hace '+minAgo(t.p.ts)+' min':minAgo(t.p.ts)<1440?'Última posición hace '+Math.round(minAgo(t.p.ts)/60)+' h':'Última posición hace más de un día')+' · tocá para pedírsela':'No comparte ubicación · tocá para pedírsela'}</span></span></button>`).join('')||'<p class="muted">Cuando un técnico active “Compartir ubicación” en Mi día, aparece acá.</p>';
   setTimeout(vivoMount,0);
   const sinTec=!d.techs.some(t=>t.fresh);
@@ -10364,7 +10414,7 @@ function ofiData0(){
     else if(ty==='pres'){ic='$';col='#f5b800';kind=i.cls==='ok'?'pres':''}
     else if(ty==='mov'){ic='⬇';col='#40c8e0';kind='mov'}
     return{id:i.open+':'+i.ts,open:i.open,ic,col,b:i.b,s:i.s||'',t:minAgo(i.ts)<1?'ahora':ofiHM(i.ts),kind}});
-  const ents=arr('entradas').filter(e=>String(e.creado?new Date(Number(e.creado)).toISOString().slice(0,10):'')===hoy&&!entCharla(e));
+  const ents=arr('entradas').filter(e=>String(n0(e.creado)?localISO(n0(e.creado)).slice(0,10):'')===hoy&&!entCharla(e));
   const mes=hoy.slice(0,7);
   const counts={wa:ents.filter(e=>e.canal!=='mail').length,mail:ents.filter(e=>e.canal==='mail').length,tk:arr('tickets').filter(tkOpen).length,
     pres:arr('presupuestos').filter(p=>p.estado==='aceptado'&&String(p.fecha||'').slice(0,7)===mes).length};
@@ -10842,10 +10892,10 @@ function planState(P=PLAN){
   if(P.founder)return['Cliente fundador','t-ok'];
   const now=Date.now();
   if(P.plan!=='gratis'&&P.efectivo===P.plan&&P.paid_until){
-    if(new Date(P.paid_until)<now)return['Pago atrasado: se corta el '+fdate(localISO(new Date(new Date(P.paid_until).getTime()+5*864e5))),'t-warn'];
-    return['Activo hasta el '+fdate(P.paid_until),'t-ok']}
+    if(new Date(P.paid_until)<now)return['Pago atrasado: se corta el '+fdZ(new Date(P.paid_until).getTime()+30*864e5),'t-warn'];
+    return['Activo hasta el '+fdZ(P.paid_until),'t-ok']}
   if(P.plan==='gratis'&&P.efectivo!=='gratis'){const d=daysLeft(P.trial_ends);return[`Prueba gratis: ${d<=0?'termina hoy':`quedan ${d} día${d===1?'':'s'}`}`,'t-acc']}
-  if(P.plan!=='gratis'&&P.efectivo==='gratis')return['Venció'+(P.paid_until?' el '+fdate(P.paid_until):'')+': pasó a Gratis','t-bad'];
+  if(P.plan!=='gratis'&&P.efectivo==='gratis')return['Venció'+(P.paid_until?' el '+fdZ(P.paid_until):'')+': pasó a Gratis','t-bad'];
   return['Para siempre','t-none'];
 }
 async function loadPlan(){
@@ -10901,8 +10951,8 @@ async function fnData(r){if(!r.error)return r.data||{};try{return await r.error.
 async function loadAdmin(){ADM_LOADING=true;const {data,error}=await SB.rpc('admin_orgs');ADM_LOADING=false;if(error){ADM=[];toast('No se pudo cargar el panel.')}else ADM=data;sr()}
 function admState(o){
   if(o.founder)return['Fundador','t-ok'];
-  if(o.plan!=='gratis'&&o.efectivo===o.plan&&o.paid_until)return new Date(o.paid_until)<Date.now()?['Atrasado','t-warn']:['Pago hasta '+fdate(o.paid_until),'t-ok'];
-  if(o.plan==='gratis'&&o.efectivo!=='gratis')return['Prueba hasta '+fdate(o.trial_ends),'t-acc'];
+  if(o.plan!=='gratis'&&o.efectivo===o.plan&&o.paid_until)return new Date(o.paid_until)<Date.now()?['Atrasado','t-warn']:['Pago hasta '+fdZ(o.paid_until),'t-ok'];
+  if(o.plan==='gratis'&&o.efectivo!=='gratis')return['Prueba hasta '+fdZ(o.trial_ends),'t-acc'];
   if(o.plan!=='gratis'&&o.efectivo==='gratis')return['Vencido','t-bad'];
   return['Gratis','t-none'];
 }
@@ -10952,7 +11002,7 @@ function sheetOrg(id){
 }
 async function loadBill(id){
   const {data}=await SB.rpc('admin_billing',{o:id});const e=document.getElementById('orgBill');if(!e)return;
-  e.innerHTML=(data&&data.length)?data.map(b=>`<div class="item"><span class="grow">${esc(BILLK[b.kind]||b.kind)}${b.status?' · '+esc(b.status):''}</span><span>${fdate(b.created_at)}</span><span class="num">${b.amount!=null?money(b.amount,b.currency):''}</span></div>`).join(''):'<p class="muted" style="margin:0">Sin cobros registrados todavía.</p>';
+  e.innerHTML=(data&&data.length)?data.map(b=>`<div class="item"><span class="grow">${esc(BILLK[b.kind]||b.kind)}${b.status?' · '+esc(b.status):''}</span><span>${fdZ(b.created_at)}</span><span class="num">${b.amount!=null?money(b.amount,b.currency):''}</span></div>`).join(''):'<p class="muted" style="margin:0">Sin cobros registrados todavía.</p>';
 }
 const isoEnd=d=>d?new Date(d+'T23:59:59').toISOString():null;
 /* 1.21: extras por empresa */
@@ -11207,7 +11257,7 @@ document.addEventListener('submit',async e=>{
 /* ---------- equipo (en Ajustes) ---------- */
 const ROLES=[['admin','Administrador'],['encargado','Encargado'],['ventas','Ventas'],['administracion','Administración'],['tecnico','Técnico'],['subcontratista','Subcontratista'],['viewer','Solo lectura']];
 const ROLEN={owner:'Dueño',admin:'Administrador',encargado:'Encargado',ventas:'Ventas',administracion:'Administración',tecnico:'Técnico',viewer:'Solo lectura',pendiente:'Pide entrar',subcontratista:'Subcontratista'};
-const sopHasta=h=>h?new Date(h).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const sopHasta=h=>h?new Date(h).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}):'';
 const SOP_ACC={permitir:'habilitó el acceso',cortar:'cortó el acceso',INSERT:'creó',UPDATE:'modificó',DELETE:'borró'};
 function soporteLogHtml(l,n=10){return(l||[]).slice(0,n).map(x=>`<div class="item"><span class="muted">${sopHasta(x.at)}</span><span class="grow">${esc(x.email||'')} ${SOP_ACC[x.accion]||esc(x.accion)}${x.col&&!['permitir','cortar'].includes(x.accion)?' · '+esc(x.col)+(x.detalle?' · '+esc(x.detalle):'')+(x.doc?` <span class="code">${esc(String(x.doc).slice(0,12))}</span>`:''):x.detalle?' · '+esc(x.detalle):''}</span></div>`).join('')||'<p class="muted" style="margin:0">Sin movimientos.</p>'}
 async function loadSoporte(){if(!ORG||!SB)return;try{const {data}=await SB.rpc('soporte_estado',{o:ORG});SOPEST=data||{activo:false,log:[]}}catch(e){SOPEST={activo:false,log:[],error:true}}sr()}
@@ -11543,7 +11593,7 @@ const qn=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 let pal=null,items=[],cur=0;
 function views(){let sec='';const out=[];[...nav.children].forEach(n=>{if(n.classList.contains('navsec'))sec=n.textContent.trim();
   else if(n.matches('button[data-view]')&&!n.hidden&&!n.classList.contains('mob'))out.push({b:n,t:lbl(n),sec,ic:(n.querySelector('svg')||{}).outerHTML||''})});return out}
-function palDraw(){const q=pal.querySelector('input').value.trim(),Q=qn(q),ul=pal.querySelector('ul');
+function palDraw(){if(!pal)return;const q=pal.querySelector('input').value.trim(),Q=qn(q),ul=pal.querySelector('ul');
   items=(window.__spotBuscar?window.__spotBuscar(q):[]);const vs=views().filter(v=>!Q||qn(v.t+' '+v.sec).includes(Q));if(vs.length&&items.length)items.push({sep:'Pantallas'});items.push(...vs);
   if(q)items.push({t:`Buscar “${q}” en ${lbl(nav.querySelector('[aria-current="page"]'))||'esta pantalla'}`,ic:SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),q});
   cur=Math.min(cur,items.length-1);if(cur<0)cur=0;while(items[cur]&&items[cur].sep&&cur<items.length-1)cur++;
@@ -11554,10 +11604,10 @@ function palGo(i){const v=items[i];if(!v||v.sep)return;palClose();if(v.open){con
 function palOpen(){if(pal)return;pal=document.createElement('div');pal.className='d2pal';pal.setAttribute('role','dialog');pal.setAttribute('aria-label','Buscar');
   pal.innerHTML=`<div class="box"><label>${SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>')}<input type="text" placeholder="Buscar número, oportunidad, cliente… o ir a una pantalla" autocomplete="off" spellcheck="false" aria-label="Buscar"></label><ul role="listbox"></ul></div>`;
   document.body.append(pal);cur=0;palDraw();requestAnimationFrame(()=>pal.classList.add('on'));const inp=pal.querySelector('input');inp.focus();
-  inp.addEventListener('input',()=>{cur=0;palDraw()});
-  inp.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const d=e.key==='ArrowDown'?1:-1;let n=items.length;do{cur=(cur+d+items.length)%Math.max(1,items.length)}while(items[cur]&&items[cur].sep&&--n>0);palDraw()}else if(e.key==='Enter'){e.preventDefault();palGo(cur)}else if(e.key==='Escape'){e.preventDefault();palClose()}});
-  pal.addEventListener('click',e=>{const li=e.target.closest('li');if(li)return palGo(+li.dataset.i);if(e.target===pal)palClose()});
-  pal.addEventListener('pointermove',e=>{const li=e.target.closest('li');if(li&&+li.dataset.i!==cur){cur=+li.dataset.i;pal.querySelectorAll('li').forEach((l,i)=>l.setAttribute('aria-selected',i===cur))}})}
+  inp.addEventListener('input',()=>{if(!pal)return;cur=0;palDraw()});
+  inp.addEventListener('keydown',e=>{if(!pal)return;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const d=e.key==='ArrowDown'?1:-1;let n=items.length;do{cur=(cur+d+items.length)%Math.max(1,items.length)}while(items[cur]&&items[cur].sep&&--n>0);palDraw()}else if(e.key==='Enter'){e.preventDefault();palGo(cur)}else if(e.key==='Escape'){e.preventDefault();palClose()}});
+  pal.addEventListener('click',e=>{if(!pal)return;const li=e.target.closest('li');if(li)return palGo(+li.dataset.i);if(e.target===pal)palClose()});
+  pal.addEventListener('pointermove',e=>{if(!pal)return;const li=e.target.closest('li');if(li&&+li.dataset.i!==cur){cur=+li.dataset.i;pal.querySelectorAll('li').forEach((l,i)=>l.setAttribute('aria-selected',i===cur))}})}
 function palClose(){if(!pal)return;const p=pal;pal=null;p.classList.remove('on');setTimeout(()=>p.remove(),200)}
 k.addEventListener('click',palOpen);window.__palAbrir=palOpen;
 addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&!e.altKey&&e.key.toLowerCase()==='k'){e.preventDefault();pal?palClose():palOpen()}else if(e.key==='Escape'&&menu)closeMenu()});
