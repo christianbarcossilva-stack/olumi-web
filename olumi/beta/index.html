@@ -2643,6 +2643,7 @@ function bannerHtml(){
   if(slow&&loaded.size<NEED)return'<p class="note">Todavía no se pudo conectar con la base de datos. Lo que ves puede estar incompleto.</p>';
   if(PLAN&&PLAN.users>PLAN.max_users)return`<p class="note">${esc((ORGINFO&&ORGINFO.name)||'Tu empresa')} tiene ${PLAN.users} usuarios y el plan ${esc(PLAN.nombre)} incluye ${PLAN.max_users}, así que quedó en solo lectura. Los datos están todos guardados.${NATIVE?'':' <button class="btn ghost" data-view="plan">Ver plan</button>'}</p>`;
   if(readonly)return'<p class="note">Tenés acceso de solo lectura. Pedile al administrador de tu empresa que te cambie el rol a Técnico.</p>';
+  if(COBRO&&['aviso_10','suspendido'].includes(COBRO.etapa)&&['owner','admin'].includes(ROLE)){const s=COBRO.etapa==='suspendido';return`<p class="note">${s?'El pago del plan no entró y la empresa pasó al plan Gratis':`El pago del plan venció el ${fdate(COBRO.pago_hasta)}. Si no se paga, el ${fdate(COBRO.suspende_el)} la empresa pasa al plan Gratis`}. No se borra nada y al pagar vuelve todo.${NATIVE?' Lo resuelve el dueño de la cuenta desde la web.':' <button class="btn ghost" data-view="plan">Ver plan</button>'}</p>`}
   const tl=PLAN&&!PLAN.founder&&PLAN.plan==='gratis'&&PLAN.efectivo!=='gratis'?daysLeft(PLAN.trial_ends):null;
   if(tl!=null&&tl<=5&&['owner','admin'].includes(ROLE))return`<p class="note">${tl<=0?'La prueba de Pro termina hoy':`Quedan ${tl} día${tl===1?'':'s'} de la prueba de Pro`}. Después la empresa sigue con el plan Gratis.${NATIVE?'':' <button class="btn ghost" data-view="plan">Ver planes</button>'}</p>`;
   return'';
@@ -10898,12 +10899,14 @@ function planState(P=PLAN){
   if(P.plan!=='gratis'&&P.efectivo==='gratis')return['Venció'+(P.paid_until?' el '+fdZ(P.paid_until):'')+': pasó a Gratis','t-bad'];
   return['Para siempre','t-none'];
 }
+var COBRO=null;
 async function loadPlan(){
   if(!SB||!ORG)return;
   const [a,b,c]=await Promise.all([SB.rpc('org_plan_info',{o:ORG}),SB.rpc('is_platform_admin'),PLANS?Promise.resolve({data:PLANS}):SB.from('plans').select('*').order('sort')]);
   if(!a.error&&a.data)PLAN=a.data;
   ISADMIN=!b.error&&!!b.data;
   if(!c.error&&c.data)PLANS=c.data;
+  try{const e=await SB.rpc('cobro_estado',{o:ORG,a:'olumi'});COBRO=e.error?null:e.data}catch(_){COBRO=null}
   readonly=ROLE==='viewer'||ROLE==='cliente'||ROLE==='pendiente'||!!(PLAN&&PLAN.users>PLAN.max_users);
   AS=(readonly&&ROLE!=='cliente')?null:SBAS;
   const na=document.getElementById('navAdmin');if(na)na.hidden=!ISADMIN;
@@ -10943,7 +10946,7 @@ function afterPayment(){
   history.replaceState(null,'',location.pathname);VIEW='plan';sr();
   toast('Mercado Pago respondió. Confirmando el pago…');
   let n=0;const t=setInterval(async()=>{await loadPlan().catch(()=>{});n++;
-    const ok=PLAN&&PLAN.mp_status==='authorized';if(ok||n>=8){clearInterval(t);toast(ok?`Listo: plan ${PLAN.nombre} activo`:'El pago todavía no se confirmó. Puede tardar unos minutos.')}},5000);
+    const ok=PLAN&&PLAN.mp_status==='authorized'&&PLAN.paid_until&&new Date(PLAN.paid_until)>Date.now()&&PLAN.efectivo!=='gratis';if(ok||n>=12){clearInterval(t);toast(ok?`Listo: plan ${PLAN.nombre} activo`:'Mercado Pago todavía no confirmó el cobro. Puede tardar unos minutos: el plan se activa apenas entra.')}},5000);
 }
 async function fnData(r){if(!r.error)return r.data||{};try{return await r.error.context.json()}catch(e){return{error:'No se pudo conectar con el servidor.'}}}
 
