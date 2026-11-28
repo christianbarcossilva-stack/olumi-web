@@ -1,4 +1,5 @@
 // Arma el .syso con el ícono, el manifiesto y los datos de versión de Ondi Scanner para Windows.
+// Para otro programa (el integrador): RSRC_NOMBRE, RSRC_DESC y RSRC_ADMIN=1 (pide permiso de administrador al abrirlo).
 // Uso: go run ./armar/rsrc ondi.ico 1.0.0 salida.syso
 package main
 
@@ -11,11 +12,25 @@ import (
 	"unicode/utf16"
 )
 
+func env(k, d string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return d
+}
+
+var (
+	nombre = env("RSRC_NOMBRE", "Ondi Scanner")
+	desc   = env("RSRC_DESC", "Ondi Scanner: escáner de red gratuito de Ondi")
+	sin    = strings.ReplaceAll(nombre, " ", "")
+	nivel  = map[bool]string{true: "requireAdministrator", false: "asInvoker"}[os.Getenv("RSRC_ADMIN") == "1"]
+)
+
 const manifiesto = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity type="win32" name="UnityTech.OndiScanner" version="%s.0" processorArchitecture="*"/>
-  <description>Ondi Scanner</description>
-  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"><security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security></trustInfo>
+  <assemblyIdentity type="win32" name="UnityTech.%s" version="%s.0" processorArchitecture="*"/>
+  <description>%s</description>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"><security><requestedPrivileges><requestedExecutionLevel level="%s" uiAccess="false"/></requestedPrivileges></security></trustInfo>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"><application><supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/></application></compatibility>
   <application xmlns="urn:schemas-microsoft-com:asm.v3"><windowsSettings><dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware><dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness></windowsSettings></application>
 </assembly>`
@@ -79,8 +94,8 @@ func version(v string) []byte {
 	}
 	str := func(k, v string) []byte { return nodo(k, u16(v), true) }
 	tabla := nodo("0C0A04B0", nil, true, // español, Unicode
-		str("CompanyName", "Unity Tech"), str("FileDescription", "Ondi Scanner: escáner de red gratuito de Ondi"), str("FileVersion", v),
-		str("InternalName", "OndiScanner"), str("LegalCopyright", "© Unity Tech"), str("OriginalFilename", "OndiScanner.exe"), str("ProductName", "Ondi Scanner"), str("ProductVersion", v))
+		str("CompanyName", "Unity Tech"), str("FileDescription", desc), str("FileVersion", v),
+		str("InternalName", sin), str("LegalCopyright", "© Unity Tech"), str("OriginalFilename", sin+".exe"), str("ProductName", nombre), str("ProductVersion", v))
 	sfi := nodo("StringFileInfo", nil, true, tabla)
 	tr := &bytes.Buffer{}
 	binary.Write(tr, binary.LittleEndian, uint16(0x0C0A))
@@ -109,7 +124,7 @@ func main() {
 		grupo.Write(e[0:12])
 		binary.Write(grupo, binary.LittleEndian, uint16(i+1))
 	}
-	rs = append(rs, recurso{14, 1, grupo.Bytes()}, recurso{16, 1, version(os.Args[2])}, recurso{24, 1, []byte(fmt.Sprintf(manifiesto, os.Args[2]))})
+	rs = append(rs, recurso{14, 1, grupo.Bytes()}, recurso{16, 1, version(os.Args[2])}, recurso{24, 1, []byte(fmt.Sprintf(manifiesto, sin, os.Args[2], nombre, nivel))})
 
 	// el árbol de recursos: tipo → número → idioma → datos
 	tipos := []uint32{}
@@ -185,16 +200,16 @@ func main() {
 	pRel := pRaw + len(sec)
 	pSim := pRel + 10*len(relocs)
 	binary.Write(o, binary.LittleEndian, struct {
-		Maquina, Secciones   uint16
+		Maquina, Secciones    uint16
 		Fecha, Simbolos, NSim uint32
-		Opc, Car             uint16
+		Opc, Car              uint16
 	}{0x8664, 1, 0, uint32(pSim), 1, 0, 0})
 	nombre := [8]byte{'.', 'r', 's', 'r', 'c'}
 	binary.Write(o, binary.LittleEndian, struct {
-		Nombre                                [8]byte
-		VTam, VDir, Tam, PRaw, PRel, PLin     uint32
-		NRel, NLin                            uint16
-		Car                                   uint32
+		Nombre                            [8]byte
+		VTam, VDir, Tam, PRaw, PRel, PLin uint32
+		NRel, NLin                        uint16
+		Car                               uint32
 	}{nombre, 0, 0, uint32(len(sec)), uint32(pRaw), uint32(pRel), 0, uint16(len(relocs)), 0, 0x40000040})
 	o.Write(sec)
 	for _, r := range relocs {
