@@ -22,7 +22,7 @@ const db = createClient(URL_, SERVICE_KEY);
 
 const TOPE_DIA = 15;
 const USER = Deno.env.get('SMTP_USER') || 'ventas@unitytech.uy';
-const DE = `Christian Barcos · Unity Tech <${USER}>`;
+const DE = `Unity Tech <${USER}>`;
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 const emailOk = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e || '').trim());
@@ -37,42 +37,43 @@ function transporte() {
     auth: { user: USER, pass },
   });
 }
-// Firma (pedido de Christian, 28/11). El agente a veces deja su propia línea de firma y la de «baja»:
-// se sacan del cuerpo y se ponen abajo, siempre iguales.
+// Firma de Unity Tech (pedido de Christian, 28/11: «la firma tiene que ser de Unity Tech» y su número «por cualquier cosa»).
+// El teléfono se guarda en cobro_ajustes.firma_telefono (no en el código, que es público).
+// El agente a veces deja su propia línea de firma y la de «baja»: se sacan del cuerpo y se ponen abajo, siempre iguales.
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const linkear = (x) => esc(x).replace(/(?<![@\w.\/])(unitytech\.uy(?:\/[\w\-\/]*)?)/g, '<a href="https://$1" style="color:#E85D04;text-decoration:none">$1</a>');
 function partes(msg, idioma) {
   const lineas = String(msg || '').replace(/\r/g, '').split('\n');
-  const cuerpo = lineas.filter((l) => !/^\s*Christian Barcos\s*[·|-]/i.test(l) && !/«?baja»?|descadastr|não (te )?escrev/i.test(l)).join('\n').trim();
+  const cuerpo = lineas.filter((l) => !/^\s*(Christian Barcos|Unity Tech)\s*[·|-]/i.test(l) && !/^\s*(Christian Barcos|Unity Tech|Equipo de Unity Tech)\s*$/i.test(l) && !/«?baja»?|descadastr|não (te )?escrev/i.test(l)).join('\n').trim();
   const baja = idioma === 'pt' ? 'Se preferir não receber mais mensagens, responda «baixa».'
     : 'Si preferís que no te escribamos más, respondé «baja» y listo.';
   return { cuerpo, baja };
 }
-const FIRMA_TXT = '--\nChristian Barcos\nUnity Tech · Montevideo, Uruguay\nventas@unitytech.uy · unitytech.uy\nKliva · Olumi · Ondi';
-const FIRMA_HTML = `
+const firmaTxt = (tel) => `--\nUnity Tech\nSoporte IT y software · Montevideo, Uruguay\nventas@unitytech.uy${tel ? ' · ' + tel : ''} · unitytech.uy\nKliva · Olumi · Ondi`;
+const firmaHtml = (tel) => `
 <table cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;border-top:1px solid #e5e5e5;padding-top:14px;font-family:Arial,Helvetica,sans-serif">
   <tr>
     <td style="vertical-align:top;padding-right:12px"><img src="https://unitytech.uy/img/firma/unitytech.png" width="44" height="44" alt="Unity Tech" style="display:block;border-radius:9px"></td>
     <td style="vertical-align:top;font-size:13px;line-height:1.5;color:#444">
-      <div style="font-size:15px;font-weight:bold;color:#111">Christian Barcos</div>
-      <div>Unity Tech · Montevideo, Uruguay</div>
-      <div><a href="mailto:ventas@unitytech.uy" style="color:#E85D04;text-decoration:none">ventas@unitytech.uy</a> · <a href="https://unitytech.uy" style="color:#E85D04;text-decoration:none">unitytech.uy</a></div>
+      <div style="font-size:15px;font-weight:bold;color:#111">Unity Tech</div>
+      <div>Soporte IT y software · Montevideo, Uruguay</div>
+      <div><a href="mailto:ventas@unitytech.uy" style="color:#E85D04;text-decoration:none">ventas@unitytech.uy</a>${tel ? ` · <a href="tel:${tel.replace(/\s/g, '')}" style="color:#E85D04;text-decoration:none">${tel}</a>` : ''} · <a href="https://unitytech.uy" style="color:#E85D04;text-decoration:none">unitytech.uy</a></div>
       <div style="color:#777"><a href="https://unitytech.uy/kliva" style="color:#777;text-decoration:none">Kliva</a> · <a href="https://unitytech.uy/olumi" style="color:#777;text-decoration:none">Olumi</a> · <a href="https://unitytech.uy/ondi" style="color:#777;text-decoration:none">Ondi</a></div>
     </td>
   </tr>
 </table>`;
-function armar(p, para, prueba) {
+function armar(p, para, prueba, tel) {
   const { cuerpo, baja } = partes(p.mensaje, p.idioma);
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#222;max-width:600px">`
     + cuerpo.split(/\n{2,}/).map((par) => `<p style="margin:0 0 12px">${linkear(par).replace(/\n/g, '<br>')}</p>`).join('')
-    + FIRMA_HTML
+    + firmaHtml(tel)
     + `<p style="margin:14px 0 0;font-size:11px;color:#999">${esc(baja)}</p></div>`;
   return {
     from: DE,
     to: para,
     replyTo: USER,
     subject: (prueba ? '[PRUEBA] ' : '') + String(p.asunto || 'Kliva · Unity Tech').slice(0, 150),
-    text: `${cuerpo}\n\n${FIRMA_TXT}\n\n${baja}`,
+    text: `${cuerpo}\n\n${firmaTxt(tel)}\n\n${baja}`,
     html,
     headers: { 'List-Unsubscribe': `<mailto:${USER}?subject=baja>` },
   };
@@ -86,6 +87,8 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const t = transporte();
   if (!t) return json({ error: 'Falta cargar SMTP_PASS en el servidor.' }, 500);
+  const { data: aj } = await db.from('cobro_ajustes').select('valor').eq('clave', 'firma_telefono').maybeSingle();
+  const tel = aj?.valor ? String(aj.valor) : '';
 
   // Prueba: solo un administrador de la plataforma, y solo le llega a él
   if (body.prueba) {
@@ -99,7 +102,7 @@ Deno.serve(async (req) => {
     let { data: p } = await q.limit(1).maybeSingle();
     if (!p) ({ data: p } = await db.from('ventas_prospectos').select('id,empresa,asunto,mensaje,idioma').order('puntaje', { ascending: false }).limit(1).maybeSingle());
     if (!p) return json({ error: 'No hay prospectos.' }, 404);
-    try { const r = await t.sendMail(armar(p, String(body.prueba).trim(), true)); return json({ ok: true, prueba: true, empresa: p.empresa, id: r.messageId }); }
+    try { const r = await t.sendMail(armar(p, String(body.prueba).trim(), true, tel)); return json({ ok: true, prueba: true, empresa: p.empresa, id: r.messageId }); }
     catch (e) { return json({ error: String(e?.message || e) }, 502); }
   }
 
@@ -118,7 +121,7 @@ Deno.serve(async (req) => {
     }
     if (p.estado === 'descartado') { await db.from('ventas_prospectos').update({ envio_estado: null }).eq('id', p.id); continue; }
     try {
-      await t.sendMail(armar(p, p.email.trim(), false));
+      await t.sendMail(armar(p, p.email.trim(), false, tel));
       await db.from('ventas_prospectos').update({ envio_estado: 'enviado', enviado_en: ahora, envio_error: null,
         estado: p.estado === 'nuevo' ? 'contactado' : p.estado, contactado_en: ahora }).eq('id', p.id);
       hechos.push({ empresa: p.empresa, ok: true });
