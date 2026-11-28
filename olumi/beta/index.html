@@ -1448,14 +1448,72 @@ html body.tv .app{grid-template-columns:minmax(0,1fr)!important}body.tv .d2x{dis
 body.po-tv #pie{display:none}body.po-tv #main{padding:16px 20px}
 body.po-tv .po-cab{margin-bottom:10px;align-items:center}body.po-tv .po-cab [data-po=ed]{display:none}
 body.po-tv .po-cab [data-po=tv]{opacity:.55}body.po-tv .po-cab [data-po=tv]:hover,body.po-tv .po-cab [data-po=tv]:focus-visible{opacity:1}
-@media (min-width:1500px){body.po-tv .po{zoom:1.18}}
-@media (min-width:2300px){body.po-tv .po{zoom:1.6}}
 .po-volver{position:fixed;left:16px;bottom:16px;z-index:60}
-@media (max-width:1100px){.po{grid-template-columns:repeat(6,minmax(0,1fr))}.po-w3,.po-w4{grid-column:span 2}.po-w6{grid-column:span 3}.po-w8{grid-column:span 4}.po-w12{grid-column:span 6}}
-@media (max-width:700px){.po{grid-template-columns:minmax(0,1fr);gap:12px}.po .po-b{grid-column:auto}.po-cab .tools{width:100%}
+/* las columnas dependen del ancho del panel (no de la ventana): así la vista previa de cada pantalla se arma igual que en esa pantalla */
+.po-cq{container:po / inline-size}
+@container po (max-width:1100px){.po{grid-template-columns:repeat(6,minmax(0,1fr))}.po-w3,.po-w4{grid-column:span 2}.po-w6{grid-column:span 3}.po-w8{grid-column:span 4}.po-w12{grid-column:span 6}}
+@container po (max-width:700px){.po{grid-template-columns:minmax(0,1fr);gap:12px}.po .po-b{grid-column:auto}
   .po-rj{flex-direction:row;align-items:baseline;gap:12px;flex-wrap:wrap}.po-rj b{font-size:52px}.po-rj span{font-size:14px}}
 @media (pointer:coarse){.po .btn.sm,.po-gal .btn.sm{min-height:36px;padding:6px 12px}}
+@media (max-width:700px){.po-cab .tools{width:100%}}
+/* acomodar, por pantalla (28/11) */
+.po-b{position:relative}
+.po-arm{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
+.po-pant{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.po-pant button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:52px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.po-pant button span{font-size:12px;color:var(--muted)}
+.po-pant button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.po-arm2{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.po-eq{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}.po-eq select{min-height:36px;width:auto}
+.po-med{margin:0;font-size:14px}.po-med b{font-weight:650}
+.po-marco{position:relative;max-width:100%;border-radius:18px;outline:1.5px solid var(--line);outline-offset:6px;overflow:hidden}
+.po-esc{transform-origin:0 0}
+.po-pli{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--accent);pointer-events:none;z-index:3}
+.po-pli span{position:absolute;right:8px;top:4px;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff;background:var(--accent)}
+.po.ed .po-c0{pointer-events:none}
+.po-no{display:none}
+.po-b.fuera{opacity:.42}.po-b.fuera .po-no{display:inline-flex;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:2;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--surface);border:1px solid var(--line);white-space:nowrap}
+.po-marco.mini{pointer-events:none}.po-marco.mini .po-b.fuera .po-no{display:none}
+.po-edb{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:20px;align-items:start}
+.po-prev{min-width:0;position:sticky;top:90px}
+.po-lst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.po-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n n" "w b" "f f";gap:4px 8px;align-items:center;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:grab}
+.po-lr.mov{opacity:.45}.po-lr.sobre{border-color:var(--accent)}
+.po-lr-n{grid-area:n;display:flex;align-items:center;gap:8px;min-width:0}.po-lr-n .ic{width:16px;height:16px;flex:none;color:var(--muted)}.po-lr-n b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.po-lr select{grid-area:w;min-height:34px;width:100%;max-width:200px;font-size:13px}.po-lr .po-eb{grid-area:b}
+.po-lr-f{grid-area:f;font-size:12px;color:var(--bad)}.po-lr-f:empty{display:none}
+@media (max-width:900px){.po-edb{grid-template-columns:minmax(0,1fr)}.po-prev{position:static}}
+@media (pointer:coarse){.po-pant button{min-height:56px}}.po-lr .po-eb .ic{transform:rotate(90deg)}
+@media (max-width:700px){.po-eq{flex-direction:column;align-items:stretch;width:100%}.po-eq select{width:100%}.po-arm2 .po-edv{width:100%}.po-arm2 .po-edv button{flex:1}}
 /* fin 1.53x */
+/* 1.53y */
+/* 1.53y · bandeja: la ficha del correo se lee de arriba a abajo (clases em-) */
+.em-row .em-rs{display:block;margin-top:2px;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.em-top{display:flex;flex-direction:column;gap:10px;padding:16px 18px;margin:0 0 16px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line)}
+.em-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}
+.em-chips .tag .ic{width:13px;height:13px;margin-right:4px;vertical-align:-2px}
+.em-res{margin:0;font-family:var(--f-head);font-size:19px;font-weight:650;line-height:1.35;letter-spacing:-.01em}
+.em-quien{margin:0;font-size:14px;line-height:1.5}
+.em-datos{display:flex;flex-direction:column;gap:6px}
+.em-d{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.45}
+.em-d .ic{width:16px;height:16px;flex:none;margin-top:2px;color:var(--accent)}
+.em-h{margin:0}
+.em-top .actions{margin:0}.em-ac2:empty{display:none}
+.em-msg h3 small{font-weight:500;font-size:12.5px}
+.em-txt{font-size:15px;line-height:1.6;white-space:normal;overflow-wrap:break-word;hyphens:auto;max-width:72ch}
+.em-fi{margin-top:10px}.em-fi summary,.em-hilo>summary,.em-df>summary{cursor:pointer;font-size:13.5px;color:var(--muted);min-height:32px;display:flex;align-items:center;gap:6px}
+.em-fi .em-txt{font-size:13px;margin-top:6px}
+.em-hilo>summary,.em-df>summary{font-size:14.5px;font-weight:600;color:var(--fg)}
+.em-hilo>summary .muted,.em-df>summary .muted{font-weight:400}
+.em-p{padding:12px 0;border-top:1px solid var(--line-2)}.em-p:first-of-type{border-top:0}
+.em-pc{margin:0 0 4px;font-size:13.5px}
+.em-p .em-txt{font-size:14px;color:color-mix(in srgb,var(--fg) 86%,var(--muted))}
+.em-df .grid{margin-top:10px}
+.em-ac3{margin-top:4px}.em-ac3:empty{display:none}
+@media (max-width:700px){.em-top{padding:14px}.em-res{font-size:17px}}
+.btc .em-bq{font-size:11.5px;padding:1px 8px;min-height:0}
+.btc .em-bres{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:13px;line-height:1.4;color:var(--muted)}
+/* fin 1.53y */
 /* 1.51o */
 .md-hecho strong{text-decoration:line-through;opacity:.55}.md-hecho .md-ev-h{opacity:.5}.md-ok{width:36px;height:36px}.md-ok.on{background:var(--ok);color:#fff;border-color:transparent}.md-px-d{font-size:13px;font-weight:650;color:var(--muted);margin:12px 0 4px;padding:0 4px}.md-px-d::first-letter{text-transform:uppercase}.md-px .row{align-items:center}.md-ev .row{align-items:center}.md-ev-h{font-variant-numeric:tabular-nums;font-weight:650;font-size:14px}.md-ev-h.tent{opacity:.6}
 /* fin 1.51o */
@@ -2504,7 +2562,6 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
     <button data-view="bandeja" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 13l2.5-8h13L21 13v6H3z"/><path d="M3 13h5l1.5 3h5L16 13h5"/></svg>Bandeja<span class="pill" id="navEnt" hidden></span></button>
     <button data-view="tickets"><svg viewBox="0 0 24 24"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M10 7v10" stroke-dasharray="2 2"/></svg>Tickets<span class="pill" id="navTk" hidden></span></button>
     <button data-view="calendario" class="dsk"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3v3H8z"/></svg>Calendario</button>
-    <button data-view="trabajos" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="M20 19l2 2"/></svg>Historial</button>
     <button data-view="proyectos" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6M9 11h1M14 11h1"/></svg>Proyectos</button>
     <button data-view="planos" class="dsk"><svg viewBox="0 0 24 24"><path d="M3.5 5.5 9 3.5l6 2 5.5-2v15L15 20.5l-6-2-5.5 2z"/><path d="M9 3.5v15M15 5.5v15"/></svg>Planos</button>
     <button data-view="tecnicos" class="dsk"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 11.5l1.6 1.6 3.4-3.4"/></svg>Técnicos</button>
@@ -2513,12 +2570,13 @@ html[data-fondo] body::after{content:"";position:fixed;inset:0;z-index:-1;pointe
     <button data-view="clientes" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Clientes</button>
     <button data-view="presupuestos" class="dsk"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Presupuestos</button>
     <button data-view="agenda" class="dsk"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Seguimientos<span class="pill" id="navOver" hidden></span></button>
-    <button data-view="inventario" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Inventario</button>
+    <button data-view="trabajos" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17.5" cy="16.5" r="3"/><path d="M20 19l2 2"/></svg>Historial</button>
     <span class="navsec dsk">Administración</span>
     <button data-view="facturacion" class="dsk"><svg viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Facturación<span class="pill" id="navFa" hidden></span></button>
     <button data-view="gastos" class="dsk"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M8 6l1.5-2.5h5L16 6"/></svg>Gastos<span class="pill" id="navGa" hidden></span></button>
     <button data-view="personal" class="dsk"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c.8-2.4 2.4-3.5 4.5-3.5s3.7 1.1 4.5 3.5"/></svg>Personal</button>
     <button data-view="reportes" class="dsk"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>Reportes</button>
+    <button data-view="inventario" class="dsk"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Inventario</button>
     <span class="navsec dsk">Empresa</span>
     <button data-view="mas" class="dsk"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Catálogo</button>
     <button data-view="ajustes" class="dsk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Ajustes</button>
@@ -2559,7 +2617,7 @@ const UNID=['unidad','metro','jornal','hora','global','rollo','caja'];
 const EST=[['borrador','Borrador'],['enviado','Enviado'],['aceptado','Aceptado'],['rechazado','Rechazado']];
 const ESTC={borrador:'t-none',enviado:'t-acc',aceptado:'t-ok',rechazado:'t-bad'};
 const IVA=0.22;
-const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','plantillas','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos','estados','herramientas'];
+const COLS=['posiciones','clientes','oportunidades','actividades','presupuestos','productos','tickets','trabajos','facturas','proyectos','planos','relevamientos','tecnicos','depositos','movimientos','equipos','tareas','cuadrillas','kits','plantillas','checklists','compras','entradas','gastos','sueldos','agentes_chat','aprobaciones','munecos','eventos','tkint','obs','fondos','estados','herramientas','paneles'];
 const NEED=COLS.length+1;
 const TKT=[['emergencia','Emergencia'],['reclamo','Reclamo o falla'],['instalacion','Instalación nueva'],['relevamiento','Relevamiento'],['mantenimiento','Mantenimiento'],['consulta','Consulta']];
 const TKTK=Object.fromEntries(TKT);
@@ -3696,7 +3754,7 @@ if(await planosAct(k,el,arg))return;
     case'opnota':{const t=($('#op_nota')?.value||'').trim();if(!t){toast('Escribí la nota primero');break}await opAddLog(SH.id,{tipo:'nota',text:t});$('#op_nota').value='';toast('Nota registrada');break}
     case'opmsg':{const t=($('#op_nota')?.value||'').trim();const o=D.oportunidades[SH.id],cl=o&&D.clientes[o.clienteId];if(!cl)break;if(!t){toast('Escribí el mensaje en el cuadro de nota');break}
       if(arg==='wa')window.open(waLink(cl.telefono)+'?text='+encodeURIComponent(t),'_blank');else location.href=`mailto:${encodeURIComponent(cl.email)}?subject=${encodeURIComponent(o.titulo||'')}&body=${encodeURIComponent(t)}`;
-      await opAddLog(SH.id,{tipo:'msg',via:arg==='wa'?'WhatsApp':'Email',text:t});$('#op_nota').value='';break}
+      $('#op_nota').value='';await opAddLog(SH.id,{tipo:'msg',via:arg==='wa'?'WhatsApp':'Email',text:t});break}
     case'rmadj':{const col=SH.type==='op'?'oportunidades':SH.type==='tk'?'tickets':'proyectos';const o=D[col][SH.id];if(!o)break;if(armed!==el){armed=el;el.dataset.orig=el.textContent;el.textContent='¿Quitar?';break}const l=[...(o.adjuntos||[])];l.splice(+arg,1);await patch(col,SH.id,{adjuntos:l});armed=null;const e2=$('#adjList');if(e2)e2.innerHTML=adjHtml(l,'rmadj');break}
     case'scan':await scanOpen(arg);break;
     case'scanclose':scanClose();break;
@@ -5071,7 +5129,7 @@ document.addEventListener('pointerup',()=>{if(!TXP)return;const {t,h}=TXP;TXP=nu
    · Un tentativo de una semana que ya pasó deja de verse en el calendario y de contar para la obra (no se borra nada).
    · El reporte de cada visita terminada espera el visto bueno del jefe, o una observación.
    El diseño se guarda por equipo (el monitor puede tener el suyo) y, si lo guarda un dueño o administrador, para toda la empresa. */
-const PO={ed:false,tmp:null,rango:'hoy',omite:0,gesto:0,min:'',lt:'',lun:'',wl:null,n:0,h:''};
+const PO={ed:false,tmp:null,tmps:{},pant:'',edv:'a',rango:'hoy',omite:0,gesto:0,min:'',lt:'',lun:'',wl:null,n:0,h:''};
 const PO_B={reloj:['Reloj','La hora en grande, para verla desde lejos.','reloj',4],
   flujo:['Flujo de la empresa','Mensajes, tickets, presupuestos, visitas, informes y cobros: cómo viene el día.','vincular',8],
   numeros:['Números del día','Emergencias, visitas, tareas, obras y lo que hay por cobrar, de un vistazo.','lista',12],
@@ -5212,7 +5270,7 @@ const PO_R={
     if(poPlata())arr('facturas').filter(x=>!x.anulada&&factState(x)==='vencida').slice(0,3).forEach(x=>f.push(poFila('dinero',`Factura ${esc(x.numero||'')} vencida`,esc([cliName(x.clienteId),money(factCalc(x).saldo,x.moneda)].filter(Boolean).join(' · ')),'fact:'+x.id)));
     PO.n=f.length;return f.length?`<div class="po-l">${f.join('')}</div>`:poVacio('Nada atrasado ni esperando una decisión.')},
   nuevo(){const l=entNuevas().sort((a,b)=>n0(b.creado)-n0(a.creado)),v=l.slice(0,5);PO.n=l.length;if(!v.length)return poVacio('No llegó nada nuevo. La bandeja está al día.');
-    return`<div class="po-l">${v.map(e=>`<div class="item link po-f" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ic(ENT_CANAL[e.canal]||ENT_CANAL.otro)}</span><span class="grow"><b>${esc(e.titulo||e.resumen||(e.texto||'').slice(0,80)||'Mensaje')}</b>${e.urgente?' <span class="tag t-bad po-tg">Urgente</span>':''}<br><small class="muted">${esc([entNombre(e),e.origen,ago(n0(e.creado))].filter(Boolean).join(' · '))}</small></span>${!e.ticketId&&!readonly?`<span class="po-ac"><button type="button" class="btn sm" data-act="ent2tkq:${e.id}">Pasar a ticket</button></span>`:''}</div>`).join('')}</div>${l.length>v.length?`<button type="button" class="btn ghost sm po-mas" data-view="bandeja">Ver los ${l.length} de la bandeja</button>`:''}`},
+    return`<div class="po-l">${v.map(e=>`<div class="item link po-f" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ic(ENT_CANAL[e.canal]||ENT_CANAL.otro)}</span><span class="grow"><b>${esc(emFix(e.titulo||e.resumen||'')||(emLeer(e).partes[0]||{t:''}).t.slice(0,80)||'Mensaje')}</b>${e.urgente?' <span class="tag t-bad po-tg">Urgente</span>':''}<br><small class="muted">${esc([entNombre(e),e.origen,ago(n0(e.creado))].filter(Boolean).join(' · '))}</small></span>${!e.ticketId&&!readonly?`<span class="po-ac"><button type="button" class="btn sm" data-act="ent2tkq:${e.id}">Pasar a ticket</button></span>`:''}</div>`).join('')}</div>${l.length>v.length?`<button type="button" class="btn ghost sm po-mas" data-view="bandeja">Ver los ${l.length} de la bandeja</button>`:''}`},
   agenda(){const l=poAgenda(),max=PO.rango==='semana'?14:10,v=l.slice(0,max);
     const seg=`<div class="seg po-seg" role="group" aria-label="Qué días"><button type="button" class="${PO.rango==='hoy'?'on':''}" aria-pressed="${PO.rango==='hoy'}" data-po="rango:hoy">Hoy</button><button type="button" class="${PO.rango==='semana'?'on':''}" aria-pressed="${PO.rango==='semana'}" data-po="rango:semana">7 días</button></div>`;
     PO.h=seg;return(v.length?`<div class="po-t" role="table" aria-label="Agenda">${v.map(r=>`<div class="po-tr${r.atr?' atr':''}" role="row" tabindex="0" data-open="${r.open}"><span class="po-td dia" role="cell">${esc(poDiaC(r.d))}<i>${esc(r.h)}</i></span><span class="po-td que" role="cell"><b>${esc(r.tit)}</b>${r.sub?`<small>${esc(r.sub)}</small>`:''}</span><span class="po-td qui" role="cell">${esc(r.quien)}</span><span class="po-td est" role="cell"><span class="tag ${r.est[1]}">${r.est[0]}</span></span></div>`).join('')}</div>${l.length>v.length?`<button type="button" class="btn ghost sm po-mas" data-view="calendario">Ver los ${l.length} en el Calendario</button>`:''}`:poVacio(PO.rango==='hoy'?'No hay nada agendado para hoy.':'No hay nada agendado en los próximos 7 días.'))},
@@ -5235,19 +5293,52 @@ const PO_R={
     const fila=x=>`<div class="item po-f${x.venc?' venc':''}"><div class="grow link" role="button" tabindex="0" data-open="${x.k==='j'?'trab':'ev'}:${x.id}"><b>${esc(x.tit)}</b><br><small class="muted">${esc([poDiaC(x.d)+(x.h?' '+x.h:''),x.sub,x.aval?'espera el aval':x.no?'día extra sin aval':''].filter(Boolean).join(' · '))}</small></div>${readonly?'':`<span class="po-ac">${x.ev&&ev2Puede(D.eventos[x.id])?`<button type="button" class="btn ghost sm" data-act="ev2trab:${esc(x.id)}">Pasar a trabajo</button>`:''}${x.aval?'':`<button type="button" class="btn sm" data-po="conf:${x.k}:${x.id}">Confirmar</button>`}</span>`}</div>`;
     return(pr.length?`<div class="po-l">${pr.slice(0,6).map(fila).join('')}</div>`:'')+(pr.length>6?`<p class="muted po-v">Y ${pr.length-6} más.</p>`:'')+(ve.length?`<p class="po-sub">${pl(ve.length,'quedó atrás','quedaron atrás')} · ya no se ${ve.length===1?'ve':'ven'} en el calendario ni ${ve.length===1?'cuenta':'cuentan'} para la obra</p><div class="po-l">${ve.slice(0,4).map(fila).join('')}</div>`:'')}};
 
-/* ---------- el diseño: qué bloques, en qué orden y de qué ancho ---------- */
-function poLay(){let l=null;try{l=JSON.parse(lsGet('olumi.panelops')||'null')}catch(e){}
-  if(!Array.isArray(l)||!l.length)l=CFG&&CFG.panelOps&&Array.isArray(CFG.panelOps.b)&&CFG.panelOps.b.length?CFG.panelOps.b:PO_FAB.map(k=>({k}));
-  const v=new Set();return l.filter(x=>x&&PO_B[x.k]&&!v.has(x.k)&&v.add(x.k)).map(x=>({k:x.k,w:PO_W.some(w=>w[0]===+x.w)?+x.w:PO_B[x.k][3]}))}
+/* ---------- el diseño: qué bloques, en qué orden y de qué ancho; uno por pantalla y por persona ----------
+   Christian 28/11: «tiene que marcar cuántas cosas podemos poner en pantalla según la dimensión… si elige una TV de 50 pulgadas, pueda armar…
+   para celular o para la notebook… creo que tiene que ser por usuario». Cada pantalla tiene el área útil (sin menú ni barras) en px y la lupa
+   con que se ve (en una tele se agranda todo para leer de lejos). tv:true → se usa en «Modo pantalla». */
+const PO_P=[['celular','Celular','6,1"',358,620,1],['tablet','Tablet','11", acostada',860,690,1],['notebook','Notebook','14"',1190,760,1],
+  ['monitor','Monitor','24", modo pantalla',1660,960,1.12,1],['tv50','TV 50"','a 3 o 4 m',1180,650,1.6,1],['tv65','TV 65"','a 3 o 4 m',1390,770,1.35,1]].map(([k,n,d,cw,ch,z,tv])=>({k,n,d,cw,ch,z,tv:!!tv}));
+const poPerf=k=>PO_P.find(p=>p.k===k)||PO_P[2];
+/* qué pantalla es este equipo: la que eligió la persona, o por el tamaño; en modo pantalla, una de las grandes */
+function poPant(){const tv=document.body.classList.contains('po-tv');let k=lsGet('olumi.panelPant')||'';if(!PO_P.some(p=>p.k===k))k='';
+  if(!k){const w=Math.max(innerWidth,1);k=w<700?'celular':w<1100?'tablet':w<1700?(tv?'monitor':'notebook'):'monitor'}
+  if(tv&&!poPerf(k).tv)k='monitor';return k}
+const poMio=()=>(ME&&D.paneles&&D.paneles[ME]&&D.paneles[ME].p)||{};
+const poLimpia=l=>{const v=new Set();return(Array.isArray(l)?l:[]).filter(x=>x&&PO_B[x.k]&&!v.has(x.k)&&v.add(x.k)).map(x=>({k:x.k,w:PO_W.some(w=>w[0]===+x.w)?+x.w:PO_B[x.k][3]}))};
+/* de dónde sale: lo de la persona para esa pantalla → lo que quedó en este equipo (versión anterior) → lo de la empresa → el recomendado */
+function poLay(k=poPant(),de){const m=poMio()[k],em=CFG&&CFG.panelOps||{};let l=null,o='fab';
+  if(Array.isArray(m)&&m.length){l=m;o='mio'}
+  if(!l){try{const x=JSON.parse(lsGet('olumi.panelops.'+k)||lsGet('olumi.panelops')||'null');if(Array.isArray(x)&&x.length){l=x;o='equipo'}}catch(e){}}
+  if(!l){const x=em.p&&em.p[k]||em.b;if(Array.isArray(x)&&x.length){l=x;o='empresa'}}
+  if(!l)l=PO_FAB.map(k=>({k}));if(de)de.o=o;return poLimpia(l)}
 function poIni(){if(poIni.ok)return;poIni.ok=1;Object.assign(ICN,{bloques:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.6"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>',pantalla:'<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/>',izq:'<path d="M14.5 6l-6 6 6 6"/>',der:'<path d="M9.5 6l6 6-6 6"/>'})}
-function poVista(){poIni();{const b=document.body.classList;if(b.contains('po-tv')&&!b.contains('tv'))b.remove('po-tv')}const tv=document.body.classList.contains('po-tv'),ed=PO.ed&&!tv,l=ed?PO.tmp:poLay(),pos=!!lsGet('olumi.panelops');
+function poVista(){poIni();{const b=document.body.classList;if(b.contains('po-tv')&&!b.contains('tv'))b.remove('po-tv')}const tv=document.body.classList.contains('po-tv'),ed=PO.ed&&!tv,de={},pa=ed?PO.pant:poPant(),P=poPerf(pa),l=ed?(PO.tmps[pa]||(PO.tmps[pa]=poLay(pa))):poLay(pa,de),edv=PO.edv;
   const cab=`<div class="vhead po-cab"><div><h1>Panel</h1><p class="sub">${esc([l.some(b=>b.k==='reloj')?'':poDiaL(today()),CFG.nombre||(ORGINFO&&ORGINFO.name)||''].filter(Boolean).join(' · '))}</p></div><div class="tools">${ed?`<button type="button" class="btn ghost" data-po="fab">Volver al recomendado</button><button type="button" class="btn" data-po="x">Cancelar</button><button type="button" class="btn pri" data-po="ok">${ic('check')}Listo</button>`
     :`${tv||readonly?'':'<button type="button" class="btn pri" data-new="tk">+ Ticket</button><button type="button" class="btn" data-new="trab">+ Visita</button>'}<button type="button" class="btn ghost" data-po="ed" title="Elegir los bloques, el orden y el tamaño">${ic('bloques')}Acomodar</button><button type="button" class="btn" data-po="tv" title="Sin menú ni buscador, para dejarlo en un monitor">${ic('pantalla')}${tv?'Salir del modo pantalla':'Modo pantalla'}</button>`}</div></div>`;
-  const blo=l.map((b,i)=>{const [n,,ico]=PO_B[b.k];PO.n=0;PO.h='';const cu=ed&&b.k!=='reloj'?`<p class="muted po-v">${PO_B[b.k][1]}</p>`:PO_R[b.k](b.w),c=ed?0:PO.n,sinCab=(b.k==='reloj'||b.k==='flujo')&&!ed,suelto=b.k==='flujo'&&!ed;
-    return`<section class="${suelto?'po-su':'panel'} po-b po-w${b.w} po-k-${b.k}${ed?' ed':''}" data-pob="${i}"${ed?' draggable="true"':''} aria-label="${n}">${sinCab?'':`<header class="po-h"><h2>${ic(ico)}${n}${c?`<span class="po-c">${c}</span>`:''}</h2>${ed?`<span class="po-eb"><button type="button" class="icb" data-po="mv:${i}:-1" aria-label="Mover antes" title="Mover antes"${i?'':' disabled'}>${ic('izq')}</button><button type="button" class="icb" data-po="mv:${i}:1" aria-label="Mover después" title="Mover después"${i<l.length-1?'':' disabled'}>${ic('der')}</button><button type="button" class="btn sm po-tam" data-po="w:${i}" title="Cambiar el ancho">${(PO_W.find(w=>w[0]===b.w)||PO_W[1])[1]}</button><button type="button" class="icb" data-po="rm:${i}" aria-label="Sacar ${n}" title="Sacar">${ic('x')}</button></span>`:PO.h}</header>`}<div class="po-c0">${cu}</div></section>`}).join('');
-  const fal=ed?Object.keys(PO_B).filter(k=>!l.some(b=>b.k===k)):[];
-  const gal=ed?`<section class="po-gal" aria-label="Bloques para agregar"><h2>${fal.length?'Bloques para agregar':'Están todos los bloques puestos'}</h2><p class="hint">Arrastrá un bloque para cambiarlo de lugar, o usá las flechas. El ancho se cambia con el botón de cada bloque. ${isBoss()?'':'Se guarda en este equipo.'}</p>${fal.length?`<div class="po-gl">${fal.map(k=>`<button type="button" class="po-gi" data-po="add:${k}"><span class="po-pv k-${k}" aria-hidden="true"><i></i><i></i><i></i></span><span class="po-gt"><b>${PO_B[k][0]}${PO_FAB.includes(k)?' <em class="aj-rec">Recomendado</em>':''}</b><span>${PO_B[k][1]}</span></span></button>`).join('')}</div>`:''}${isBoss()&&!readonly?`<label class="po-emp"><input type="checkbox" id="po_emp"${PO.emp?' checked':''}><span><b>Usarlo en toda la empresa</b> · si no, queda solo en este equipo (por ejemplo, el monitor)</span></label>`:''}</section>`:'';
-  return cab+(l.length?`<div class="po${ed?' ed':''}">${blo}</div>`:poVacio('El panel está vacío. Agregá un bloque de abajo.'))+gal+(!ed&&!tv&&pos?`<p class="hint po-pie">Este equipo tiene su propio diseño del panel.</p>`:'')}
+  const blo=l.map((b,i)=>{const [n,,ico]=PO_B[b.k];PO.n=0;PO.h='';const cu=PO_R[b.k](b.w),c=PO.n,sinCab=(b.k==='reloj'||b.k==='flujo')&&!(ed&&edv==='a'),suelto=b.k==='flujo'&&!(ed&&edv==='a'),edA=ed&&edv==='a';
+    return`<section class="${suelto?'po-su':'panel'} po-b po-w${b.w} po-k-${b.k}${edA?' ed':''}" data-pob="${i}"${edA?' draggable="true"':''} aria-label="${n}">${edA?'<span class="po-no">No entra sin bajar</span>':''}${sinCab?'':`<header class="po-h"><h2>${ic(ico)}${n}${c?`<span class="po-c">${c}</span>`:''}</h2>${edA?`<span class="po-eb"><button type="button" class="icb" data-po="mv:${i}:-1" aria-label="Mover antes" title="Mover antes"${i?'':' disabled'}>${ic('izq')}</button><button type="button" class="icb" data-po="mv:${i}:1" aria-label="Mover después" title="Mover después"${i<l.length-1?'':' disabled'}>${ic('der')}</button><button type="button" class="btn sm po-tam" data-po="w:${i}" title="Cambiar el ancho">${(PO_W.find(w=>w[0]===b.w)||PO_W[1])[1]}</button><button type="button" class="icb" data-po="rm:${i}" aria-label="Sacar ${n}" title="Sacar">${ic('x')}</button></span>`:PO.h}</header>`}<div class="po-c0">${cu}</div></section>`}).join('');
+  const fal=ed?Object.keys(PO_B).filter(k=>!l.some(b=>b.k===k)):[],nom=k=>PO_B[k][0];
+  const grilla=`<div class="po-cq"><div class="po${ed?' ed':''}"${tv?` style="zoom:${P.z}"`:''}>${blo}</div></div>`;
+  if(!ed)return cab+(l.length?grilla:poVacio('El panel está vacío. Tocá «Acomodar» para agregar bloques.'))+(!tv&&de.o==='mio'?`<p class="hint po-pie">Tu panel para ${esc(P.n)} · lo armaste vos.</p>`:!tv&&de.o==='equipo'?`<p class="hint po-pie">Este equipo tiene su propio diseño del panel.</p>`:'');
+  setTimeout(poMedir,0);
+  /* elegir la pantalla que se está armando */
+  const pants=`<div class="po-pant" role="group" aria-label="Pantalla que estás armando">${PO_P.map(p=>`<button type="button" class="${p.k===pa?'on':''}" data-po="pant:${p.k}" aria-pressed="${p.k===pa}"><b>${esc(p.n)}</b><span>${esc(p.d)}</span></button>`).join('')}</div>`;
+  const aqui=poPant(),eq=`<label class="po-eq">Este equipo muestra el panel de <select id="po_eq">${[['','Automático ('+poPerf(aqui).n+')'],...PO_P.map(p=>[p.k,p.n])].map(([k,n])=>`<option value="${k}"${(lsGet('olumi.panelPant')||'')===k?' selected':''}>${esc(n)}</option>`).join('')}</select></label>`;
+  const med=`<p class="po-med" id="poMed" aria-live="polite">Midiendo…</p>`;
+  const marco=`<div class="po-marco k-${pa}${edv==='b'?' mini':''}" data-cw="${P.cw}" data-ch="${P.ch}"><div class="po-esc">${grilla}</div><div class="po-pli" aria-hidden="true"><span>Hasta acá se ve sin bajar</span></div></div>`;
+  const lista=edv==='b'?`<ol class="po-lst" aria-label="Bloques, en orden">${l.map((b,i)=>`<li class="po-lr" data-pob="${i}" draggable="true"><span class="po-lr-n">${ic(PO_B[b.k][2])}<b>${nom(b.k)}</b></span><select data-pow="${i}" aria-label="Ancho de ${nom(b.k)}">${PO_W.map(([w,n])=>`<option value="${w}"${w===b.w?' selected':''}>${n}</option>`).join('')}</select><span class="po-eb"><button type="button" class="icb" data-po="mv:${i}:-1" aria-label="Subir ${nom(b.k)}"${i?'':' disabled'}>${ic('izq')}</button><button type="button" class="icb" data-po="mv:${i}:1" aria-label="Bajar ${nom(b.k)}"${i<l.length-1?'':' disabled'}>${ic('der')}</button><button type="button" class="icb" data-po="rm:${i}" aria-label="Sacar ${nom(b.k)}">${ic('x')}</button></span><span class="po-lr-f" data-pof="${i}"></span></li>`).join('')}</ol>`:'';
+  const ver=`<div class="seg po-edv" role="group" aria-label="Forma de acomodar (prueba)"><button type="button" class="${edv==='a'?'on':''}" data-po="edv:a">A · Sobre la pantalla</button><button type="button" class="${edv==='b'?'on':''}" data-po="edv:b">B · Lista y vista previa</button></div>`;
+  const gal=`<section class="po-gal" aria-label="Bloques para agregar"><h2>${fal.length?'Bloques para agregar':'Están todos los bloques puestos'}</h2><p class="hint">${edv==='a'?'Arrastrá un bloque para cambiarlo de lugar, o usá las flechas. El ancho se cambia con el botón de cada bloque.':'Ordená la lista (arrastrando o con las flechas) y elegí el ancho de cada bloque: a la derecha ves cómo queda.'} Se guarda para vos, en «${esc(P.n)}».</p>${fal.length?`<div class="po-gl">${fal.map(k=>`<button type="button" class="po-gi" data-po="add:${k}"><span class="po-pv k-${k}" aria-hidden="true"><i></i><i></i><i></i></span><span class="po-gt"><b>${PO_B[k][0]}${PO_FAB.includes(k)?' <em class="aj-rec">Recomendado</em>':''}</b><span>${PO_B[k][1]}</span></span></button>`).join('')}</div>`:''}${isBoss()&&!readonly?`<label class="po-emp"><input type="checkbox" id="po_emp"${PO.emp?' checked':''}><span><b>Usarlo en toda la empresa</b> · el panel de «${esc(P.n)}» de quien no armó el suyo</span></label>`:''}</section>`;
+  return cab+`<div class="po-arm">${pants}<div class="po-arm2">${ver}${eq}</div>${med}</div>`+(edv==='b'?`<div class="po-edb">${lista}<div class="po-prev">${marco}</div></div>`:marco)+gal}
+/* cuánto entra: se arma el panel al ancho de esa pantalla, se achica para que entre acá y se marca hasta dónde se ve sin bajar */
+function poMedir(){const m=document.querySelector('.po-marco');if(!m)return;const cw=+m.dataset.cw,ch=+m.dataset.ch,es=m.querySelector('.po-esc'),cab=m.querySelector('.po-cq');if(!es)return;
+  const pe=m.parentElement,cs=getComputedStyle(pe),dis=(pe.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0))||cw,s=Math.min(1,dis/cw);es.style.width=cw+'px';es.style.transform=s<1?`scale(${s})`:'';m.style.width=Math.round(cw*s)+'px';
+  const h=es.offsetHeight;m.style.height=Math.max(Math.round(h*s),Math.round(ch*s)+28)+'px';const pli=m.querySelector('.po-pli');if(pli)pli.style.top=Math.round(ch*s)+'px';
+  const top=es.getBoundingClientRect().top;let n=0;const bl=[...m.querySelectorAll('.po-b')];
+  bl.forEach((b,i)=>{const r=b.getBoundingClientRect(),ok=(r.bottom-top)/s<=ch+1;b.classList.toggle('fuera',!ok);if(ok)n++;const f=document.querySelector(`[data-pof="${b.dataset.pob}"]`);if(f)f.textContent=ok?'':'No entra'});
+  const t=document.getElementById('poMed'),P=poPerf(PO.pant);if(t)t.innerHTML=bl.length?(n===bl.length?`<b>Entran los ${bl.length} bloques</b> en ${esc(P.n)} sin bajar.`:`<b>Entran ${n} de ${bl.length} bloques</b> en ${esc(P.n)} sin bajar. Los de abajo se ven bajando${P.tv?': en una pantalla de pared nadie baja, así que conviene sacarlos o achicarlos.':'.'}`):'Sin bloques.'}
+addEventListener('resize',()=>{if(PO.ed)poMedir()});
 VIEWS.hoy=function(){return isLead()?poVista():vHoy()};
 /* en modo pantalla: el mapa se abre en grande y tiene cómo volver; ir a cualquier otra pantalla sale del modo pantalla */
 {const v0=VIEWS.vivo;VIEWS.vivo=function(){const h=v0.apply(this,arguments);return document.body.classList.contains('po-tv')?`<button type="button" class="btn po-volver" data-po="volver">${ic('izq')}Volver al panel</button>`+h:h}}
@@ -5259,12 +5350,22 @@ function poTv(on){const b=document.body;b.classList.toggle('tv',on);b.classList.
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('po-tv'))poTv(false)});
 document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-po]');if(!t||t.disabled)return;e.preventDefault();e.stopPropagation();
   const [k,a,b,c]=t.dataset.po.split(':'),L=PO.tmp;
-  if(k==='ed'){PO.tmp=poLay();PO.ed=true;PO.emp=false;sr();return}
-  if(k==='x'){PO.ed=false;PO.tmp=null;sr();return}
-  if(k==='fab'){PO.tmp=PO_FAB.map(x=>({k:x,w:PO_B[x][3]}));sr();return}
-  if(k==='ok'){const emp=!!(document.getElementById('po_emp')||{}).checked,fab=JSON.stringify(L.map(x=>x.k+x.w))===JSON.stringify(PO_FAB.map(x=>x+PO_B[x][3]));PO.ed=false;PO.tmp=null;
-    try{if(emp&&isBoss()){await saveCfg({...CFG,panelOps:{v:1,b:L}});localStorage.removeItem('olumi.panelops');toast('Panel guardado para toda la empresa')}
-      else{if(fab&&!(CFG.panelOps&&CFG.panelOps.b))localStorage.removeItem('olumi.panelops');else lsSet('olumi.panelops',JSON.stringify(L));toast('Panel guardado en este equipo')}}catch(x){handleErr(x)}sr();return}
+  if(k==='ed'){PO.pant=poPant();PO.tmps={};PO.tmp=PO.tmps[PO.pant]=poLay(PO.pant);PO.ed=true;PO.emp=false;PO.edv=(lsGet('olumi.panelEdv')==='b'?'b':'a');sr();return}
+  if(k==='x'){PO.ed=false;PO.tmp=null;PO.tmps={};sr();return}
+  if(k==='pant'){PO.pant=a;PO.tmp=PO.tmps[a]||(PO.tmps[a]=poLay(a));sr();return}
+  if(k==='edv'){PO.edv=a==='b'?'b':'a';lsSet('olumi.panelEdv',PO.edv);sr();return}
+  if(k==='fab'){PO.tmp=PO.tmps[PO.pant]=PO_FAB.map(x=>({k:x,w:PO_B[x][3]}));sr();return}
+  if(k==='ok'){const emp=!!(document.getElementById('po_emp')||{}).checked&&isBoss()&&!readonly,T=PO.tmps,pa=PO.pant,fabS=JSON.stringify(PO_FAB.map(x=>({k:x,w:PO_B[x][3]})));PO.ed=false;PO.tmp=null;PO.tmps={};
+    /* lo que se armó en cada pantalla tocada; lo que quedó igual al recomendado (y no hay uno de la empresa) no se guarda */
+    const mio={...poMio()},em=CFG.panelOps||{},emP={...(em.p||{})};let cambio=0;
+    for(const [k,L2] of Object.entries(T)){const l2=poLimpia(L2),emK=emP[k]||em.b;if(emp&&k===pa){emP[k]=l2;delete mio[k];cambio=1;continue}
+      if(JSON.stringify(l2)===fabS&&!emK)delete mio[k];else if(emK&&JSON.stringify(l2)===JSON.stringify(poLimpia(emK)))delete mio[k];else mio[k]=l2;
+      try{localStorage.removeItem('olumi.panelops.'+k)}catch(_){}}
+    try{localStorage.removeItem('olumi.panelops');
+      if(emp)await saveCfg({...CFG,panelOps:{v:2,p:emP,...(em.b?{b:em.b}:{})}});
+      if(readonly){for(const [k,l2] of Object.entries(mio))lsSet('olumi.panelops.'+k,JSON.stringify(l2));toast('Panel guardado en este equipo')}
+      else if(ME){await put('paneles',ME,{p:mio,actualizado:Date.now()});if(D.paneles)D.paneles[ME]={p:mio,actualizado:Date.now()}}
+      if(!readonly)toast(emp?`Panel de «${poPerf(pa).n}» guardado para toda la empresa`:`Tu panel de «${poPerf(pa).n}» quedó guardado`)}catch(x){handleErr(x)}sr();return}
   if(k==='mv'&&L){const i=+a,j=i+ +b;if(j>=0&&j<L.length){[L[i],L[j]]=[L[j],L[i]];sr()}return}
   if(k==='w'&&L){const i=+a,n=PO_W.findIndex(w=>w[0]===L[i].w);L[i].w=PO_W[(n+1)%PO_W.length][0];sr();return}
   if(k==='rm'&&L){const n=performance.now();if(n-(PO.trm||0)<450)return;PO.trm=n;L.splice(+a,1);sr();return}   /* el rebote no saca también el bloque que quedó debajo del dedo */
@@ -5283,11 +5384,12 @@ document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.c
     if(k==='conf'){t.disabled=true;const col=a==='j'?'trabajos':'eventos',r=D[col][b];if(!r)return;const n={...r,tentativo:false,actualizado:Date.now()};delete n.avalNo;await put(col,b,n);D[col][b]=n;arrDirty();toast('Confirmado');sr();return}
   }catch(x){if(!(x&&x.code==='loading'))handleErr(x);sr()}},true);   /* en captura: un botón del panel dentro de una fila que abre su ficha no abre también la ficha */
 /* arrastrar para reordenar (compu) */
-document.addEventListener('dragstart',e=>{const s=PO.ed&&e.target.closest&&e.target.closest('.po-b.ed');if(!s)return;PO.dr=+s.dataset.pob;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','po')}catch(_){}s.classList.add('mov')});
-document.addEventListener('dragover',e=>{if(PO.dr==null)return;const s=e.target.closest&&e.target.closest('.po-b.ed');if(!s)return;e.preventDefault();document.querySelectorAll('.po-b.sobre').forEach(x=>x!==s&&x.classList.remove('sobre'));if(+s.dataset.pob!==PO.dr)s.classList.add('sobre')});
-document.addEventListener('drop',e=>{if(PO.dr==null)return;const s=e.target.closest&&e.target.closest('.po-b.ed');if(s&&PO.tmp){e.preventDefault();const a=PO.dr,b=+s.dataset.pob;if(a!==b){const [x]=PO.tmp.splice(a,1);PO.tmp.splice(b,0,x)}}PO.dr=null;sr()});
+document.addEventListener('dragstart',e=>{const s=PO.ed&&e.target.closest&&e.target.closest('.po-b.ed,.po-lr');if(!s)return;PO.dr=+s.dataset.pob;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','po')}catch(_){}s.classList.add('mov')});
+document.addEventListener('dragover',e=>{if(PO.dr==null)return;const s=e.target.closest&&e.target.closest('.po-b.ed,.po-lr');if(!s)return;e.preventDefault();document.querySelectorAll('.po-b.sobre').forEach(x=>x!==s&&x.classList.remove('sobre'));if(+s.dataset.pob!==PO.dr)s.classList.add('sobre')});
+document.addEventListener('drop',e=>{if(PO.dr==null)return;const s=e.target.closest&&e.target.closest('.po-b.ed,.po-lr');if(s&&PO.tmp){e.preventDefault();const a=PO.dr,b=+s.dataset.pob;if(a!==b){const [x]=PO.tmp.splice(a,1);PO.tmp.splice(b,0,x)}}PO.dr=null;sr()});
 document.addEventListener('dragend',()=>{if(PO.dr!=null){PO.dr=null;sr()}});
-document.addEventListener('change',e=>{if(e.target&&e.target.id==='po_emp')PO.emp=e.target.checked});
+document.addEventListener('change',e=>{const t=e.target;if(!t)return;if(t.id==='po_emp')PO.emp=t.checked;if(t.id==='po_eq'){lsSet('olumi.panelPant',t.value);if(!t.value)try{localStorage.removeItem('olumi.panelPant')}catch(_){};sr()}
+  if(t.dataset&&t.dataset.pow!=null&&PO.tmp){PO.tmp[+t.dataset.pow].w=+t.value;sr()}});
 /* el reloj anda solo; cada minuto se rehace el panel (lo que pasa de «agendado» a «atrasado») */
 setInterval(()=>{if(VIEW!=='hoy')return;const r=document.getElementById('poReloj'),d=new Date(),m=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   if(r&&r.textContent!==m)r.textContent=m;if(PO.min&&PO.min!==m&&!PO.ed&&!SH&&!document.getElementById('poDlg')&&document.querySelector('.po'))sr();PO.min=m},1000);
@@ -5303,6 +5405,120 @@ function poPryHtml(id){const p=D.proyectos[id];if(!p)return'';const s=poDias(id)
     ${ex.map(x=>`<div class="item"><span class="grow"><b>${pl(n0(x.dias)||1,'día extra','días extra')} · ${esc(PO_MOT[x.motivo]||'')}</b><br><small class="muted">${esc(x.nota||'')} · pidió ${esc(personName(x.pide).replace(' (vos)',''))}${x.por&&x.estado!=='pendiente'?`, ${x.estado==='aprobado'?'avaló':'no avaló'} ${esc(personName(x.por).replace(' (vos)',''))}`:''} · ${fdZ(x.pedidoEn)}</small></span><span class="tag ${x.estado==='aprobado'?'t-ok':x.estado==='pendiente'?'t-warn':'t-none'}">${x.estado==='aprobado'?'Avalado':x.estado==='pendiente'?'Espera aval':'Sin aval'}</span></div>`).join('')}</section>`}
 {const s0=sheetPry;sheetPry=function(id,p){const h=s0(id,p),d='<details class="more pr-datos">';return id&&h.includes(d)?h.replace(d,poPryHtml(id)+d):h}}
 /* === fin 1.53x === */
+/* === 1.53y · bandeja: los correos y mensajes se leen claros (Christian 28/11: «así no se entiende nada») ===
+   - Arriba: qué es (coordinación, presupuesto, falla…), el resumen y lo que se sacó del texto (fechas, lugares, montos).
+   - Del correo se muestra el último mensaje limpio (sin el hilo citado, sin imágenes de la firma, sin letras rotas); el hilo queda plegado.
+   - Un hilo, una entrada: las respuestas del mismo asunto se muestran juntas, y lo que se hace con una vale para todo el hilo.
+   - El botón principal depende de qué es: coordinación → Agendar, presupuesto → Armar presupuesto, falla o trabajo → Pasar a ticket.
+   Nada se reescribe en la base: se limpia al mostrar. (prefijo em-) */
+const EM={c:new WeakMap(),sync:0};
+/* letras rotas: «cÃ³mo» → «cómo» (UTF-8 leído como Windows-1252) */
+const EM_W={'€':0x80,'‚':0x82,'ƒ':0x83,'„':0x84,'…':0x85,'†':0x86,'‡':0x87,'ˆ':0x88,'‰':0x89,'Š':0x8A,'‹':0x8B,'Œ':0x8C,'Ž':0x8E,'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'•':0x95,'–':0x96,'—':0x97,'˜':0x98,'™':0x99,'š':0x9A,'›':0x9B,'œ':0x9C,'ž':0x9E,'Ÿ':0x9F};
+const emFix=s=>{s=String(s||'');if(!/[ÃÂâ][\u0080-¿€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/.test(s))return s;let td;try{td=new TextDecoder('utf-8',{fatal:true})}catch(e){return s}
+  return s.replace(/[Â-ô][\u0080-¿€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]{1,3}/g,m=>{try{return td.decode(Uint8Array.from([...m].map(c=>EM_W[c]??c.charCodeAt(0))))}catch(e){return m}})};
+const emSinAcento=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const EM_PRE=/^\s*(?:(?:re|rv|fw|fwd|reenviado|aw|tr)\s*:\s*)+/i;
+const emLimpio=t=>emFix(t).replace(/\[cid:[^\]]*\]/gi,' ').replace(/\[https?:[^\]]*\]/gi,' ').replace(/<\s*(?:mailto|tel):[^>]*>/gi,'').replace(/\b(?:mailto|tel):/gi,'').replace(/<\s*https?:[^>]*>/gi,' ').replace(/_{4,}|-{4,}(?!\s*(?:Original|Mensaje))/g,' ')
+  .replace(/ATENCI\S{1,2}N:\s*Este correo electr\S{1,2}nico se envi\S{1,2} desde fuera de la organizaci\S{1,2}n\.[^.]{0,200}\./gi,' ').replace(/\[?(?:PRECAUCI[ÓO]N|CAUTION|EXTERNAL)\]?:\s*(?:Este correo proviene de un remitente externo|This (?:email|message) (?:originated|came) from outside[^.]*)\.?/gi,' ').replace(/\[External\]\s*/gi,'').replace(/[ \t ]+/g,' ').replace(/\s*\n\s*\n\s*/g,'\n\n').trim();
+/* cabeceras de un correo citado: Outlook (en inglés y en español), Gmail y «mensaje original» */
+const EM_CAB=/(?:-{3,}\s*(?:Original Message|Mensaje original)\s*-{3,})|(?:\b(?:From|De)\s*:\s*(.{1,160}?)\s+(?:Sent|Enviado(?: el)?|Date|Fecha)\s*:\s*(.{4,70}?)\s+(?:To|Para)\s*:)|(?:\bEl\s+(.{6,70}?),\s*(.{1,100}?)\s+escribi[oó]:)|(?:\bOn\s+(.{6,70}?),?\s+(.{1,100}?)\s+wrote:)/gi;
+const EM_COLA=/(?:Aviso de Confidencialidad|Notice of Confidentiality|El contenido (?:del presente|de este) (?:mensaje|correo)|The (?:contents|information) (?:of this e-?mail|transmitted)|Por favor evit[aá] imprimir|Please avoid printing|Este correo electr[oó]nico ha sido analizado|Libre de virus|Obtener Outlook para|Enviado desde mi|Sent from my|Get Outlook for)/i;
+const EM_CIERRE=/(?:saludos(?: cordiales)?|atentamente|quedo atent[oa]s?[^.!\n]{0,40}|slds|un abrazo|abrazo|muchas gracias|gracias|best regards|regards)\s*[.!,]?/gi;
+const emQuien=s=>{s=String(s||'').replace(/<[^>]*>/g,'').replace(/["'“”]/g,'').replace(/\s+/g,' ').trim();if(/^\S+@\S+$/.test(s))s=s.split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());return s.slice(0,80)};
+/* parte el texto en cuerpo y firma: lo que sigue al último saludo, si es corto */
+function emFirma(t){let m,u=null;EM_CIERRE.lastIndex=0;while((m=EM_CIERRE.exec(t)))u=m;if(!u)return[t,''];const fin=u.index+u[0].length,resto=t.slice(fin).trim();
+  return resto&&resto.length<420&&u.index>12?[t.slice(0,fin).trim(),resto]:[t,'']}
+/* un correo (o mensaje) entero → asunto y las partes del hilo, de la más nueva a la más vieja */
+function emLeer(e){if(!e)return null;if(EM.c.has(e))return EM.c.get(e);
+  const bl=String(e.texto||'').split(/\n\n(?=\s*(?:Asunto|Subject)\s*:)/);let tx=bl.pop()||'',asunto='',a0='';const sa=t=>{const m=t.match(/^\s*(?:Asunto|Subject)\s*:\s*(.*)\n/i);return m?[emFix(m[1]).replace(/\[External\]\s*/gi,'').replace(EM_PRE,'').trim(),t.slice(m[0].length)]:['',t]};
+  [asunto,tx]=sa(tx);if(bl.length)a0=sa(bl[0])[0];
+  tx=emLimpio(tx);const base=asunto?emSinAcento(asunto).replace(/\s+/g,' '):'';
+  const cortes=[];let m;EM_CAB.lastIndex=0;while((m=EM_CAB.exec(tx)))cortes.push({i:m.index,f:m.index+m[0].length,de:emQuien(m[1]||m[4]||m[6]||''),cuando:String(m[2]||m[3]||m[5]||'').trim()});
+  const partes=[];let ini=0,cab={de:emQuien(e.contacto&&(e.contacto.nombre||e.contacto.empresa)||e.nombre||e.de||''),cuando:''};
+  const saca=(t,esCita)=>{if(esCita){const s=t.search(/\b(?:Subject|Asunto)\s*:\s*/i);if(s>=0&&s<900){t=t.slice(s).replace(/^\S+\s*:\s*/,'').replace(EM_PRE,'');if(base&&emSinAcento(t).replace(/\s+/g,' ').startsWith(base))t=t.slice(asunto.length)}}return t.replace(/^[\s:;,.-]+/,'').trim()};
+  cortes.forEach((c,k)=>{const t=saca(tx.slice(ini,c.i),k>0);if(t)partes.push({...cab,t});cab={de:c.de,cuando:c.cuando};ini=c.f});
+  {const t=saca(tx.slice(ini),cortes.length>0);if(t)partes.push({...cab,t})}
+  partes.forEach(p=>{const c=p.t.search(EM_COLA);if(c>20)p.t=p.t.slice(0,c).trim();p.t=p.t.replace(/\s\*\s+/g,'\n• ').replace(/^\*\s+/,'• ');[p.t,p.firma]=emFirma(p.t)});
+  const kb=a0?emSinAcento(a0).replace(/\s+/g,' '):base;
+  bl.reverse().forEach(t=>{const [as2,t2]=sa(t),r2=emLeer({canal:e.canal,texto:(as2?'Asunto: '+as2+'\n':'')+t2,contacto:e.contacto,nombre:e.nombre,de:e.de});partes.push(...r2.partes)});
+  const r={asunto,partes,clave:e.canal==='mail'&&kb.length>=6?'m:'+kb:''};EM.c.set(e,r);return r}
+/* lo que se puede sacar del texto sin preguntarle a nadie */
+const EM_MES='enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre';
+const EM_LUG=['Montevideo','Canelones','Ciudad de la Costa','Las Piedras','Pando','Maldonado','Punta del Este','Piriápolis','San Carlos','Colonia','Carmelo','Nueva Helvecia','Juan Lacaze','Rosario','Salto','Paysandú','Rivera','Tacuarembó','Paso de los Toros','Artigas','Bella Unión','Durazno','Florida','Trinidad','Minas','Rocha','Chuy','La Paloma','Treinta y Tres','Melo','Río Branco','Mercedes','Dolores','Fray Bentos','Young','San José','Libertad','Sarandí del Yí'];
+function emDatos(t){t=String(t||'');const f=[],l=[],m=[];let x;
+  const rf=new RegExp(`\\b(\\d{1,2})(?:\\s*(?:al|y|a|-)\\s*(\\d{1,2}))?\\s+de\\s+(${EM_MES})(?:\\s+(?:de\\s+)?(\\d{4}))?`,'gi');while((x=rf.exec(t)))f.push(x[0].replace(/\s+/g,' ').toLowerCase());
+  const st=emSinAcento(t);for(const p of EM_LUG)if(new RegExp('(^|[^a-z])'+emSinAcento(p)+'([^a-z]|$)').test(st))l.push(p);
+  const rm=/(?:US\$|U\$S|USD|\$U|UYU|\$)\s?\d[\d.,]*/g;while((x=rm.exec(t)))m.push(x[0]);
+  const u=a=>[...new Set(a)].slice(0,6);return{f:u(f),l:u(l),m:u(m)}}
+/* qué es: lo que entendió el asistente, con lo que eligió la persona por encima */
+const EM_QUE={coordinar:['Coordinación','t-acc','calendario','Agendar','ent2trab'],comercial:['Pedido de presupuesto','t-ok','presupuesto','Armar presupuesto','ent2pres'],soporte:['Falla o reclamo','t-bad','alerta','Pasar a ticket','ent2tk'],
+  administrativo:['Administración','t-none','factura','',''],proveedor:['Proveedor','t-none','etiqueta','',''],dudoso:['Para revisar','t-warn','mensaje','',''],spam:['Publicidad','t-none','etiqueta','',''],
+  trabajo:['Trabajo nuevo','t-acc','obra','Pasar a ticket','ent2tk'],consulta:['Consulta','t-none','mensaje','',''],charla:['Charla','t-none','mensaje','',''],informe:['Reporte de técnico','t-acc','informe','Crear informe de visita','ent2trab']};
+function emQue(e){const ai=e.carril||e.intencion||'';let k;
+  if(['charla','proveedor','spam','informe','falla','presupuesto'].includes(e.tipo))k={falla:'soporte',presupuesto:'comercial'}[e.tipo]||e.tipo;
+  else if(EM_QUE[ai])k=ai;else k=e.tipo==='otro'?'consulta':e.tipo||'consulta';
+  const q=[...(EM_QUE[k]||EM_QUE.consulta)];if(q[4]==='ent2pres'&&!has('presupuestos'))q.splice(3,2,'Pasar a ticket','ent2tk');return q}
+/* un hilo, una entrada */
+function emGrupo(e){const k=emLeer(e).clave;if(!k)return[e];return arr('entradas').filter(x=>x.id===e.id||emLeer(x).clave===k).sort((a,b)=>n0(b.actualizado||b.creado)-n0(a.actualizado||a.creado))}
+function emAgrupar(l){const v=new Set();return l.filter(e=>{const k=emLeer(e).clave;if(!k)return true;if(v.has(k))return false;v.add(k);return true})}
+/* lo que se hace con una entrada del hilo (estado, ticket) vale para todas */
+async function emSync(col,id,f){if(col!=='entradas'||EM.sync||!f||!('estado' in f||'ticketId' in f))return;const e=D.entradas[id];if(!e)return;
+  const g=emGrupo({...e,id}).filter(x=>x.id!==id&&((('estado' in f)&&x.estado!==f.estado)||(('ticketId' in f)&&x.ticketId!==f.ticketId)));if(!g.length)return;
+  const c={actualizado:Date.now()};if('estado' in f)c.estado=f.estado;if('ticketId' in f)c.ticketId=f.ticketId;EM.sync=1;try{for(const x of g)await patch('entradas',x.id,c)}finally{EM.sync=0}}
+{const p0=patch;patch=async function(col,id,f){const r=await p0.apply(this,arguments);try{await emSync(col,id,f)}catch(x){}return r}}
+{const q0=put;put=async function(col,id,d){const r=await q0.apply(this,arguments);try{if(col==='entradas'&&!EM.sync)await emSync(col,id,d)}catch(x){}return r}}
+const emHora=t=>t?new Date(n0(t)).toLocaleString('es-UY',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}):'';
+const emTxt=t=>esc(t).replace(/\n/g,'<br>');
+/* la fila de la bandeja */
+entRow=function(e){const q=emQue(e),r=emLeer(e),g=emGrupo(e),c=e.contacto,tit=emFix(e.titulo||r.asunto||e.resumen||'')||(r.partes[0]?r.partes[0].t.slice(0,80):'Mensaje'),res=emFix(e.resumen||'');
+  return`<div class="tkrow em-row" role="button" tabindex="0" data-open="ent:${e.id}"><span class="av-ic" aria-hidden="true">${ic(ENT_CANAL[e.canal]||ENT_CANAL.otro)}</span><div class="tk-main"><strong>${esc(tit)}</strong>${res&&res!==tit?`<span class="em-rs">${esc(res)}</span>`:''}<div class="tk-meta"><span>${esc(entNombre(e))}</span>${e.urgente?'<span class="tag t-bad">'+ic('alerta','in')+'Urgente</span>':''}${!e.clienteId&&c?'<span class="tag t-warn">Sin registrar</span>':''}${e.origen?`<span class="muted">${esc(e.origen)}</span>`:''}${g.length>1?`<span class="muted">${g.length} correos del mismo hilo</span>`:''}${isAbo(e.clienteId)?aboTag(e.clienteId):''}<span>·</span><span>${ago(n0(g[0].actualizado||e.creado))}</span></div></div>
+    <div class="tk-side"><span class="tag ${q[1]}">${esc(q[0])}</span>${entCharla(e)&&!readonly?`<button class="btn ico ghost" data-act="entborrar:${e.id}" aria-label="Borrar mensaje" title="Borrar">${ic('x')}</button>`:`<span class="tk-est">${ENT_EST[e.estado||'nuevo']}${e.ticketId&&D.tickets[e.ticketId]?' '+esc(D.tickets[e.ticketId].numero||''):''}</span>${!e.ticketId&&!readonly&&(e.estado||'nuevo')!=='descartado'&&(!q[4]||q[4]==='ent2tk')?`<button class="btn" data-act="ent2tkq:${e.id}" style="min-height:32px;padding:4px 12px">Pasar a ticket</button>`:''}`}</div></div>`};
+/* el tablero de la bandeja (la vista de siempre): un hilo, una tarjeta; qué es y el resumen en la tarjeta */
+{const l0=btLista;btLista=function(){return emAgrupar(l0().sort((a,b)=>n0(b.actualizado||b.creado)-n0(a.actualizado||a.creado)))}}
+btCard=function(e){const p=btPrio(e),t=btTicket(e),ev=btEvento(e),j=btTrabajo(e),pi=e.pidio||{},q=emQue(e),g=emGrupo(e),r=emLeer(e);
+  const quien=entNombre(e),pide=pi.nombre&&e.clienteId&&!quien.includes(pi.nombre)?pi.nombre+(pi.area?' · '+pi.area:''):'';
+  const cuando=j&&j.fecha?ic('obra','in')+btDia(j.fecha)+(j.hora?' '+j.hora:''):ev&&ev.fecha?ic('calendario','in')+btDia(ev.fecha)+(ev.hora?' '+ev.hora:''):'';
+  const mov=readonly?'':`<button class="btn ico ghost btmv" data-act="btmover:${e.id}" aria-label="Mover a otra columna" title="Mover a…">${ic('mas')}</button>`;
+  const tit=emFix(e.titulo||r.asunto||'')||(r.partes[0]?r.partes[0].t.slice(0,90):'Mensaje'),res=emFix(e.resumen||'');
+  return`<article class="btc pr-${p}" draggable="${readonly?'false':'true'}" data-btid="${e.id}" role="button" tabindex="0" data-open="ent:${e.id}">
+    <header><span class="btcan" title="${esc((BT_CANALES.find(c=>c[0]===btCanal(e))||[])[1]||'')}">${ic(ENT_CANAL[e.canal]||ENT_CANAL.otro)}</span><span class="tag ${q[1]} em-bq">${esc(q[0])}</span>${p==='urgente'?`<span class="btu">${ic('alerta','in')}Urgente</span>`:p==='baja'?'<span class="btb">Sin apuro</span>':''}<span class="btago" title="${esc(ago(n0(g[0].actualizado||e.creado)))}">${btAgo(n0(g[0].actualizado||e.creado))}</span>${mov}</header>
+    <strong>${esc(tit)}</strong>${res&&res!==tit?`<span class="em-bres">${esc(res)}</span>`:''}
+    <p>${esc(quien)}${pide?`<span> · ${esc(pide)}</span>`:''}${g.length>1?`<span> · ${g.length} correos</span>`:''}</p>
+    ${t||cuando?`<footer>${t?`<span class="tag t-acc">${esc(t.numero||'Ticket')}</span>`:''}${cuando?`<span class="btwhen">${cuando}</span>`:''}</footer>`:''}
+  </article>`};
+/* la ficha: primero qué es y qué pide; después el último mensaje limpio; el hilo y los datos, plegados */
+{const s0=sheetEnt;sheetEnt=function(id,p){if(!id||!D.entradas[id])return s0(id,p);
+  const e={...D.entradas[id],id},c=e.contacto||{},r=emLeer(D.entradas[id]),g=emGrupo(e),q=emQue(e),ul=r.partes[0]||{t:'',de:'',cuando:''};
+  const wa=(e.mensajes||[]).filter(m=>m&&m.text);const esWa=e.canal!=='mail'&&wa.length;
+  const ult=esWa?wa[wa.length-1]:null,txt=esWa?emFix(ult.text):ul.t,firma=esWa?'':ul.firma,dq=emDatos(txt);
+  const otroCli=!e.clienteId&&g.find(x=>x.clienteId&&D.clientes[x.clienteId]);
+  const v={...e,clienteId:e.clienteId||(otroCli?otroCli.clienteId:''),titulo:emFix(e.titulo||''),c_nombre:c.nombre||'',c_empresa:c.empresa||'',c_telefono:c.telefono||'',c_email:c.email||''};
+  const chip=(i,l)=>l.length?`<span class="em-d">${ic(i,'in')}${l.map(esc).join(' · ')}</span>`:'';
+  const tk=e.ticketId&&D.tickets[e.ticketId],tel=c.telefono||D.clientes[e.clienteId]?.telefono||'';
+  const pri=tk?`<button class="btn pri" data-open="tk:${e.ticketId}">Ver ticket ${esc(tk.numero||'')}</button>`:q[4]&&!readonly?`<button class="btn pri" data-act="${q[4]}">${esc(q[3])}</button>`:'';
+  const otros=readonly?'':[['ent2tk','Pasar a ticket'],['ent2trab','Agendar visita'],['ent2rel','Relevar'],...(has('presupuestos')?[['ent2pres','Presupuestar']]:[])].filter(([a])=>a!==q[4]&&!(tk&&a==='ent2tk')).map(([a,n])=>`<button class="btn" data-act="${a}">${n}</button>`).join('');
+  const resp=`${tel&&waLink(tel)?`<a class="btn" href="${esc(waUrl(tel,`Hola${c.nombre?' '+c.nombre.split(' ')[0]:''}, te escribo de ${CFG.nombre||'la empresa'} por tu mensaje.`))}" target="_blank" rel="noopener">${ic('mensaje','in')}Responder por WhatsApp</a>`:''}${c.email?`<a class="btn" href="mailto:${esc(c.email)}${r.asunto?'?subject='+encodeURIComponent('RE: '+r.asunto):''}" target="_blank" rel="noopener">${ic('correo','in')}Responder por correo</a>`:''}`;
+  let body=`<section class="em-top"><div class="em-chips"><span class="tag ${q[1]}">${ic(q[2],'in')}${esc(q[0])}</span>${e.urgente?'<span class="tag t-bad">Urgente</span>':''}<span class="muted">${esc([e.origen||(e.canal==='mail'?'Correo':'WhatsApp'),ago(n0(e.actualizado||e.creado))].filter(Boolean).join(' · '))}</span></div>
+    <p class="em-res">${esc(emFix(e.resumen||'')||txt.slice(0,220)||emFix(e.titulo||''))}</p>
+    <p class="em-quien"><b>${esc(entNombre(e))}</b>${c.nombre&&e.clienteId?' · '+esc(c.nombre):''}${c.email?` · <span class="muted">${esc(c.email)}</span>`:''}${!e.clienteId?' <span class="tag t-warn">Sin registrar</span>':''}</p>
+    ${dq.f.length||dq.l.length||dq.m.length?`<div class="em-datos">${chip('calendario',dq.f)}${chip('mapa',dq.l)}${chip('presupuesto',dq.m)}</div>`:''}
+    ${otroCli?`<p class="hint em-h">Un correo anterior de este hilo ya está con <b>${esc(otroCli.clienteId&&D.clientes[otroCli.clienteId].nombre||'')}</b>: quedó elegido abajo, en «Datos del pedido». Guardá para dejarlo.</p>`:''}
+    <div class="actions">${pri}${otros}</div><div class="actions em-ac2">${resp}</div></section>`;
+  body+=entInformeHtml(e);
+  if(txt)body+=`<section class="rel em-msg"><h3>${esWa?'Último mensaje':'Lo que dice'} <small class="muted">${esc([esWa?(ult.dir==='out'?'Empresa':emQuien(ult.name)||entNombre(e)):ul.de,esWa?emHora(ult.ts):ul.cuando||emHora(e.actualizado||e.creado)].filter(Boolean).join(' · '))}</small></h3><div class="em-txt">${emTxt(txt)}</div>${firma?`<details class="em-fi"><summary>Firma</summary><div class="em-txt muted">${emTxt(firma)}</div></details>`:''}</section>`;
+  const hilo=esWa?wa.slice(-30,-1).reverse().map(m=>({de:m.dir==='out'?(m.auto?'Asistente':'Empresa'):emQuien(m.name)||'Cliente',cuando:emHora(m.ts),t:emFix(m.text)})):r.partes.slice(1);
+  if(hilo.length)body+=`<details class="rel em-hilo"><summary>Ver la conversación anterior · ${pl(hilo.length,'mensaje','mensajes')}${g.length>1?` · este hilo llegó en ${g.length} correos y se muestra junto`:''}</summary>${hilo.map(h=>`<div class="em-p"><p class="em-pc"><b>${esc(h.de||'—')}</b>${h.cuando?` <span class="muted">${esc(h.cuando)}</span>`:''}</p><div class="em-txt">${emTxt(h.t)}</div></div>`).join('')}</details>`;
+  body+=`<details class="rel em-df"${readonly?'':''}><summary>Datos del pedido <span class="muted">· tipo, cliente, estado, contacto y el texto como llegó</span></summary><div class="grid">${ENTF_FIELDS().map(f=>fld(f,v[f.k])).join('')}</div><p class="err" id="shErr" hidden></p></details>`;
+  body+=`<div class="actions em-ac3">${!e.clienteId&&(c.nombre||c.empresa||c.telefono)&&!readonly?'<button class="btn ghost" data-act="entvinc">Es de un cliente que ya tengo</button><button class="btn ghost" data-act="entreg">Registrar como cliente nuevo</button>':''}${readonly?'':entOpen(e)&&(e.estado||'nuevo')==='nuevo'?'<button class="btn ghost" data-act="entest:seguimiento">Marcar en seguimiento</button>':''}${readonly?'':entOpen(e)?'<button class="btn ghost danger" data-act="entest:descartado">Descartar</button>':'<button class="btn ghost" data-act="entest:nuevo">Reabrir</button>'}${entCharla(e)&&!readonly?'<button class="btn ghost danger" data-act="entborrar">Borrar mensaje</button>':''}</div>`;
+  return sheetFrame('Bandeja',emFix(e.titulo||r.asunto||'Pedido'),body,{del:true})}}
+/* copia para «Pasar a ticket» desde la lista: el último mensaje limpio (el resumen lo suma esa acción) */
+function emAccion(o){if(!o||o.canal!=='mail'||o.tipo==='informe')return o;const r=emLeer(o),u=r.partes[0];return u?{...o,texto:u.t,titulo:emFix(o.titulo||r.asunto||''),resumen:emFix(o.resumen||'')}:o}
+/* al pasar a ticket, agendar o relevar: va el mensaje limpio, no el hilo entero */
+{const a0=entAct;entAct=async function(k,el,arg){const id=SH&&SH.type==='ent'&&SH.id;const o=id&&D.entradas[id];
+  if(!o||!['ent2tk','ent2trab','ent2rel'].includes(k)||o.tipo==='informe')return a0.apply(this,arguments);
+  const r=emLeer(o),u=r.partes[0],t=o.canal==='mail'&&u?[emFix(o.resumen||''),u.t].filter(Boolean).join('\n\n'):'',tmp=t?{...o,texto:t,titulo:emFix(o.titulo||r.asunto||'')}:o;D.entradas[id]=tmp;
+  try{return await a0.apply(this,arguments)}finally{if(D.entradas[id]===tmp)D.entradas[id]=o}}}
+/* === fin 1.53y === */
 async function fjNumPres(q){try{if(!q.oportunidadId)return'';{const n=CRMC().cotNum===false?'':qNumOp(q);if(n||CRMC().cotNum===false)return n}if(!CRMC().cotNum)return'';let o=D.oportunidades[q.oportunidadId];if(!o)return'';
   if(!o.numero){const n=opNumNuevo();await put('oportunidades',q.oportunidadId,{...o,numero:n});o={...o,numero:n}}
   return qNumOp({oportunidadId:q.oportunidadId})||''}catch(e){return''}}
@@ -10257,7 +10473,7 @@ const entOpen=e=>['nuevo','seguimiento'].includes(e.estado||'nuevo');
 const tkContacto=t=>t.contacto||t.contactoWeb||null;
 const contactoLabel=c=>c?[c.empresa,c.nombre].filter(Boolean).join(' · ')||c.telefono||c.email||'Sin nombre':'';
 const entNombre=e=>e.clienteId?cliName(e.clienteId):(contactoLabel(e.contacto)||e.nombre||e.de||'Sin nombre');
-const entNuevas=()=>arr('entradas').filter(e=>(e.estado||'nuevo')==='nuevo'&&!entCharla(e));
+const entNuevas=()=>emAgrupar(arr('entradas').filter(e=>(e.estado||'nuevo')==='nuevo'&&!entCharla(e)).sort((a,b)=>n0(b.actualizado||b.creado)-n0(a.actualizado||a.creado)));
 let ENTF='abiertas';
 function entRow(e){
   const tp=ENT_TIPO[e.tipo]||ENT_TIPO.otro,c=e.contacto;
@@ -10269,7 +10485,7 @@ function vBandeja(){
   let l=all.filter(e=>ENTF==='charla'?entCharla(e):ENTF==='abiertas'?entOpen(e)&&!entCharla(e):ENTF==='nuevas'?(e.estado||'nuevo')==='nuevo'&&!entCharla(e):true);
   const nCharla=all.filter(entCharla).length;
   if(Q)l=l.filter(e=>qn([e.titulo,e.resumen,e.texto,entNombre(e),e.contacto?.telefono,e.de].join(' ')).includes(qn(Q)));
-  l.sort((a,b)=>n0(b.creado)-n0(a.creado));
+  l.sort((a,b)=>n0(b.actualizado||b.creado)-n0(a.actualizado||a.creado));l=emAgrupar(l);
   const nuevas=entNuevas().length;
   const head=`<div class="vhead"><div><h1>Bandeja de entrada</h1><p class="sub">${pl(nuevas,'pedido nuevo','pedidos nuevos')} · lo que llega por WhatsApp y email, antes de convertirlo en ticket, visita o presupuesto</p></div>
     <div class="tools"><div class="seg" role="group" aria-label="Filtro">${[['abiertas','Pendientes'],['nuevas','Nuevas'],['charla','Charla y otros'+(nCharla?' · '+nCharla:'')],['todas','Todas']].map(([k,n])=>`<button class="${ENTF===k?'on':''}" data-act="entf:${k}">${n}</button>`).join('')}</div>${ENTF==='charla'&&nCharla&&!readonly?'<button class="btn ghost danger" data-act="entvaciar">Vaciar charla</button>':''}<button class="btn pri" data-new="ent">+ Pedido</button></div></div>
@@ -11073,7 +11289,7 @@ async function agAct(k,arg,el){
     await put('aprobaciones',arg,{...x,estado:'aprobado',aprobadoPor:ME||'',aprobadoEn:Date.now()});
     openSheet('pres',null,{copy:{numero:'',oportunidadId:'',proyectoId:'',clienteId:cli?cli.id:'',fecha:today(),validez:15,moneda:x.moneda||defMon(),estado:'borrador',iva:true,descuento:0,lineas:(x.lineas||[]).map(l=>({desc:l.desc||'',cant:n0(l.cant)||1,unidad:l.unidad||'unidad',precio:n0(l.precio)})),condiciones:CFG.condiciones||'',notas:(x.nota||'')+(cli?'':(x.cliente?'\nCliente: '+x.cliente:''))}});return true}
   if(k==='aprobok'||k==='aprobno'){const x=D.aprobaciones[arg];if(x)await put('aprobaciones',arg,{...x,estado:k==='aprobok'?'aprobado':'descartado',aprobadoPor:ME||'',aprobadoEn:Date.now()});sr();return true}
-  if(k==='ent2tkq'){const e=D.entradas[arg];if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
+  if(k==='ent2tkq'){const e=emAccion(D.entradas[arg]);if(!e)return true;const c=e.contacto||{};const tipo={falla:'reclamo',trabajo:'instalacion',presupuesto:'relevamiento',consulta:'consulta'}[e.tipo]||'consulta';
     openSheet('tk',null,{cli:e.clienteId||'',draft:{titulo:e.titulo||'',descripcion:[e.resumen,e.texto].filter(Boolean).join('\n\n'),mensaje:e.texto||'',tipo:e.urgente?'emergencia':tipo,origen:e.canal==='mail'?'Email':'WhatsApp',contacto:e.clienteId?null:c,entradaId:arg,waFrom:(c.telefono||e.de||'').replace(/\D/g,''),waNombre:c.nombre||e.nombre||''}});if(SH)SH.dirty=true;return true}
   return false}
 
@@ -11097,8 +11313,8 @@ function saveTabs(){const v=[0,1,2].map(i=>$('#tab_'+i)?.value).filter(Boolean);
 function ofiMiDia(){if(!ME)return'';const jobs=arr('trabajos').filter(j=>j.fecha===today()&&(j.tecnicos||[]).includes(ME)).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const tar=misTareasHtml();
   return`<section class="group ofidia"><h2>Tu día <span class="num">${jobs.length}</span><button class="btn ghost" data-view="campo" style="margin-left:auto;min-height:32px">Ver todo lo tuyo</button></h2>${jobs.length?`<div class="jobs">${jobs.slice(0,4).map(jobCard).join('')}</div>${jobs.length>4?`<p class="hint">y ${jobs.length-4} más en Mi día</p>`:''}`:'<p class="hint" style="margin:0 0 6px">No tenés visitas asignadas para hoy.</p>'}</section>${tar}`}
-const MENUSEC=[['Inicio',['oficina','campo','agentes','inicio']],['Operación',['vivo','bandeja','tickets','calendario','trabajos','proyectos','tecnicos']],['Comercial',['pipeline','clientes','presupuestos','agenda','inventario']],
-  ['Administración',['facturacion','gastos','personal','reportes']],['Empresa',['mas','ajustes','plan','admin']]];
+const MENUSEC=[['Inicio',['oficina','campo','agentes','inicio']],['Operación',['vivo','bandeja','tickets','calendario','proyectos','planos','tecnicos']],['Comercial',['pipeline','clientes','presupuestos','agenda','trabajos']],
+  ['Administración',['facturacion','gastos','personal','reportes','inventario']],['Empresa',['mas','ajustes','plan','admin']]];
 const MENUEXTRA={campo:['Mi día','Tus visitas, tareas y relevamientos'],tickets:['Tickets','Pedidos y fallas de los clientes'],calendario:['Calendario','Visitas de la semana'],pipeline:['CRM','Oportunidades y embudo de ventas'],tecnicos:['Técnicos','Fichas, horas, productividad y liquidación']};
 
 
