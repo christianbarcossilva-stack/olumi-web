@@ -58,8 +58,9 @@ Deno.serve(async (req) => {
   // Prueba: solo un administrador de la plataforma, y solo le llega a él
   if (body.prueba) {
     const userDb = createClient(URL_, ANON_KEY, { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } });
-    const { data: esAdmin } = await userDb.rpc('is_platform_admin');
-    if (esAdmin !== true) return json({ error: 'Solo un administrador de la plataforma puede mandar pruebas.' }, 403);
+    const { data: { user } } = await userDb.auth.getUser();
+    const { data: adm } = user ? await db.from('platform_admins').select('user_id').eq('user_id', user.id).maybeSingle() : { data: null };
+    if (!adm) return json({ error: 'Solo un administrador de la plataforma puede mandar pruebas.' }, 403);
     if (!emailOk(body.prueba)) return json({ error: 'Correo de prueba inválido.' }, 400);
     let q = db.from('ventas_prospectos').select('id,empresa,asunto,mensaje');
     q = body.id ? q.eq('id', String(body.id)) : q.eq('envio_estado', 'en_cola').order('puntaje', { ascending: false });
