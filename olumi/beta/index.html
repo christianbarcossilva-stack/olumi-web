@@ -5459,8 +5459,10 @@ function emQue(e){const ai=e.carril||e.intencion||'';let k;
   else if(EM_QUE[ai])k=ai;else k=e.tipo==='otro'?'consulta':e.tipo||'consulta';
   const q=[...(EM_QUE[k]||EM_QUE.consulta)];if(q[4]==='ent2pres'&&!has('presupuestos'))q.splice(3,2,'Pasar a ticket','ent2tk');return q}
 /* un hilo, una entrada */
-function emGrupo(e){const k=emLeer(e).clave;if(!k)return[e];return arr('entradas').filter(x=>x.id===e.id||emLeer(x).clave===k).sort((a,b)=>n0(b.actualizado||b.creado)-n0(a.actualizado||a.creado))}
-function emAgrupar(l){const v=new Set();return l.filter(e=>{const k=emLeer(e).clave;if(!k)return true;if(v.has(k))return false;v.add(k);return true})}
+/* el que manda en el hilo es el correo más nuevo (el que llegó último, no el último que alguien tocó) */
+function emGrupo(e){const k=emLeer(e).clave;if(!k)return[e];return arr('entradas').filter(x=>x.id===e.id||emLeer(x).clave===k).sort((a,b)=>n0(b.creado)-n0(a.creado))}
+function emAgrupar(l){const m=new Map();l.forEach(e=>{const k=emLeer(e).clave;if(k&&(!m.has(k)||n0(e.creado)>n0(m.get(k).creado)))m.set(k,e)});const v=new Set();
+  return l.map(e=>{const k=emLeer(e).clave;if(!k)return e;if(v.has(k))return null;v.add(k);return m.get(k)}).filter(Boolean)}
 /* lo que se hace con una entrada del hilo (estado, ticket) vale para todas */
 async function emSync(col,id,f){if(col!=='entradas'||EM.sync||!f||!('estado' in f||'ticketId' in f))return;const e=D.entradas[id];if(!e)return;
   const g=emGrupo({...e,id}).filter(x=>x.id!==id&&((('estado' in f)&&x.estado!==f.estado)||(('ticketId' in f)&&x.ticketId!==f.ticketId)));if(!g.length)return;
@@ -5491,7 +5493,7 @@ btCard=function(e){const p=btPrio(e),t=btTicket(e),ev=btEvento(e),j=btTrabajo(e)
   const e={...D.entradas[id],id},c=e.contacto||{},r=emLeer(D.entradas[id]),g=emGrupo(e),q=emQue(e),ul=r.partes[0]||{t:'',de:'',cuando:''};
   const wa=(e.mensajes||[]).filter(m=>m&&m.text);const esWa=e.canal!=='mail'&&wa.length;
   const ult=esWa?wa[wa.length-1]:null,txt=esWa?emFix(ult.text):ul.t,firma=esWa?'':ul.firma,dq=emDatos(txt);
-  const otroCli=!e.clienteId&&g.find(x=>x.clienteId&&D.clientes[x.clienteId]);
+  const tq=emSinAcento(e.texto||'')+' '+emSinAcento(c.empresa||'')+' '+emSinAcento(c.email||''),otroCli=!e.clienteId&&g.find(x=>{const cl=x.clienteId&&D.clientes[x.clienteId];if(!cl)return false;const n=emSinAcento(cl.nombre||'').split(/[^a-z0-9]+/).filter(w=>w.length>3),dm=String(cl.email||'').split('@')[1]||'';return n.some(w=>tq.includes(w))&&(!dm||tq.includes(dm.toLowerCase())||n.some(w=>emSinAcento(c.empresa||'').includes(w)))});
   const v={...e,clienteId:e.clienteId||(otroCli?otroCli.clienteId:''),titulo:emFix(e.titulo||''),c_nombre:c.nombre||'',c_empresa:c.empresa||'',c_telefono:c.telefono||'',c_email:c.email||''};
   const chip=(i,l)=>l.length?`<span class="em-d">${ic(i,'in')}${l.map(esc).join(' · ')}</span>`:'';
   const tk=e.ticketId&&D.tickets[e.ticketId],tel=c.telefono||D.clientes[e.clienteId]?.telefono||'';
