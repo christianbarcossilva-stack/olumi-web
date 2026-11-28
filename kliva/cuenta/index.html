@@ -88,6 +88,35 @@ form { display: grid; gap: 14px; }
 .state { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); font-size: 15.5px; }
 .state .i { color: var(--pass); margin-top: 2px; }
 .acts { display: flex; flex-wrap: wrap; gap: 10px; }
+/* planes y pago (28/11): Mercado Pago, la misma cuenta de Olumi y Ondi */
+#planes { margin-top: 22px; }
+.ph { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
+.ph .seg { min-width: 300px; }
+.empresa { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.empresa label { flex: 1 1 260px; }
+select { width: 100%; min-height: 50px; padding: 0 14px; border: 0; border-radius: 14px; font: 500 17px var(--text); color: var(--fg); background: var(--field); box-shadow: inset 0 0 0 1px var(--line); }
+select:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.planes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.plan { position: relative; display: grid; gap: 6px; align-content: start; padding: 18px; border-radius: 18px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .2s, background .2s; }
+.plan input { position: absolute; opacity: 0; pointer-events: none; }
+.plan b { font-size: 18px; }
+.plan .pr { font-size: clamp(24px, 2.6vw, 30px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+.plan .pr small { display: block; font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.plan span { color: var(--muted); font-size: 14.5px; }
+.plan:has(input:checked) { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
+.plan:has(input:focus-visible) { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.pie { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; padding-top: 4px; }
+.paso { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgb(127 127 127 / .14); box-shadow: inset 0 0 0 1px var(--line); }
+.paso button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: none; color: var(--fg); font: 600 22px var(--text); cursor: pointer; }
+.paso output { min-width: 34px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.extra { display: flex; align-items: center; gap: 12px; font-size: 15.5px; color: var(--muted); }
+.total { display: grid; gap: 2px; text-align: right; }
+.total b { font-size: 24px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.total small { color: var(--muted); font-size: 14px; }
+.estado { padding: 14px 16px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); font-size: 15.5px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.estado.ok { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pass) 55%, transparent); }
+.estado.bad { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 55%, transparent); }
+@media (max-width: 860px) { .planes { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ph .seg { min-width: 0; width: 100%; } .total { text-align: left; } }
 footer { padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 18px; }
 footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
@@ -143,13 +172,37 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
         <div class="me"><span class="av" id="av"></span><div><b id="yoNom"></b><small id="yoMail"></small></div></div>
         <div class="state"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><p>Sin licencia, Kliva funciona con hasta 2 equipos. Para conectar más equipos, pedí tu licencia: te llega a este email.</p></div>
         <div class="acts">
-          <a class="btn pri" id="bLic" href="#">Pedir mi licencia</a>
+          <a class="btn pri" id="bLic" href="#planes">Elegir un plan</a>
           <a class="btn" id="bIns" href="#">Pedir la instalación</a>
         </div>
         <button class="link" type="button" id="bSalir">Salir</button>
       </div>
     </section>
   </div>
+
+  <section class="card glass" id="planes" aria-labelledby="t-planes" hidden>
+    <div class="ph">
+      <div style="display:grid;gap:8px"><h2 id="t-planes">Tu plan de Kliva</h2><p class="note">Se cobra por equipo conectado, con personas sin límite. Pagás con tarjeta por Mercado Pago y podés cancelar cuando quieras.</p></div>
+      <div class="seg" role="tablist" aria-label="Pago mensual o anual">
+        <button type="button" role="tab" id="cMes" aria-selected="true">Mensual</button>
+        <button type="button" role="tab" id="cAno" aria-selected="false">Anual, 2 meses de regalo</button>
+      </div>
+    </div>
+    <div class="estado" id="estado" hidden><p id="estadoT"></p><button class="link" type="button" id="bCancelar" hidden>Cancelar la suscripción</button></div>
+    <div class="empresa">
+      <label for="org">Empresa<select id="org"></select></label>
+      <label for="orgNom" id="lOrgNom" hidden>Nombre de la empresa<input id="orgNom" type="text" autocomplete="organization" placeholder="Frigorífico del Sur"></label>
+      <label for="mpMail">Email de tu cuenta de Mercado Pago<input id="mpMail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false"></label>
+    </div>
+    <div class="planes" id="lista" role="radiogroup" aria-label="Planes"></div>
+    <div class="pie">
+      <div class="extra"><span>Equipos extra</span><span class="paso"><button type="button" id="xMenos" aria-label="Un equipo extra menos">−</button><output id="xN" aria-live="polite">0</output><button type="button" id="xMas" aria-label="Un equipo extra más">+</button></span><span id="xPr"></span></div>
+      <div class="total"><b id="tot"></b><small id="totIva"></small></div>
+    </div>
+    <div class="acts"><button class="btn pri" type="button" id="bPagar">Pagar con Mercado Pago</button></div>
+    <p class="msg" id="mPago" role="status"></p>
+    <p class="note">Al confirmar el primer pago te mandamos la licencia a tu email. Si la tarjeta no pasa, no se activa nada y no se cobra.</p>
+  </section>
 </div></main>
 
 <footer><div class="wrap"><a href="/kliva/">Kliva</a><a href="/kliva/beta/">Probar Kliva</a><a href="/kliva/privacidad/">Privacidad</a><a href="/kliva/soporte/">Soporte</a><a href="/">Unity Tech</a></div></footer>
@@ -196,7 +249,7 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
   });
 
   // ---- la cuenta Unity Tech (la misma de Olumi) ----
-  var CFG = window.OLUMI_CONFIG, sb = null, modo = 'nueva';
+  var CFG = window.OLUMI_CONFIG, sb = null, modo = 'nueva', yo = null;
   try { sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } }); } catch (e) {}
   function ponModo(m) {
     modo = m; var nueva = m === 'nueva';
@@ -219,11 +272,11 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
     return 'No se pudo: ' + m;
   }
   function mostrar(user) {
-    $('#out').hidden = !!user; $('#in').hidden = !user; if (!user) return;
+    $('#out').hidden = !!user; $('#in').hidden = !user; $('#planes').hidden = !user; if (!user) return;
+    if (!yo || yo.id !== user.id) { yo = user; cargar(); }
     var nom = (user.user_metadata && user.user_metadata.name) || user.email.split('@')[0];
     $('#yoNom').textContent = nom; $('#yoMail').textContent = user.email; $('#av').textContent = nom.trim().charAt(0).toUpperCase();
     var cuerpo = 'Cuenta: ' + user.email + '\nNombre y empresa: ' + nom + '\nCuántos equipos y de qué marcas: \nPaís: ';
-    $('#bLic').href = 'mailto:hola@unitytech.uy?subject=' + encodeURIComponent('Licencia de Kliva') + '&body=' + encodeURIComponent(cuerpo);
     $('#bIns').href = 'mailto:hola@unitytech.uy?subject=' + encodeURIComponent('Instalación de Kliva') + '&body=' + encodeURIComponent(cuerpo + '\nDónde lo instalamos (servidor de la empresa o una computadora): ');
   }
   if (!sb) { msg($('#mCta'), 'La cuenta no está disponible en este momento. Probá de nuevo en un rato.', 'bad'); $('#bCta').disabled = true; }
@@ -255,7 +308,116 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
     var r = await sb.auth.resetPasswordForEmail(mail, { redirectTo: 'https://unitytech.uy/olumi/app/' });
     msg($('#mCta'), r.error ? claro(r.error) : 'Te mandamos un email a ' + mail + ' para elegir una contraseña nueva.', r.error ? 'bad' : 'ok');
   });
-  $('#bSalir').addEventListener('click', function () { sb && sb.auth.signOut(); });
+  $('#bSalir').addEventListener('click', function () { yo = null; sb && sb.auth.signOut(); });
+
+  // ---- el plan y el pago (Mercado Pago, función mp-suscribir con app 'kliva') ----
+  var EQUIPOS = { basico: 'Hasta 5 equipos', pro: 'Hasta 15 equipos', empresa: 'Hasta 40 equipos', instaladora: 'Hasta 60 equipos, para varios clientes' };
+  var planes = [], orgs = [], plan = 'basico', ciclo = 'mensual', extra = 0, esperando = /[?&]pago=mp/.test(location.search);
+  var dinero = function (n) { var r = Math.round(n * 100) / 100, f = r % 1 ? 2 : 0; return 'US$ ' + r.toLocaleString('es-UY', { minimumFractionDigits: f, maximumFractionDigits: f }); };
+  var fecha = function (t) { return new Date(t).toLocaleDateString('es-UY', { day: 'numeric', month: 'long', year: 'numeric' }); };
+  function ponCiclo(c) { ciclo = c; $('#cMes').setAttribute('aria-selected', c === 'mensual'); $('#cAno').setAttribute('aria-selected', c === 'anual'); pintarPlanes(); }
+  $('#cMes').addEventListener('click', function () { ponCiclo('mensual'); });
+  $('#cAno').addEventListener('click', function () { ponCiclo('anual'); });
+  $('#xMenos').addEventListener('click', function () { extra = Math.max(0, extra - 1); total(); });
+  $('#xMas').addEventListener('click', function () { extra = Math.min(100, extra + 1); total(); });
+  function elegido() { return planes.filter(function (p) { return p.id === plan; })[0]; }
+  function pintarPlanes() {
+    var c = $('#lista'); c.replaceChildren();
+    planes.forEach(function (p) {
+      var l = D.createElement('label'), i = D.createElement('input'), b = D.createElement('b'), pr = D.createElement('div'), s = D.createElement('span');
+      l.className = 'plan'; i.type = 'radio'; i.name = 'plan'; i.value = p.id; i.checked = p.id === plan;
+      i.addEventListener('change', function () { plan = p.id; total(); });
+      b.textContent = p.nombre; pr.className = 'pr';
+      var sm = D.createElement('small'); sm.textContent = '+ IVA ' + (ciclo === 'anual' ? 'por año' : 'por mes');
+      pr.append(dinero(p.precio_usd * (ciclo === 'anual' ? 10 : 1)).replace(' ', '\u00a0') + ' ', sm);
+      s.textContent = EQUIPOS[p.id] || '';
+      l.append(i, b, pr, s); c.append(l);
+    });
+    total();
+  }
+  function total() {
+    var p = elegido(); $('#xN').textContent = extra;
+    if (!p) { $('#tot').textContent = ''; $('#totIva').textContent = ''; return; }
+    var exUsd = Math.round(Number(p.extra_monto) / 1.22), k = ciclo === 'anual' ? 10 : 1;
+    $('#xPr').textContent = dinero(exUsd) + ' + IVA cada uno por mes';
+    $('#tot').textContent = dinero((Number(p.precio_usd) + extra * exUsd) * k) + ' + IVA ' + (ciclo === 'anual' ? 'por año' : 'por mes');
+    $('#totIva').textContent = dinero((Number(p.monto) + extra * Number(p.extra_monto)) * k) + ' con IVA incluido';
+  }
+  function orgActual() { return $('#org').value; }
+  $('#org').addEventListener('change', function () { $('#lOrgNom').hidden = orgActual() !== 'nueva'; estado(); });
+  async function cargar() {
+    msg($('#mPago'));
+    var r = await sb.from('cobro_planes').select('id,nombre,precio_usd,monto,extra_monto,orden').eq('app', 'kliva').order('orden');
+    planes = r.data || [];
+    if (!planes.length) { msg($('#mPago'), 'Los planes no se pudieron cargar. Probá de nuevo en un rato.', 'bad'); $('#bPagar').disabled = true; }
+    var m = await sb.from('members').select('org_id,role,orgs(name)').eq('user_id', yo.id).in('role', ['owner', 'admin']);
+    orgs = (m.data || []).map(function (x) { return { id: x.org_id, name: x.orgs ? x.orgs.name : 'Empresa' }; });
+    var sel = $('#org'), guardada = null; try { guardada = localStorage.getItem('kliva.org'); } catch (e) {}
+    sel.replaceChildren();
+    orgs.forEach(function (o) { var op = D.createElement('option'); op.value = o.id; op.textContent = o.name; sel.append(op); });
+    var nv = D.createElement('option'); nv.value = 'nueva'; nv.textContent = orgs.length ? 'Otra empresa…' : 'Una empresa nueva'; sel.append(nv);
+    if (guardada && orgs.some(function (o) { return o.id === guardada; })) sel.value = guardada;
+    if (!orgs.length) { var nom = (yo.user_metadata && yo.user_metadata.name) || ''; $('#orgNom').value = nom.indexOf(',') > 0 ? nom.split(',').slice(1).join(',').trim() : ''; }
+    $('#lOrgNom').hidden = orgActual() !== 'nueva';
+    if (!$('#mpMail').value) $('#mpMail').value = yo.email;
+    pintarPlanes(); estado();
+  }
+  var intentos = 0;
+  async function estado() {
+    var o = orgActual(), box = $('#estado'), t = $('#estadoT'), bc = $('#bCancelar');
+    box.hidden = true; bc.hidden = true; $('#bPagar').disabled = !planes.length; $('#bPagar').textContent = 'Pagar con Mercado Pago';
+    if (!o || o === 'nueva') { if (esperando) { box.hidden = false; box.className = 'estado'; t.textContent = 'Elegí la empresa con la que pagaste para ver si ya se confirmó.'; } return; }
+    try { localStorage.setItem('kliva.org', o); } catch (e) {}
+    var r = await sb.rpc('cobro_estado', { o: o, a: 'kliva' }); if (o !== orgActual()) return;
+    var e = r.data || {}, nom = e.plan ? (planes.filter(function (p) { return p.id === e.plan; })[0] || { nombre: e.plan }).nombre : '';
+    var s = await sb.from('suscripciones').select('mp_status').eq('org_id', o).eq('app', 'kliva').maybeSingle();
+    var mp = s.data && s.data.mp_status;
+    if (e.plan && e.etapa !== 'fundador' && planes.some(function (p) { return p.id === e.plan; }) && plan !== e.plan) { plan = e.plan; pintarPlanes(); }
+    box.className = 'estado';
+    if (e.etapa === 'fundador') { box.hidden = false; box.className = 'estado ok'; t.textContent = 'Esta empresa es cliente fundador: Kliva no tiene costo. Para probar un pago, elegí «Otra empresa…».'; $('#bPagar').disabled = true; return; }
+    if (e.etapa === 'al_dia') {
+      box.hidden = false; box.className = 'estado ok'; esperando = false;
+      t.textContent = 'Plan ' + nom + ' al día hasta el ' + fecha(e.pago_hasta) + (mp === 'cancelled' ? '. La suscripción está cancelada: no se vuelve a cobrar.' : '. Se renueva solo.');
+      bc.hidden = mp !== 'authorized'; $('#bPagar').textContent = 'Cambiar de plan'; return;
+    }
+    if (e.etapa === 'atrasado' || e.etapa === 'aviso_10') { box.hidden = false; box.className = 'estado bad'; t.textContent = 'El pago del plan ' + nom + ' venció el ' + fecha(e.pago_hasta) + '. Kliva sigue andando hasta el ' + fecha(e.suspende_el) + '; revisá la tarjeta en Mercado Pago o pagá de nuevo.'; return; }
+    if (e.etapa === 'suspendido') { box.hidden = false; box.className = 'estado bad'; t.textContent = 'El plan ' + nom + ' quedó sin pagar desde el ' + fecha(e.pago_hasta) + '. Kliva quedó solo para mirar; con el pago vuelve todo como estaba.'; return; }
+    if (esperando) {
+      box.hidden = false; t.textContent = 'Estamos esperando que Mercado Pago confirme el pago. Suele tardar menos de un minuto; esta página se actualiza sola.';
+      if (intentos++ < 24) setTimeout(function () { if (o === orgActual()) estado(); }, 5000);
+      else t.textContent = 'Mercado Pago todavía no confirmó el pago. Si en Mercado Pago figura aprobado, escribinos a hola@unitytech.uy y lo revisamos.';
+    }
+  }
+  $('#bCancelar').addEventListener('click', async function () {
+    var b = this; b.disabled = true; msg($('#mPago'));
+    var r = await sb.functions.invoke('mp-suscribir', { body: { app: 'kliva', org: orgActual(), accion: 'cancelar' } });
+    var d = await leerRespuesta(r); b.disabled = false;
+    if (d.error) msg($('#mPago'), d.error, 'bad'); else { msg($('#mPago'), 'Listo, la suscripción quedó cancelada. El plan sigue hasta la fecha pagada.', 'ok'); estado(); }
+  });
+  async function leerRespuesta(r) {
+    if (!r.error) return r.data || {};
+    try { var j = await r.error.context.json(); if (j && j.error) return j; } catch (e) {}
+    return { error: 'No se pudo conectar con Mercado Pago. Probá de nuevo.' };
+  }
+  $('#bPagar').addEventListener('click', async function () {
+    var b = this, o = orgActual(); msg($('#mPago'));
+    if (!elegido()) return;
+    b.disabled = true;
+    try {
+      if (o === 'nueva') {
+        var nom = $('#orgNom').value.trim();
+        if (!nom) { msg($('#mPago'), 'Escribí el nombre de la empresa.', 'bad'); $('#orgNom').focus(); b.disabled = false; return; }
+        var c = await sb.rpc('create_org', { org_name: nom, my_name: ((yo.user_metadata && yo.user_metadata.name) || '').split(',')[0].trim() });
+        if (c.error) throw c.error;
+        o = c.data; try { localStorage.setItem('kliva.org', o); } catch (e) {}
+      }
+      msg($('#mPago'), 'Abriendo Mercado Pago…');
+      var r = await sb.functions.invoke('mp-suscribir', { body: { app: 'kliva', org: o, plan: plan, ciclo: ciclo, extra: extra, email: $('#mpMail').value.trim() || yo.email } });
+      var d = await leerRespuesta(r);
+      if (d.error || !d.url) { msg($('#mPago'), d.error || 'Mercado Pago no devolvió el enlace de pago. Probá de nuevo.', 'bad'); if (o !== orgActual()) cargar(); b.disabled = false; return; }
+      location.href = d.url;
+    } catch (err) { msg($('#mPago'), claro(err), 'bad'); b.disabled = false; }
+  });
   window.__klivaCuenta = { armar: armar };   // para las pruebas
 })();
 </script>
